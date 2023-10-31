@@ -79,6 +79,25 @@ class Dir
     }
 
     /**
+     * 复制文件夹到指定路径
+     *
+     * @param string $toPath 目标路径
+     *
+     * @return void
+     * @throws \Exception
+     */
+    public function copyTo(string $toPath): void
+    {
+        $this->traverse(function (EachFile $file) use ($toPath){
+            $dir = implode(DIRECTORY_SEPARATOR, [$toPath, ...$file->relativelyDirs]);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            copy($file->filepath, $dir . DIRECTORY_SEPARATOR . $file->filename);
+        });
+    }
+
+    /**
      * 设置优先处理的文件名
      *
      * @param string $filename
