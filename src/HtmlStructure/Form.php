@@ -8,8 +8,11 @@ namespace Sc\Util\HtmlStructure;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
+use Sc\Util\HtmlStructure\Form\FormItemEditor;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
+use Sc\Util\HtmlStructure\Html\Js\Grammar;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -104,7 +107,7 @@ class Form
     {
         return array_merge(...array_map(function ($v) {
             if ($v->getName()) {
-                return [$v->getName() => $v->getDefault()];
+                return [$v->getName() => $v instanceof FormItemEditor ? Grammar::mark($v->getDefault() ?: '', 'line') : $v->getDefault()];
             }
 
             return $v->getDefault();

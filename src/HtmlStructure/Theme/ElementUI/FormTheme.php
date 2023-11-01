@@ -51,7 +51,7 @@ class FormTheme implements FormThemeInterface
             ->setAttr('v-model', $form->getId())
             ->setAttrs($config);
 
-        $el->append(...array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems()));
+        $el->append(El::double('el-row')->append(...array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems())))->append();
 
         // 默认值设置，用函数保存，避免被污染
         Html::js()->vue->addMethod("{$form->getId()}Default", ['defaultValues'], JsCode::make(
