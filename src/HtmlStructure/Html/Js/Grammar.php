@@ -23,7 +23,7 @@ class Grammar
 
     // 包含换行字符串
     private const Line_START = '#{l#';
-    private const Line_END = '#l}#(.*)';
+    private const Line_END = '#l}#';
 
     /**
      * 标记语法
@@ -57,17 +57,6 @@ class Grammar
         $jsCode = preg_replace_callback('/"' . self::MARK_START . '\\\\\/(.*?)\\\\\/' . self::MARK_END . '"/', function ($match){
             return  preg_replace('/[^\\\]\\\/', '', '/' . $match[1] . '/');
         }, $jsCode);
-
-        $jsCode = strtr($jsCode, [
-            '\r\n'                 => "\r\n",
-            '\n'                   => "\r\n",
-            '"' . self::MARK_START => '',
-            self::MARK_END . '"'   => '',
-            self::MARK_START       => '',
-            self::MARK_END         => '',
-        ]);
-
-        return preg_replace("/" . self::Line_START . "(.*?)" . self::Line_END . "/", "$1", $jsCode);
 
         return strtr($jsCode, [
             '\r\n'                 => "\r\n",

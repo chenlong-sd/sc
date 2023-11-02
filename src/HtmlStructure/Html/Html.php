@@ -121,8 +121,8 @@ class Html
         $css = self::css()->toCode();
         $js  = self::js()->toCode();
 
-        $css and self::html()->find('head')->append(El::double('style')->append($css));
-        $js  and self::html()->find('html')->append(El::double('script')->append($js));
+        $css and self::html()->find('head')->append(El::double('style')->append(El::text($css)));
+        $js  and self::html()->find('html')->append(El::double('script')->append(El::text($js)));
 
         return trim(El::fictitious()->append(El::text('<!DOCTYPE html>'), self::html())->toHtml());
     }
