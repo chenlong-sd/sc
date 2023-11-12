@@ -27,10 +27,7 @@ class FormItemInLineTheme extends AbstractFormItemTheme implements FormItemInLin
         $col       = $this->colCalc($children);
 
         foreach ($children as $child) {
-            $elCol = El::double('el-col')
-                ->setAttr(':span', $child->getCol() ?: $col)
-                ->append($child->render("ElementUI"));
-            $el->append($elCol);
+            $el->append($child->col($child->getCol() ?: $col)->render("ElementUI"));
         }
 
         return $this->afterRender($formItemInLine, $el);

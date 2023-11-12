@@ -52,11 +52,14 @@ abstract class AbstractFormItemTheme
             $el->setAttr('v-if', $formItem->getWhen());
         }
 
-        $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
-        if ($formItem->getAfterCol()) {
-            $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
+        if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml()) {
+            $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
+            if ($formItem->getAfterCol()) {
+                $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
+            }
+            return $res->getParent() ?: $res;
         }
 
-        return $res->getParent() ?: $res;
+        return $el;
     }
 }

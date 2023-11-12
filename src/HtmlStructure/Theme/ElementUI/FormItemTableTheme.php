@@ -66,7 +66,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
                                 $element->setAttr($attr, preg_replace("/(?<!\w|\.)\w/", '@$0', $value));
                             }
                         }
-                    })->getContent()
+                    })->find('el-form-item')->getContent()
                 )
             );
         }
