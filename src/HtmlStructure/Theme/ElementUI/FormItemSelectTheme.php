@@ -39,7 +39,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
             ':label' => "item.label",
         ]);
 
-        if ($formItemSelect->getOptions() && !array_search($formItemSelect->getDefault(), $formItemSelect->getOptions())) {
+        if ($formItemSelect->getOptions() && array_search($formItemSelect->getDefault(), array_column($formItemSelect->getOptions(), 'value')) === false) {
             $formItemSelect->default(null);
         }
 

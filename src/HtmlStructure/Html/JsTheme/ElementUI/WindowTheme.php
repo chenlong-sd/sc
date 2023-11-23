@@ -28,12 +28,15 @@ class WindowTheme implements WindowThemeInterface
 
         $attrs = array_merge([
             'destroy-on-close' => $isIframe ? '' : null,
-            'title'            => $window->getTitle(),
+            ':close-on-click-modal' => "false",
+            ':title'           => $vModel . "Title",
             'v-model'          => $vModel,
         ], $attrs);
+        Html::js()->vue->set( $vModel . "Title", '');
 
         $template = El::double('el-dialog')->setAttrs($attrs);
         $code = JsCode::create('// 打开弹窗');
+        $code->then("this['{$vModel}Title'] = " . sprintf('`%s`', preg_replace('/\{(.*?)}/', "\${row.$1}", $window->getTitle())));
 
         if ($isIframe) {
             // iframe
@@ -93,8 +96,8 @@ class WindowTheme implements WindowThemeInterface
                 ':src'   => "{$vModel}IframeUrl",
             ])
         )->append(
-            El::double('template')->setAttr('#header', '{ close, titleId, titleClass }')
-                ->append(El::double('span')->append($window->getTitle()))
+            El::double('template')->setAttr('#header', "{ close, titleId, titleClass}")
+                ->append(El::double('span')->append("{{ {$vModel}Title }}"))
                 ->append($fullScreen)
         );
 

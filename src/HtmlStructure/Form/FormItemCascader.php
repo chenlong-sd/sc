@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCascaderThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -18,7 +19,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemCascader extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Options, LabelWidth, FormOrigin, Events, Attrs;
+    use DefaultConstruct, DefaultValue, Placeholder, Options, LabelWidth, FormOrigin, Events, Attrs;
 
     public function render(string $theme = null): AbstractHtmlElement
     {

@@ -31,6 +31,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCas
 
         $cascader = El::double('el-cascader')->setAttrs([
             'v-model'  => $this->getVModel($formItemCascader),
+            'placeholder' => $formItemCascader->getPlaceholder(),
             ':options' => $optionsVar,
             'style'    => 'width:100%'
         ])->setAttrs($formItemCascader->getVAttrs());

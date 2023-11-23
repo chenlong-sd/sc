@@ -85,7 +85,7 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
             $autoComplete->append($format);
         }
 
-        return $base->append($autoComplete);
+        return $this->afterRender($formItemText, $base->append($autoComplete));
     }
 
     /**
