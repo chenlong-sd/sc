@@ -406,8 +406,9 @@ class TableTheme implements TableThemeInterface
         $searchType = array_combine(
             array_map(function (Form\FormItemInterface|Form\FormItemAttrGetter $item) use (&$searchFields){
                 if (str_contains($name = $item->getName(), '.')){
-                    $searchFields[$name] = Tool::random("searchF")->get();
-                    $name = $searchFields[$name];
+                    $newName = Tool::random("searchF")->get();
+                    $searchFields[$newName] = $name;
+                    $item->setName($name = $newName);
                 }
 
                 return $name;

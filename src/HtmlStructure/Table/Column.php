@@ -180,6 +180,22 @@ class Column
     }
 
     /**
+     * 不显示此列
+     *
+     * @return $this
+     */
+    public function notShow(bool $confirm = true): static
+    {
+        if ($confirm) {
+            $this->show = [
+                'type' => null
+            ];
+        }
+
+        return $this;
+    }
+
+    /**
      * @return string|\Stringable
      */
     public function getFormat(): \Stringable|string

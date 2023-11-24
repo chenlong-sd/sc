@@ -11,6 +11,8 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemEditor;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
+use Sc\Util\HtmlStructure\Form\FormItemText;
+use Sc\Util\HtmlStructure\Form\FormItemTextarea;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
@@ -107,7 +109,11 @@ class Form
     {
         return array_merge(...array_map(function ($v) {
             if ($v->getName()) {
-                return [$v->getName() => $v instanceof FormItemEditor ? Grammar::mark($v->getDefault() ?: '', 'line') : $v->getDefault()];
+                $value = $v->getDefault();
+                if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea) {
+                    $value = Grammar::mark($v->getDefault() ?: '', 'line');
+                }
+                return [$v->getName() => $value];
             }
 
             return $v->getDefault();

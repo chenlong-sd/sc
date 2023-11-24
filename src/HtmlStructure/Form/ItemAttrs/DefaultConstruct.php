@@ -9,4 +9,15 @@ trait DefaultConstruct
 {
     public function __construct(protected ?string $name = null, protected ?string $label = null) { }
 
+    public function setName(?string $name): static
+    {
+        $this->name = $name;
+        return $this;
+    }
+
+    public function setLabel(?string $label): static
+    {
+        $this->label = $label;
+        return $this;
+    }
 }

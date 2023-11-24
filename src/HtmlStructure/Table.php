@@ -269,7 +269,7 @@ class Table
      */
     public function getColumns(): array
     {
-        return $this->columns;
+        return array_values(array_filter($this->columns, fn(Column $column) => !empty($column->getShow()['type']) || !$column->getShow()));
     }
 
     public function getSearchForms(): array
