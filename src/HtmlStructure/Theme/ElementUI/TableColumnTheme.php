@@ -43,6 +43,7 @@ class TableColumnTheme implements TableColumnThemeInterface
                 'switch' => $this->switchHandle($column, $show['config']),
                 'tag'    => $this->tagHandle($column, $show['config']),
                 'image'  => $this->imageHandle($column),
+                'mapping'  => $this->mappingHandle($column, $show['config']),
             };
         }
 
@@ -183,6 +184,29 @@ class TableColumnTheme implements TableColumnThemeInterface
                 'fit'                => 'scale-down',
                 ':preview-teleported' => '@true'
             ])
+        );
+    }
+
+    private function mappingHandle(Column $column, array $config): void
+    {
+        if (count($config) === count($config, COUNT_RECURSIVE)) {
+            $new = [];
+            foreach ($config as $value => $label) {
+                $new[] = compact('value', 'label');
+            }
+            $config = $new;
+        }
+
+        $mappingName = $column->getAttr('prop') . "Mapping";
+        Html::js()->vue->set($mappingName, $config['options']);
+        $column->setFormat(El::double('span')
+            ->setAttr('v-for', "(item, index) in @$mappingName")
+            ->append(
+                El::double('span')
+                    ->setAttr('v-if', '@item.value == ' . $column->getAttr('prop'))
+                    ->append("{{ @item.label }}")
+            )
+
         );
     }
 }

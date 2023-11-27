@@ -58,4 +58,5 @@ interface FormItemAttrGetter
     public function getSubmitText();
     public function getResetText();
     public function getMultiple();
+    public function getPlain();
 }

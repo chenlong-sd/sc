@@ -257,4 +257,21 @@ class Column
     {
         return $this->search;
     }
+
+    /**
+     * @param mixed $mapping 支持 key => value , [value => ', label => ']
+     *
+     * @return Column
+     */
+    public function showMapping(mixed $mapping): static
+    {
+        $this->show = [
+            'type' => 'mapping',
+            'config' => [
+                'options'  => $mapping,
+            ]
+        ];
+
+        return $this;
+    }
 }

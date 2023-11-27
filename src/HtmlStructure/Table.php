@@ -109,7 +109,7 @@ class Table
 
         $this->headerEvents[$eventName] = [
             'el'       => $eventLabel,
-            'handler'  => $handler,
+            'handler'  => $handler instanceof \Closure ? $handler() : $handler,
             'position' => 'left'
         ];
     }
@@ -129,7 +129,7 @@ class Table
 
         $this->headerEvents[$eventName] = [
             'el'       => $eventLabel,
-            'handler'  => $handler,
+            'handler'  => $handler instanceof \Closure ? $handler() : $handler,
             'position' => 'right'
         ];
     }
@@ -181,7 +181,7 @@ class Table
 
         $this->rowEvents[$eventName] = [
             'el'      => $eventLabel,
-            'handler' => $handler,
+            'handler' => $handler instanceof \Closure ? $handler() : $handler,
             'group'   => $this->rowGroup
         ];
     }

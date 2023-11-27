@@ -31,8 +31,15 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
 
         $children  = $formItemGroup->getChildren();
 
+        $row = El::double('el-row')->setAttr(':gutter', 10);
+
         foreach ($children as $child) {
-            $el->append($child->render("ElementUI"));
+            $row->append($child->render("ElementUI"));
+        }
+        if ($formItemGroup->getPlain()) {
+            $el = $row;
+        }else{
+            $el->append($row);
         }
 
         if ($formItemGroup->getLabel()) {
