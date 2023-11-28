@@ -28,6 +28,10 @@ class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDat
             'placeholder' => $formItemDatetime->getPlaceholder(),
         ])->setAttrs($formItemDatetime->getVAttrs());
 
+        if ($formItemDatetime->getCol()) {
+            $datetime->setAttrIfNotExist('style', 'width:100%');
+        }
+
         return $this->afterRender($formItemDatetime, $el->append($datetime));
     }
 }

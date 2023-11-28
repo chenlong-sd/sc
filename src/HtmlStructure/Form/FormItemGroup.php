@@ -77,6 +77,6 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             }
 
             return $v->getDefault();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit)));
+        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
     }
 }

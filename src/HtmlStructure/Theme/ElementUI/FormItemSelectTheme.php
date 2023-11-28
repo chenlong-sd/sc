@@ -4,9 +4,15 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
+use Sc\Util\HtmlStructure\Html\Js;
+use Sc\Util\HtmlStructure\Html\Js\Axios;
+use Sc\Util\HtmlStructure\Html\Js\Grammar;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSelectThemeInterface;
 
 /**
@@ -46,11 +52,65 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
         if ($formItemSelect->getMultiple()) {
             $select->setAttr('multiple');
         }
+        if ($formItemSelect->getCol()) {
+            $select->setAttrIfNotExist('style', 'width:100%');
+        }
+
+        $this->remoteSearch($formItemSelect, $select, $optionsVar);
 
         $this->addEvent($select, $formItemSelect->getEvents(), $formItemSelect->getName());
 
         Html::js()->vue->set($optionsVar, $formItemSelect->getOptions());
 
         return $this->afterRender($formItemSelect, $base->append($select->append($options)));
+    }
+
+    private function remoteSearch(FormItemSelect|FormItemAttrGetter $formItemSelect, DoubleLabel $select, string $optionsVar): void
+    {
+        $remoteSearch = $formItemSelect->getRemoteSearch();
+        if (!$remoteSearch) return;
+
+
+        $method = $formItemSelect->getName() . "RemoteSearch";
+        $select->setAttrs([
+            ":remote" => 'true',
+            ':remote-method' => $method
+        ]);
+
+        if ($remoteSearch['code'] instanceof JsFunc) {
+            Html::js()->vue->addMethod($method, $remoteSearch['code']);
+            return;
+        }
+
+        $field = $remoteSearch['code'] ?: $formItemSelect->getName();
+        $showField = explode('.', $field);
+        $showField = end($showField);
+        Html::js()->vue->addMethod($method, JsFunc::anonymous(['query'])->code(
+            Js\JsVar::def('options', $optionsVar),
+            Axios::get($remoteSearch['url'], [
+                'search' => [
+                    'search' => [
+                        $field => Grammar::mark('query')
+                    ],
+                    'searchType' => [
+                        $field => 'like'
+                    ],
+                    'page' => 1,
+                    'limit' => 20
+                ],
+            ])->success(JsCode::make(
+                Js\JsFor::loop('let i = 0; i < data.data.data.length; i++')->then(
+                    Js\JsIf::when("!data.data.data[i].hasOwnProperty('value')")->then(
+                        "data.data.data[i].value = data.data.data[i].id"
+                    ),
+                    Js\JsIf::when("!data.data.data[i].hasOwnProperty('label')")->then(
+                        "data.data.data[i].label = data.data.data[i].$showField"
+                    ),
+                ),
+                Js\JsVar::assign("this[options]", '@data.data.data')
+            ))
+        ));
+
+        Html::js()->vue->event('mounted', JsFunc::call("this.$method", ''));
     }
 }

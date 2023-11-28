@@ -242,9 +242,11 @@ class Table
      *
      * @date 2023/5/26
      */
-    public function addColumns(...$columns): void
+    public function addColumns(...$columns): static
     {
         $this->columns = [...$this->columns, ...$columns];
+
+        return $this;
     }
 
     /**

@@ -21,6 +21,7 @@ class WindowTheme implements WindowThemeInterface
     public function render(Window $window): string
     {
         $code = JsCode::create('// 打开弹窗');
+        $code->thenIf('row === undefined', 'row = {}');
         foreach ($window->getRowData() as $key => $value) {
             $code->then(JsVar::assign('row.' . $key, $value));
         }

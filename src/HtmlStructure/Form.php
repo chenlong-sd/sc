@@ -8,6 +8,7 @@ namespace Sc\Util\HtmlStructure;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
+use Sc\Util\HtmlStructure\Form\FormItemCustomize;
 use Sc\Util\HtmlStructure\Form\FormItemEditor;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
@@ -117,7 +118,7 @@ class Form
             }
 
             return $v->getDefault();
-        }, array_filter($this->getFormItems(), fn($v) => !$v instanceof FormItemSubmit)));
+        }, array_filter($this->getFormItems(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
     }
 
     /**

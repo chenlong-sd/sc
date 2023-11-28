@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultConstruct;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\UploadUrl;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
@@ -22,7 +23,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     const UPLOAD_TYPE_IMAGE = "image";
     const UPLOAD_TYPE_IMAGES = "images";
 
-    use DefaultConstruct, DefaultValue, UploadUrl, Events, Attrs, FormOrigin;
+    use DefaultConstruct, DefaultValue, UploadUrl, Events, Attrs, FormOrigin, LabelWidth;
 
     protected string|AbstractHtmlElement $uploadEl = "选择文件";
     protected string $uploadType = self::UPLOAD_TYPE_FILE;

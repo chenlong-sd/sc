@@ -59,4 +59,5 @@ interface FormItemAttrGetter
     public function getResetText();
     public function getMultiple();
     public function getPlain();
+    public function getRemoteSearch();
 }

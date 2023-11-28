@@ -61,20 +61,12 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $this->resourceLoad();
         // 隐藏logo
         Html::css()->addCss('#fr-logo{ display: none; }.fr-popup.fr-active{ z-index: 5 !important; }');
 
         $el = Theme::getRender(FormItemEditorThemeInterface::class, $theme)->render($this);
 
         return $this->ExecuteBeforeRendering($el);
-    }
-
-    private function resourceLoad(): void
-    {
-        Html::js()->load(StaticResource::FROALA_JS);
-        Html::css()->load(StaticResource::FROALA_CSS);
-        Html::js()->load(StaticResource::FROALA_LANGUAGE);
     }
 
     /**
