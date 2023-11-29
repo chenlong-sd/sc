@@ -25,6 +25,7 @@ class Column
     private string|\Stringable $format = '';
     private array $show = [];
     private array $search = [];
+    protected ?string $fixedPosition = null;
 
     public function __construct(private array $attrs = []){}
 
@@ -41,6 +42,20 @@ class Column
         $attrs = is_string($attr) ? [$attr => $value] : $attr;
 
         $this->attrs = [...$this->attrs, ...$attrs];
+
+        return $this;
+    }
+
+    /**
+     * 固定列
+     *
+     * @param string $position
+     *
+     * @return Column
+     */
+    public function fixed(#[ExpectedValues(['right', 'left'])]string $position = 'right'): static
+    {
+        $this->fixedPosition = $position;
 
         return $this;
     }
@@ -259,11 +274,11 @@ class Column
     }
 
     /**
-     * @param mixed $mapping 支持 key => value , [value => ', label => ']
+     * @param array $mapping 支持 key => value , [value => ', label => ']
      *
      * @return Column
      */
-    public function showMapping(mixed $mapping): static
+    public function showMapping(array $mapping): static
     {
         $this->show = [
             'type' => 'mapping',
@@ -273,5 +288,10 @@ class Column
         ];
 
         return $this;
+    }
+
+    public function getFixedPosition(): ?string
+    {
+        return $this->fixedPosition;
     }
 }

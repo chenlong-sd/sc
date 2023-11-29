@@ -34,6 +34,10 @@ abstract class AbstractFormItemTheme
     public function addEvent(AbstractHtmlElement $element, array $events, string $prefix = ''): void
     {
         foreach ($events as $event => $handle){
+            if (is_string($handle)) {
+                $element->setAttr('@' . $event, $handle);
+                continue;
+            }
             $name = $prefix . "__" . $event;
             $element->setAttr('@' . $event, $name);
             Html::js()->vue->addMethod($name, $handle);

@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemDatetime;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemDatetimeThemeInterface;
@@ -28,10 +29,36 @@ class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDat
             'placeholder' => $formItemDatetime->getPlaceholder(),
         ])->setAttrs($formItemDatetime->getVAttrs());
 
+        $datetime->setAttrIfNotExist('type', 'datetime');
+
+        $this->formatHandle($datetime);
+
         if ($formItemDatetime->getCol()) {
             $datetime->setAttrIfNotExist('style', 'width:100%');
         }
 
         return $this->afterRender($formItemDatetime, $el->append($datetime));
+    }
+
+    /**
+     * YYYY-MM-DD  HH:mm:ss
+     *
+     * @param DoubleLabel $datetime
+     *
+     * @return void
+     */
+    private function formatHandle(DoubleLabel $datetime): void
+    {
+        if ($datetime->getAttr('format')) {
+            $datetime->setAttrIfNotExist('value-format', $datetime->getAttr('format'));
+            return;
+        }
+        $format = match ($datetime->getAttr('type')){
+            'date' => 'YYYY-MM-DD',
+            'datetime' => 'YYYY-MM-DD HH:mm:ss',
+        };
+
+        $datetime->setAttr('format', $format);
+        $datetime->setAttrIfNotExist('value-format', $format);
     }
 }

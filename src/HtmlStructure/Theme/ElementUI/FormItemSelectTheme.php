@@ -82,15 +82,19 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
             return;
         }
 
-        $field = $remoteSearch['code'] ?: $formItemSelect->getName();
-        $showField = explode('.', $field);
-        $showField = end($showField);
-        Html::js()->vue->addMethod($method, JsFunc::anonymous(['query'])->code(
+        $field     = $remoteSearch['code'] ?: $formItemSelect->getName();
+        $fields    = explode('.', $field);
+        $showField = count($fields) == 2 ? $fields[1] : $fields[0];
+
+        $defaultSearchField = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : $fields[0]);
+
+        Html::js()->vue->addMethod($method, JsFunc::anonymous(['query', 'cquery'])->code(
             Js\JsVar::def('options', $optionsVar),
             Axios::get($remoteSearch['url'], [
                 'search' => [
                     'search' => [
-                        $field => Grammar::mark('query')
+                        $field => Grammar::mark('query'),
+                        $defaultSearchField => Grammar::mark('cquery')
                     ],
                     'searchType' => [
                         $field => 'like'
@@ -111,6 +115,6 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
             ))
         ));
 
-        Html::js()->vue->event('mounted', JsFunc::call("this.$method", ''));
+        Html::js()->vue->event('mounted', JsFunc::call("this.$method", '', '@this.' . $formItemSelect->getForm()->getId() . '.' . $formItemSelect->getName()));
     }
 }

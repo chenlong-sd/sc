@@ -50,14 +50,18 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
     /**
      * @param string|Url                  $url
      * @param string|\Closure|JsFunc|null $fieldOrCode 为字符串时识别为搜索的字段，否则为搜索处理代码
+     * @param string|null                 $defaultSearchField 有默认值时搜索值
      *
      * @return $this
      */
-    public function remoteSearch(string|Url $url,  #[Language('JavaScript')]string|\Closure|JsFunc $fieldOrCode = null): static
+    public function remoteSearch(string|Url $url,  #[Language('JavaScript')]string|\Closure|JsFunc $fieldOrCode = null, string $defaultSearchField = null): static
     {
+        $code = $fieldOrCode instanceof \Closure ? $fieldOrCode() : $fieldOrCode;
+
         $this->remoteSearch = [
             'url' => $url,
-            'code' => $fieldOrCode instanceof \Closure ? $fieldOrCode() : $fieldOrCode
+            'code' => is_array($code) ? $code[0] : $code,
+            'defaultSearchField' => is_array($code) ? $code[1] : ($defaultSearchField)
         ];
 
         return $this;

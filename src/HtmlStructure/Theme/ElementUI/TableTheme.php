@@ -192,7 +192,7 @@ class TableTheme implements TableThemeInterface
             return $column->getAttr('mark-event');
         });
         if (!$eventColumn = current($events)) {
-            $eventColumn = Column::event();
+            $eventColumn = Column::event()->fixed();
             $table->addColumns($eventColumn);
         }
 

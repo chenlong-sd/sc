@@ -14,12 +14,12 @@ trait Events
     /**
      * 事件
      *
-     * @param string $event
-     * @param JsFunc $handler
+     * @param string        $event
+     * @param JsFunc|string $handler
      *
      * @return $this
      */
-    public function event(string $event, JsFunc $handler): static
+    public function event(string $event, JsFunc|string $handler): static
     {
         $this->events[$event] = $handler;
 
