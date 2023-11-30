@@ -192,12 +192,12 @@ class TableColumnTheme implements TableColumnThemeInterface
 
     private function mappingHandle(Column $column, array $config): void
     {
-        if (count($config) === count($config, COUNT_RECURSIVE)) {
+        if (count($config['options']) === count($config['options'], COUNT_RECURSIVE)) {
             $new = [];
-            foreach ($config as $value => $label) {
+            foreach ($config['options'] as $value => $label) {
                 $new[] = compact('value', 'label');
             }
-            $config = $new;
+            $config['options'] = $new;
         }
 
         $mappingName = $column->getAttr('prop') . "Mapping";

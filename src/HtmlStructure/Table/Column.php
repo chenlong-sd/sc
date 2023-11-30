@@ -14,7 +14,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
 /**
  * Class Column
  * @method static Column selection() 选择列
- * @method static Column index()     索引列
+ * @method static Column index(string $title = '')     索引列
  * @method static Column expand(string $title)    可展开列，仅ElementUI
  * @method static Column normal(string $title, string $prop = '') 常规列
  * @method static Column event(string $title = '') 事件列
@@ -250,6 +250,10 @@ class Column
         } else if ($name === 'event') {
             $initAttr['label']      = $arguments[0] ?? '操作';
             $initAttr['mark-event'] = true;
+        } else if ($name === 'index') {
+            $initAttr['label'] = $arguments[0] ?? '序号';
+            $initAttr['type']  = $name;
+            $initAttr['width'] = 80;
         } else {
             $initAttr['type'] = $name;
         }

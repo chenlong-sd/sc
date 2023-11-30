@@ -99,9 +99,9 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
                     'searchType' => [
                         $field => 'like'
                     ],
-                    'page' => 1,
-                    'limit' => 20
                 ],
+                'page' => 1,
+                'pageSize' => 20
             ])->success(JsCode::make(
                 Js\JsFor::loop('let i = 0; i < data.data.data.length; i++')->then(
                     Js\JsIf::when("!data.data.data[i].hasOwnProperty('value')")->then(

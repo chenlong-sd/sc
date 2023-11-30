@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructure\Form;
 
 use JetBrains\PhpStorm\ExpectedValues;
+use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
@@ -39,14 +40,14 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         return $this->ExecuteBeforeRendering($el);
     }
 
-    public function setSubmit(string $jsCode): static
+    public function setSubmit(#[Language('JavaScript')] string $jsCode): static
     {
         $this->submitHandle = $jsCode;
 
         return $this;
     }
 
-    public function setReset(string $jsCode): static
+    public function setReset(#[Language('JavaScript')] string $jsCode): static
     {
         $this->resetHandle = $jsCode;
 
@@ -83,14 +84,14 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function success(string $code, bool $strict = false): static
+    public function success(#[Language('JavaScript')] string $code, bool $strict = false): static
     {
         $this->success = $strict ? "@strict " . $code : $code;
 
         return $this;
     }
 
-    public function fail(string $code): static
+    public function fail(#[Language('JavaScript')] string $code): static
     {
         $this->fail = $code;
 

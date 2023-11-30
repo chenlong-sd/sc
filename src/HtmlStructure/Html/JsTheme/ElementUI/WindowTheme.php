@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Window;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
+use Sc\Util\HtmlStructure\Html\StaticResource;
 
 class WindowTheme implements WindowThemeInterface
 {
@@ -37,6 +38,7 @@ class WindowTheme implements WindowThemeInterface
             ':close-on-click-modal' => "false",
             ':title'           => $vModel . "Title",
             'v-model'          => $vModel,
+            ':draggable'       => "true"
         ], $attrs);
         Html::js()->vue->set( $vModel . "Title", '');
 
@@ -137,7 +139,6 @@ class WindowTheme implements WindowThemeInterface
                 this['{$vModel}IframeUrl'] = parsedUrl.href;
             JS);
     }
-
     /**
      * @param AbstractHtmlElement|string|null $elements
      * @param DoubleLabel                     $template

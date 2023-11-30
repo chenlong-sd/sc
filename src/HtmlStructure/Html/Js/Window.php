@@ -110,10 +110,19 @@ class Window
 
     public function toCode(string $theme = null)
     {
+        if ($theme === null && $this->url) {
+            $theme = 'Layui';
+        }
+
         $theme = JsTheme::getTheme(WindowThemeInterface::class, $theme);
         $theme = new $theme();
 
         return $theme->render($this);
+    }
+
+    public function render(string $theme = null)
+    {
+        return $this->toCode($theme);
     }
 
     public function __toString(): string

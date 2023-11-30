@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Form\FormItemGroup;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Html\Html;
@@ -30,6 +31,12 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         Html::css()->addCss(".el-form-item .vue--form-card .el-form-item{margin-bottom:18px;}");
 
         $children  = $formItemGroup->getChildren();
+        if ($formItemGroup->getPlain() && $formItemGroup->getLabel()) {
+            $children = [
+                FormItem::customize($formItemGroup->getLabel()),
+                ...$children
+            ];
+        }
 
         $row = El::double('el-row')->setAttr(':gutter', 10);
 
@@ -40,14 +47,13 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             $el = $row;
         }else{
             $el->append($row);
-        }
-
-        if ($formItemGroup->getLabel()) {
-            $el->append(
-                El::double('template')->setAttr('#header')->append(
-                    El::double('el-text')->setAttr('size', 'large')->append($formItemGroup->getLabel())
-                )
-            );
+            if ($formItemGroup->getLabel()) {
+                $el->append(
+                    El::double('template')->setAttr('#header')->append(
+                        El::double('el-text')->setAttr('size', 'large')->append($formItemGroup->getLabel())
+                    )
+                );
+            }
         }
 
         return $this->afterRender($formItemGroup, $el);
