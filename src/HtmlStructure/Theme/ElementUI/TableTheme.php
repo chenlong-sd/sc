@@ -36,8 +36,12 @@ class TableTheme implements TableThemeInterface
     public function render(Table $table): AbstractHtmlElement
     {
         $el = El::double('el-table');
+
         $attrs = $table->getAttrs();
-        $attrs['v-loading'] = $table->getId() . 'Loading';
+        if (empty($attrs['v-loading']) && is_string($table->getData())) {
+            $attrs['v-loading'] = $table->getId() . 'Loading';
+            Html::js()->vue->set( $table->getId() . 'Loading', false);
+        }
 
         $dataVarName = $this->dataSet($table);
 
@@ -46,7 +50,7 @@ class TableTheme implements TableThemeInterface
         }
 
         Html::css()->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
-        Html::js()->vue->set( $table->getId() . 'Loading', false);
+
         if (empty($attrs['header-cell-class-name'])) {
             Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
             $attrs['header-cell-class-name'] = 'vue--table-header-center';

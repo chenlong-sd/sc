@@ -25,7 +25,7 @@ class WindowTheme implements WindowThemeInterface
 
         $code = JsCode::create('// 打开弹窗')->then(
             JsVar::def('url', $window->getUrl()),
-            JsVar::def('query', $window->getQuery()),
+            JsVar::def('query', $window->getQuery() ?: '@{}'),
         );
 
         $this->urlHandle($code);
@@ -34,21 +34,20 @@ class WindowTheme implements WindowThemeInterface
             ? ['type' => 2, 'area' => ['90%', '90%'], 'content' => Grammar::mark('url')]
             : ['type' => 1, 'content' => $window->getContent()];
 
-        $baseConfig['anim'] = 5;
-
         $baseConfig = array_merge($baseConfig, $config);
 
-        $baseConfig['title']  = $window->getTitle();
+        $baseConfig['title']  = Grammar::mark(sprintf('`%s`', preg_replace('/\{(.*?)}/', "\${row.$1}", $window->getTitle())));
         $baseConfig['maxmin'] = true;
+        $baseConfig['moveOut'] = true;
 
         $originCode = '';
         if (!empty($baseConfig['success']) && $baseConfig['success'] instanceof JsFunc) {
             $originCode = $baseConfig['success']->code;
         }
-
+        $code->then(JsVar::def("childrenWin"));
         $baseConfig['success'] = JsFunc::anonymous(['layero', 'index', 'that'], <<<JS
             layero.find('.layui-layer-content').css('background', 'white')
-            let childrenWin = window[layero.find('iframe')[0]['name']];
+            childrenWin = window[layero.find('iframe')[0]['name']];
             $originCode;
         JS);
 

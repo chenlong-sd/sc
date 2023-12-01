@@ -29,7 +29,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
             'v-model'     => $this->getVModel($formItemSelect),
             'placeholder' => $formItemSelect->getPlaceholder(),
             'clearable'   => '',
-            'filterable'  => ''
+            'filterable'  => '',
         ]);
         $select->setAttrs($formItemSelect->getVAttrs());
 

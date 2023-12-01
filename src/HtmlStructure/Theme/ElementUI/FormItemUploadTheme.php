@@ -62,6 +62,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         Html::js()->vue->addMethod("{$formItemUpload->getName()}remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
 
+        $uploadEl->setAttrs($formItemUpload->getVAttrs());
 
         return $upload->append($uploadEl);
     }

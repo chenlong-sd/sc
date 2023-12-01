@@ -62,10 +62,27 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             if (str_contains($success, '@strict ')){
                 $successHandle = preg_replace("/^@strict/", '', $success);
             }else{
+                $closePage = $formItemSubmit->getClosePage();
+                if ($closePage['theme'] == "ElementUI") {
+                    $closeCode = "VueApp.closeWindow()";
+                }else{
+                    $closeCode = "layer.close(index);";
+                }
+
+                if ($closePage['page'] == 'parent') {
+                    $closeCode = JsCode::create("parent.$closeCode");
+                    if ($closePage['theme'] != 'ElementUI') {
+                        $closeCode = JsCode::make(
+                            JsVar::def('index', '@parent.layer.getFrameIndex(window.name)'),
+                            $closeCode
+                        );
+                    }
+                }
+
                 $successHandle = JsCode::create($formItemSubmit->getSuccessTipCode())
                     ->then($success)
                     ->then("this.{$formId}Reset()")
-                    ->then($formItemSubmit->getSuccessCloseCode());
+                    ->then($closeCode);
             }
             $submitHandle = Axios::post(
                 url: Grammar::mark("this.{$formId}Url"),

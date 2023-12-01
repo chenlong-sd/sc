@@ -45,4 +45,11 @@ class JsServiceTheme implements JsServiceThemeInterface
 
         return JsFunc::call("layer.confirm", $message, $options, JsFunc::arrow(['index'], $then));
     }
+
+    public function loading(): string
+    {
+        $message = $this->jsService->serviceConfig['message'];
+
+        return JsFunc::call('layer.load', $message);
+    }
 }

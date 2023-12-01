@@ -60,4 +60,5 @@ interface FormItemAttrGetter
     public function getMultiple();
     public function getPlain();
     public function getRemoteSearch();
+    public function getClosePage();
 }

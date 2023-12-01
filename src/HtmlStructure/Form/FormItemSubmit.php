@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -26,12 +27,18 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     protected string $fail = '';
     protected string $success = '';
     protected string $successTipCode = 'this.$message.success("成功")';
+    protected array $closePage = ['page' => 'current', 'theme' => 'ElementUI'];
 
     /**
      * @param string $submitText
      * @param string $resetText 为空时则隐藏
      */
-    public function __construct(protected string $submitText = '提交', protected string $resetText = '重置'){}
+    public function __construct(
+        protected string $submitText = '提交',
+        protected string $resetText = '重置'
+    ){
+        $this->successTipCode = JsService::message("成功");
+    }
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -65,21 +72,21 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     /**
      * 成功关闭
      *
-     * @param string $page
+     * @param string      $page
+     * @param string|null $theme
      *
      * @return $this
      */
     public function successClose(#[ExpectedValues([
         'current', // 当前页面
         'parent' , // 父级页面
-    ])] string $page): static
+    ])] string $page, #[ExpectedValues([...Theme::AVAILABLE_THEME, null])] ?string $theme = null): static
     {
-        if ($page === 'current') {
-            $this->successCloseCode = "VueApp.closeWindow()";
-        }else{
-            $this->successCloseCode = "parent.VueApp.closeWindow()";
-            $this->successTipCode = 'parent.VueApp.$message.success("成功")';
+        if ($theme === null) {
+            $theme = $page == 'parent' ? 'Layui' : 'ElementUI';
         }
+
+        $this->closePage = compact('page', 'theme');
 
         return $this;
     }
