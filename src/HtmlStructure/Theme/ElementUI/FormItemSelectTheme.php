@@ -86,7 +86,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
         $fields    = explode('.', $field);
         $showField = count($fields) == 2 ? $fields[1] : $fields[0];
 
-        $defaultSearchField = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : $fields[0]);
+        $defaultSearchField = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : 'id');
 
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['query', 'cquery'])->code(
             Js\JsVar::def('options', $optionsVar),
