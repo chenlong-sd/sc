@@ -266,17 +266,22 @@ class TableTheme implements TableThemeInterface
                 ->setAttr(':underline', 'false')
                 ->append($el);
         }
+        $attr = [];
+        if (is_array($el)) {
+            $attr  = $el[1] ?? [];
+            $el    = $el[0];
+        }
 
         if (is_string($el) && str_starts_with($el, '@')) {
             $bt   = explode('.', substr($el, 1));
             $type = $bt[0];
             if (count($bt) > 2) {
                 $bt[1] = preg_replace('/(?<=\w)[A-Z]/', '-$0', $bt[1]);
-                $icon  = El::double('el-icon')->append(El::double($bt[1]));
-                $title = "&nbsp;" . $bt[2];
+                $icon  = $bt[1];
+                $title = $bt[2];
             } else {
                 $title = $bt[1] ?? '';
-                $icon  = '';
+                $icon  = null;
             }
             if (str_contains($title, '[')){
                 preg_match("/([^\[]+)\[(.*)\]/", $title, $match);
@@ -284,10 +289,9 @@ class TableTheme implements TableThemeInterface
                 $theme = $match[2];
             }
 
-            $el = El::double('el-button')
-                ->setAttr('type', $type)
-                ->append($icon)
-                ->append($title);
+            $attr = array_merge(['type' => $type, 'icon' => $icon], $attr);
+
+            $el = El::double('el-button')->setAttrs($attr)->append($title);
             if (isset($theme)) {
                 $el->setAttr($theme);
             }

@@ -168,14 +168,14 @@ class Table
     }
 
     /**
-     * @param string|AbstractHtmlElement $eventLabel 如只是需要改变按钮颜色和添加图标，
+     * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
      * @param mixed                      $handler    事件处理代码，行数据变量  row , 取当前行id值：row.id
      *
      * @date 2023/6/1
      */
-    public function setRowEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): void
+    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): void
     {
         $eventName = Tool::random('RowEvent')->get();
 
