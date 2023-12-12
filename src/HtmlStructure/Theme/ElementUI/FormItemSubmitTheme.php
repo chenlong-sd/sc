@@ -31,7 +31,7 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     {
         $formId = $formItemSubmit->getForm()->getId();
 
-        $el = El::double('el-form-item')->setAttr("label", ' ')->setAttr('submit-sign');
+        $el = $this->getBaseEl($formItemSubmit)->setAttr('submit-sign');
 
         $submitButton = El::double('el-button')->setAttrs([
             'type'      => 'primary',

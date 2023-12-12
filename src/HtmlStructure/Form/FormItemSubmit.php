@@ -7,6 +7,7 @@ use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
@@ -17,7 +18,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemSubmit extends AbstractFormItem implements FormItemInterface
 {
-    use FormOrigin, Events;
+    use FormOrigin, Events,LabelWidth;
 
     protected string $createUrl = '';
     protected string $updateUrl = '';
