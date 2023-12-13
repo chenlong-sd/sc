@@ -171,6 +171,7 @@ class Table
      * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
+     *                                               数组时，第一个元素为数组，会识别为元素的属性值
      * @param mixed                      $handler    事件处理代码，行数据变量  row , 取当前行id值：row.id
      *
      * @date 2023/6/1

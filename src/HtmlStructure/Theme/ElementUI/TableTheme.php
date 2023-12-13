@@ -130,7 +130,7 @@ class TableTheme implements TableThemeInterface
                 "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
                 "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
             ],
-            'query' => Grammar::mark("this.getUrlSearch()")
+            'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
         ];
         if ($table->isOpenPagination()) {
             $query['page']     = Grammar::mark("this.{$table->getId()}Page");

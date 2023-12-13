@@ -32,7 +32,7 @@ class Url implements \Stringable
         if ($url) {
             $this->urlInfo = parse_url($url);
 
-            parse_str($this->getQuery(''), $this->query);
+            parse_str($this->urlInfo['query'] ?? '', $this->query);
         }
     }
 
