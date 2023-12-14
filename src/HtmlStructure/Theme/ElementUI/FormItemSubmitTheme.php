@@ -36,7 +36,8 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         $submitButton = El::double('el-button')->setAttrs([
             'type'      => 'primary',
             '@click'    => $formId . "Submit",
-            'v-loading' => Html::js()->vue->bind($formId . "Loading", false)
+            'v-loading' => Html::js()->vue->bind($formId . "Loading", false),
+            ':disabled' => $formId . "Loading",
         ])->append($formItemSubmit->getSubmitText());
 
         $reset = El::double('el-button')->setAttrs([
