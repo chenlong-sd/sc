@@ -103,7 +103,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setHeaderEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): void
+    public function setHeaderEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): static
     {
         $eventName = Tool::random('HeaderEvent')->get();
 
@@ -112,6 +112,8 @@ class Table
             'handler'  => $handler instanceof \Closure ? $handler() : $handler,
             'position' => 'left'
         ];
+
+        return $this;
     }
 
     /**
@@ -176,7 +178,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): void
+    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
     {
         $eventName = Tool::random('RowEvent')->get();
 
@@ -185,6 +187,8 @@ class Table
             'handler' => $handler instanceof \Closure ? $handler() : $handler,
             'group'   => $this->rowGroup
         ];
+
+        return $this;
     }
 
     /**
@@ -193,9 +197,9 @@ class Table
      * @param string|AbstractHtmlElement $eventLabel
      * @param \Closure                   $closure
      *
-     * @return void
+     * @return Table
      */
-    public function setRowGroupEvent(string|AbstractHtmlElement $eventLabel, \Closure $closure): void
+    public function setRowGroupEvent(string|AbstractHtmlElement $eventLabel, \Closure $closure): static
     {
         $this->rowGroup = md5($eventLabel);
         $this->rowGroupEvent[$this->rowGroup] = $eventLabel;
@@ -203,6 +207,8 @@ class Table
         $closure($this);
 
         $this->rowGroup = null;
+
+        return $this;
     }
 
     /**
