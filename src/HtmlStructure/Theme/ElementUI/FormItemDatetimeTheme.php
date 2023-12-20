@@ -55,7 +55,7 @@ class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDat
         }
         $format = match ($datetime->getAttr('type')){
             'date' => 'YYYY-MM-DD',
-            'datetime' => 'YYYY-MM-DD HH:mm:ss',
+            default =>  'YYYY-MM-DD HH:mm:ss'
         };
 
         $datetime->setAttr('format', $format);

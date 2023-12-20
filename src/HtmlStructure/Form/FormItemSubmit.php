@@ -88,6 +88,9 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         }
 
         $this->closePage = compact('page', 'theme');
+        if ($page == 'parent') {
+            $this->successTipCode = JsService::message("成功")->toParent();
+        }
 
         return $this;
     }

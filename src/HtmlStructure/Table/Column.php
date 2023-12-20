@@ -99,9 +99,20 @@ class Column
                     }, $this->show['config']['options'])
                 );
             }else if (str_contains($this->attrs['prop'], 'time')) {
-                $formItem = FormItem::datetime($this->attrs['prop'])->setTimeType('datetimerange')->valueFormat();
+                $formItem = FormItem::datetime($this->attrs['prop'])
+                    ->setVAttrs([
+                        'start-placeholder' => "开始时间",
+                        'end-placeholder'   => "结束时间",
+                    ])
+                    ->setTimeType('datetimerange')->valueFormat();
             }else if (str_contains($this->attrs['prop'], 'date')) {
-                $formItem = FormItem::datetime($this->attrs['prop'])->setTimeType('daterange')->valueFormat('YYYY-MM-DD');
+                $formItem = FormItem::datetime($this->attrs['prop'])
+                    ->setTimeType('daterange')
+                    ->setVAttrs([
+                        'start-placeholder' => "开始日期",
+                        'end-placeholder'   => "结束日期",
+                    ])
+                    ->valueFormat('YYYY-MM-DD');
             }else if ($type === 'in') {
                 $formItem = FormItem::select($this->attrs['prop'])->setVAttrs('allow-create');
             }else{

@@ -12,6 +12,11 @@ use Sc\Util\HtmlStructure\Html\JsTheme\JsTheme;
  */
 class JsService
 {
+    /**
+     * @var true
+     */
+    public bool $isParent = false;
+
     private function __construct(public mixed $serviceConfig, public readonly string $type) { }
 
     /**
@@ -73,6 +78,13 @@ class JsService
         $theme = JsTheme::getTheme(JsServiceThemeInterface::class);
 
         return (new $theme($this))->{$this->type}();
+    }
+
+    public function toParent(): static
+    {
+        $this->isParent = true;
+
+        return $this;
     }
 
     public function __toString(): string
