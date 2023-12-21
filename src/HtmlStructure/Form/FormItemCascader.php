@@ -21,10 +21,27 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Placeholder, Options, LabelWidth, FormOrigin, Events, Attrs;
 
+    /**
+     * @var true
+     */
+    protected bool $closeAfterSelection = false;
+
     public function render(string $theme = null): AbstractHtmlElement
     {
         $el = Theme::getRender(FormItemCascaderThemeInterface::class, $theme)->render($this);
 
         return $this->ExecuteBeforeRendering($el);
+    }
+
+    /**
+     * 选择后即关闭
+     *
+     * @return $this
+     */
+    public function closeAfterSelection(): static
+    {
+        $this->closeAfterSelection = true;
+
+        return $this;
     }
 }
