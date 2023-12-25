@@ -437,11 +437,12 @@ class Tree
      * @param string $str
      * @param string $separate
      *
-     * @return array{chain:array, parent:mixed}
+     * @return array{"chain":array, "parent":mixed}
      */
     public static function chainToArr(string $str, string $separate = ','): array
     {
         $chain = array_filter(explode($separate, $str), fn($v) => $v !== '');
+        $chain = array_map(fn($v) => filter_var($v, FILTER_VALIDATE_INT) ? (int)$v : $v, $chain);
 
         return [
             "chain"  => $chain,
