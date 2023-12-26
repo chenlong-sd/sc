@@ -86,6 +86,30 @@ trait ElementQuery
     }
 
     /**
+     * 后面第几个元素
+     *
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function next(int $number = 1): mixed
+    {
+        return $this->brothers($number);
+    }
+
+    /**
+     * 前面第几个元素
+     *
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function pre(int $number = 1): mixed
+    {
+        return $this->brothers(-$number);
+    }
+
+    /**
      * 获取所有匹配项
      *
      * @param string|callable $selector
@@ -207,5 +231,18 @@ trait ElementQuery
         }
 
         return true;
+    }
+
+    /**
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    private function brothers(int $number): mixed
+    {
+        $currentLayerEl = $this->getParent()?->getChildren() ?: [];
+        $thisIndex      = array_search($this, $currentLayerEl);
+
+        return $currentLayerEl[$thisIndex + $number] ?? null;
     }
 }

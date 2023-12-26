@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\Js\Layer;
 use Sc\Util\HtmlStructure\Html\Js\Window;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
 
@@ -53,7 +54,7 @@ class WindowTheme implements WindowThemeInterface
 
         Html::loadThemeResource('Layui');
 
-        return $code->then(JsFunc::call('layer.open', $baseConfig));
+        return $code->then(Layer::open($baseConfig));
     }
 
 

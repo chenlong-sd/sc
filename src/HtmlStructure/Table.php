@@ -95,7 +95,7 @@ class Table
     /**
      * 设置头部事件
      *
-     * @param string|AbstractHtmlElement $eventLabel 如只是需要改变按钮颜色和添加图标，
+     * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               可使用：@success.icon.title[theme], theme可取：default, plain
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
@@ -103,7 +103,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setHeaderEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): static
+    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
     {
         $eventName = Tool::random('HeaderEvent')->get();
 
