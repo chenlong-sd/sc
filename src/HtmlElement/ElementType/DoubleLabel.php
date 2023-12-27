@@ -167,4 +167,16 @@ class DoubleLabel extends AbstractHtmlElement
     {
         return array_search($element, $this->childrenNodes, true);
     }
+
+    /**
+     * @param AbstractHtmlElement|string|array $elements
+     *
+     * @return DoubleLabel|$this
+     */
+    public function setChildren(AbstractHtmlElement|string|array $elements): static
+    {
+        $this->childrenNodes = is_array($elements) ? $elements : [El::get($elements)];
+
+        return $this;
+    }
 }

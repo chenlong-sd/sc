@@ -81,7 +81,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     public function successClose(#[ExpectedValues([
         'current', // 当前页面
         'parent' , // 父级页面
-    ])] string $page, #[ExpectedValues([...Theme::AVAILABLE_THEME, null])] ?string $theme = null): static
+    ])] ?string $page, #[ExpectedValues([...Theme::AVAILABLE_THEME, null])] ?string $theme = null): static
     {
         if ($theme === null) {
             $theme = $page == 'parent' ? 'Layui' : 'ElementUI';
