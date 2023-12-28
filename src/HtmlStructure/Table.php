@@ -75,13 +75,16 @@ class Table
      * @param string|array $attr
      * @param mixed        $value
      *
+     * @return Table
      * @date 2023/5/26
      */
-    public function setAttr(string|array $attr, mixed $value = null): void
+    public function setAttr(string|array $attr, mixed $value = null): static
     {
         $attrs = is_string($attr) ? [$attr => $value] : $attr;
 
         $this->attrs = array_merge($this->attrs, $attrs);
+
+        return $this;
     }
 
     /**
