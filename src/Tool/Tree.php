@@ -434,13 +434,19 @@ class Tree
     /**
      *  1,2,3, = [1,2,3]
      *
-     * @param string $str
-     * @param string $separate
+     * @param string|null $str
+     * @param string      $separate
      *
      * @return array{"chain":array, "parent":mixed}
      */
-    public static function chainToArr(string $str, string $separate = ','): array
+    public static function chainToArr(?string $str, string $separate = ','): array
     {
+        if (!$str) {
+            return [
+                "chain"  => [],
+                'parent' => 0
+            ];
+        }
         $chain = array_filter(explode($separate, $str), fn($v) => $v !== '');
         $chain = array_map(fn($v) => filter_var($v, FILTER_VALIDATE_INT) ? (int)$v : $v, $chain);
 
