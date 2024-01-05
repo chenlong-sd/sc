@@ -24,7 +24,7 @@ class JsServiceTheme implements JsServiceThemeInterface
 
             $this->jsService->serviceConfig = [$messageKey => $this->jsService->serviceConfig];
         }
-        $this->callVar = $this->jsService->isParent ? 'parent.VueApp' : 'this';
+        $this->callVar = $this->jsService->window !== null ? $this->jsService->window .= '.VueApp' : 'this';
 
         $this->jsService->serviceConfig = array_map(fn($v) => $v instanceof \Stringable ? (string)$v : $v, $this->jsService->serviceConfig);
     }

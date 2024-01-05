@@ -157,6 +157,38 @@ class Vue
     }
 
     /**
+     * 获取可用的method
+     *
+     * @param string $method
+     *
+     * @return string
+     */
+    public function getAvailableMethod(string $method = ''): string
+    {
+        if (!$method) {
+            return $this->getAvailableMethod("cusMethod");
+        }
+
+        if (isset($this->config['methods'][$method])) {
+            return $this->getAvailableMethod($method . "_m_");
+        }
+
+        return $method;
+    }
+
+    /**
+     * 是否存在 method
+     *
+     * @param string $method
+     *
+     * @return bool
+     */
+    public function existsMethod(string $method): bool
+    {
+        return isset($this->config['methods'][$method]);
+    }
+
+    /**
      * Vue 生命周期事件
      *
      * @param string $event

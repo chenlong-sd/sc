@@ -70,8 +70,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
         $remoteSearch = $formItemSelect->getRemoteSearch();
         if (!$remoteSearch) return;
 
-
-        $method = $formItemSelect->getName() . "RemoteSearch";
+        $method = Html::js()->vue->getAvailableMethod($formItemSelect->getName() . "RemoteSearch");
         $select->setAttrs([
             ":remote" => 'true',
             ':remote-method' => $method

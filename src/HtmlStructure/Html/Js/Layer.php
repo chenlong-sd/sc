@@ -18,23 +18,23 @@ use Sc\Util\HtmlStructure\Html\Js;
  * @method static Layer alert(string $content, array $options = null, JsFunc $yes = null)
  * @method static Layer confirm(string $content, array $options = null, JsFunc $yes = null, JsFunc $cancel = null)
  * @method static Layer msg(string $content, array $options = null, JsFunc $end = null)
- * @method static Layer load(int $icon = null, array $options = null)
+ * @method static Layer load(int|mixed $icon = null, array $options = null)
  * @method static Layer tips(string $content, string $elem, array $options = null)
- * @method static Layer close(int $index, array $options = null)
+ * @method static Layer close(int|mixed $index, array $options = null)
  * @method static Layer closeAll(string $type, JsFunc $callback)
  * @method static Layer closeLast(string $type, JsFunc $callback)
  * @method static Layer config(array $options)    全局配置默认属性。
  * @method static Layer ready(JsFunc $callback)    样式初始化就绪。
- * @method static Layer style(int $index, array $css)    重新设置弹层样式。
- * @method static Layer title(string $title, int $index)    设置弹层的标题。
- * @method static Layer getChildFrame(string $selector, int $index) 获取 iframe 页中的元素。
+ * @method static Layer style(int|mixed $index, array $css)    重新设置弹层样式。
+ * @method static Layer title(string $title, int|mixed $index)    设置弹层的标题。
+ * @method static Layer getChildFrame(string $selector, int|mixed $index) 获取 iframe 页中的元素。
  * @method static Layer getFrameIndex(string $name = 'window.name') 在 iframe 页中获取弹层索引。
- * @method static Layer iframeAuto(int $index)  设置 iframe 层高度自适应。
- * @method static Layer iframeSrc(int $index, string $url)  重新设置 iframe 层 URL。
+ * @method static Layer iframeAuto(int|mixed $index)  设置 iframe 层高度自适应。
+ * @method static Layer iframeSrc(int|mixed $index, string $url)  重新设置 iframe 层 URL。
  * @method static Layer setTop(string $var)  将对应弹层的层叠顺序为置顶。
- * @method static Layer full(int $index)  设置弹层最大化尺寸。
- * @method static Layer min(int $index)  设置弹层最小化尺寸。
- * @method static Layer restore(int $index,)  还原弹层尺寸。
+ * @method static Layer full(int|mixed $index)  设置弹层最大化尺寸。
+ * @method static Layer min(int|mixed $index)  设置弹层最小化尺寸。
+ * @method static Layer restore(int|mixed $index,)  还原弹层尺寸。
  *
  * @package Sc\Util\HtmlStructure\Html\Js
  * @date    2023/5/19

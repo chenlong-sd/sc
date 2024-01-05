@@ -16,6 +16,7 @@ class JsService
      * @var true
      */
     public bool $isParent = false;
+    public ?string $window = null;
 
     private function __construct(public mixed $serviceConfig, public readonly string $type) { }
 
@@ -82,7 +83,17 @@ class JsService
 
     public function toParent(): static
     {
-        $this->isParent = true;
+        return $this->toWindow('parent');
+    }
+
+    /**
+     * @param string $window
+     *
+     * @return $this
+     */
+    public function toWindow(string $window): static
+    {
+        $this->window = $window;
 
         return $this;
     }

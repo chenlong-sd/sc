@@ -14,14 +14,14 @@ class JsServiceTheme implements JsServiceThemeInterface
 
     private string $parent = '';
 
-    public function __construct(private JsService $jsService)
+    public function __construct(private readonly JsService $jsService)
     {
         if (is_string($this->jsService->serviceConfig)) {
             $this->jsService->serviceConfig = [
                 'content' => $this->jsService->serviceConfig,
             ];
         }
-        $this->parent = $this->jsService->isParent ? 'parent.' : '';
+        $this->parent = $this->jsService->window !== null ? $this->jsService->window . '.' : '';
     }
 
     public function message(): string
