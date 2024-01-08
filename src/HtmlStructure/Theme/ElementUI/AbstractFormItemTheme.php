@@ -52,16 +52,16 @@ abstract class AbstractFormItemTheme
      */
     public function afterRender(FormItemInterface|FormItemAttrGetter $formItem, AbstractHtmlElement $el): AbstractHtmlElement
     {
-        if ($formItem->getWhen()){
-            $el->setAttr('v-if', $formItem->getWhen());
-        }
-
         if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml()) {
             $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
             if ($formItem->getAfterCol()) {
                 $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
             }
-            return $res->getParent() ?: $res;
+            $el = $res->getParent() ?: $res;
+        }
+
+        if ($formItem->getWhen()){
+            $el->setAttr('v-if', $formItem->getWhen());
         }
 
         return $el;
