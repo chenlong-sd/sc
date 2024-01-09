@@ -85,8 +85,10 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
                     ->then("this.{$formId}Reset()")
                     ->then($closeCode);
             }
+
+
             $submitHandle = Axios::post(
-                url: Grammar::mark("this.{$formId}Url"),
+                url: Grammar::mark("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
                 data: "@data"
             )->then(JsFunc::arrow(['{ data }'])->code(
                 JsIf::when('data.code === 200')
