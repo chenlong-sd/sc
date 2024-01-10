@@ -88,45 +88,8 @@ class Column
      */
     public function addSearch(#[ExpectedValues(['=', 'like', 'in', 'between', 'like_right'])] string $type = '=', FormItemInterface|string $formItem = null): static
     {
-        if (!$formItem) {
-            if($this->show){
-                $formItem = FormItem::select($this->attrs['prop'])->options(
-                    array_map(function ($options){
-                        if ($options instanceof AbstractHtmlElement){
-                            $options = trim($options->getContent());
-                        }
-                        return $options;
-                    }, $this->show['config']['options'])
-                );
-            }else if (str_contains($this->attrs['prop'], 'time')) {
-                $formItem = FormItem::datetime($this->attrs['prop'])
-                    ->setVAttrs([
-                        'start-placeholder' => "开始时间",
-                        'end-placeholder'   => "结束时间",
-                    ])
-                    ->setTimeType('datetimerange')->valueFormat();
-            }else if (str_contains($this->attrs['prop'], 'date')) {
-                $formItem = FormItem::datetime($this->attrs['prop'])
-                    ->setTimeType('daterange')
-                    ->setVAttrs([
-                        'start-placeholder' => "开始日期",
-                        'end-placeholder'   => "结束日期",
-                    ])
-                    ->valueFormat('YYYY-MM-DD');
-            }else if ($type === 'in') {
-                $formItem = FormItem::select($this->attrs['prop'])->setVAttrs('allow-create');
-            }else{
-                $formItem = FormItem::text($this->attrs['prop']);
-            }
-            $formItem->placeholder($this->attrs['label']);
-
-            if ($type === 'in' && $formItem instanceof FormItemSelect) {
-                $formItem->setVAttrs('multiple');
-            }
-        }
-
-        if (is_string($formItem)) {
-            $formItem = FormItem::text($formItem)->placeholder($this->attrs['label']);
+        if (!$formItem instanceof FormItemInterface) {
+            $formItem = $this->autoMakeFormItem($formItem, $type);
         }
 
         $this->search = [
@@ -308,5 +271,52 @@ class Column
     public function getFixedPosition(): ?string
     {
         return $this->fixedPosition;
+    }
+
+    /**
+     * @param FormItemInterface|string|null $formItem
+     * @param string                        $type
+     *
+     * @return mixed|\Sc\Util\HtmlStructure\Form\FormItemDatetime|FormItemSelect|\Sc\Util\HtmlStructure\Form\FormItemText
+     */
+    private function autoMakeFormItem(FormItemInterface|string|null $formItem, string $type): mixed
+    {
+        $name = $formItem ?: $this->attrs['prop'];
+        if ($this->show) {
+            $formItem = FormItem::select($name)->options(
+                array_map(function ($options) {
+                    if ($options instanceof AbstractHtmlElement) {
+                        $options = trim($options->getContent());
+                    }
+                    return $options;
+                }, $this->show['config']['options'])
+            );
+        } else if (str_contains($name, 'time')) {
+            $formItem = FormItem::datetime($name)
+                ->setVAttrs([
+                    'start-placeholder' => "开始时间",
+                    'end-placeholder'   => "结束时间",
+                ])
+                ->setTimeType('datetimerange')->valueFormat();
+        } else if (str_contains($name, 'date')) {
+            $formItem = FormItem::datetime($name)
+                ->setTimeType('daterange')
+                ->setVAttrs([
+                    'start-placeholder' => "开始日期",
+                    'end-placeholder'   => "结束日期",
+                ])
+                ->valueFormat('YYYY-MM-DD');
+        } else if ($type === 'in') {
+            $formItem = FormItem::select($name)->setVAttrs('allow-create');
+        } else {
+            $formItem = FormItem::text($name);
+        }
+        $formItem->placeholder($this->attrs['label']);
+
+        if ($type === 'in' && $formItem instanceof FormItemSelect) {
+            $formItem->multiple();
+        }
+
+        return $formItem;
     }
 }
