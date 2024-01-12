@@ -30,6 +30,7 @@ trait ElementQuery
             : [$this];
 
         try {
+            $stopEachException = new StopEachException();
             while ($element = array_shift($eloop)) {
                 $children = [];
                 if ($element instanceof DoubleLabel) {
@@ -37,7 +38,7 @@ trait ElementQuery
                 }
 
                 // 调用callable
-                call_user_func($callable, $element, new StopEachException());
+                call_user_func($callable, $element, $stopEachException);
 
                 $children and array_unshift($eloop, ...$children);
             }
