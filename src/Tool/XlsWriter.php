@@ -165,8 +165,7 @@ class XlsWriter extends Excel
      */
     public function headers(array $headers): void
     {
-
-        $currentColumn = 1;
+        $currentColumn = 0;
         $currentRow    = 1;
         foreach ($headers as $header) {
             $columnNumber = $header['columnNumber'] ?? 1;
@@ -240,21 +239,6 @@ class XlsWriter extends Excel
 
         $end = array_shift($res);
         return implode(array_map(fn($v) => self::$chars[--$v], array_reverse($res))) . self::$chars[$end];
-    }
-
-    /**
-     * @param int $columnIndex
-     *
-     * @return array
-     */
-    public static function getColumns(int $columnIndex): array
-    {
-        $res = [];
-        for ($i = 0; $i < $columnIndex; $i++){
-            $res[] = getColumn($i);
-        }
-
-        return $res;
     }
 
     /**

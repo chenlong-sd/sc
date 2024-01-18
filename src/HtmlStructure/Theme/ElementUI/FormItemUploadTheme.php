@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
+use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
@@ -65,9 +66,11 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         Html::js()->vue->addMethod("{$formItemUpload->getName()}remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
 
-        $uploadEl->setAttrs($formItemUpload->getVAttrs());
+        $upload->setAttrs($formItemUpload->getVAttrs());
 
-        return $upload->append($uploadEl)->append(El::double('template')->setAttr('#tip')->append($formItemUpload->getTip()));
+        $this->limitHandle($upload);
+
+        return $upload->append($uploadEl)->append(El::double('template')->setAttr('#tip')->append($this->tip($formItemUpload->getTip())));
     }
 
     /**
@@ -285,6 +288,32 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
 
         return El::double('div')->setAttr('style', 'width:100%')->append($table);
+    }
+
+    private function limitHandle(DoubleLabel $upload): void
+    {
+        if ((($limit = $upload->getAttr("limit")) || ($limit = $upload->getAttr(':limit'))) && !$upload->hasAttr(":on-exceed")) {
+            $method = "uploadOnExceed" . Tool::random('up')->get(11, 55);
+            $upload->setAttr(":on-exceed", $method);
+
+            Html::js()->vue->addMethod($method, JsFunc::anonymous()->code(
+                JsService::message("文件限制数量为" . $limit, 'error')
+            ));
+        }
+    }
+
+    /**
+     * @param String|AbstractHtmlElement $tip
+     *
+     * @return DoubleLabel|AbstractHtmlElement
+     */
+    private function tip(String|AbstractHtmlElement $tip): DoubleLabel|AbstractHtmlElement
+    {
+        if ($tip instanceof AbstractHtmlElement) {
+            return $tip;
+        }
+
+        return El::double('el-text')->setAttr('style', 'margin-left:5px')->append($tip);
     }
 
 }
