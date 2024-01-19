@@ -303,11 +303,11 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     }
 
     /**
-     * @param String|AbstractHtmlElement $tip
+     * @param String|AbstractHtmlElement|null $tip
      *
      * @return DoubleLabel|AbstractHtmlElement
      */
-    private function tip(String|AbstractHtmlElement $tip): DoubleLabel|AbstractHtmlElement
+    private function tip(String|AbstractHtmlElement|null $tip): DoubleLabel|AbstractHtmlElement
     {
         if ($tip instanceof AbstractHtmlElement) {
             return $tip;
