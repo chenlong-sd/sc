@@ -70,7 +70,7 @@ class Vue
 
         $this->config['methods'] = [];
 
-        Html::html()->find('#app')->setAttr('v-cloak');
+        Html::html()->find($this->el)->setAttr('v-cloak');
         Html::css()->addCss('[v-cloak]{display: none}');
     }
 
@@ -169,7 +169,7 @@ class Vue
             return $this->getAvailableMethod("cusMethod");
         }
 
-        if (isset($this->config['methods'][$method])) {
+        if ($this->existsMethod($method)) {
             return $this->getAvailableMethod($method . "_m_");
         }
 
