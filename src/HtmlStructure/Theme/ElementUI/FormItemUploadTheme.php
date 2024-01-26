@@ -56,10 +56,15 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             $uploadEl = $formItemUpload->getUploadType() === FormItemUpload::UPLOAD_TYPE_IMAGE
                 ? $this->image($upload, $VModel, $rand)
                 : $this->images($upload, $rand);
-        }else{
-            $uploadEl = $formItemUpload->getUploadEl() instanceof AbstractHtmlElement
-                ? $formItemUpload->getUploadEl()
-                : El::double('el-button')->setAttr('type', 'primary')->append($formItemUpload->getUploadEl());
+        } else {
+            if (!$formItemUpload->getUploadEl()) {
+                $uploadEl = "";
+            } else {
+                $uploadEl = $formItemUpload->getUploadEl() instanceof AbstractHtmlElement
+                    ? $formItemUpload->getUploadEl()
+                    : El::double('el-button')->setAttr('type', 'primary')->append($formItemUpload->getUploadEl());
+            }
+
         }
 
         $this->multipleFileHandle($formItemUpload, $rand, $upload, $VModel);
