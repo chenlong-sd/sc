@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultConstruct;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\UploadUrl;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
@@ -22,10 +23,12 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     const UPLOAD_TYPE_IMAGE = "image";
     const UPLOAD_TYPE_IMAGES = "images";
 
-    use DefaultConstruct, DefaultValue, UploadUrl, Events, Attrs, FormOrigin;
+    use DefaultConstruct, DefaultValue, UploadUrl, Events, Attrs, FormOrigin, LabelWidth;
 
     protected string|AbstractHtmlElement $uploadEl = "选择文件";
     protected string $uploadType = self::UPLOAD_TYPE_FILE;
+    protected string|AbstractHtmlElement $tip;
+    protected bool $disableDownload = false;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -77,6 +80,30 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
             $this->default = $this->default !== null ? $this->default : '';
         }
 
+        return $this;
+    }
+
+    /**
+     * 提示
+     *
+     * @param string|AbstractHtmlElement $tip
+     *
+     * @return $this
+     */
+    public function tip(string|AbstractHtmlElement $tip): static
+    {
+        $this->tip = $tip;
+        return $this;
+    }
+
+    /**
+     * @param bool $disable
+     *
+     * @return $this
+     */
+    public function disableDownload(bool $disable = true): static
+    {
+        $this->disableDownload = true;
         return $this;
     }
 }

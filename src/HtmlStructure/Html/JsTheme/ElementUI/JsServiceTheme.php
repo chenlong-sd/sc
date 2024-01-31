@@ -12,6 +12,8 @@ use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\JsServiceThemeInterface;
 class JsServiceTheme implements JsServiceThemeInterface
 {
 
+    private string $callVar;
+
     public function __construct(private JsService $jsService)
     {
         if (is_string($this->jsService->serviceConfig)) {
@@ -22,12 +24,14 @@ class JsServiceTheme implements JsServiceThemeInterface
 
             $this->jsService->serviceConfig = [$messageKey => $this->jsService->serviceConfig];
         }
+        $this->callVar = $this->jsService->window !== null ? $this->jsService->window .= '.VueApp' : 'this';
+
         $this->jsService->serviceConfig = array_map(fn($v) => $v instanceof \Stringable ? (string)$v : $v, $this->jsService->serviceConfig);
     }
 
     public function message(): string
     {
-        return JsFunc::call('this.$message', $this->jsService->serviceConfig);
+        return JsFunc::call("$this->callVar.\$message", $this->jsService->serviceConfig);
     }
 
     public function confirm(): string
@@ -37,7 +41,7 @@ class JsServiceTheme implements JsServiceThemeInterface
         $then = $serviceConfig['then'];
         unset($serviceConfig['then']);
 
-        return JsFunc::call('this.$confirm', $serviceConfig['message'], '提示', $serviceConfig)
+        return JsFunc::call("$this->callVar.\$confirm", $serviceConfig['message'], '提示', $serviceConfig)
             ->call('then', JsFunc::arrow([], $then));
     }
 
@@ -46,6 +50,6 @@ class JsServiceTheme implements JsServiceThemeInterface
      */
     public function loading(): string
     {
-        return JsFunc::call('this.$loading', $this->jsService->serviceConfig);
+        return JsFunc::call("$this->callVar.\$loading", $this->jsService->serviceConfig);
     }
 }

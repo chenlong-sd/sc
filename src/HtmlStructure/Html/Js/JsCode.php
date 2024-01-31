@@ -36,9 +36,9 @@ class JsCode
         return (new self())->thenIf($where, $trueHandle, $falseHandle);
     }
 
-    public function then(#[Language('JavaScript')] string|\Stringable $code): static
+    public function then(#[Language('JavaScript')] string|\Stringable ...$code): static
     {
-        $this->codes[] = $code;
+        $this->codes = [...$this->codes, ...$code];
 
         return $this;
     }

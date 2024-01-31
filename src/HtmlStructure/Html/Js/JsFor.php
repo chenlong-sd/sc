@@ -14,13 +14,13 @@ class JsFor
      */
     private string $code = '';
 
-    public function __construct(private readonly string $where)
+    public function __construct(private readonly string $expression)
     {
     }
 
-    public static function loop(#[Language('JavaScript')] string $where): JsFor
+    public static function loop(#[Language('JavaScript')] string $expression): JsFor
     {
-        return new self($where);
+        return new self($expression);
     }
 
     public function then(#[Language('JavaScript')] string ...$code): static
@@ -33,7 +33,7 @@ class JsFor
     public function toCode(): string
     {
         return <<<JS
-            for ($this->where){
+            for ($this->expression){
                 $this->code
             }
         JS;

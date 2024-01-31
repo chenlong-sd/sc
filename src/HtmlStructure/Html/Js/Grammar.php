@@ -59,14 +59,16 @@ class Grammar
         }, $jsCode);
 
         return strtr($jsCode, [
-            '\r\n'                 => "\r\n",
-            '\n'                   => "\r\n",
+//            '\r\n'                 => "\r\n",
+//            '\n'                   => "\r\n",
             '"' . self::MARK_START => '',
             self::MARK_END . '"'   => '',
             self::MARK_START       => '',
             self::MARK_END         => '',
             '"' . self::Line_START => '`',
             self::Line_END . '"'   => '`',
+            self::Line_START       => '',
+            self::Line_END         => '',
         ]);
     }
 

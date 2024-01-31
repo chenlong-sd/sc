@@ -20,6 +20,7 @@ class Window
     private ?string $url = null;
     private array $query;
     private ?VueComponentInterface $component = null;
+    protected array $rowData = [];
 
     public function __construct(private readonly string $title)
     {
@@ -93,12 +94,35 @@ class Window
         return $this;
     }
 
+    /**
+     * 设置rowData
+     *
+     * @param array $data
+     *
+     * @return $this
+     */
+    public function setRowData(array $data): static
+    {
+        $this->rowData = [...$this->rowData, ...$data];
+
+        return $this;
+    }
+
     public function toCode(string $theme = null)
     {
+        if ($theme === null && $this->url) {
+            $theme = 'Layui';
+        }
+
         $theme = JsTheme::getTheme(WindowThemeInterface::class, $theme);
         $theme = new $theme();
 
         return $theme->render($this);
+    }
+
+    public function render(string $theme = null)
+    {
+        return $this->toCode($theme);
     }
 
     public function __toString(): string
@@ -149,6 +173,11 @@ class Window
     public function getComponent(): ?VueComponentInterface
     {
         return $this->component;
+    }
+
+    public function getRowData(): array
+    {
+        return $this->rowData;
     }
 
 }

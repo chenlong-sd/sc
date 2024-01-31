@@ -14,12 +14,19 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Window;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
+use Sc\Util\HtmlStructure\Html\StaticResource;
 
 class WindowTheme implements WindowThemeInterface
 {
 
     public function render(Window $window): string
     {
+        $code = JsCode::create('// 打开弹窗');
+        $code->thenIf('row === undefined', 'row = {}');
+        foreach ($window->getRowData() as $key => $value) {
+            $code->then(JsVar::assign('row.' . $key, $value));
+        }
+
         mt_srand();
         $vModel = "VueWindow" . mt_rand(1, 999);
 
@@ -31,11 +38,12 @@ class WindowTheme implements WindowThemeInterface
             ':close-on-click-modal' => "false",
             ':title'           => $vModel . "Title",
             'v-model'          => $vModel,
+            ':draggable'       => "true"
         ], $attrs);
         Html::js()->vue->set( $vModel . "Title", '');
 
         $template = El::double('el-dialog')->setAttrs($attrs);
-        $code = JsCode::create('// 打开弹窗');
+
         $code->then("this['{$vModel}Title'] = " . sprintf('`%s`', preg_replace('/\{(.*?)}/', "\${row.$1}", $window->getTitle())));
 
         if ($isIframe) {
@@ -131,7 +139,6 @@ class WindowTheme implements WindowThemeInterface
                 this['{$vModel}IframeUrl'] = parsedUrl.href;
             JS);
     }
-
     /**
      * @param AbstractHtmlElement|string|null $elements
      * @param DoubleLabel                     $template
@@ -156,10 +163,10 @@ class WindowTheme implements WindowThemeInterface
                 JsVar::assign("this.{$vModel}Url", "@this.{$vModel}UpdateUrl"),
                 JsVar::assign("this.{$vModel}Url", "@this.{$vModel}CreateUrl"))
             );
+            $template->append($elements);
             if ($submit) {
                 $submit->remove();
-
-                $template->append($elements)->append(
+                $template->append(
                     El::double('template')->setAttr('#footer')->append(...$submit->getChildren())
                 );
             }

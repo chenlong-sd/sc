@@ -14,7 +14,9 @@ use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
+use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
 use Sc\Util\Tool;
 
@@ -30,7 +32,8 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     {
         $el = $this->getBaseEl($formItemUpload);
 
-        $el->append($this->uploadMake($formItemUpload));
+        $fileFormat = $this->fileFormat($formItemUpload);
+        $el->append($this->uploadMake($formItemUpload))->append($fileFormat);
 
         return $this->afterRender($formItemUpload, $el);
     }
@@ -42,6 +45,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             'v-model:file-list' => $VModel,
             ':on-remove'       => "{$formItemUpload->getName()}remove",
             'action'           => $formItemUpload->getUploadUrl(),
+            ':show-file-list'  => str_starts_with($formItemUpload->getUploadType(), 'image') ? 'true' : 'false'
         ]);
 
         $rand = Tool::random()->get();
@@ -52,18 +56,26 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             $uploadEl = $formItemUpload->getUploadType() === FormItemUpload::UPLOAD_TYPE_IMAGE
                 ? $this->image($upload, $VModel, $rand)
                 : $this->images($upload, $rand);
-        }else{
-            $uploadEl = $formItemUpload->getUploadEl() instanceof AbstractHtmlElement
-                ? $formItemUpload->getUploadEl()
-                : El::double('el-button')->setAttr('type', 'primary')->append($formItemUpload->getUploadEl());
+        } else {
+            if (!$formItemUpload->getUploadEl()) {
+                $uploadEl = "";
+            } else {
+                $uploadEl = $formItemUpload->getUploadEl() instanceof AbstractHtmlElement
+                    ? $formItemUpload->getUploadEl()
+                    : El::double('el-button')->setAttr('type', 'primary')->append($formItemUpload->getUploadEl());
+            }
+
         }
 
         $this->multipleFileHandle($formItemUpload, $rand, $upload, $VModel);
 
         Html::js()->vue->addMethod("{$formItemUpload->getName()}remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
 
+        $upload->setAttrs($formItemUpload->getVAttrs());
 
-        return $upload->append($uploadEl);
+        $this->limitHandle($upload);
+
+        return $upload->append($uploadEl)->append(El::double('template')->setAttr('#tip')->append($this->tip($formItemUpload->getTip())));
     }
 
     /**
@@ -245,6 +257,68 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             JS
         );
 
+    }
+
+    private function fileFormat(FormItemUpload|FormItemAttrGetter $formItemUpload)
+    {
+        if (str_starts_with($formItemUpload->getUploadType(), 'image')) {
+            return '';
+        }
+
+        $data = $formItemUpload->getForm()->getId() . '.' . $formItemUpload->getName();
+        $table =  Table::create([], 'upts' . $formItemUpload->getName())->addColumns(
+            Table\Column::normal('文件名', 'name'),
+            Table\Column::event('下载', '')->setAttr('width', 80)->setFormat(El::double('el-link')->setAttrs([
+                'type' => 'primary',
+                ':href' => 'url',
+                ':download' => 'name',
+                'icon' => 'download',
+            ])->append('下载'))->notShow($formItemUpload->getDisableDownload()),
+            Table\Column::event('删除', '')->setAttr('width', 80)->setFormat(El::double('el-button')->setAttrs([
+                'link' => '',
+                'type' => 'danger',
+                'icon' => 'delete',
+                '@click' => 'uprm' . $formItemUpload->getName() . '(@scope)'
+            ])),
+        )->setPagination(false)->render()->find('el-table')
+            ->setAttr(":data", $data)
+            ->setAttr(":show-header", 'false')
+            ->setAttr("empty-text", '暂无上传文件')
+            ->setAttr('header-cell-class-name', null)
+            ->setAttr('cell-class-name', null);
+
+        Html::js()->vue->addMethod( 'uprm' . $formItemUpload->getName(), JsFunc::anonymous(['scope'])->code(
+            JsCode::create("this.$data.splice(scope.\$index, 1)")
+        ));
+
+
+        return El::double('div')->setAttr('style', 'width:100%')->append($table);
+    }
+
+    private function limitHandle(DoubleLabel $upload): void
+    {
+        if ((($limit = $upload->getAttr("limit")) || ($limit = $upload->getAttr(':limit'))) && !$upload->hasAttr(":on-exceed")) {
+            $method = "uploadOnExceed" . Tool::random('up')->get(11, 55);
+            $upload->setAttr(":on-exceed", $method);
+
+            Html::js()->vue->addMethod($method, JsFunc::anonymous()->code(
+                JsService::message("文件限制数量为" . $limit, 'error')
+            ));
+        }
+    }
+
+    /**
+     * @param String|AbstractHtmlElement|null $tip
+     *
+     * @return DoubleLabel|AbstractHtmlElement
+     */
+    private function tip(String|AbstractHtmlElement|null $tip): DoubleLabel|AbstractHtmlElement
+    {
+        if ($tip instanceof AbstractHtmlElement) {
+            return $tip;
+        }
+
+        return El::double('el-text')->setAttr('style', 'margin-left:5px')->append($tip);
     }
 
 }

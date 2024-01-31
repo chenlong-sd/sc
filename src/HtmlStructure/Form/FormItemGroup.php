@@ -21,6 +21,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     protected array $children = [];
     protected ?string $label;
     protected ?string $name;
+    /**
+     * @var true
+     */
+    protected bool $plain;
 
     public function __construct(FormItemInterface|string ...$children)
     {
@@ -30,6 +34,17 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         }else{
             $this->children = $children;
         }
+    }
+
+    /**
+     * 无卡片样式
+     *
+     * @return $this
+     */
+    public function plain(): static
+    {
+        $this->plain = true;
+        return $this;
     }
 
     /**
@@ -62,6 +77,6 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             }
 
             return $v->getDefault();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit)));
+        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
     }
 }

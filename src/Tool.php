@@ -24,6 +24,7 @@ use Sc\Util\Tool\RemoteResourceDownload;
 use Sc\Util\Tool\SensitiveWord;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
+use Sc\Util\Tool\XlsWriter;
 
 /**
  * Class Tool.
@@ -40,6 +41,7 @@ use Sc\Util\Tool\Url;
  * @method static SensitiveWord SensitiveWord(string ...$text)
  * @method static Ciphertext ciphertext(string $secret)
  * @method static Random random(?string $prefix = null)
+ * @method static XlsWriter xls(array|string $config)
  *
  * @date 2022/2/20
  */
@@ -48,6 +50,7 @@ use Sc\Util\Tool\Url;
 #[StaticCallAttribute('stringToDom', HtmlDocument::class, 'fromCode')]
 #[StaticCallAttribute('baiduFanYi', BaiduFanYi::class)]
 #[StaticCallAttribute('jwt', JWT::class)]
+#[StaticCallAttribute('xls', XlsWriter::class)]
 class Tool extends StaticCall
 {
     /**

@@ -39,7 +39,7 @@ class QRCode
      *      属性    类型    必填    说明
      *      is_hyaline    bool    否    默认是false，是否需要透明底色，为 true 时，生成透明底色的小程序
      * 返回参数
-     *
+     * 数量无限制
      * @param array|string $param
      *
      * @return $this

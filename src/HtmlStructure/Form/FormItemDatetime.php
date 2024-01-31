@@ -29,10 +29,6 @@ class FormItemDatetime extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        if (empty($this->getVAttrs()['value-format'])) {
-            $this->valueFormat();
-        }
-
         $el = Theme::getRender(FormItemDatetimeThemeInterface::class, $theme)->render($this);
 
         return $this->ExecuteBeforeRendering($el);

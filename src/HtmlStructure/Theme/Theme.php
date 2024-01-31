@@ -43,6 +43,7 @@ class Theme
     public static function getRender(mixed $interfaceClass, ?string $theme = null): mixed
     {
         $theme = $theme === null ? Html::theme() : $theme;
+        $theme = $theme ?: Theme::DEFAULT_THEME;
 
         $themeBaseNamespace = preg_replace('/Theme$/', '', self::class);
 

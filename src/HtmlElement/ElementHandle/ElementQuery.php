@@ -30,6 +30,7 @@ trait ElementQuery
             : [$this];
 
         try {
+            $stopEachException = new StopEachException();
             while ($element = array_shift($eloop)) {
                 $children = [];
                 if ($element instanceof DoubleLabel) {
@@ -37,7 +38,7 @@ trait ElementQuery
                 }
 
                 // 调用callable
-                call_user_func($callable, $element, new StopEachException());
+                call_user_func($callable, $element, $stopEachException);
 
                 $children and array_unshift($eloop, ...$children);
             }
@@ -83,6 +84,30 @@ trait ElementQuery
         $queryElement = $this->queryElement($selectors);
 
         return $queryElement ? current($queryElement) : null;
+    }
+
+    /**
+     * 后面第几个元素
+     *
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function next(int $number = 1): mixed
+    {
+        return $this->brothers($number);
+    }
+
+    /**
+     * 前面第几个元素
+     *
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function pre(int $number = 1): mixed
+    {
+        return $this->brothers(-$number);
     }
 
     /**
@@ -207,5 +232,18 @@ trait ElementQuery
         }
 
         return true;
+    }
+
+    /**
+     * @param int $number
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    private function brothers(int $number): mixed
+    {
+        $currentLayerEl = $this->getParent()?->getChildren() ?: [];
+        $thisIndex      = array_search($this, $currentLayerEl);
+
+        return $currentLayerEl[$thisIndex + $number] ?? null;
     }
 }

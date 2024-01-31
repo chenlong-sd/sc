@@ -407,5 +407,53 @@ class Tree
         return $data;
     }
 
+    /**
+     * [1,2,3] = 1,2,3,
+     *
+     * @param mixed  $chain
+     * @param string $separate
+     *
+     * @return array{"chain":"string", "parent":"mixed"}|null
+     */
+    public static function chainToStr(mixed $chain, string $separate = ','): ?array
+    {
+        if (!$chain) {
+            return [
+                "chain"  => '',
+                'parent' => 0
+            ];
+        }
+        if (!is_array($chain)) return null;
+
+        return [
+            "chain"  => implode($separate, $chain) . $separate,
+            'parent' => end($chain)
+        ];
+    }
+
+    /**
+     *  1,2,3, = [1,2,3]
+     *
+     * @param string|null $str
+     * @param string      $separate
+     *
+     * @return array{"chain":array, "parent":mixed}
+     */
+    public static function chainToArr(?string $str, string $separate = ','): array
+    {
+        if (!$str) {
+            return [
+                "chain"  => [],
+                'parent' => 0
+            ];
+        }
+        $chain = array_filter(explode($separate, $str), fn($v) => $v !== '');
+        $chain = array_map(fn($v) => filter_var($v, FILTER_VALIDATE_INT) ? (int)$v : $v, $chain);
+
+        return [
+            "chain"  => $chain,
+            'parent' => $chain ? end($chain) : ''
+        ];
+    }
 }
 

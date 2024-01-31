@@ -31,12 +31,13 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     {
         $formId = $formItemSubmit->getForm()->getId();
 
-        $el = El::double('el-form-item')->setAttr("label", ' ')->setAttr('submit-sign');
+        $el = $this->getBaseEl($formItemSubmit)->setAttr('submit-sign');
 
         $submitButton = El::double('el-button')->setAttrs([
             'type'      => 'primary',
             '@click'    => $formId . "Submit",
-            'v-loading' => Html::js()->vue->bind($formId . "Loading", false)
+            'v-loading' => Html::js()->vue->bind($formId . "Loading", false),
+            ':disabled' => $formId . "Loading",
         ])->append($formItemSubmit->getSubmitText());
 
         $reset = El::double('el-button')->setAttrs([
@@ -62,13 +63,32 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             if (str_contains($success, '@strict ')){
                 $successHandle = preg_replace("/^@strict/", '', $success);
             }else{
+                $closePage = $formItemSubmit->getClosePage();
+                if ($closePage['theme'] == "ElementUI") {
+                    $closeCode = "VueApp.closeWindow()";
+                }else{
+                    $closeCode = "layer.close(index);";
+                }
+
+                if ($closePage['page'] == 'parent') {
+                    $closeCode = JsCode::create("parent.$closeCode");
+                    if ($closePage['theme'] != 'ElementUI') {
+                        $closeCode = JsCode::make(
+                            JsVar::def('index', '@parent.layer.getFrameIndex(window.name)'),
+                            $closeCode
+                        );
+                    }
+                }
+
                 $successHandle = JsCode::create($formItemSubmit->getSuccessTipCode())
                     ->then($success)
                     ->then("this.{$formId}Reset()")
-                    ->then($formItemSubmit->getSuccessCloseCode());
+                    ->then($closeCode);
             }
+
+
             $submitHandle = Axios::post(
-                url: Grammar::mark("this.{$formId}Url"),
+                url: Grammar::mark("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
                 data: "@data"
             )->then(JsFunc::arrow(['{ data }'])->code(
                 JsIf::when('data.code === 200')

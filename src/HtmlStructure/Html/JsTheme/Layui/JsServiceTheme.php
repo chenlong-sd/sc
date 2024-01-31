@@ -12,13 +12,16 @@ use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\JsServiceThemeInterface;
 class JsServiceTheme implements JsServiceThemeInterface
 {
 
-    public function __construct(private JsService $jsService)
+    private string $parent = '';
+
+    public function __construct(private readonly JsService $jsService)
     {
         if (is_string($this->jsService->serviceConfig)) {
             $this->jsService->serviceConfig = [
                 'content' => $this->jsService->serviceConfig,
             ];
         }
+        $this->parent = $this->jsService->window !== null ? $this->jsService->window . '.' : '';
     }
 
     public function message(): string
@@ -32,7 +35,7 @@ class JsServiceTheme implements JsServiceThemeInterface
         };
         unset($this->jsService->serviceConfig['message'], $this->jsService->serviceConfig['type'],);
 
-        return JsFunc::call('layer.msg', $message, $this->jsService->serviceConfig,);
+        return JsFunc::call("{$this->parent}layer.msg", $message, $this->jsService->serviceConfig,);
     }
 
     public function confirm(): string
@@ -43,6 +46,13 @@ class JsServiceTheme implements JsServiceThemeInterface
 
         $options = array_merge(['icon' => 3, 'title' => '提示'], $this->jsService->serviceConfig);
 
-        return JsFunc::call("layer.confirm", $message, $options, JsFunc::arrow(['index'], $then));
+        return JsFunc::call("{$this->parent}layer.confirm", $message, $options, JsFunc::arrow(['index'], $then));
+    }
+
+    public function loading(): string
+    {
+        $message = $this->jsService->serviceConfig['message'];
+
+        return JsFunc::call("{$this->parent}layer.load", $message);
     }
 }

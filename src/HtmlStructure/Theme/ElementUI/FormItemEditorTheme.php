@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemEditor;
 use Sc\Util\HtmlStructure\Form\FormItemText;
+use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemEditorThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 
@@ -27,6 +28,8 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
      */
     public function render(FormItemEditor|FormItemAttrGetter $formItemEditor): AbstractHtmlElement
     {
+        $this->resourceLoad();
+
         $editorEl = $this->initialize($formItemEditor);
         $baseEl   = $this->getBaseEl($formItemEditor);
 
@@ -53,4 +56,12 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
 
         return El::double('div')->setId($editorId);
     }
+
+    private function resourceLoad(): void
+    {
+        Html::js()->load(StaticResource::FROALA_JS);
+        Html::css()->load(StaticResource::FROALA_CSS);
+        Html::js()->load(StaticResource::FROALA_LANGUAGE);
+    }
+
 }

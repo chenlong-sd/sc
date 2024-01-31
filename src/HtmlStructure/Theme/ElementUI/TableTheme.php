@@ -36,8 +36,12 @@ class TableTheme implements TableThemeInterface
     public function render(Table $table): AbstractHtmlElement
     {
         $el = El::double('el-table');
+
         $attrs = $table->getAttrs();
-        $attrs['v-loading'] = $table->getId() . 'Loading';
+        if (empty($attrs['v-loading']) && is_string($table->getData())) {
+            $attrs['v-loading'] = $table->getId() . 'Loading';
+            Html::js()->vue->set( $table->getId() . 'Loading', false);
+        }
 
         $dataVarName = $this->dataSet($table);
 
@@ -46,7 +50,7 @@ class TableTheme implements TableThemeInterface
         }
 
         Html::css()->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
-        Html::js()->vue->set( $table->getId() . 'Loading', false);
+
         if (empty($attrs['header-cell-class-name'])) {
             Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
             $attrs['header-cell-class-name'] = 'vue--table-header-center';
@@ -126,7 +130,7 @@ class TableTheme implements TableThemeInterface
                 "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
                 "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
             ],
-            'query' => Grammar::mark("this.getUrlSearch()")
+            'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
         ];
         if ($table->isOpenPagination()) {
             $query['page']     = Grammar::mark("this.{$table->getId()}Page");
@@ -192,7 +196,7 @@ class TableTheme implements TableThemeInterface
             return $column->getAttr('mark-event');
         });
         if (!$eventColumn = current($events)) {
-            $eventColumn = Column::event();
+            $eventColumn = Column::event()->fixed();
             $table->addColumns($eventColumn);
         }
 
@@ -262,17 +266,22 @@ class TableTheme implements TableThemeInterface
                 ->setAttr(':underline', 'false')
                 ->append($el);
         }
+        $attr = [];
+        if (is_array($el)) {
+            $attr  = $el[1] ?? [];
+            $el    = $el[0];
+        }
 
         if (is_string($el) && str_starts_with($el, '@')) {
             $bt   = explode('.', substr($el, 1));
             $type = $bt[0];
             if (count($bt) > 2) {
                 $bt[1] = preg_replace('/(?<=\w)[A-Z]/', '-$0', $bt[1]);
-                $icon  = El::double('el-icon')->append(El::double($bt[1]));
-                $title = "&nbsp;" . $bt[2];
+                $icon  = $bt[1];
+                $title = $bt[2];
             } else {
                 $title = $bt[1] ?? '';
-                $icon  = '';
+                $icon  = null;
             }
             if (str_contains($title, '[')){
                 preg_match("/([^\[]+)\[(.*)\]/", $title, $match);
@@ -280,10 +289,9 @@ class TableTheme implements TableThemeInterface
                 $theme = $match[2];
             }
 
-            $el = El::double('el-button')
-                ->setAttr('type', $type)
-                ->append($icon)
-                ->append($title);
+            $attr = array_merge(['type' => $type, 'icon' => $icon], $attr);
+
+            $el = El::double('el-button')->setAttrs($attr)->append($title);
             if (isset($theme)) {
                 $el->setAttr($theme);
             }

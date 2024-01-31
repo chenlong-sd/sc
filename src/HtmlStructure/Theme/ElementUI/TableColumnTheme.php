@@ -37,12 +37,16 @@ class TableColumnTheme implements TableColumnThemeInterface
     public function render(Column $column): AbstractHtmlElement
     {
         $columnEl = El::double('el-table-column');
+        if ($column->getFixedPosition()) {
+            $column->setAttr('fixed', $column->getFixedPosition());
+        }
 
         if ($show = $column->getShow()) {
             match ($show['type']) {
                 'switch' => $this->switchHandle($column, $show['config']),
                 'tag'    => $this->tagHandle($column, $show['config']),
                 'image'  => $this->imageHandle($column),
+                'mapping'  => $this->mappingHandle($column, $show['config']),
             };
         }
 
@@ -183,6 +187,29 @@ class TableColumnTheme implements TableColumnThemeInterface
                 'fit'                => 'scale-down',
                 ':preview-teleported' => '@true'
             ])
+        );
+    }
+
+    private function mappingHandle(Column $column, array $config): void
+    {
+        if (count($config['options']) === count($config['options'], COUNT_RECURSIVE)) {
+            $new = [];
+            foreach ($config['options'] as $value => $label) {
+                $new[] = compact('value', 'label');
+            }
+            $config['options'] = $new;
+        }
+
+        $mappingName = $column->getAttr('prop') . "Mapping";
+        Html::js()->vue->set($mappingName, $config['options']);
+        $column->setFormat(El::double('span')
+            ->setAttr('v-for', "(item, index) in @$mappingName")
+            ->append(
+                El::double('span')
+                    ->setAttr('v-if', '@item.value == ' . $column->getAttr('prop'))
+                    ->append("{{ @item.label }}")
+            )
+
         );
     }
 }

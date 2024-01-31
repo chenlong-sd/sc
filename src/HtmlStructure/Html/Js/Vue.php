@@ -70,7 +70,7 @@ class Vue
 
         $this->config['methods'] = [];
 
-        Html::html()->find('#app')->setAttr('v-cloak');
+        Html::html()->find($this->el)->setAttr('v-cloak');
         Html::css()->addCss('[v-cloak]{display: none}');
     }
 
@@ -154,6 +154,38 @@ class Vue
             return;
         }
         $this->config['methods'][$name] = $method;
+    }
+
+    /**
+     * 获取可用的method
+     *
+     * @param string $method
+     *
+     * @return string
+     */
+    public function getAvailableMethod(string $method = ''): string
+    {
+        if (!$method) {
+            return $this->getAvailableMethod("cusMethod");
+        }
+
+        if ($this->existsMethod($method)) {
+            return $this->getAvailableMethod($method . "_m_");
+        }
+
+        return $method;
+    }
+
+    /**
+     * 是否存在 method
+     *
+     * @param string $method
+     *
+     * @return bool
+     */
+    public function existsMethod(string $method): bool
+    {
+        return isset($this->config['methods'][$method]);
     }
 
     /**
