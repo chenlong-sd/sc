@@ -57,7 +57,6 @@ class Temporary implements VueComponentInterface
 
             if ($this->content->hasAttr("v-loading")) {
                 $code->then(
-                    JsCode::create("console.log(row)"),
                     JsIf::when("this['{$vModel}GetDefaultData'] !== undefined")
                         ->then("this['{$vModel}GetDefaultData'](row.id)")
                         ->else("this.{$vModel}Default(row)")

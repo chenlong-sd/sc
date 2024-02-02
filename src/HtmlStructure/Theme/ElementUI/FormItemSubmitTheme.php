@@ -99,15 +99,17 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
                 $formItemSubmit->getFail()
             ))->catch(JsFunc::arrow(['error'])->code(
                 JsCode::create('console.log(error)')->then('this.$message.error(error)')
-            ))->finally(JsFunc::arrow()->code("this.{$formId}Loading = false;"));
+            ))->finally(JsFunc::arrow()->code(JsVar::assign("this.{$formId}Loading", false)));
         }
 
-        Html::js()->vue->addMethod($formId ."Submit", [],
-            JsCode::create("this.{$formId}Loading = true;")
-                ->then(JsVar::def('data',  "@this.{$formItemSubmit->getFormModel()}"))
-                ->then($formItemSubmit->getForm()->getSubmitHandle())
-                ->then($this->verifyData($formItemSubmit->getForm()))
-                ->then($submitHandle)
+        Html::js()->vue->addMethod($formId . "Submit", [], JsCode::make(
+            JsVar::def('data', "@this.{$formItemSubmit->getFormModel()}"),
+            $formItemSubmit->getForm()->getSubmitHandle(),
+            JsVar::def('res', $this->verifyData($formItemSubmit->getForm(), JsCode::make(
+                JsVar::assign("this.{$formId}Loading", true),
+                $submitHandle
+            ))),
+        ),
         );
     }
 
@@ -121,17 +123,18 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     }
 
     /**
-     * @param Form $form
+     * @param Form  $form
+     * @param mixed $submitCode
      *
      * @return Obj
      */
-    private function verifyData(Form $form): Obj
+    private function verifyData(Form $form, mixed $submitCode): Obj
     {
-        return JsFunc::call("this.\$refs['{$form ->getId()}'].validate", JsFunc::arrow(['valid', 'fields'])->code(
+        return JsFunc::call("this.\$refs.{$form ->getId()}.validate", JsFunc::arrow(['valid'])->code(
             JsIf::when('!valid')->then(
-                JsCode::create("return;")
+                JsCode::create("return false;")
             ),
-            JsCode::create("console.log(1111)")
+            $submitCode,
         ));
     }
 }
