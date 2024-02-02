@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
@@ -16,6 +17,7 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\Js\Obj;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
 use Sc\Util\Tool;
 
@@ -104,6 +106,7 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             JsCode::create("this.{$formId}Loading = true;")
                 ->then(JsVar::def('data',  "@this.{$formItemSubmit->getFormModel()}"))
                 ->then($formItemSubmit->getForm()->getSubmitHandle())
+                ->then($this->verifyData($formItemSubmit->getForm()))
                 ->then($submitHandle)
         );
     }
@@ -117,4 +120,18 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         Html::js()->vue->addMethod($formId . "Reset", [], $resetHandle);
     }
 
+    /**
+     * @param Form $form
+     *
+     * @return Obj
+     */
+    private function verifyData(Form $form): Obj
+    {
+        return JsFunc::call("this.\$refs['{$form ->getId()}'].validate", JsFunc::arrow(['valid', 'fields'])->code(
+            JsIf::when('!valid')->then(
+                JsCode::create("return;")
+            ),
+            JsCode::create("console.log(1111)")
+        ));
+    }
 }

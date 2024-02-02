@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextareaThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
@@ -26,7 +27,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemTextarea extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Placeholder, LabelWidth, FormOrigin, Events, Attrs;
+    use DefaultConstruct, DefaultValue, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate;
 
     protected array $autocomplete;
 

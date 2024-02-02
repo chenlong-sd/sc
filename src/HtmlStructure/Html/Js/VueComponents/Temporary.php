@@ -7,6 +7,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Vue;
 
@@ -49,13 +50,18 @@ class Temporary implements VueComponentInterface
         if ($this->content->getLabel() === 'el-form'){
             // 判断组件是否是一个表单，如果是表单看是否有传输默认数据，如果有则设置对应的提交地址
 
-            $vModel = $this->content->getAttr('v-model');
+            $vModel = $this->content->getAttr(':model');
 
             $code->then(JsVar::def('row', '@data'));
             $code->then(JsVar::assign("this.{$vModel}Url", "@row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
 
             if ($this->content->hasAttr("v-loading")) {
-                $code->then(JsCode::if('row !== undefined && row.id', "this['{$vModel}GetDefaultData'](row.id)", "this.{$vModel}Default(row)"));
+                $code->then(
+                    JsCode::create("console.log(row)"),
+                    JsIf::when("this['{$vModel}GetDefaultData'] !== undefined")
+                        ->then("this['{$vModel}GetDefaultData'](row.id)")
+                        ->else("this.{$vModel}Default(row)")
+                );
             }else{
                 $code->then("this.{$vModel}Default(row)");
             }

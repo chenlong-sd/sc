@@ -26,11 +26,53 @@ class FormTheme implements FormThemeInterface
         $config = $form->getConfig();
         unset($config['data']);
 
+        $config = $this->defaultDataHandle($form, $config);
+
+        $el = El::double('el-form')
+            ->setAttr('ref', $form->getId())
+            ->setAttr(':rules', $this->rulesHandle($form))
+            ->setAttr('@submit.prevent')
+            ->setAttr(':model', $form->getId())
+            ->setAttrs($config);
+
+        $el->append(El::double('el-row')->append(...array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems())))->append();
+
+        return $el;
+    }
+
+    /**
+     * @param Form $form
+     *
+     * @return string
+     */
+    public function rulesHandle(Form $form): string
+    {
+        $rules = [];
+        /** @var Form\FormItemAttrGetter|Form\FormItemInterface $item */
+        foreach ($form->getFormItems() as $item) {
+            if ($rule = $item->getRules()) {
+                $rules[$item->getName()] = $rule;
+            }
+        }
+
+        Html::js()->vue->set($form->getId() . 'Rules', $rules);
+
+        return $form->getId() . 'Rules';
+    }
+
+    /**
+     * @param Form  $form
+     * @param array $config
+     *
+     * @return array
+     */
+    private function defaultDataHandle(Form $form, array $config): array
+    {
+        $loadingVar          = $form->getId() . 'Loading';
+        $config['v-loading'] = $loadingVar;
+        Html::js()->vue->set($loadingVar, true);
+
         if (isset($config['dataUrl'])) {
-
-            $config['v-loading'] = $form->getId() . 'Loading';
-            Html::js()->vue->set($form->getId() . 'Loading', true);
-
             Html::js()->vue->addMethod("{$form->getId()}GetDefaultData", ['id'],
                 Axios::get($config['dataUrl'], ['id' => Grammar::mark('id')])
                     ->then(JsFunc::arrow(['{ data }'])->code(<<<JS
@@ -38,20 +80,13 @@ class FormTheme implements FormThemeInterface
                         for (const k in this['{$form->getId()}']){
                             if(data.data.hasOwnProperty(k)) this['{$form->getId()}'][k] =  data.data[k];
                         }
-                        this["{$form->getId()}Loading"] = false;
-                    JS))
+                        this["$loadingVar"] = false;
+                    JS
+                    ))
             );
 
             unset($config['dataUrl']);
         }
-
-        $el = El::double('el-form')
-            ->setAttr('ref', $form->getId())
-            ->setAttr('@submit.prevent')
-            ->setAttr('v-model', $form->getId())
-            ->setAttrs($config);
-
-        $el->append(El::double('el-row')->append(...array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems())))->append();
 
         // 默认值设置，用函数保存，避免被污染
         Html::js()->vue->addMethod("{$form->getId()}Default", ['defaultValues'], JsCode::make(
@@ -67,6 +102,6 @@ class FormTheme implements FormThemeInterface
         Html::js()->vue->set($form->getId(), '');
         Html::js()->vue->event('created', sprintf("this.%sDefault();", $form->getId()));
 
-        return $el;
+        return $config;
     }
 }

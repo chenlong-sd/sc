@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemDatetimeThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -25,7 +26,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemDatetime extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Placeholder, LabelWidth, FormOrigin, Events, Attrs;
+    use DefaultConstruct, DefaultValue, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate;
 
     public function render(string $theme = null): AbstractHtmlElement
     {

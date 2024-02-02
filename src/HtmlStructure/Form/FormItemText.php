@@ -14,6 +14,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
@@ -26,7 +27,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemText extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs;
+    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate;
 
     protected string|JsFunc $autoCompleteHandle = '';
     protected \Stringable|string $autoCompleteFormat = '';
