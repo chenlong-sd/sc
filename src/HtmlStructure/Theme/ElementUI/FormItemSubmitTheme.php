@@ -105,10 +105,10 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         Html::js()->vue->addMethod($formId . "Submit", [], JsCode::make(
             JsVar::def('data', "@this.{$formItemSubmit->getFormModel()}"),
             $formItemSubmit->getForm()->getSubmitHandle(),
-            JsVar::def('res', $this->verifyData($formItemSubmit->getForm(), JsCode::make(
+            $this->verifyData($formItemSubmit->getForm(), JsCode::make(
                 JsVar::assign("this.{$formId}Loading", true),
                 $submitHandle
-            ))),
+            ))
         ),
         );
     }

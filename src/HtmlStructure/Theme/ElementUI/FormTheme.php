@@ -35,7 +35,8 @@ class FormTheme implements FormThemeInterface
             ->setAttr(':model', $form->getId())
             ->setAttrs($config);
 
-        $el->append(El::double('el-row')->append(...array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems())))->append();
+        $items  = array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems());
+        $el->append(El::double('el-row')->append(...$items))->append();
 
         return $el;
     }

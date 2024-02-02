@@ -3,11 +3,13 @@
 namespace Sc\Util\HtmlStructure\Form\ItemAttrs;
 
 use JetBrains\PhpStorm\ExpectedValues;
+use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\HtmlStructure\Html\Js\JsIf;
 
 /**
  * Class Validate
@@ -28,6 +30,18 @@ trait Validate
         }
 
         return $this->addRule(['required' => true], $message, $trigger);
+    }
+
+    public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur'])
+    {
+        return $this->customizeVerify(JsFunc::anonymous(['rule', 'value', 'callback'])->code(
+            JsCode::create("console.log($when)"),
+            JsIf::when("!value && $when")->then(
+                JsFunc::call("callback", $message ?: $this->getLabel() . "不能为空")
+            )->else(
+                JsFunc::call("callback")
+            )
+        ), $trigger);
     }
 
     /**
