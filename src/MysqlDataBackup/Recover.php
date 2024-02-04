@@ -30,7 +30,8 @@ class Recover
             $currentSql = '';
             while ($content =  $splFileObject->fgets()) {
                 $currentSql .= $content;
-                if (str_ends_with($content, ';' . PHP_EOL)) {
+
+                if (str_ends_with($content, ';' . PHP_EOL) || str_ends_with($content, ";\r\n") ) {
                     // 执行sql
                     $this->connect->getPDO()->prepare($currentSql)->execute();
 
