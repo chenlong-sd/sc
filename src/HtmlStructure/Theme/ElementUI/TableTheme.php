@@ -15,9 +15,11 @@ use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFor;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
+use Sc\Util\HtmlStructure\Html\Js\JsLog;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
@@ -61,6 +63,10 @@ class TableTheme implements TableThemeInterface
         }
 
         $attrs['style'] = ($attrs['style'] ?? '') . ';margin-top:5px';
+        if ($sortMethod = $this->sortHandle($table)) {
+            $attrs['@sort-change'] = $sortMethod;
+        }
+
         $el->setAttr(':data', $dataVarName);
         $el->setAttrs($attrs);
 
@@ -130,11 +136,12 @@ class TableTheme implements TableThemeInterface
                 "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
                 "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
             ],
+            'order' => Grammar::mark("this.{$dataVarName}Sort"),
             'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
         ];
         if ($table->isOpenPagination()) {
-            $query['page']     = Grammar::mark("this.{$table->getId()}Page");
-            $query['pageSize'] = Grammar::mark("this.{$table->getId()}PageSize");
+            $query['page']     = Grammar::mark("this.{$dataVarName}Page");
+            $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
         }
         Html::js()->vue->addMethod($dataVarName . 'GetData', [],
             JsCode::create(JsVar::assign($table->getId() . 'Loading', true))
@@ -213,6 +220,12 @@ class TableTheme implements TableThemeInterface
         $left  = El::double('div');
         $right = El::double('div');
         $header = El::double('div')->setAttr('style', 'display:flex;justify-content: space-between;');
+
+        $statusToggleButtons = $this->statusToggleButtonsHandle($table);
+        if (!$statusToggleButtons->isEmpty()) {
+            $left->append($statusToggleButtons);
+        }
+
         foreach ($table->getHeaderEvents() as $name => ['el' => $el, 'handler' => $handler, 'position' => $position]) {
             $el = $this->getEl($el)->setAttr('bg');
             if ($el->getAttr('plain') === null && $el->getAttr('default') === null) {
@@ -439,5 +452,87 @@ class TableTheme implements TableThemeInterface
         $form->addFormItems(...$searchForms);
 
         return $form->render('ElementUI');
+    }
+
+    /**
+     * @param Table $table
+     *
+     * @return FictitiousLabel
+     */
+    private function statusToggleButtonsHandle(Table $table): FictitiousLabel
+    {
+        $el = El::fictitious();
+
+        foreach ($table->getStatusToggleButtons() as $toggleButton) {
+            $status = El::double('el-button-group')->addClass('ml-4')
+                ->setAttr('style', 'margin-right:10px');
+
+            $statusVarName = Html::js()->vue->getAvailableDataName("statusToggle");
+            $method        = Html::js()->vue->getAvailableMethod("statusToggleMethod");
+
+            Html::js()->vue->set($statusVarName, null);
+            Html::js()->vue->addMethod($method, JsFunc::anonymous(['status'])->code(
+                JsVar::assign("this.{$table->getId()}Search['{$toggleButton['searchField']}']", '@status'),
+                JsVar::assign("this.$statusVarName", '@status'),
+                JsFunc::call("this.{$table->getId()}GetData")
+            ));
+
+            $status->append(El::double('el-button')->setAttrs([
+                'type'   => 'primary',
+                ':plain' => "$statusVarName !== null",
+                'bg'     => '',
+                '@click' => "$method(null)",
+            ])->append("全部"));
+
+            foreach ($toggleButton['mapping'] as $key => $value) {
+                if (is_array($value)) {
+                    $key   = $value['value'];
+                    $value = $value['label'];
+                }
+
+                $status->append(El::double('el-button')->setAttrs([
+                    'type' => 'primary',
+                    ':plain' => "$statusVarName !== $key",
+                    'bg' => '',
+                    '@click' => "$method($key)",
+                ])->append($value));
+            }
+
+            $el->append($status);
+        }
+
+        return $el;
+    }
+
+    /**
+     * @param Table $table
+     *
+     * @return string|null
+     */
+    private function sortHandle(Table $table): ?string
+    {
+        Html::js()->vue->set("{$table->getId()}Sort", null);
+
+        $fieldMap = array_map(fn(Column $column) => [$column->getAttr('prop') => $column->getSortField()], $table->getColumns());
+        $fieldMap = array_filter(array_merge(...$fieldMap));
+
+        if (!$fieldMap){
+            return null;
+        }
+
+        Html::js()->vue->set("{$table->getId()}SortFieldMap", $fieldMap);
+        $sortMethod = Html::js()->vue->getAvailableMethod($table->getId() . 'SortMethod');
+
+        Html::js()->vue->addMethod($sortMethod, ['{ column, prop, order }'], JsCode::make(
+            JsLog::print("@column, prop, order"),
+            JsVar::assign("this.{$table->getId()}Sort", [
+                'order' => Grammar::mark("order"),
+                'field' => Grammar::mark("this.{$table->getId()}SortFieldMap.hasOwnProperty(prop) ? this.{$table->getId()}SortFieldMap[prop] : prop")
+            ]),
+            JsLog::printVar("this.{$table->getId()}Sort"),
+            JsFunc::call("this.{$table->getId()}GetData"),
+        ));
+
+        return $sortMethod;
     }
 }

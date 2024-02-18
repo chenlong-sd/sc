@@ -26,6 +26,7 @@ class Column
     private array $show = [];
     private array $search = [];
     protected ?string $fixedPosition = null;
+    protected ?string $sortField = null;
 
     public function __construct(private array $attrs = []){}
 
@@ -42,6 +43,16 @@ class Column
         $attrs = is_string($attr) ? [$attr => $value] : $attr;
 
         $this->attrs = [...$this->attrs, ...$attrs];
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function enableSort(string $sortField = null): static
+    {
+        $this->sortField = $sortField ?: $this->getAttr('prop');
 
         return $this;
     }
@@ -318,5 +329,10 @@ class Column
         }
 
         return $formItem;
+    }
+
+    public function getSortField(): ?string
+    {
+        return $this->sortField;
     }
 }

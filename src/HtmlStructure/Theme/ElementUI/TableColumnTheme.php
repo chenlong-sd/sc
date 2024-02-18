@@ -40,6 +40,9 @@ class TableColumnTheme implements TableColumnThemeInterface
         if ($column->getFixedPosition()) {
             $column->setAttr('fixed', $column->getFixedPosition());
         }
+        if ($column->getSortField()) {
+            $column->setAttr('sortable', "custom");
+        }
 
         if ($show = $column->getShow()) {
             match ($show['type']) {

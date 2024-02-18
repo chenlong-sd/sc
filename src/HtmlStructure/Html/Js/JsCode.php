@@ -23,6 +23,11 @@ class JsCode
         return new self($code);
     }
 
+    public static function raw(#[Language('JavaScript')] string|\Stringable $code): string
+    {
+        return $code;
+    }
+
     public static function make(#[Language('JavaScript')] string ...$code): JsCode
     {
         $block = new self();

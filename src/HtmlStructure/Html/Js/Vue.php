@@ -177,6 +177,24 @@ class Vue
     }
 
     /**
+     * @param string $name
+     *
+     * @return string
+     */
+    public function getAvailableDataName(string $name = ''): string
+    {
+        if (!$name) {
+            return $this->getAvailableDataName("cusVar");
+        }
+
+        if ($this->existsData($name)) {
+            return $this->getAvailableDataName($name . "_v");
+        }
+
+        return $name;
+    }
+
+    /**
      * 是否存在 method
      *
      * @param string $method
@@ -185,7 +203,23 @@ class Vue
      */
     public function existsMethod(string $method): bool
     {
+        if ($this->makeComponent) {
+            return isset($this->makeComponent['methods'][$method]);
+        }
         return isset($this->config['methods'][$method]);
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return bool
+     */
+    public function existsData(string $name): bool
+    {
+        if ($this->makeComponent) {
+            return isset($this->makeComponent['data'][$name]);
+        }
+        return isset($this->data[$name]);
     }
 
     /**

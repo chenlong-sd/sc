@@ -179,4 +179,12 @@ class DoubleLabel extends AbstractHtmlElement
 
         return $this;
     }
+
+    /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        return !$this->getChildren();
+    }
 }

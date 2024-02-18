@@ -52,6 +52,7 @@ class Table
     private ?string $rowGroup = null;
     private array $rowGroupEvent = [];
     protected array $searchForms = [];
+    protected array $statusToggleButtons = [];
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -277,6 +278,19 @@ class Table
     }
 
     /**
+     * @param string $searchField
+     * @param array  $mapping
+     *
+     * @return Table
+     */
+    public function addStatusToggleButtons(string $searchField, array $mapping): static
+    {
+        $this->statusToggleButtons[] = compact('searchField', 'mapping');
+
+        return $this;
+    }
+
+    /**
      * @return array|Column[]
      */
     public function getColumns(): array
@@ -303,5 +317,10 @@ class Table
     public function isOpenPagination(): bool
     {
         return $this->openPagination;
+    }
+
+    public function getStatusToggleButtons(): array
+    {
+        return $this->statusToggleButtons;
     }
 }

@@ -413,21 +413,24 @@ class Tree
      * @param mixed  $chain
      * @param string $separate
      *
-     * @return array{"chain":"string", "parent":"mixed"}|null
+     * @return array{"chain":"string", "parent":"mixed", "selectValue":"mixed"}|null
      */
     public static function chainToStr(mixed $chain, string $separate = ','): ?array
     {
         if (!$chain) {
             return [
-                "chain"  => '',
-                'parent' => 0
+                "chain"       => '',
+                'parent'      => 0,
+                'selectValue' => 0,
             ];
         }
         if (!is_array($chain)) return null;
 
+        $end = end($chain);
         return [
-            "chain"  => implode($separate, $chain) . $separate,
-            'parent' => end($chain)
+            "chain"       => implode($separate, $chain) . $separate,
+            'parent'      => $end,
+            'selectValue' => $end,
         ];
     }
 
@@ -443,16 +446,18 @@ class Tree
     {
         if (!$str) {
             return [
-                "chain"  => [],
-                'parent' => 0
+                "chain"       => [],
+                'parent'      => 0,
+                'selectValue' => 0,
             ];
         }
         $chain = array_filter(explode($separate, $str), fn($v) => $v !== '');
         $chain = array_map(fn($v) => filter_var($v, FILTER_VALIDATE_INT) ? (int)$v : $v, $chain);
-
+        $end   = $chain ? end($chain) : '';
         return [
             "chain"  => $chain,
-            'parent' => $chain ? end($chain) : ''
+            'parent' => $end,
+            'selectValue' => $end,
         ];
     }
 }
