@@ -121,8 +121,7 @@ class Page
                             JsCode::if('data.code !== 200',
 
                                 JsCode::create('clearInterval(getMsg)')
-                                    ->then('this.status = "wait"')
-                                    ->then('this.messages.push("无");'),
+                                    ->then('this.status = "wait"'),
 
                                 JsCode::create('this.messages.push(...data.messages)')
                                     ->then('seek = data.seek')

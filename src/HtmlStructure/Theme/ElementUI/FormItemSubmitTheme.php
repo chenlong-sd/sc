@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
@@ -16,6 +17,7 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\Js\Obj;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
 use Sc\Util\Tool;
 
@@ -97,14 +99,17 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
                 $formItemSubmit->getFail()
             ))->catch(JsFunc::arrow(['error'])->code(
                 JsCode::create('console.log(error)')->then('this.$message.error(error)')
-            ))->finally(JsFunc::arrow()->code("this.{$formId}Loading = false;"));
+            ))->finally(JsFunc::arrow()->code(JsVar::assign("this.{$formId}Loading", false)));
         }
 
-        Html::js()->vue->addMethod($formId ."Submit", [],
-            JsCode::create("this.{$formId}Loading = true;")
-                ->then(JsVar::def('data',  "@this.{$formItemSubmit->getFormModel()}"))
-                ->then($formItemSubmit->getForm()->getSubmitHandle())
-                ->then($submitHandle)
+        Html::js()->vue->addMethod($formId . "Submit", [], JsCode::make(
+            JsVar::def('data', "@this.{$formItemSubmit->getFormModel()}"),
+            $formItemSubmit->getForm()->getSubmitHandle(),
+            $this->verifyData($formItemSubmit->getForm(), JsCode::make(
+                JsVar::assign("this.{$formId}Loading", true),
+                $submitHandle
+            ))
+        ),
         );
     }
 
@@ -117,4 +122,19 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         Html::js()->vue->addMethod($formId . "Reset", [], $resetHandle);
     }
 
+    /**
+     * @param Form  $form
+     * @param mixed $submitCode
+     *
+     * @return Obj
+     */
+    private function verifyData(Form $form, mixed $submitCode): Obj
+    {
+        return JsFunc::call("this.\$refs.{$form ->getId()}.validate", JsFunc::arrow(['valid'])->code(
+            JsIf::when('!valid')->then(
+                JsCode::create("return false;")
+            ),
+            $submitCode,
+        ));
+    }
 }

@@ -185,13 +185,6 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
     {
         $el->setAttr('row-key', '_id_');
 
-        $default = [];
-        foreach ($formItemTable->getDefault() as $index => $value) {
-            $value['_id_'] = "it-" . $index;
-            $default[]     = $value;
-        }
-        $formItemTable->default($default);
-
         $formItemTable->getForm()->setSubmitHandle(JsCode::make(
             JsVar::assign("data", '@JSON.parse(JSON.stringify(data))'),
             JsFor::loop("var i = 0; i < data.{$formItemTable->getName()}.length; i++")->then(

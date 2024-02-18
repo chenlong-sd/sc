@@ -43,18 +43,15 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
     protected function getDefault()
     {
         if ($this->default){
+            foreach ($this->default as $index => &$value){
+                $value['_id_'] = "t-" . $index;
+            }
+
+            unset($value);
             return $this->default;
         }
 
-        $rowData = array_merge(...array_map(function ($v) {
-            if ($v->getName()) {
-                return [$v->getName() => $v->getDefault()];
-            }
-
-            return $v->getDefault();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit)));
-
-        return [$rowData];
+        return $this->noFormDefaultData();
     }
 
 
@@ -63,5 +60,23 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
         $this->formModel = $formModel;
 
         $this->childrenFormSet('setFormModel', "scope.row");
+    }
+
+    /**
+     * @return array
+     */
+    private function noFormDefaultData(): array
+    {
+        $rowData = array_merge(...array_map(function ($v) {
+            if ($v->getName()) {
+                return [$v->getName() => $v->getDefault()];
+            }
+
+            return $v->getDefault();
+        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit)));
+
+        $rowData['_id_'] = 1;
+
+        return [$rowData];
     }
 }

@@ -149,11 +149,11 @@ class WindowTheme implements WindowThemeInterface
     private function normalHandle(AbstractHtmlElement|string|null $elements, DoubleLabel $template, JsCode $code): void
     {
         if (method_exists($elements, 'getLabel') && $elements->getLabel() === 'el-form') {
-            $vModel = $elements->getAttr('v-model');
+            $vModel = $elements->getAttr(':model');
             if ($elements->hasAttr("v-loading")) {
                 // 说明需要请求后台获取默认数据。
                 // 实际可能在创建数据的时候也会使用这个，所以再判断一下 row.id 值是否为真
-                $code->then(JsCode::if('row !== undefined && row.id', "this['{$vModel}GetDefaultData'](row.id)", "this.{$vModel}Default(row)"));
+                $code->then(JsCode::if("this['{$vModel}GetDefaultData'] !== undefined", "this['{$vModel}GetDefaultData'](row.id)", "this.{$vModel}Default(row)"));
             }else{
                 $code->then("this.{$vModel}Default(row)");
             }
@@ -216,7 +216,7 @@ class WindowTheme implements WindowThemeInterface
             El::double($vueComponent->getName())
                 ->setAttrs([
                     'ref' => $vueComponent->getName(),
-//                    'v-if' => $showVar
+                    //                    'v-if' => $showVar
                 ])
         );
 
@@ -224,11 +224,11 @@ class WindowTheme implements WindowThemeInterface
             JsFunc::call('setTimeout', JsFunc::arrow()->code(
                 JsCode::if("this.\$refs['{$vueComponent->getName()}'] !== undefined",
                     JsCode::create("this.\$refs['{$vueComponent->getName()}'].onShow(row)")
-                    ->then("clearInterval(f)")
+                        ->then("clearInterval(f)")
                 )
             )
-        )));
-//        Html::js()->vue->set($showVar, false);
+            )));
+        //        Html::js()->vue->set($showVar, false);
         Html::js()->vue->addComponents($vueComponent);
     }
 }

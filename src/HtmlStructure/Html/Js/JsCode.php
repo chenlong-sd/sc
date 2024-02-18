@@ -50,21 +50,13 @@ class JsCode
 
     public function thenIf(#[Language('JavaScript')] string $where, #[Language('JavaScript')] string $trueHandle, #[Language('JavaScript')] string|\Stringable $falseHandle = ''): static
     {
+        $if = JsIf::when($where)->then($trueHandle);
+
         if ($falseHandle) {
-            $this->codes[] = <<<JS
-                if ($where) {
-                    $trueHandle;
-                }else{
-                    $falseHandle;
-                }
-            JS;
-        } else {
-            $this->codes[] = <<<JS
-                if ($where) {
-                    $trueHandle;
-                }
-            JS;
+            $if->else($falseHandle);
         }
+
+        $this->codes[] = $if;
 
         return $this;
     }

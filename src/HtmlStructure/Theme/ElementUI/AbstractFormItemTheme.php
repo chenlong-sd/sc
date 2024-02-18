@@ -20,6 +20,9 @@ abstract class AbstractFormItemTheme
         if ($formItem->getLabelWidth() !== null) {
             $el->setAttr('label-width', $formItem->getLabelWidth());
         }
+        if ($formItem->getRules()) {
+            $el->setAttr("prop", $formItem->getName());
+        }
 
         return $el;
     }

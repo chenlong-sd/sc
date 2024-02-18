@@ -22,7 +22,7 @@ class ExecutionProgress
         $type     = 'back_up';
         $msg      = "success";
         $isEnd    = false;
-        $filePath = __DIR__ . '/tmp/' . self::PROGRESS_FILE;
+        $filePath = __DIR__ . "/tmp/" . self::PROGRESS_FILE;
         $messages = [];
 
         try {
@@ -96,11 +96,12 @@ class ExecutionProgress
             }
         } catch (\Throwable $exception) {
             @unlink($signalFilename);
+            $fd and fclose($fd);
+            @unlink($filename);
+
             if ($exception->getCode() === 11211) {
                 throw $exception;
             }
-            $fd and fclose($fd);
-            @unlink($filename);
         }
     }
 
@@ -126,5 +127,11 @@ class ExecutionProgress
     public static function isEnd(): bool
     {
         return file_exists(__DIR__ . "/tmp/" . self::END_SIGNAL_FILE);
+    }
+
+    public function clearProgress(): void
+    {
+        @unlink(__DIR__ . "/tmp/" . self::END_SIGNAL_FILE);
+        @unlink(__DIR__ . "/tmp/" . self::PROGRESS_FILE);
     }
 }

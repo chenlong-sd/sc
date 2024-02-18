@@ -160,7 +160,7 @@ class JsFunc
     private function defCode(): string
     {
         $templateReplace = [
-            ':function' => $this->name === '=>' ? '' : 'function',
+            ':function' => $this->name === '=>' ? '' : (str_contains($this->code, 'await') ? 'async function' : 'function'),
             ':name'     => ($this->name && $this->name !== '=>') ? $this->name : '',
             ':params'   => implode(', ', $this->params),
             ':code'     => strtr($this->code, ["\r\n" => "\r\n    ", '\\"' => '"']),
