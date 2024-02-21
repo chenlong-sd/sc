@@ -2,23 +2,22 @@
 
 namespace Sc\Util\Wechat;
 
-use Sc\Util\Attributes\StaticCallAttribute;
 use Sc\Util\StaticCall;
-use Sc\Util\Wechat\PublicPlatform\Applet\Login;
-use Sc\Util\Wechat\PublicPlatform\Applet\PhoneNumber;
-use Sc\Util\Wechat\PublicPlatform\Applet\QRCode;
-use Sc\Util\Wechat\PublicPlatform\Applet\UniformMessage;
+use Sc\Util\Wechat\PublicPlatform\PublicAccount\Menu;
+use Sc\Util\Wechat\PublicPlatform\PublicAccount\MessageManger;
 use Sc\Util\Wechat\PublicPlatform\PublicAccount\TemplateMessage;
+use Sc\Util\Wechat\PublicPlatform\PublicAccount\User;
 
 /**
  * 微信公众号
- *
+ * @method static MessageManger messageManger(Config $config) 消息管理
+ * @method static User user(Config $config) 用户
  * @method static TemplateMessage templateMessage(Config $config) 模板消息
- *
+ * @method static Menu menu(Config $config) 菜单
  * @author chenlong<vip_chenlong@163.com>
  * @date   2022/6/24 14:15
  */
-class WechatPublicAccount extends StaticCall
+class WechatPublic extends StaticCall
 {
     /**
      * 获取类的全命名空间

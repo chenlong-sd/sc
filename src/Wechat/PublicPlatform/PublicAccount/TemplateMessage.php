@@ -2,7 +2,6 @@
 
 namespace Sc\Util\Wechat\PublicPlatform\PublicAccount;
 
-use Psr\SimpleCache\InvalidArgumentException;
 use Sc\Util\Wechat\Config;
 use Sc\Util\Wechat\Execption\WechatException;
 use Sc\Util\Wechat\PublicPlatform\AccessToken;
@@ -24,8 +23,7 @@ class TemplateMessage
      * @param Message $message
      *
      * @return Response
-     * @throws InvalidArgumentException
-     * @throws WechatException
+     * @throws WechatException|\Psr\SimpleCache\InvalidArgumentException
      */
     public function send(Message $message): Response
     {

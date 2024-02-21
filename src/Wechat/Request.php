@@ -36,7 +36,7 @@ class Request
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array_map(fn($k, $v) => "$k:$v", array_keys($header), array_values($header)));
-        curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));
 
         return self::execution($curl);
     }
@@ -80,7 +80,7 @@ class Request
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array_map(fn($k, $v) => "$k:$v", array_keys($header), array_values($header)));
-        curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));
 
         return self::execution($curl);
     }

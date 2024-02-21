@@ -15,6 +15,8 @@ use JetBrains\PhpStorm\ExpectedValues;
  * @property-read string $cacheEngine    缓存静态调用类
  * @property-read string $cert           证书路径
  * @property-read string $cert_key       证书密钥路径
+ * @property-read string $pub_token      公众号域名配置token
+ * @property-read string $EncodingAESKey 公众号消息加解密密钥
  *
  * @author chenlong<vip_chenlong@163.com>
  * @date   2022/5/26 15:21
@@ -25,15 +27,17 @@ class Config
      * @var array
      */
     private array $data = [
-        'mch_id'      => '', // 商户号
-        'key'         => '', // 支付密钥
-        'v3_key'      => '', // v3支付密钥
-        'serial_no'   => '', // 支付序列号
-        'appid'       => '', //
-        'secret'      => '', //
-        'cacheEngine' => '', // 缓存静态调用类
-        'cert'        => '', // 证书内容
-        'cert_key'    => '', // 证书密钥内容
+        'mch_id'         => '', // 商户号
+        'key'            => '', // 支付密钥
+        'v3_key'         => '', // v3支付密钥
+        'serial_no'      => '', // 支付序列号
+        'appid'          => '', //
+        'secret'         => '', //
+        'cacheEngine'    => '', // 缓存静态调用类
+        'cert'           => '', // 证书内容
+        'cert_key'       => '', // 证书密钥内容
+        'pub_token'      => '', // 公众号域名验证token
+        'EncodingAESKey' => '', // 消息加解密密钥
     ];
 
     /**
@@ -122,8 +126,14 @@ class Config
         foreach ($attr as $key => $val){
             $this->data[$key] = $val;
             if ($key == "cert_path") {
-                $this->data['cert']     = file_get_contents($val . DIRECTORY_SEPARATOR . 'apiclient_cert.pem');
-                $this->data['cert_key'] = file_get_contents($val . DIRECTORY_SEPARATOR . 'apiclient_key.pem');
+                if (is_file($val . DIRECTORY_SEPARATOR . 'apiclient_cert.pem')) {
+                    $this->data['cert']     = file_get_contents($val . DIRECTORY_SEPARATOR . 'apiclient_cert.pem');
+                }
+
+                if (is_file($val . DIRECTORY_SEPARATOR . 'apiclient_key.pem')) {
+                    $this->data['cert_key'] = file_get_contents($val . DIRECTORY_SEPARATOR . 'apiclient_key.pem');
+                }
+
             }
         }
 
