@@ -236,11 +236,12 @@ class JWT
      * token 根据自身数据刷新
      *
      * @param string $token
+     * @param int    $exp
      *
      * @return array
      * @throws \Exception
      */
-    public function selfRefresh(string $token): array
+    public function selfRefresh(string $token, int $exp = 3600): array
     {
         $tokenPayload = $this->verify($token, false);
 
@@ -249,7 +250,7 @@ class JWT
         $this->payload['jti']  = $tokenPayload['jti'];
         $this->payload['jtiv'] = ($tokenPayload['jtiv'] ?? 0) + 1;
 
-        $this->setExp(3600);
+        $this->setExp($exp);
 
         return $this->getToken();
     }
