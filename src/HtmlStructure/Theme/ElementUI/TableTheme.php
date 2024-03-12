@@ -58,7 +58,7 @@ class TableTheme implements TableThemeInterface
             $attrs['header-cell-class-name'] = 'vue--table-header-center';
         }
         if (empty($attrs['cell-class-name'])) {
-            Html::css()->addCss('.vue--table-row-center{text-align: center !important;}');
+            Html::css()->addCss('.el-table .el-table__cell.vue--table-row-center{text-align: center;}');
             $attrs['cell-class-name'] = 'vue--table-row-center';
         }
 
