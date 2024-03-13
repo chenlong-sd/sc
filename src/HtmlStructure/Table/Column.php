@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
+use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableColumnThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -334,5 +335,19 @@ class Column
     public function getSortField(): ?string
     {
         return $this->sortField;
+    }
+
+    public function align(#[ExpectedValues(['center', 'left', 'right'])] string $align): static
+    {
+        if (!$className = $this->getAttr('class-name')) {
+            Html::css()->addCss(".el-table .sc-table-left{text-align: left!important;}");
+            Html::css()->addCss(".el-table .sc-table-right{text-align: right!important;}");
+
+            $this->setAttr('class-name', 'sc-table-' . $align);
+        }else{
+            Html::css()->addCss(".el-table .$className{text-align: $align!important;}");
+        }
+
+        return $this;
     }
 }
