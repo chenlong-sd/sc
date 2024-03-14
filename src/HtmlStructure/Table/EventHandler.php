@@ -36,6 +36,17 @@ class EventHandler
         return JsVar::assign('location.href', $url);
     }
 
+    /**
+     * @param string|\Stringable $url
+     * @param string             $tableId
+     *
+     * @return string
+     */
+    public static function injectSearchRedirect(string|\Stringable $url, string $tableId): string
+    {
+        return self::redirect(JsFunc::call("urlInjectSearch", $url, $tableId));
+    }
+
     public static function get(string|\Stringable $url = '', mixed $data = null, #[Language('JavaScript')] string|\Stringable $successHandler = "console.log(data.data)"): Axios
     {
         $errorMessage   = JsService::message(Grammar::mark("data.msg ? data.msg : '服务器错误'"), 'error');

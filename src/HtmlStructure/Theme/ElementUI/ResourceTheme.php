@@ -7,6 +7,10 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\HtmlStructure\Html\Js\JsLog;
+use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\ElementIcon;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\ResourceThemeInterface;
@@ -32,5 +36,43 @@ class ResourceTheme implements ResourceThemeInterface
         Html::js()->load(StaticResource::ELEMENT_PLUS_JS);
         Html::js()->load(StaticResource::ELEMENT_PLUS_LANG);
         Html::js()->vue->addComponents(new ElementIcon());
+
+        $this->utilMethodDef();
+    }
+
+    /**
+     * @return void
+     */
+    private function utilMethodDef(): void
+    {
+        // 地址注入搜索参数
+        Html::js()->defFunc("urlInjectSearch", ['url', 'tableId'], JsCode::make(
+            JsCode::create(<<<JS
+            function buildQuery(obj, parentPrefix = null) {
+              var parts = [];
+              for (let key in obj) {
+                if (obj.hasOwnProperty(key)) {
+                  let propName = parentPrefix ? `\${parentPrefix}[\${encodeURIComponent(key)}]` : encodeURIComponent(key);
+                  let value = obj[key];
+                  if (value && typeof value === 'object' && !(value instanceof Date) && !(value instanceof File)) {
+                    parts.push(buildQuery(value, propName));
+                  } else {
+                    parts.push(propName + '=' + encodeURIComponent(value));
+                  }
+                }
+              }
+              return parts.join('&');
+            }
+            JS),
+            JsVar::def('urlObj', '@new URL(url)'),
+            JsVar::def("search", JsFunc::call('buildQuery', [
+                'search' => [
+                    "search"      => Grammar::mark('VueApp[`${tableId}Search`]'),
+                    "searchType"  => Grammar::mark('VueApp[`${tableId}SearchType`]'),
+                    "searchField" => Grammar::mark('VueApp[`${tableId}SearchField`]'),
+                ]
+            ])),
+            JsCode::create("return  urlObj.origin + urlObj.pathname + '?' +search + urlObj.hash;")
+        ));
     }
 }

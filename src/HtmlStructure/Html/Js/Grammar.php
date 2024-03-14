@@ -55,7 +55,7 @@ class Grammar
     {
         // 这个是处理正则表达式的
         $jsCode = preg_replace_callback('/"' . self::MARK_START . '\\\\\/(.*?)\\\\\/' . self::MARK_END . '"/', function ($match){
-            return  preg_replace('/[^\\\]\\\/', '', '/' . $match[1] . '/');
+            return  '/' . preg_replace('/(?<!\\\)\\\/', '', $match[1]). '/';
         }, $jsCode);
 
         return strtr($jsCode, [
