@@ -56,6 +56,8 @@ class Table
     protected array $searchForms = [];
     protected array $statusToggleButtons = [];
 
+    protected int $maxHeight = 0;
+
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
     }
@@ -324,5 +326,22 @@ class Table
     public function getStatusToggleButtons(): array
     {
         return $this->statusToggleButtons;
+    }
+
+    public function getMaxHeight(): int
+    {
+        return $this->maxHeight;
+    }
+
+    /**
+     * 设置最大高度。不设置则自动识别
+     *
+     * @param int $maxHeight
+     *
+     * @return void
+     */
+    public function setMaxHeight(int $maxHeight = -1): void
+    {
+        $this->maxHeight = $maxHeight;
     }
 }
