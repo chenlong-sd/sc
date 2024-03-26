@@ -54,7 +54,10 @@ class ResourceTheme implements ResourceThemeInterface
                 if (obj.hasOwnProperty(key)) {
                   let propName = parentPrefix ? `\${parentPrefix}[\${encodeURIComponent(key)}]` : encodeURIComponent(key);
                   let value = obj[key];
-                  if (value && typeof value === 'object' && !(value instanceof Date) && !(value instanceof File)) {
+                  
+                  if (!value) continue;
+                  
+                  if (typeof value === 'object' && !(value instanceof Date) && !(value instanceof File)) {
                     parts.push(buildQuery(value, propName));
                   } else {
                     parts.push(propName + '=' + encodeURIComponent(value));

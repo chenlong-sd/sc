@@ -28,12 +28,13 @@ class EventHandler
 {
     /**
      * @param string|\Stringable $url
+     * @param bool               $isNewTag
      *
      * @return string
      */
-    public static function redirect(string|\Stringable $url): string
+    public static function redirect(string|\Stringable $url, bool $isNewTag = false): string
     {
-        return JsVar::assign('location.href', $url);
+        return $isNewTag ? JsFunc::call("window.open", $url) : JsVar::assign("location.href", $url);
     }
 
     /**
@@ -42,9 +43,9 @@ class EventHandler
      *
      * @return string
      */
-    public static function injectSearchRedirect(string|\Stringable $url, string $tableId): string
+    public static function injectSearchRedirectDownload(string|\Stringable $url, string $tableId): string
     {
-        return self::redirect(JsFunc::call("urlInjectSearch", $url, $tableId));
+        return self::redirect(JsFunc::call("urlInjectSearch", $url, $tableId), true);
     }
 
     public static function get(string|\Stringable $url = '', mixed $data = null, #[Language('JavaScript')] string|\Stringable $successHandler = "console.log(data.data)"): Axios
