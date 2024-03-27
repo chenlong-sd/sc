@@ -34,10 +34,16 @@ trait Validate
         return $this->addRule(['required' => true], $message, $trigger);
     }
 
+    /**
+     * @param string       $when  变量需使用全局变量 VueApp ，例：VueApp.user.id === 1
+     * @param string|null  $message
+     * @param string|array $trigger
+     *
+     * @return $this
+     */
     public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur'])
     {
         return $this->customizeVerify(JsFunc::anonymous(['rule', 'value', 'callback'])->code(
-            JsCode::create("console.log($when)"),
             JsIf::when("!value && $when")->then(
                 JsFunc::call("callback", $message ?: $this->getLabel() . "不能为空")
             )->else(
@@ -75,11 +81,11 @@ trait Validate
                                ] string $type, string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if (($type == 'integer') && $this instanceof FormItemText) {
-            return $this->patternVerify('/^\d+$/');
+            return $this->patternVerify('/^\-?\d+$/');
         }
 
         if (($type == 'number') && $this instanceof FormItemText) {
-            return $this->patternVerify('/^\d+(\.\d+)?$/');
+            return $this->patternVerify('/^\-?\d+(\.\d+)?$/');
         }
 
         if ($message === null) {

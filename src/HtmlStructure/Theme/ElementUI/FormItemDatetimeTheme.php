@@ -54,11 +54,11 @@ class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDat
             return;
         }
         $format = match ($datetime->getAttr('type')){
-            'date' => 'YYYY-MM-DD',
+            'date', 'dates' => 'YYYY-MM-DD',
             default =>  'YYYY-MM-DD HH:mm:ss'
         };
 
-        $datetime->setAttr('format', $format);
+        $datetime->setAttrIfNotExist('format', $format);
         $datetime->setAttrIfNotExist('value-format', $format);
     }
 }

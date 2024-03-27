@@ -52,7 +52,9 @@ class FormTheme implements FormThemeInterface
         /** @var Form\FormItemAttrGetter|Form\FormItemInterface $item */
         foreach ($form->getFormItems() as $item) {
             if ($rule = $item->getRules()) {
-                $rules[$item->getName()] = $rule;
+                $item->getName()
+                    ? $rules[$item->getName()] = $rule
+                    : $rules = array_merge($rules, $rule);
             }
         }
 
