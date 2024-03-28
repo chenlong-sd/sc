@@ -9,7 +9,9 @@ use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
+use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Table\EventHandler;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
@@ -53,6 +55,8 @@ class Table
     private array $rowGroupEvent = [];
     protected array $searchForms = [];
     protected array $statusToggleButtons = [];
+
+    protected int $maxHeight = 0;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -177,7 +181,7 @@ class Table
      * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
-     *                                               数组时，第一个元素为数组，会识别为元素的属性值
+     *                                               数组时，第一个元素为数组，会识别为元素的属性值, 例：["@primary.Exit.编辑", ["v-if" => "id == 1"]]
      * @param mixed                      $handler    事件处理代码，行数据变量  row , 取当前行id值：row.id
      *
      * @date 2023/6/1
@@ -322,5 +326,22 @@ class Table
     public function getStatusToggleButtons(): array
     {
         return $this->statusToggleButtons;
+    }
+
+    public function getMaxHeight(): int
+    {
+        return $this->maxHeight;
+    }
+
+    /**
+     * 设置最大高度。不设置则自动识别
+     *
+     * @param int $maxHeight
+     *
+     * @return void
+     */
+    public function setMaxHeight(int $maxHeight = -1): void
+    {
+        $this->maxHeight = $maxHeight;
     }
 }

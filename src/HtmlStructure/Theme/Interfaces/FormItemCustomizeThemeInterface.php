@@ -11,5 +11,5 @@ use Sc\Util\HtmlStructure\Form\FormItemCustomize;
 
 interface FormItemCustomizeThemeInterface
 {
-    public function render(FormItemCustomize|FormItemAttrGetter $formItemDatetime): AbstractHtmlElement;
+    public function render(FormItemCustomize|FormItemAttrGetter $formItemCustomize): AbstractHtmlElement;
 }

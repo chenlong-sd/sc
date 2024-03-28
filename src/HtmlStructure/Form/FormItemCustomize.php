@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructure\Form;
 
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Attrs;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCustomizeThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -11,6 +12,8 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemCustomize extends AbstractFormItem implements FormItemInterface
 {
+    use Attrs;
+
     public function __construct(protected AbstractHtmlElement|string $element)
     {}
 

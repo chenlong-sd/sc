@@ -67,6 +67,8 @@ class TableTheme implements TableThemeInterface
             $attrs['@sort-change'] = $sortMethod;
         }
 
+        $this->heightRestrictions($table, $attrs);
+
         $el->setAttr(':data', $dataVarName);
         $el->setAttrs($attrs);
 
@@ -386,7 +388,7 @@ class TableTheme implements TableThemeInterface
         // 如需自定义，重新设置JS变量值就可以了
 
         Html::js()->vue->set("{$table->getId()}Page", 1);
-        Html::js()->vue->set("{$table->getId()}PageSize", 20);
+        Html::js()->vue->set("{$table->getId()}PageSize", 50);
 
         $pagination = El::double('el-pagination')->setAttrs([
             'background'      => '',
@@ -413,6 +415,34 @@ class TableTheme implements TableThemeInterface
         ));
 
         return $pagination;
+    }
+
+    /**
+     * 高度限制
+     *
+     * @param Table $table
+     * @param array $attrs
+     *
+     * @return void
+     */
+    private function heightRestrictions(Table $table, array &$attrs): void
+    {
+        if (!$table->isOpenPagination() || !$table->getMaxHeight()) {
+            return;
+        }
+
+        $heightName = "maxHeight{$table->getId()}";
+        $attrs[":max-height"] = $heightName;
+        Html::js()->vue->set($heightName, max($table->getMaxHeight(), 0));
+        Html::js()->vue->set("vueWindowHeight", "@window.innerHeight");
+
+        if ($table->getMaxHeight() < 0) {
+            Html::js()->vue->event('mounted', JsCode::make(
+                JsFunc::call('setTimeout', JsFunc::arrow()->code(
+                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top - 60")),
+                )
+            ));
+        }
     }
 
     private function searchHandle(Table $table): AbstractHtmlElement|string

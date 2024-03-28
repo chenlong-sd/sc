@@ -13,7 +13,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\Col;
  * 表单项目
  *
  * Class AbstractFormItem
- * @method $this setWhen(string $when) 何时展示 js 展示条件
+ * @method $this setWhen(string $when) 何时展示 js 展示条件，可使用 when 方法代替
  * @method $this setHide(bool $where)  隐藏条件直接再php层面过滤
  *
  * @package Sc\Util\HtmlStructure\Form
@@ -55,6 +55,25 @@ abstract class AbstractFormItem
     public function beforeRender(?\Closure $beforeRender): AbstractFormItem
     {
         $this->beforeRender = $beforeRender;
+        return $this;
+    }
+
+    /**
+     * 何时展示 js 展示条件
+     *
+     * @param string ...$wheres
+     *
+     * @return AbstractFormItem
+     */
+    public function when(string ...$wheres): static
+    {
+        $where = implode(' ', $wheres);
+        if (count($wheres) == 2 && !str_contains($where, '=')) {
+            $where =  $wheres[0] . ' === ' . $wheres[1];
+        }
+
+        $this->setter('when', $where);
+
         return $this;
     }
 

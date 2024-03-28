@@ -44,8 +44,6 @@ class WindowTheme implements WindowThemeInterface
 
         $template = El::double('el-dialog')->setAttrs($attrs);
 
-        $code->then("this['{$vModel}Title'] = " . sprintf('`%s`', preg_replace('/\{(.*?)}/', "\${row.$1}", $window->getTitle())));
-
         if ($isIframe) {
             // iframe
             $this->iframeHandle($vModel, $template, $window, $code);
@@ -68,6 +66,7 @@ class WindowTheme implements WindowThemeInterface
 
         Html::js()->vue->set($vModel, false);
         Html::js()->vue->set('windowHeight', "@windowHeight");
+        $code->then("this['{$vModel}Title'] = " . sprintf('`%s`', preg_replace('/\{(.*?)}/', "\${row.$1}", $window->getTitle())));
 
         $this->registerCloseWindow();
 
