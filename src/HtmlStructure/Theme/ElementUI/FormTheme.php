@@ -71,7 +71,7 @@ class FormTheme implements FormThemeInterface
     {
         $loadingVar          = $form->getId() . 'Loading';
         $config['v-loading'] = $loadingVar;
-        Html::js()->vue->set($loadingVar, true);
+        Html::js()->vue->set($loadingVar, false);
 
         if (isset($config['dataUrl'])) {
             Html::js()->vue->addMethod("{$form->getId()}GetDefaultData", ['id'],
