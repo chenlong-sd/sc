@@ -77,7 +77,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             }
 
             return $v->getDefault();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
+        }, array_filter($this->getChildren(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
     }
 
     public function getRules(): array
@@ -88,6 +88,12 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             }
 
             return $v->getRules();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
+        }, array_filter($this->getChildren(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
+    }
+
+
+    public function getChildren(): array
+    {
+        return array_filter($this->children, fn($children) => !$children->getHide());
     }
 }

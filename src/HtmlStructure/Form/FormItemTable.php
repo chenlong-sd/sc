@@ -73,10 +73,16 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
             }
 
             return $v->getDefault();
-        }, array_filter($this->children, fn($v) => !$v instanceof FormItemSubmit)));
+        }, array_filter($this->getChildren(), fn($v) => !$v instanceof FormItemSubmit)));
 
         $rowData['_id_'] = 1;
 
         return [$rowData];
+    }
+
+
+    public function getChildren(): array
+    {
+        return array_filter($this->children, fn($children) => !$children->getHide());
     }
 }

@@ -124,7 +124,7 @@ trait Validate
     public function numberRangeVerify(float|int $min, float|int $max, string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
-            $message = $this->getLabel() . "的大小必须再 $min - $max 之间";
+            $message = $this->getLabel() . "的大小必须在 $min - $max 之间";
         }
 
         $this->typeVerify('number', null, $trigger);
