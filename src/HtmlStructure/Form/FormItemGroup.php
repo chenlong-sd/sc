@@ -87,7 +87,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
                 return [$v->getName() => $v->getRules()];
             }
 
-            return $v->getRules();
+            return $v->getRules() ?: [];
         }, array_filter($this->getChildren(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
     }
 

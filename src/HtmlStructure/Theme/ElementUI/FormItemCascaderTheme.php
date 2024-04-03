@@ -31,7 +31,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCas
             $optionsVar = $formItemCascader->getName() . 'Rand' .  mt_rand(1, 999);
         }
 
-        $cascader = El::double('el-cascader')->setAttrs([
+        $cascader = El::double($formItemCascader->isPanel() ? 'el-cascader-panel' : 'el-cascader')->setAttrs([
             'v-model'  => $this->getVModel($formItemCascader),
             'placeholder' => $formItemCascader->getPlaceholder(),
             ':options' => $optionsVar,
@@ -44,7 +44,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCas
 
         $this->addEvent($cascader, $formItemCascader->getEvents(), $formItemCascader->getName());
 
-        return $this->afterRender($formItemCascader, $base->append($cascader));
+        return $this->afterRender($formItemCascader, $formItemCascader->isPanel() ? $cascader : $base->append($cascader));
     }
 
     public function closeAfterSelection(FormItemCascader|FormItemAttrGetter $formItemCascader, DoubleLabel $el): void

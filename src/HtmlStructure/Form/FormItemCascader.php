@@ -26,12 +26,28 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
      * @var true
      */
     protected bool $closeAfterSelection = false;
+    /**
+     * @var true
+     */
+    private bool $isPanel = false;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
         $el = Theme::getRender(FormItemCascaderThemeInterface::class, $theme)->render($this);
 
         return $this->ExecuteBeforeRendering($el);
+    }
+
+    /**
+     * 转为面板模式
+     *
+     * @return $this
+     */
+    public function toPanel(): static
+    {
+        $this->isPanel = true;
+
+        return $this;
     }
 
     /**
@@ -44,5 +60,10 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
         $this->closeAfterSelection = true;
 
         return $this;
+    }
+
+    public function isPanel(): bool
+    {
+        return $this->isPanel;
     }
 }
