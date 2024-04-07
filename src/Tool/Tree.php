@@ -159,15 +159,29 @@ class Tree
     }
 
     /**
-     * 设置指定条件的数据 默认 无
+     * @link self::filter
+     *
      * @param array|callable $where
-     * 一级条件： ['id' = 2]
-     * 多级条件： [['id' = 2], ['id' = 3]]
-     * @return Tree
+     * @deprecated
+     * @return $this
      */
     public function setWhere(array|callable $where): Tree
     {
-        $this->where = $where;
+        return $this->filter($where);
+    }
+
+    /**
+     * 设置指定条件的数据 默认 无
+     *  一级条件： ['id' = 2]
+     *  多级条件： [['id' = 2], ['id' = 3]]
+     *
+     * @param array|callable $condition
+     *
+     * @return $this
+     */
+    public function filter(array|callable $condition): static
+    {
+        $this->where = $condition;
         return $this;
     }
 
