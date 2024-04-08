@@ -21,6 +21,7 @@ use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsLog;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
@@ -83,6 +84,42 @@ class TableTheme implements TableThemeInterface
         $search = $this->searchHandle($table);
 
         return El::fictitious()->append($search, $headerEl, $el, $pagination);
+    }
+
+    private function drawHandle(Table $table): void
+    {
+        $draw = $table->getDraw();
+        if (!$draw['able']) {
+            return;
+        }
+
+        if (empty($table->getAttrs()['row-key'])) {
+            throw new \Exception("请设置表格的row-key属性，以保证数据渲染正确性");
+        }
+
+        $table->setRowEvent(is_string($draw['el']) ? [$draw['el'], ['class' => 'sc-ft-draw']] : $draw['el']->addClass('sc-ft-draw'), " ");
+
+        $initSortMethodName = "{$table->getId()}InitSort";
+        Html::js()->load(StaticResource::SORT_ABLE_JS);
+        Html::js()->vue->addMethod($initSortMethodName, JsFunc::anonymous()->code(
+            JsVar::def("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
+            JsFunc::call('new Sortable', "@ElDraw{$table->getId()}", [
+                "handle"    => ".sc-ft-draw",
+                "animation" => 150,
+                'onUpdate'  => JsFunc::arrow(['evt'])->code(
+                    JsCode::create("const currRow = this.{$table->getId()}.splice(evt.oldIndex, 1)[0];"),
+                    JsCode::create("this.{$table->getId()}.splice(evt.newIndex, 0, currRow)"),
+                    JsFunc::call('setTimeout', JsFunc::arrow()->code(
+                        $draw['updateHandle']
+                    ))
+                ),
+                ...$draw['config']
+            ])
+        ));
+
+        Html::js()->vue->event('mounted', JsCode::make(
+            JsCode::create("this.$initSortMethodName()")
+        ));
     }
 
     /**
@@ -176,9 +213,12 @@ class TableTheme implements TableThemeInterface
      * @param Table $table
      *
      * @return void
+     * @throws \Exception
      */
     private function rowEventHandle(Table $table): void
     {
+        $this->drawHandle($table);
+
         /**
          * 让处理程序和事件 dom 关联
          */

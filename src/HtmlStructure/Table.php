@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Table\EventHandler;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
@@ -57,6 +58,13 @@ class Table
     protected array $statusToggleButtons = [];
 
     protected int $maxHeight = 0;
+
+    protected array $draw = [
+        'able'         => false,
+        'el'           => null,
+        'updateHandle' => "",
+        'config'       => []
+    ];
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -343,5 +351,32 @@ class Table
     public function setMaxHeight(int $maxHeight = -1): void
     {
         $this->maxHeight = $maxHeight;
+    }
+
+    public function getDraw(): array
+    {
+        return $this->draw;
+    }
+
+    /**
+     * 设置行拖动
+     *
+     * @param string|AbstractHtmlElement|array $element        如只是需要改变按钮颜色和添加图标，
+     *                                                         可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
+     *                                                         更复杂的请示使用{@see AbstractHtmlElement}
+     *                                                         数组时，第一个元素为数组，会识别为元素的属性值, 例：["@primary.Exit.编辑", ["v-if" => "id == 1"]]
+     * @param callable|JsCode|string           $updateCallable 更新排序时的处理回调代码   this.{$table->getId()} 表格数据， evt 事件对象
+     * @param array                            $sortConfig     更多Sortable实例的配置
+     *
+     * @return void
+     */
+    public function setDraw(string|AbstractHtmlElement|array $element = "@primary.rank.", callable|JsCode|string $updateCallable = "", array $sortConfig = []): void
+    {
+        $this->draw = [
+            'able'         => true,
+            'el'           => $element,
+            'updateHandle' => $updateCallable instanceof \Closure ? $updateCallable() : $updateCallable,
+            'config'       => $sortConfig
+        ];
     }
 }
