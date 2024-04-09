@@ -33,7 +33,7 @@ class Axios
 
     public static function create(array $options): Axios
     {
-        return new self($options);
+        return new self(self::dataHandle($options));
     }
 
     public static function post(string|\Stringable $url = '', mixed $data = []): Axios

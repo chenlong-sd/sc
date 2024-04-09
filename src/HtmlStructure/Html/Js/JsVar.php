@@ -79,6 +79,9 @@ class JsVar
                         if (is_string($value) && str_contains($value, "\n")){
                             $value = Grammar::mark($value, 'line');
                         }
+                        if ($value instanceof JsFunc) {
+                            $value = $value->toCode();
+                        }
                     });
                 }
 

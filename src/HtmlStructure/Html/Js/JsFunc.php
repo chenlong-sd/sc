@@ -137,7 +137,7 @@ class JsFunc
 
         array_walk_recursive($params, function (&$value) {
             if ($value instanceof \Stringable){
-                $value = (string)$value;
+                $value = Grammar::mark($value);
             }
         });
 

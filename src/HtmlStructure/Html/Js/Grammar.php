@@ -58,9 +58,13 @@ class Grammar
             return  '/' . preg_replace('/(?<!\\\)\\\/', '', $match[1]). '/';
         }, $jsCode);
 
+        // 这个是处理函数类型的代码的时候
+        $jsCode = preg_replace_callback('/"' . self::MARK_START . '(.*?)' . self::MARK_END . '"/', function ($match){
+            return  preg_replace('/\\\(.)/', '$1', strtr($match[1], ['\r\n' => "\r\n", '\n' => "\n"]));
+        }, $jsCode);
+
         return strtr($jsCode, [
-//            '\r\n'                 => "\r\n",
-//            '\n'                   => "\r\n",
+            '\\/' => '/',
             '"' . self::MARK_START => '',
             self::MARK_END . '"'   => '',
             self::MARK_START       => '',
