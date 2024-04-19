@@ -50,8 +50,8 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
 
     /**
      * @param string|Url                  $url
-     * @param string|\Closure|JsFunc|null $fieldOrCode            为字符串时识别为搜索的字段，否则为搜索处理代码
-     * @param string|null                 $haveDefaultSearchField 有默认值时搜索值
+     * @param string|\Closure|JsFunc|null $fieldOrCode            为字符串时识别为搜索和显示的字段，否则为搜索处理代码
+     * @param string|null                 $haveDefaultSearchField 该表单有默认值时远程搜索的字段名，默认为id
      *
      * @return $this
      */
