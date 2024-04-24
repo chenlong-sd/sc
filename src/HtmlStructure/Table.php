@@ -65,6 +65,7 @@ class Table
         'updateHandle' => "",
         'config'       => []
     ];
+    private bool $statusToggleButtonsNewLine = false;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -290,8 +291,8 @@ class Table
     }
 
     /**
-     * @param string $searchField
-     * @param array  $mapping
+     * @param string $searchField 切换时搜索的字段名
+     * @param array  $mapping     可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
      *
      * @return Table
      */
@@ -300,6 +301,25 @@ class Table
         $this->statusToggleButtons[] = compact('searchField', 'mapping');
 
         return $this;
+    }
+
+    /**
+     * 设置状态切换的为新行
+     *
+     * @param bool $newLine
+     *
+     * @return $this
+     */
+    public function setStatusToggleButtonsNewLine(bool $newLine = true): static
+    {
+        $this->statusToggleButtonsNewLine = $newLine;
+
+        return $this;
+    }
+
+    public function getStatusToggleButtonsNewLine(): bool
+    {
+        return $this->statusToggleButtonsNewLine;
     }
 
     /**

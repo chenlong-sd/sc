@@ -533,12 +533,12 @@ class TableTheme implements TableThemeInterface
     {
         $el = El::fictitious();
 
-        foreach ($table->getStatusToggleButtons() as $toggleButton) {
+        foreach ($table->getStatusToggleButtons() as $index => $toggleButton) {
             $status = El::double('el-button-group')->addClass('ml-4')
                 ->setAttr('style', 'margin-right:10px');
 
-            $statusVarName = Html::js()->vue->getAvailableDataName("statusToggle");
-            $method        = Html::js()->vue->getAvailableMethod("statusToggleMethod");
+            $statusVarName = Html::js()->vue->getAvailableDataName("statusToggle" . $table->getId() . $index);
+            $method        = Html::js()->vue->getAvailableMethod("statusToggleMethod" . $table->getId() . $index);
 
             Html::js()->vue->set($statusVarName, null);
             Html::js()->vue->addMethod($method, JsFunc::anonymous(['status'])->code(
@@ -566,6 +566,10 @@ class TableTheme implements TableThemeInterface
                     'bg' => '',
                     '@click' => "$method($key)",
                 ])->append($value));
+            }
+
+            if ($table->getStatusToggleButtonsNewLine()) {
+                $status = El::double('div')->setAttr('style', 'margin-bottom:10px')->append($status);
             }
 
             $el->append($status);
