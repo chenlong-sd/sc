@@ -136,7 +136,7 @@ class JsFunc
         $params = $this->params;
 
         array_walk_recursive($params, function (&$value) {
-            if ($value instanceof \Stringable){
+            if ($value instanceof \Stringable && str_starts_with(get_class($value), 'Sc\\Util\\HtmlStructure\\Html\\Js')){
                 $value = Grammar::mark($value);
             }
         });
