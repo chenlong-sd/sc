@@ -34,7 +34,8 @@ class AccessToken
     public static function get(Config $config)
     {
         $cache = Tool::cache($config->get('cacheEngine') ?: null);
-        if ($accessToken = $cache->get("WT:{$config->get('appid')}")) {
+        $key   = "WT1:{$config->get('appid')}";
+        if ($accessToken = $cache->get($key)) {
             return $accessToken;
         }
 
@@ -44,7 +45,7 @@ class AccessToken
             throw new WechatException("获取token失败");
         }
 
-        $cache->set("WT:{$config->get('appid')}", $response->getData('access_token'), 6500);
+        $cache->set($key, $response->getData('access_token'), 6500);
 
         return $response->getData('access_token');
     }
