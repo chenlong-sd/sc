@@ -40,7 +40,10 @@ trait LabelAttr
         if ($value === null) {
             unset($this->attrs[$attr]);
         }else{
-            $this->attrs[$attr] = $value;
+            $this->attrs[$attr] = preg_replace_callback("/\{#([\w\-_@:|]+)}/", function ($match){
+                $matchAttr = explode('|', $match[1]);
+                return $this->getAttr($matchAttr[0]) !== null ? $this->getAttr($matchAttr[0]) : ($matchAttr[1] ?? null);
+            }, $value);
         }
 
         return $this;

@@ -20,6 +20,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsLog;
+use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
@@ -77,6 +78,8 @@ class TableTheme implements TableThemeInterface
         $headerEl = $this->headerEventHandle($table);
 
         $el->append(...array_map(fn($column) => $column->render('ElementUI'), $table->getColumns()));
+
+        $this->trashHandle($table, $el, $headerEl);
 
         $this->selection($el);
 
@@ -182,9 +185,11 @@ class TableTheme implements TableThemeInterface
             $query['page']     = Grammar::mark("this.{$dataVarName}Page");
             $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
         }
-        Html::js()->vue->addMethod($dataVarName . 'GetData', [],
+        $query["temp"] = "@query";
+        Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
             JsCode::create(JsVar::assign($table->getId() . 'Loading', true))
                 ->then(
+                    JsVar::assign('query', '@query ? query : {}'),
                     Axios::get(
                         url: Grammar::mark("this.{$dataVarName}Url()"),
                         query: $query
@@ -262,6 +267,14 @@ class TableTheme implements TableThemeInterface
         $left  = El::double('div');
         $right = El::double('div');
         $header = El::double('div')->setAttr('style', 'display:flex;justify-content: space-between;');
+
+        if ($table->getTrash() && is_string($table->getData())) {
+            $table->setHeaderRightEvent(["@danger.delete.回收站", ['v-if' => 'is_super']], function () use ($table){
+                return Table\EventHandler::window("回收站")->setUrl(
+                    "@location.href", ['is_delete' => 1]
+                );
+            });
+        }
 
         $statusToggleButtons = $this->statusToggleButtonsHandle($table);
         if (!$statusToggleButtons->isEmpty()) {
@@ -608,5 +621,60 @@ class TableTheme implements TableThemeInterface
         ));
 
         return $sortMethod;
+    }
+
+    /**
+     * 回收站处理
+     *
+     * @param Table       $table
+     * @param DoubleLabel $el
+     * @param DoubleLabel $headerEl
+     *
+     * @return void
+     */
+    private function trashHandle(Table $table, DoubleLabel $el, AbstractHtmlElement $headerEl): void
+    {
+        if (!$table->getTrash()) {
+            return;
+        }
+
+        Html::js()->vue->set("isTrash", "@location.search.includes('is_delete=1')");
+
+        $el->find('[mark-event]')?->setAttr('v-if', '{#v-if|1} && !isTrash');
+        $headerEl->each(function (AbstractHtmlElement $el){
+            if ($el instanceof TextCharacters && $el->getText() != "刷新数据") {
+                $parent = $el->getParent();
+
+                $parent?->setAttr('v-if','{#v-if|1} && !isTrash');
+            }
+        });
+
+        if (empty($recoverUrl = $table->getTrash()['recoverUrl'])) {
+            return;
+        }
+
+        $recoverMethod = $table->getId() . "Recover";
+        $headerEl->getChildren()[0]->append(
+            El::double('el-button')->setAttrs([
+                'type' => 'success',
+                'bg' => '',
+                'text'  => '',
+                'icon'  => 'RefreshLeft',
+                '@click' => $recoverMethod
+            ])->append("恢复数据")
+        );
+
+        Html::js()->vue->addMethod($recoverMethod, [], JsCode::make(
+            JsVar::def('selection',  "@this.{$table->getId()}Selection"),
+            Axios::post($recoverUrl, [
+                'ids' => "@selection.map(v => v.id)"
+            ])->addLoading()
+                ->confirmMessage("确认恢复该数据吗？")
+                ->success(JsCode::make(
+                    JsService::message("恢复成功"),
+                    JsFunc::call("this.{$table->getId()}GetData")
+                ))
+                ->fail("this.\$message(data.msg ? data.msg : '服务器错误')")
+        ));
     }
 }

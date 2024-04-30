@@ -66,6 +66,7 @@ class Table
         'config'       => []
     ];
     private bool $statusToggleButtonsNewLine = false;
+    private array $trash = [];
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -134,7 +135,7 @@ class Table
     }
 
     /**
-     * @param string|AbstractHtmlElement $eventLabel 如只是需要改变按钮颜色和添加图标，
+     * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               可使用：@success.icon.title[theme], theme可取：default, plain
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
@@ -142,7 +143,7 @@ class Table
      *
      * @return void
      */
-    public function setHeaderRightEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): void
+    public function setHeaderRightEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): void
     {
         $eventName = Tool::random('HeaderEvent')->get();
 
@@ -398,5 +399,27 @@ class Table
             'updateHandle' => $updateCallable instanceof \Closure ? $updateCallable() : $updateCallable,
             'config'       => $sortConfig
         ];
+    }
+
+    /**
+     * 启用回收站
+     *
+     * @param string|null $recoverUrl 恢复数据地址，不填则没有恢复数据操作
+     *
+     * @return void
+     */
+    public function enableTrash(?string $recoverUrl = null): void
+    {
+        $this->trash = [
+            'recoverUrl' => $recoverUrl
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function getTrash(): array
+    {
+        return $this->trash;
     }
 }
