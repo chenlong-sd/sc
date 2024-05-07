@@ -30,7 +30,7 @@ trait LabelAttr
      * 设置属性
      *
      * @param string $attr  属性名
-     * @param mixed  $value 属性值, 值为 null 则删除属性
+     * @param mixed  $value 属性值, 值为 null 则删除属性, {# attr } 可替换原有的属性
      *
      * @return $this
      * @date 2023/4/13

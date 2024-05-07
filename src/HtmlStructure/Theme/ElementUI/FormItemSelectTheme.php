@@ -87,8 +87,14 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
 
         $defaultSearchField = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : 'id');
 
+        $queryValue = "selectSearchValue" . $formItemSelect->getName();
+        Html::js()->vue->set($queryValue, null);
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['query', 'cquery'])->code(
             Js\JsVar::def('options', $optionsVar),
+            Js\JsIf::when('this.' . $queryValue . ' === query')->then(
+                'return;'
+            ),
+            Js\JsVar::assign('this.' . $queryValue, '@query'),
             Axios::get($remoteSearch['url'], [
                 'search' => [
                     'search' => [
@@ -110,7 +116,8 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
                         "data.data.data[i].label = data.data.data[i].$showField"
                     ),
                 ),
-                Js\JsVar::assign("this[options]", '@data.data.data')
+                Js\JsVar::assign("this[options]", '@data.data.data'),
+                $remoteSearch['afterSearchHandle'] ?: "",
             ))
         ));
 
