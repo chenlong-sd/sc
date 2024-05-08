@@ -61,6 +61,17 @@ class JsVar
         return new self($name, $value, self::SCENE_ASSIGN);
     }
 
+    /**
+     * @param string $name
+     * @param mixed  $value
+     *
+     * @return JsVar
+     */
+    public static function set(string $name, mixed $value): JsVar
+    {
+        return self::assign($name, $value);
+    }
+
     public function __toString(): string
     {
         return $this->toCode();
