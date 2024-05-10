@@ -27,6 +27,8 @@ class WindowTheme implements WindowThemeInterface
             $code->then(JsVar::assign('row.' . $key, $value));
         }
 
+        $window->getBeforeOpen() and $code->then($window->getBeforeOpen());
+
         mt_srand();
         $vModel = "VueWindow" . mt_rand(1, 999);
 
@@ -220,7 +222,7 @@ class WindowTheme implements WindowThemeInterface
         );
 
         $code->then(JsVar::def('f',
-            JsFunc::call('setTimeout', JsFunc::arrow()->code(
+            JsFunc::call('setInterval', JsFunc::arrow()->code(
                 JsCode::if("this.\$refs['{$vueComponent->getName()}'] !== undefined",
                     JsCode::create("this.\$refs['{$vueComponent->getName()}'].onShow(row)")
                         ->then("clearInterval(f)")

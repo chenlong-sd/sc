@@ -21,6 +21,7 @@ class Window
     private array $query;
     private ?VueComponentInterface $component = null;
     protected array $rowData = [];
+    protected ?JsCode $beforeOpen = null;
 
     public function __construct(private readonly string $title)
     {
@@ -180,4 +181,14 @@ class Window
         return $this->rowData;
     }
 
+    public function beforeOpen(?JsCode $jsCode): Window
+    {
+        $this->beforeOpen = $jsCode;
+        return $this;
+    }
+
+    public function getBeforeOpen(): ?JsCode
+    {
+        return $this->beforeOpen;
+    }
 }

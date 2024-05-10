@@ -380,11 +380,23 @@ class Vue
         ];
     }
 
-    public function endMakeTmpComponent(): ?array
+    public function getTmpComponent(): ?array
     {
-        $component = $this->makeComponent;
-        $this->makeComponent = null;
+        return $this->makeComponent;
+    }
 
-        return $component;
+    public function endMakeTmpComponent(): void
+    {
+        $this->makeComponent = null;
+    }
+
+    public function setTmpComponentOnShowHandle(#[Language('JavaScript')] string $handle): static
+    {
+        if (!$this->makeComponent) {
+            return $this;
+        }
+
+        $this->makeComponent['onShow'][] = $handle;
+        return $this;
     }
 }
