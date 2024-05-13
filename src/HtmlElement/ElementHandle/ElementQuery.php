@@ -86,6 +86,29 @@ trait ElementQuery
         return $queryElement ? current($queryElement) : null;
     }
 
+
+    /**
+     * 弹出元素
+     *
+     * @param string|callable|null $selector
+     *
+     * @return false|mixed|DoubleLabel|null
+     */
+    public function pop(#[Language('JQuery-CSS')]string|callable $selector = null): mixed
+    {
+        if ($selector) {
+            $element = $this->find($selector);
+
+            $this->remove($element);
+
+            return $element;
+        }
+
+        $this->remove();
+
+        return $this;
+    }
+
     /**
      * 后面第几个元素
      *
