@@ -167,7 +167,7 @@ trait Validate
             $message = $this->getLabel() . sprintf("长度限制为 %d", $length);
         }
 
-        return $this->addRule(['length' => $length], $message, $trigger);
+        return $this->addRule(['max' => $length], $message, $trigger);
     }
 
     /**

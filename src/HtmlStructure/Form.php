@@ -111,7 +111,7 @@ class Form
         return array_merge(...array_map(function ($v) {
             if ($v->getName()) {
                 $value = $v->getDefault();
-                if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea) {
+                if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea || is_string($value)) {
                     $value = Grammar::mark($v->getDefault() ?: '', 'line');
                 }
                 return [$v->getName() => $value];
