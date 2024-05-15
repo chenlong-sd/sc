@@ -60,7 +60,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
 
         $this->addEvent($select, $formItemSelect->getEvents(), $formItemSelect->getName());
 
-        Html::js()->vue->set($optionsVar, $formItemSelect->getOptions());
+        Html::js()->vue->set($optionsVar, Html::js()->vue->get($optionsVar, $formItemSelect->getOptions()));
 
         return $this->afterRender($formItemSelect, $base->append($select->append($options)));
     }
