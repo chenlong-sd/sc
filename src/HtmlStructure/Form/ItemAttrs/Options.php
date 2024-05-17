@@ -9,6 +9,7 @@ trait Options
 {
     protected array $options = [];
     protected ?string $optionsVarName = null;
+    protected array $optionsRemote = [];
 
     /**
      * @param array $options
@@ -50,5 +51,18 @@ trait Options
         }
 
         return $this->options;
+    }
+
+    /**
+     * @param string $url
+     * @param string $valueCode 获取值的js代码，默认为返回的 data.data值
+     *
+     * @return $this
+     */
+    public function remoteGetOptions(string $url, string $valueCode = "data.data"): static
+    {
+        $this->optionsRemote = compact('url', 'valueCode');
+
+        return $this;
     }
 }

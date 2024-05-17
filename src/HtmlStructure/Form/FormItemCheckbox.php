@@ -27,4 +27,12 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
 
         return $this->ExecuteBeforeRendering($el);
     }
+
+    /**
+     * @return mixed
+     */
+    public function getDefault(): mixed
+    {
+        return $this->default ?: [];
+    }
 }

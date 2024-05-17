@@ -35,7 +35,7 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
 
         $this->addEvent($box, $formItemCheckbox->getEvents(), $formItemCheckbox->getName());
 
-        Html::js()->vue->set($optionsVar, $formItemCheckbox->getOptions());
+        $this->setOptions($formItemCheckbox, $optionsVar);
 
         return $this->afterRender($formItemCheckbox, $base->append($box->append($checkbox)));
     }

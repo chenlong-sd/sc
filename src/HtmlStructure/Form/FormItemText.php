@@ -65,7 +65,7 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
      */
     public function toPassword(): static
     {
-        $this->setVAttrs('type', 'password');
+        $this->setVAttrs(['type' => 'password', 'show-password' => '']);
 
         return $this;
     }

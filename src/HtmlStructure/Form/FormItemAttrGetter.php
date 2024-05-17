@@ -62,4 +62,5 @@ interface FormItemAttrGetter
     public function getRemoteSearch();
     public function getClosePage();
     public function getRules();
+    public function getOptionsRemote();
 }

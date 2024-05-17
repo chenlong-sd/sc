@@ -32,7 +32,7 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
 
         $this->addEvent($checkbox, $formItemRadio->getEvents(), $formItemRadio->getName());
 
-        Html::js()->vue->set($optionsVar, $formItemRadio->getOptions());
+        $this->setOptions($formItemRadio, $optionsVar);
 
         return $this->afterRender($formItemRadio, $base->append($checkbox));
     }
