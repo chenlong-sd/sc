@@ -138,6 +138,10 @@ class TableColumnTheme implements TableColumnThemeInterface
 
             $columnEl->setAttr($attr, $value);
         }
+
+        if (array_intersect(array_keys($attrs), ['width', ':width']) && !array_intersect(array_keys($attrs), ['show-overflow-tooltip', ':show-overflow-tooltip'])) {
+            $columnEl->setAttr(':show-overflow-tooltip', 'true');
+        }
     }
 
     private function switchHandle(Column $column, array $switch): void
