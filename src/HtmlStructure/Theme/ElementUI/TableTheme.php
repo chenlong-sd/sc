@@ -71,6 +71,8 @@ class TableTheme implements TableThemeInterface
 
         $this->heightRestrictions($table, $attrs);
 
+        $attrs = array_merge($attrs, ['highlight-current-row' => '']);
+
         $el->setAttr(':data', $dataVarName);
         $el->setAttrs($attrs);
 

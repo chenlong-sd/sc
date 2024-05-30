@@ -17,6 +17,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\Js\Window;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableColumnThemeInterface;
 
@@ -46,10 +47,11 @@ class TableColumnTheme implements TableColumnThemeInterface
 
         if ($show = $column->getShow()) {
             match ($show['type']) {
-                'switch' => $this->switchHandle($column, $show['config']),
-                'tag'    => $this->tagHandle($column, $show['config']),
-                'image'  => $this->imageHandle($column),
+                'switch'   => $this->switchHandle($column, $show['config']),
+                'tag'      => $this->tagHandle($column, $show['config']),
+                'image'    => $this->imageHandle($column),
                 'mapping'  => $this->mappingHandle($column, $show['config']),
+                'openPage' => $this->openPageHandle($column, $show['config']),
             };
         }
 
@@ -218,5 +220,29 @@ class TableColumnTheme implements TableColumnThemeInterface
             )
 
         );
+    }
+
+    private function openPageHandle(Column $column, array $config): void
+    {
+        if (!$element = $config['element']) {
+            $element = El::double('el-link')->setAttrs([
+                'type' => 'primary',
+            ])->append("{{ {$column->getAttr('prop')} }}");
+        }
+
+        $method = "openPage" . $column->getAttr('prop');
+        $element->setAttrIfNotExist('@click', "@$method(@scope)");
+
+        $column->setFormat($element);
+
+        Html::js()->vue->addMethod($method, JsFunc::anonymous(['scope'])->code(
+            JsVar::def('row', '@scope.row'),
+            Window::open("查看【{{$column->getAttr('prop')}}】详情")
+                ->setConfig($config['config'])
+                ->setUrl($config['url'], [
+                    'id' => '@id',
+                    $column->getAttr('prop') => "@{$column->getAttr('prop')}",
+                ])
+        ));
     }
 }

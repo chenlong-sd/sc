@@ -350,4 +350,29 @@ class Column
 
         return $this;
     }
+
+    /**
+     * 打开页面
+     *
+     * @param string                          $url
+     * @param array                           $config
+     * @param string                          $type
+     * @param string|AbstractHtmlElement|null $element
+     *
+     * @return $this
+     */
+    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement $element = null): static
+    {
+        $this->show = [
+            'type'   => 'openPage',
+            'config' => [
+                'url'     => $url,
+                'config'  => $config,
+                'type'    => $type,
+                'element' => $element,
+            ]
+        ];
+
+        return $this;
+    }
 }
