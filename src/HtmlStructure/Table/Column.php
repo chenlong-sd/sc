@@ -294,7 +294,7 @@ class Column
     private function autoMakeFormItem(FormItemInterface|string|null $formItem, string $type): mixed
     {
         $name = $formItem ?: $this->attrs['prop'];
-        if ($this->show) {
+        if (!empty($this->show['config']['options'])) {
             $formItem = FormItem::select($name)->options(
                 array_map(function ($options) {
                     if ($options instanceof AbstractHtmlElement) {

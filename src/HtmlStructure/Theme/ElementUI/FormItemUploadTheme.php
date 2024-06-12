@@ -69,7 +69,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         $this->multipleFileHandle($formItemUpload, $rand, $upload, $VModel);
 
-        Html::js()->vue->addMethod("{$formItemUpload->getName()}remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
+        Html::js()->vue->addMethod(strtr($formItemUpload->getName(), ['.' => '_']) . "remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
 
         $upload->setAttrs($formItemUpload->getVAttrs());
 
@@ -89,7 +89,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     {
         $successMethod = "UISuccess" . $rand;
         $beforeMethod  = "UIBefore" . $rand;
-        $notify       = "UINotify" . $rand;
+        $notify        = "UINotify" . $rand;
         Html::js()->vue->set($notify, '');
 
         $upload->setAttrs([
@@ -245,7 +245,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         $submitVar = preg_replace('/^.+\./', '', $VModel);
 
-        $formItemUpload->getForm()->setSubmitHandle(<<<JS
+        $formItemUpload->getForm()?->setSubmitHandle(<<<JS
                 let newD$rand = [];
                 for(var i = 0; i < data.$submitVar.length; i++) {
                     newD{$rand}[i] = {
@@ -265,8 +265,8 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             return '';
         }
 
-        $data = $formItemUpload->getForm()->getId() . '.' . $formItemUpload->getName();
-        $table =  Table::create([], 'upts' . $formItemUpload->getName())->addColumns(
+        $data = $formItemUpload->getForm()?->getId() ? $formItemUpload->getForm()?->getId() . '.' . $formItemUpload->getName() : $formItemUpload->getName();
+        $table =  Table::create([], 'upts' . strtr($formItemUpload->getName(), ['.' => '_']))->addColumns(
             Table\Column::normal('文件名', 'name'),
             Table\Column::event('下载', '')->setAttr('width', 80)->setFormat(El::double('el-link')->setAttrs([
                 'type' => 'primary',
@@ -278,7 +278,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                 'link' => '',
                 'type' => 'danger',
                 'icon' => 'delete',
-                '@click' => 'uprm' . $formItemUpload->getName() . '(@scope)'
+                '@click' => 'uprm' . strtr($formItemUpload->getName(), ['.' => '_']) . '(@scope)'
             ])),
         )->setPagination(false)->render()->find('el-table')
             ->setAttr(":data", $data)
@@ -287,7 +287,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ->setAttr('header-cell-class-name', null)
             ->setAttr('cell-class-name', null);
 
-        Html::js()->vue->addMethod( 'uprm' . $formItemUpload->getName(), JsFunc::anonymous(['scope'])->code(
+        Html::js()->vue->addMethod( 'uprm' . strtr($formItemUpload->getName(), ['.' => '_']), JsFunc::anonymous(['scope'])->code(
             JsCode::create("this.$data.splice(scope.\$index, 1)")
         ));
 
