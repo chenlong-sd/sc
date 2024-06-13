@@ -15,6 +15,7 @@ class Constant
 
     protected bool $isFinal = false;
     protected bool $isEnum = false;
+    protected array $attributes = [];
 
     public function __construct(private readonly string $name)
     {
@@ -29,6 +30,10 @@ class Constant
     {
         $contents = $this->docBlockComment?->getCode() ?: [];
 
+        if ($this->attributes) {
+            $contents = array_merge($contents, array_map(fn($attr) => $attr->out(), $this->attributes));
+        }
+
         $default    = $this->valueOut();
         $embellish  = $this->isFinal ? 'final ' : '';
         $label      = $this->isEnum ? 'case' : 'const';
@@ -40,11 +45,19 @@ class Constant
 
     private function valueOut(): ?string
     {
-        if ($this->isEnum && !property_exists($this->value, 'value')) {
-            return null;
+        $outValue = $this->value;
+        if (!$this->isEnum) {
+            if (is_object($this->value)) {
+                if (!property_exists($this->value, 'value')) {
+                    return null;
+                }
+                $outValue = $this->value->value;
+            } elseif (empty($this->value)) {
+                return null;
+            }
         }
 
-        return ValueOut::out($this->isEnum ? $this->value->value : $this->value);
+        return ValueOut::out($outValue);
     }
 
     public function __toString(): string
@@ -55,6 +68,19 @@ class Constant
     public function setDocBlockComment(array|string $docBlockComment): Constant
     {
         $this->docBlockComment = new DocComment($docBlockComment);
+
+        return $this;
+    }
+
+    public function addAttribute(Attribute|callable ...$attributes): Constant
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof Attribute) {
+                $this->attributes[] = $attribute;
+                continue;
+            }
+            $this->attributes[] = $attribute();
+        }
 
         return $this;
     }

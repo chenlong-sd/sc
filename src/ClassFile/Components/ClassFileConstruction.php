@@ -73,9 +73,16 @@ class ClassFileConstruction
         return $this;
     }
 
-    public function addConstants(Constant ...$classConstants): ClassFileConstruction
+    public function addConstants(Constant|callable ...$classConstants): ClassFileConstruction
     {
-        $this->classConstants = [...$this->classConstants, ...$classConstants];
+        foreach ($classConstants as $constant) {
+            if ($constant instanceof Constant) {
+                $this->classConstants[] = $constant;
+                continue;
+            }
+
+            $this->classConstants[] = $constant();
+        }
 
         return $this;
     }
@@ -482,6 +489,11 @@ class ClassFileConstruction
     public function getOriginProperty(string $property)
     {
         return $this->originClass->$property;
+    }
+
+    public function getName(): string
+    {
+        return $this->className;
     }
 
 }

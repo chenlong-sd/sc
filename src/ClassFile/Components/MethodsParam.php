@@ -72,9 +72,15 @@ class MethodsParam
         return $this;
     }
 
-    public function addAttribute(Attribute ...$attribute): MethodsParam
+    public function addAttribute(Attribute|callable ...$attributes): MethodsParam
     {
-        $this->attribute = array_merge($this->attribute, $attribute);
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof Attribute) {
+                $this->attribute[] = $attribute;
+                continue;
+            }
+            $this->attribute[] = $attribute();
+        }
 
         return $this;
     }
