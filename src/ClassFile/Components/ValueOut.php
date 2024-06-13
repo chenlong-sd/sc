@@ -2,6 +2,8 @@
 
 namespace Sc\Util\ClassFile\Components;
 
+use JetBrains\PhpStorm\Language;
+
 /**
  * Class ValueOUt
  */
@@ -11,6 +13,10 @@ class ValueOut
         "/\s*'deleted_time'\s*=>\s*'int',\s*'updated_time'\s*=>\s*'datetime',\s*'created_time'\s*=>\s*'datetime'\s*/" => "...self::DEFAULT_CASTS"
     ];
 
+    public static function registerReplace(#[Language('PhpRegExp')] string $rule, string $replacement): void
+    {
+        self::$replace[$rule] = $replacement;
+    }
 
     public static function out(mixed $value, int $indentation = 4): string
     {
