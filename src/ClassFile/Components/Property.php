@@ -2,6 +2,8 @@
 
 namespace Sc\Util\ClassFile\Components;
 
+use JetBrains\PhpStorm\ExpectedValues;
+
 /**
  * Class Property
  */
@@ -73,7 +75,7 @@ class Property
         return $this;
     }
 
-    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction): Property
+    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction = null): Property
     {
         if ($type instanceof \ReflectionType) {
             if ($type instanceof \ReflectionUnionType) {
@@ -89,7 +91,7 @@ class Property
         return $this;
     }
 
-    public function setPublicScope(string $publicScope): Property
+    public function setPublicScope(#[ExpectedValues(values: ['public', 'protected', 'private'])]string $publicScope): Property
     {
         $this->publicScope = $publicScope;
         return $this;

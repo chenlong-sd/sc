@@ -30,9 +30,15 @@ class Method
 
     public function __construct(private readonly string $name){}
 
-    public function addParameters(MethodsParam ...$parameters): Method
+    public function addParameters(MethodsParam|callable ...$parameters): Method
     {
-        $this->parameters = array_merge($this->parameters, $parameters);
+        foreach ($parameters as $methodsParam) {
+            if ($methodsParam instanceof MethodsParam) {
+                $this->parameters[] = $methodsParam;
+            }else{
+                $this->parameters[] = $methodsParam();
+            }
+        }
 
         return $this;
     }
@@ -61,7 +67,7 @@ class Method
         return $this;
     }
 
-    public function setReturnType(string|\ReflectionType|null $returnType, ClassFileConstruction $classFileConstruction): Method
+    public function setReturnType(string|\ReflectionType|null $returnType, ClassFileConstruction $classFileConstruction = null): Method
     {
         if ($returnType instanceof \ReflectionType) {
             if ($returnType instanceof \ReflectionUnionType) {

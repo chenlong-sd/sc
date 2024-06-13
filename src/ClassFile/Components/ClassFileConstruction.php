@@ -59,9 +59,16 @@ class ClassFileConstruction
         return $this->$name;
     }
 
-    public function addProperties(Property ...$classProperties): ClassFileConstruction
+    public function addProperties(Property|callable ...$classProperties): ClassFileConstruction
     {
-        $this->classProperties = [...$this->classProperties, ...$classProperties];
+        foreach ($classProperties as $property) {
+            if ($property instanceof Property){
+                $this->classProperties[] = $property;
+                continue;
+            }
+
+            $this->classProperties[] = $property();
+        }
 
         return $this;
     }
@@ -260,15 +267,29 @@ class ClassFileConstruction
         return preg_replace('/\\\\\w+$/', '', $classname);
     }
 
-    public function addClassAttributes(Attribute ...$classAttributes): ClassFileConstruction
+    public function addClassAttributes(Attribute|callable...$classAttributes): ClassFileConstruction
     {
-        $this->classAttributes = [...$this->classAttributes, ...$classAttributes];
+        foreach ($classAttributes as $attribute) {
+            if ($attribute instanceof Attribute) {
+                $this->classAttributes[] = $attribute;
+            } else {
+                $this->classAttributes[] = $attribute();
+            }
+        }
+
         return $this;
     }
 
-    public function addClassMethods(Method ...$classMethods): ClassFileConstruction
+    public function addClassMethods(Method|callable ...$classMethods): ClassFileConstruction
     {
-        $this->classMethods = [...$this->classMethods, ...$classMethods];
+        foreach ($classMethods as $method) {
+            if ($method instanceof Method) {
+                $this->classMethods[] = $method;
+            }else{
+                $this->classMethods[] = $method();
+            }
+        }
+
         return $this;
     }
 
