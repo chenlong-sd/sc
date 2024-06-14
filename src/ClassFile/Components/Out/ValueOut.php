@@ -1,6 +1,6 @@
 <?php
 
-namespace Sc\Util\ClassFile\Components;
+namespace Sc\Util\ClassFile\Components\Out;
 
 use JetBrains\PhpStorm\Language;
 

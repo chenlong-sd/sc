@@ -2,7 +2,9 @@
 
 namespace Sc\Util\ClassFile\Components;
 
-class MethodsParam
+use Sc\Util\ClassFile\Components\Out\ValueOut;
+
+class FunctionParam
 {
     private array $type = [];
 
@@ -21,7 +23,7 @@ class MethodsParam
     {
     }
 
-    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction): self
+    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction = null): self
     {
         if ($type instanceof \ReflectionType) {
             if ($type instanceof \ReflectionUnionType) {
@@ -64,7 +66,7 @@ class MethodsParam
         return implode(array_map(fn($attr) => $attr->out(), $this->attribute)) . ' ' . $out;
     }
 
-    public function setNotDefault(): MethodsParam
+    public function setNotDefault(): FunctionParam
     {
         $this->haveDefault = false;
         $this->default     = null;
@@ -72,7 +74,7 @@ class MethodsParam
         return $this;
     }
 
-    public function addAttribute(Attribute|callable ...$attributes): MethodsParam
+    public function addAttribute(Attribute|callable ...$attributes): FunctionParam
     {
         foreach ($attributes as $attribute) {
             if ($attribute instanceof Attribute) {
@@ -85,7 +87,7 @@ class MethodsParam
         return $this;
     }
 
-    public function setIsVariadic(bool $isVariadic): MethodsParam
+    public function setIsVariadic(bool $isVariadic): FunctionParam
     {
         $this->isVariadic = $isVariadic;
         return $this;

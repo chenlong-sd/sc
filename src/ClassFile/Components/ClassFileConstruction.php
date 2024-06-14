@@ -496,4 +496,14 @@ class ClassFileConstruction
         return $this->className;
     }
 
+    public function getNamespace(): string
+    {
+        return $this->classNamespace;
+    }
+
+    public function getGlobalClassname(): string
+    {
+        return $this->getNamespace() . '\\' . $this->getName();
+    }
+
 }

@@ -6,7 +6,7 @@ use Sc\Util\ClassFile\Components\Attribute;
 use Sc\Util\ClassFile\Components\ClassFileConstruction;
 use Sc\Util\ClassFile\Components\Constant;
 use Sc\Util\ClassFile\Components\Method;
-use Sc\Util\ClassFile\Components\MethodsParam;
+use Sc\Util\ClassFile\Components\FunctionParam;
 use Sc\Util\ClassFile\Components\Property;
 
 /**
@@ -72,7 +72,7 @@ class ClassFileResolve
             $attributeName = $classFileConstruction->getAppropriateClassName($attribute->getName());
 
             $attributeDes = new Attribute($attributeName);
-            $attributeDes->setParams(...$attribute->getArguments());
+            array_map(fn($param) => $attributeDes->addParam($param), $attribute->getArguments());
             $classFileConstruction->addClassAttributes($attributeDes);
         }
 
@@ -116,7 +116,7 @@ class ClassFileResolve
             if ($reflectionProperty->getAttributes()) {
                 foreach ($reflectionProperty->getAttributes() as $attribute) {
                     $propertyAttribute = new Attribute($classFileConstruction->getAppropriateClassName($attribute->getName()));
-                    $propertyAttribute->setParams(...$attribute->getArguments());
+                    array_map(fn($param) => $propertyAttribute->addParam($param), $attribute->getArguments());
                     $property->addAttribute($propertyAttribute);
                 }
             }
@@ -181,13 +181,13 @@ class ClassFileResolve
                         : ClassFileConstruction::getClassName($attributeName);
 
                     $attributeRes = new Attribute($attributeName);
-                    $attributeRes->setParams($attribute->getArguments());
+                    array_map(fn($param) => $attributeRes->addParam($param), $attribute->getArguments());
                     $methods->addAttribute($attributeRes);
                 }
             }
 
             foreach ($method->getParameters() as $parameter) {
-                $methodsParam = new MethodsParam($parameter->getName());
+                $methodsParam = new FunctionParam($parameter->getName());
                 $methodsParam->setType($parameter->getType(), $classFileConstruction);
                 $methodsParam->setIsVariadic($parameter->isVariadic());
 
@@ -203,7 +203,7 @@ class ClassFileResolve
                             : ClassFileConstruction::getClassName($attributeName);
 
                         $attributeRes = new Attribute($attributeName);
-                        $attributeRes->setParams($attribute->getArguments());
+                        array_map(fn($param) => $attributeRes->addParam($param), $attribute->getArguments());
                         $methodsParam->addAttribute($attributeRes);
                     }
                 }

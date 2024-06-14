@@ -2,6 +2,8 @@
 
 namespace Sc\Util\ClassFile\Components;
 
+use Sc\Util\ClassFile\Components\Out\ValueOut;
+
 /**
  * Class Method
  */
@@ -13,7 +15,7 @@ class Method
 
     private ?DocComment $docBlockComment = null;
     /**
-     * @var array|MethodsParam[]
+     * @var array|FunctionParam[]
      */
     private array $parameters = [];
 
@@ -30,10 +32,10 @@ class Method
 
     public function __construct(private readonly string $name){}
 
-    public function addParameters(MethodsParam|callable ...$parameters): Method
+    public function addParameters(FunctionParam|callable ...$parameters): Method
     {
         foreach ($parameters as $methodsParam) {
-            if ($methodsParam instanceof MethodsParam) {
+            if ($methodsParam instanceof FunctionParam) {
                 $this->parameters[] = $methodsParam;
             }else{
                 $this->parameters[] = $methodsParam();
@@ -105,7 +107,7 @@ class Method
             . ($this->isStatic ? ' static' : '')
             . ($this->isFinal ? ' final' : '')
             . ' function ' . $this->name . '('
-            . implode(', ', array_map(fn (MethodsParam $methodsParam) => $methodsParam->out(), $this->parameters))
+            . implode(', ', array_map(fn (FunctionParam $methodsParam) => $methodsParam->out(), $this->parameters))
             . ')'
             . ($this->returnType ? ': ' . $this->returnType : '');
 
