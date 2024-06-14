@@ -13,29 +13,29 @@ class ClassFileConstruction
     /**
      * @var array|Property[]
      */
-    private array $classProperties = [];
+    private array $properties = [];
 
     /**
      * @var array |Method[]
      */
-    private array $classMethods = [];
+    private array $methods = [];
 
-    private array $classConstants = [];
+    private array $constants = [];
 
-    private array $classTraits = [];
-    private array $classTraitsAlise = [];
+    private array $traits = [];
+    private array $traitsAlise = [];
 
-    private array $classUses = [];
+    private array $uses = [];
     private array $classUsesAlias = [];
 
-    private string $classNamespace = '';
+    private string $namespace = '';
 
-    private ?DocComment $classDocBlock = null;
+    private ?DocComment $docBlock = null;
 
-    private ?string $classExtends = '';
-    private array $classImplements = [];
+    private ?string $extends = '';
+    private array $implements = [];
 
-    private array $classAttributes = [];
+    private array $attributes = [];
 
     private array $classFileContent = [];
     private ?\ReflectionClass $originReflexClass = null;
@@ -63,11 +63,11 @@ class ClassFileConstruction
     {
         foreach ($classProperties as $property) {
             if ($property instanceof Property){
-                $this->classProperties[] = $property;
+                $this->properties[] = $property;
                 continue;
             }
 
-            $this->classProperties[] = $property();
+            $this->properties[] = $property();
         }
 
         return $this;
@@ -77,11 +77,11 @@ class ClassFileConstruction
     {
         foreach ($classConstants as $constant) {
             if ($constant instanceof Constant) {
-                $this->classConstants[] = $constant;
+                $this->constants[] = $constant;
                 continue;
             }
 
-            $this->classConstants[] = $constant();
+            $this->constants[] = $constant();
         }
 
         return $this;
@@ -89,8 +89,8 @@ class ClassFileConstruction
 
     public function out(): string
     {
-        $extends    = $this->classExtends ? " extends {$this->classExtends}" : "";
-        $implements = $this->classImplements ? " implements " . implode(', ', $this->classImplements) : "";
+        $extends    = $this->extends ? " extends {$this->extends}" : "";
+        $implements = $this->implements ? " implements " . implode(', ', $this->implements) : "";
         $type       = match (true) {
             $this->isInterface => 'interface',
             $this->isTrait     => 'trait',
@@ -105,17 +105,17 @@ class ClassFileConstruction
         $code = [
             "<?php", '',
             ...($this->declare ? [$this->declare . ';', ''] : []),
-            "namespace {$this->classNamespace};", "",
+            "namespace {$this->namespace};", "",
             ...$this->useOut(),
             ...["", "", ],
-            ...($this->classDocBlock?->getCode() ?: []),
-            ...($this->classAttributes ? array_map(fn($attribute) => $attribute->out(), $this->classAttributes) : []),
+            ...($this->docBlock?->getCode() ?: []),
+            ...($this->attributes ? array_map(fn($attribute) => $attribute->out(), $this->attributes) : []),
             "$embellish$type {$this->classNameOut()}" . $extends . $implements,
             "{",
             $this->traitsOut(),
-            ...array_map(fn($constant) => $constant->outCode(), $this->classConstants),
-            ...array_map(fn($property) => $property->outCode(), $this->classProperties),
-            ...array_map(fn($method) => $method->out(), $this->classMethods),
+            ...array_map(fn($constant) => $constant->outCode(), $this->constants),
+            ...array_map(fn($property) => $property->outCode(), $this->properties),
+            ...array_map(fn($method) => $method->out(), $this->methods),
             "}",
         ];
 
@@ -125,12 +125,12 @@ class ClassFileConstruction
     private function traitsOut(): string
     {
         $out = [];
-        foreach ($this->classTraits as $classTrait) {
+        foreach ($this->traits as $classTrait) {
             $classTraitShortName = array_reverse(explode('\\', $classTrait))[0];
-            $outStr = "use " . (in_array($classTrait, $this->classUses) ? $classTraitShortName : $classTrait);
+            $outStr = "use " . (in_array($classTrait, $this->uses) ? $classTraitShortName : $classTrait);
 
             $aliasArr = [];
-            foreach ($this->classTraitsAlise as $alias => $item) {
+            foreach ($this->traitsAlise as $alias => $item) {
                 if (str_contains($item, $classTrait)) {
                     $item = str_replace($classTrait . "::", "", $item);
                     $aliasArr[] = "$item as $alias;";
@@ -154,13 +154,13 @@ class ClassFileConstruction
         return implode("\r\n    ", ["", ...$out]);
     }
 
-    public function setClassNamespace(string $classNamespace): ClassFileConstruction
+    public function setNamespace(string $classNamespace): ClassFileConstruction
     {
-        $this->classNamespace = $classNamespace;
+        $this->namespace = $classNamespace;
         return $this;
     }
 
-    public function addClassUses(string $useClass, string $alias = null): bool
+    public function addUses(string $useClass, string $alias = null): bool
     {
         $useClass = trim($useClass);
 
@@ -170,7 +170,7 @@ class ClassFileConstruction
 
         $uniqueTag = $alias ?: self::getClassShortName($useClass);
 
-        foreach ($this->classUses as $use) {
+        foreach ($this->uses as $use) {
             if ($this->getClassUseAlias($use) === $uniqueTag) {
                 return false;
             }
@@ -179,7 +179,7 @@ class ClassFileConstruction
             }
         }
 
-        $this->classUses[] = trim($useClass);
+        $this->uses[] = trim($useClass);
 
         if ($alias) {
             $this->classUsesAlias[$useClass] = $alias;
@@ -190,7 +190,7 @@ class ClassFileConstruction
 
     public function hasClassUse(string $className): bool
     {
-        return in_array($className, $this->classUses);
+        return in_array($className, $this->uses);
     }
 
     public function hasClassUseAlias(string $className): bool
@@ -207,37 +207,37 @@ class ClassFileConstruction
         return null;
     }
 
-    public function setClassDocBlock(string|array $classDocBlock): ClassFileConstruction
+    public function setDocBlock(string|array $classDocBlock): ClassFileConstruction
     {
-        $this->classDocBlock = new DocComment($classDocBlock);
+        $this->docBlock = new DocComment($classDocBlock);
         return $this;
     }
 
-    public function addClassTraits(string ...$classTraits): ClassFileConstruction
+    public function addTraits(string ...$classTraits): ClassFileConstruction
     {
-        $this->classTraits = [...$this->classTraits, ...$classTraits];
+        $this->traits = [...$this->traits, ...$classTraits];
         return $this;
     }
 
-    public function addClassTraitsAlise(array|string $classTraitsAlise, string $classTraitsAliseName = null): ClassFileConstruction
+    public function addTraitsAlise(array|string $classTraitsAlise, string $classTraitsAliseName = null): ClassFileConstruction
     {
         if (is_string($classTraitsAlise)) {
             $classTraitsAlise = [$classTraitsAlise => $classTraitsAliseName];
         }
-        $this->classTraitsAlise = array_merge($this->classTraitsAlise, $classTraitsAlise);
+        $this->traitsAlise = array_merge($this->traitsAlise, $classTraitsAlise);
         return $this;
     }
 
-    public function setClassExtends(?string $classExtends): ClassFileConstruction
+    public function setExtends(?string $classExtends): ClassFileConstruction
     {
-        $this->classExtends = $classExtends ? $this->getAppropriateClassName($classExtends) : '';
+        $this->extends = $classExtends ? $this->getAppropriateClassName($classExtends) : '';
         return $this;
     }
 
-    public function addClassImplements(string ...$classImplements): ClassFileConstruction
+    public function addImplements(string ...$classImplements): ClassFileConstruction
     {
         array_map(function ($implement) {
-            return $this->classImplements[] = $this->getAppropriateClassName($implement);
+            return $this->implements[] = $this->getAppropriateClassName($implement);
         }, $classImplements);
 
         return $this;
@@ -245,7 +245,7 @@ class ClassFileConstruction
 
     public function getAppropriateClassName(string $classname): string
     {
-        return $this->hasClassUse($classname) || self::getClassNamespace($classname) === $this->classNamespace
+        return $this->hasClassUse($classname) || self::getClassNamespace($classname) === $this->namespace
             ? ($this->getClassUseAlias($classname) ?: self::getClassShortName($classname))
             : self::getClassName($classname);
     }
@@ -274,26 +274,26 @@ class ClassFileConstruction
         return preg_replace('/\\\\\w+$/', '', $classname);
     }
 
-    public function addClassAttributes(Attribute|callable...$classAttributes): ClassFileConstruction
+    public function addAttributes(Attribute|callable...$classAttributes): ClassFileConstruction
     {
         foreach ($classAttributes as $attribute) {
             if ($attribute instanceof Attribute) {
-                $this->classAttributes[] = $attribute;
+                $this->attributes[] = $attribute;
             } else {
-                $this->classAttributes[] = $attribute();
+                $this->attributes[] = $attribute();
             }
         }
 
         return $this;
     }
 
-    public function addClassMethods(Method|callable ...$classMethods): ClassFileConstruction
+    public function addMethods(Method|callable ...$classMethods): ClassFileConstruction
     {
         foreach ($classMethods as $method) {
             if ($method instanceof Method) {
-                $this->classMethods[] = $method;
+                $this->methods[] = $method;
             }else{
-                $this->classMethods[] = $method();
+                $this->methods[] = $method();
             }
         }
 
@@ -341,7 +341,7 @@ class ClassFileConstruction
      */
     public function useOut(): array
     {
-        if (!$this->classUses) {
+        if (!$this->uses) {
             return [];
         }
 
@@ -349,7 +349,7 @@ class ClassFileConstruction
             return $this->hasClassUseAlias($use)
                 ? "use $use as {$this->getClassUseAlias($use)};"
                 : "use $use;";
-        }, $this->classUses);
+        }, $this->uses);
     }
 
     public function getTypeName(\ReflectionType $type): string
@@ -385,22 +385,22 @@ class ClassFileConstruction
         return $this->className;
     }
 
-    public function getClassProperties(): array
+    public function getProperties(): array
     {
-        return $this->classProperties;
+        return $this->properties;
     }
 
     public function removeClassProperties(string ...$name): void
     {
         $removeIndex = [];
-        foreach ($this->classProperties as $index => $classProperty){
+        foreach ($this->properties as $index => $classProperty){
             if (in_array($classProperty->getName(), $name)) {
                 $removeIndex[] = $index;
             }
         }
 
         foreach ($removeIndex as $index) {
-            unset($this->classProperties[$index]);
+            unset($this->properties[$index]);
         }
     }
 
@@ -422,7 +422,7 @@ class ClassFileConstruction
 
     public function getClassMethod(string $name): ?Method
     {
-        $methods = array_filter($this->classMethods, fn($method) => $method->getName() === $name);
+        $methods = array_filter($this->methods, fn($method) => $method->getName() === $name);
 
         return $methods ? current($methods) : null;
     }
@@ -498,7 +498,7 @@ class ClassFileConstruction
 
     public function getNamespace(): string
     {
-        return $this->classNamespace;
+        return $this->namespace;
     }
 
     public function getGlobalClassname(): string

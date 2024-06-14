@@ -31,14 +31,14 @@ class ClassFileResolve
                 $classFileConstruction->setDeclare(trim($line));
             }
             if (str_starts_with($line, 'use')) {
-                $classFileConstruction->addClassUses(strtr($line, ['use ' => '', ';' => '']));
+                $classFileConstruction->addUses(strtr($line, ['use ' => '', ';' => '']));
             }
             if (preg_match("/<<<([A-Za-z]{3,})$/", trim($line), $match)) {
                 $EOT = $match[1];
             }
             foreach ($interfaceNames as $interfaceName) {
                 if (str_contains($line, $interfaceName)){
-                    $classFileConstruction->addClassImplements($interfaceName);
+                    $classFileConstruction->addImplements($interfaceName);
                 }
             }
         }
@@ -50,12 +50,12 @@ class ClassFileResolve
 
         $classFileConstruction->setClassFileContent($contents);
         $classFileConstruction->setOriginReflexClass($reflectionClass);
-        $classFileConstruction->setClassNamespace($reflectionClass->getNamespaceName());
-        $classFileConstruction->setClassDocBlock($reflectionClass->getDocComment());
-        $classFileConstruction->setClassExtends($reflectionClass->getParentClass() ? $reflectionClass->getParentClass()->getName() : '');
+        $classFileConstruction->setNamespace($reflectionClass->getNamespaceName());
+        $classFileConstruction->setDocBlock($reflectionClass->getDocComment());
+        $classFileConstruction->setExtends($reflectionClass->getParentClass() ? $reflectionClass->getParentClass()->getName() : '');
         $classFileConstruction->addProperties(...$this->propertyResolve($reflectionClass, $classFileConstruction));
-        $classFileConstruction->addClassTraits(...$reflectionClass->getTraitNames());
-        $classFileConstruction->addClassTraitsAlise($reflectionClass->getTraitAliases());
+        $classFileConstruction->addTraits(...$reflectionClass->getTraitNames());
+        $classFileConstruction->addTraitsAlise($reflectionClass->getTraitAliases());
         $classFileConstruction->addConstants(...$this->constantResolve($reflectionClass));
 
         if (!$reflectionClass->isEnum()) {
@@ -73,10 +73,10 @@ class ClassFileResolve
 
             $attributeDes = new Attribute($attributeName);
             array_map(fn($param) => $attributeDes->addParam($param), $attribute->getArguments());
-            $classFileConstruction->addClassAttributes($attributeDes);
+            $classFileConstruction->addAttributes($attributeDes);
         }
 
-        $classFileConstruction->addClassMethods(...$this->methodsResolve($reflectionClass, $classFileConstruction));
+        $classFileConstruction->addMethods(...$this->methodsResolve($reflectionClass, $classFileConstruction));
 
         return $classFileConstruction;
     }
