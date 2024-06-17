@@ -5,6 +5,7 @@
 
 namespace Sc\Util\HtmlElement\ElementType;
 
+use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementHandle\ElementQuery;
 
 /**
@@ -70,12 +71,18 @@ abstract class AbstractHtmlElement
     }
 
     /**
+     * @param string|null $selector
+     *
      * @return DoubleLabel|null
      * @date 2023/4/15
      */
-    public function getParent(): ?DoubleLabel
+    public function getParent(#[Language('JQuery-CSS')] string $selector = null): ?DoubleLabel
     {
-        return $this->parent;
+        if (!$selector || !$this->parent || $this->parent->find($selector)) {
+            return $this->parent;
+        }
+
+        return $this->parent->getParent($selector);
     }
 
     /**

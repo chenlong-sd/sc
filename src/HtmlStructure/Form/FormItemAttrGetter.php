@@ -46,6 +46,7 @@ interface FormItemAttrGetter
     public function getFail();
     public function getCol();
     public function getAfterCol();
+    public function getOffsetCol();
     public function getAutoComplete();
 
     /**

@@ -66,11 +66,14 @@ abstract class AbstractFormItemTheme
             if ($formItem->getAfterCol()) {
                 $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
             }
+            if ($formItem->getOffsetCol()) {
+                $res->setAttr(':offset', $formItem->getOffsetCol());
+            }
             $el = $res->getParent() ?: $res;
         }
 
         if ($formItem->getWhen()){
-            $el->setAttr('v-if', $formItem->getWhen());
+            $el->find('el-col')->setAttr('v-if', $formItem->getWhen());
         }
 
         return $el;

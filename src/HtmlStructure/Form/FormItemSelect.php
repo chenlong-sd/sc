@@ -50,15 +50,15 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
 
     /**
      * @param string|Url                  $url
-     * @param string|\Closure|JsFunc|null $fieldOrCode            为字符串时识别为搜索和显示的字段，否则为搜索处理代码
+     * @param string|\Closure|JsFunc|null $searchFieldOrCode      为字符串时识别为搜索和显示的字段，否则为搜索处理代码
      * @param string|null                 $haveDefaultSearchField 该表单有默认值时远程搜索的字段名，默认为id
      * @param string|null                 $afterSearchHandle      搜索之后的处理,结果数据为data
      *
      * @return $this
      */
-    public function remoteSearch(string|Url $url,  #[Language('JavaScript')]string|\Closure|JsFunc $fieldOrCode = null, string $haveDefaultSearchField = null, #[Language('JavaScript')] string $afterSearchHandle = null): static
+    public function remoteSearch(string|Url $url, #[Language('JavaScript')]string|\Closure|JsFunc $searchFieldOrCode = null, string $haveDefaultSearchField = null, #[Language('JavaScript')] string $afterSearchHandle = null): static
     {
-        $code = $fieldOrCode instanceof \Closure ? $fieldOrCode() : $fieldOrCode;
+        $code = $searchFieldOrCode instanceof \Closure ? $searchFieldOrCode() : $searchFieldOrCode;
 
         $this->remoteSearch = [
             'url' => $url,

@@ -26,7 +26,7 @@ class WindowTheme implements WindowThemeInterface
 
         $code = JsCode::create('// 打开弹窗')->then(
             JsVar::def('url', $window->getUrl()),
-            JsVar::def('query', $window->getQuery() ?: '@{}'),
+            JsVar::def('query', array_map(fn($v) => str_starts_with($v, '@') ? strtr($v, ['@' => '@row.']) : $v, $window->getQuery()) ?: '@{}'),
         );
 
         $this->urlHandle($code);
@@ -71,10 +71,6 @@ class WindowTheme implements WindowThemeInterface
             
             for(const key in query){
                 let value = query[key];
-                if (/^@/.test(value) && row.hasOwnProperty(value.substring(1))){
-                    parsedUrl.searchParams.set(key, row[value.substring(1)]);
-                    continue;
-                }
                 parsedUrl.searchParams.set(key, value);
             }
             

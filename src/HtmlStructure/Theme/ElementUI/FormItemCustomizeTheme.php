@@ -37,6 +37,9 @@ class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCu
         if ($formItemCustomize->getAfterCol()) {
             $res->after(El::double('el-col')->setAttr(':span', $formItemCustomize->getAfterCol()));
         }
+        if ($formItemCustomize->getOffsetCol()) {
+            $res->setAttr(':offset', $formItemCustomize->getOffsetCol());
+        }
         return $res->getParent() ?: $res;
     }
 }

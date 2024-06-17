@@ -294,7 +294,7 @@ class Column
     private function autoMakeFormItem(FormItemInterface|string|null $formItem, string $type): mixed
     {
         $name = $formItem ?: $this->attrs['prop'];
-        if ($this->show) {
+        if (!empty($this->show['config']['options'])) {
             $formItem = FormItem::select($name)->options(
                 array_map(function ($options) {
                     if ($options instanceof AbstractHtmlElement) {
@@ -347,6 +347,31 @@ class Column
         }else{
             Html::css()->addCss(".el-table .$className{text-align: $align!important;}");
         }
+
+        return $this;
+    }
+
+    /**
+     * 打开页面
+     *
+     * @param string                          $url
+     * @param array                           $config
+     * @param string                          $type
+     * @param string|AbstractHtmlElement|null $element
+     *
+     * @return $this
+     */
+    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement $element = null): static
+    {
+        $this->show = [
+            'type'   => 'openPage',
+            'config' => [
+                'url'     => $url,
+                'config'  => $config,
+                'type'    => $type,
+                'element' => $element,
+            ]
+        ];
 
         return $this;
     }

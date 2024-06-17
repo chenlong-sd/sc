@@ -72,6 +72,10 @@ class Temporary implements VueComponentInterface
             $code->then(...$this->config['onShow']);
         }
 
+        if (!empty(Html::js()->vue->getConfig('methods')['init'])) {
+            $code->then("this.init(row)");
+        }
+
         if (empty(Html::js()->vue->getConfig('methods')['onShow'])) {
             Html::js()->vue->addMethod('onShow', ['data'], $code);
         }
