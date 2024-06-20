@@ -30,7 +30,8 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             ->setAttrs($formItemCheckbox->getVAttrs());
         $checkbox = El::double('el-checkbox')->setAttrs([
             'v-for'   => "(item, index) in $optionsVar",
-            ':label'  => 'item.value'
+            ':label'  => 'item.value',
+            ':disabled' => "item.disabled"
         ])->append('{{ item.label }}');
 
         $this->addEvent($box, $formItemCheckbox->getEvents(), $formItemCheckbox->getName());

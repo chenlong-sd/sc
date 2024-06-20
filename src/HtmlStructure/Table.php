@@ -111,6 +111,25 @@ class Table
     }
 
     /**
+     * 条件渲染，用于后续事件，或者闭包里面的事件
+     *
+     * @param bool          $condition true: 渲染，false: 不渲染
+     * @param callable|null $callback
+     *
+     * @return Table|$this
+     */
+    public function when(bool $condition, callable $callback = null): Table|static
+    {
+        $table = $condition ? $this : clone $this;
+
+        if ($callback) {
+            $callback($table);
+        }
+
+        return $table;
+    }
+
+    /**
      * 设置头部事件
      *
      * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
