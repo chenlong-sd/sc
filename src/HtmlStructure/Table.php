@@ -67,6 +67,7 @@ class Table
     ];
     private bool $statusToggleButtonsNewLine = false;
     private array $trash = [];
+    private $virtual = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -116,11 +117,18 @@ class Table
      * @param bool          $condition true: 渲染，false: 不渲染
      * @param callable|null $callback
      *
-     * @return Table|$this
+     * @return Table|$this|object
      */
-    public function when(bool $condition, callable $callback = null): Table|static
+    public function when(bool $condition, callable $callback = null): mixed
     {
-        $table = $condition ? $this : clone $this;
+        if (!$this->virtual) {
+            $this->virtual = new class
+            {
+                public function __call(string $name, array $arguments){}
+            };
+        }
+
+        $table = $condition ? $this : $this->virtual;
 
         if ($callback) {
             $callback($table);

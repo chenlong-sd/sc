@@ -64,7 +64,6 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                     ? $formItemUpload->getUploadEl()
                     : El::double('el-button')->setAttr('type', 'primary')->append($formItemUpload->getUploadEl());
             }
-
         }
 
         $this->multipleFileHandle($formItemUpload, $rand, $upload, $VModel);
