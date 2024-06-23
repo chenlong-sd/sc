@@ -27,7 +27,8 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
         $checkbox = El::double('el-radio')->setAttrs([
             'v-for'   => "(item, index) in $optionsVar",
             'v-model' => $this->getVModel($formItemRadio),
-            ':label'  => 'item.value'
+            ':label'  => 'item.value',
+            ':disabled' => "item.disabled",
         ])->append('{{ item.label }}')->setAttrs($formItemRadio->getVAttrs());
 
         $this->addEvent($checkbox, $formItemRadio->getEvents(), $formItemRadio->getName());
