@@ -29,7 +29,7 @@ trait AopProxyTrait
                 return new static();
             }
 
-            return ImitateAopProxy::getProxy(new static());
+            return ImitateAopProxy::getProxy(static::class);
         }
 
         throw new \BadMethodCallException();
