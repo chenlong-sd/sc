@@ -181,7 +181,7 @@ class Tree
      */
     public function filter(array|callable $condition): static
     {
-        $this->where = $condition;
+        $this->where = is_array($condition) ? $condition : [$condition];
         return $this;
     }
 
@@ -454,7 +454,7 @@ class Tree
      * @param string|null $str
      * @param string      $separate
      *
-     * @return array{"chain":array, "parent":mixed}
+     * @return array{"chain":array, "parent":mixed, "selectValue":"mixed"}
      */
     public static function chainToArr(?string $str, string $separate = ','): array
     {

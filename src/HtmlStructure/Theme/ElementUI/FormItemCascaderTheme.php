@@ -11,7 +11,10 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCascader;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js\Axios;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCascaderThemeInterface;
 
 class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCascaderThemeInterface
@@ -38,7 +41,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCas
             'style'    => 'width:100%'
         ])->setAttrs($formItemCascader->getVAttrs());
 
-        Html::js()->vue->set($optionsVar, $formItemCascader->getOptions());
+        $this->setOptions($formItemCascader, $optionsVar);
 
         $formItemCascader->getCloseAfterSelection() and $this->closeAfterSelection($formItemCascader, $cascader);
 
@@ -67,4 +70,5 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCas
 
         $formItemCascader->event('change', $jsFunc);
     }
+
 }

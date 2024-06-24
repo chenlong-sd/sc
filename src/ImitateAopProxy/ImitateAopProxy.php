@@ -22,8 +22,9 @@ use Sc\Util\ImitateAopProxy\Interfaces\ImitateAspectAttrInterface;
  *
  * Class ImitateAopProxy
  */
-class ImitateAopProxy
+final class ImitateAopProxy
 {
+    private static array $proxyContainers = [];
 
     private object $proxyClass;
 
@@ -33,11 +34,23 @@ class ImitateAopProxy
      * @param object|string $class
      *
      */
-    public function __construct(object|string $class)
+    private function __construct(object|string $class)
     {
         $this->proxyClass = $class;
 
         $this->genMapping($this->proxyClass);
+    }
+
+    public static function getProxy(object|string $class)
+    {
+        $key = is_string($class) ? $class : get_class($class);
+
+        if (empty(self::$proxyContainers[$key])) {
+            $class = is_object($class) ? $class : new $class();
+            self::$proxyContainers[$key] = new self($class);
+        }
+
+        return self::$proxyContainers[$key];
     }
 
     /**
@@ -49,16 +62,6 @@ class ImitateAopProxy
     public function __call(string $name, array $arguments)
     {
         return $this->call($name, $arguments);
-    }
-
-    public function __get(string $name)
-    {
-        return $this->proxyClass->$name;
-    }
-
-    public function __set(string $name, $value): void
-    {
-        $this->proxyClass->$name = $value;
     }
 
     /**

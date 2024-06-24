@@ -65,6 +65,9 @@ class Table
         'updateHandle' => "",
         'config'       => []
     ];
+    private bool $statusToggleButtonsNewLine = false;
+    private array $trash = [];
+    private $virtual = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -109,6 +112,32 @@ class Table
     }
 
     /**
+     * 条件渲染，用于后续事件，或者闭包里面的事件
+     *
+     * @param bool          $condition true: 渲染，false: 不渲染
+     * @param callable|null $callback
+     *
+     * @return Table|$this|object
+     */
+    public function when(bool $condition, callable $callback = null): mixed
+    {
+        if (!$this->virtual) {
+            $this->virtual = new class
+            {
+                public function __call(string $name, array $arguments){}
+            };
+        }
+
+        $table = $condition ? $this : $this->virtual;
+
+        if ($callback) {
+            $callback($table);
+        }
+
+        return $table;
+    }
+
+    /**
      * 设置头部事件
      *
      * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
@@ -133,7 +162,7 @@ class Table
     }
 
     /**
-     * @param string|AbstractHtmlElement $eventLabel 如只是需要改变按钮颜色和添加图标，
+     * @param string|AbstractHtmlElement|array $eventLabel 如只是需要改变按钮颜色和添加图标，
      *                                               可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                               可使用：@success.icon.title[theme], theme可取：default, plain
      *                                               更复杂的请示使用{@see AbstractHtmlElement}
@@ -141,7 +170,7 @@ class Table
      *
      * @return void
      */
-    public function setHeaderRightEvent(string|AbstractHtmlElement $eventLabel, #[Language('JavaScript')] mixed $handler): void
+    public function setHeaderRightEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): void
     {
         $eventName = Tool::random('HeaderEvent')->get();
 
@@ -290,8 +319,8 @@ class Table
     }
 
     /**
-     * @param string $searchField
-     * @param array  $mapping
+     * @param string $searchField 切换时搜索的字段名
+     * @param array  $mapping     可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
      *
      * @return Table
      */
@@ -300,6 +329,25 @@ class Table
         $this->statusToggleButtons[] = compact('searchField', 'mapping');
 
         return $this;
+    }
+
+    /**
+     * 设置状态切换的为新行
+     *
+     * @param bool $newLine
+     *
+     * @return $this
+     */
+    public function setStatusToggleButtonsNewLine(bool $newLine = true): static
+    {
+        $this->statusToggleButtonsNewLine = $newLine;
+
+        return $this;
+    }
+
+    public function getStatusToggleButtonsNewLine(): bool
+    {
+        return $this->statusToggleButtonsNewLine;
     }
 
     /**
@@ -378,5 +426,27 @@ class Table
             'updateHandle' => $updateCallable instanceof \Closure ? $updateCallable() : $updateCallable,
             'config'       => $sortConfig
         ];
+    }
+
+    /**
+     * 启用回收站
+     *
+     * @param string|null $recoverUrl 恢复数据地址，不填则没有恢复数据操作
+     *
+     * @return void
+     */
+    public function enableTrash(?string $recoverUrl = null): void
+    {
+        $this->trash = [
+            'recoverUrl' => $recoverUrl
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function getTrash(): array
+    {
+        return $this->trash;
     }
 }

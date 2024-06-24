@@ -96,6 +96,17 @@ trait Validate
     }
 
     /**
+     * @param string|null  $message
+     * @param string|array $trigger
+     *
+     * @return $this
+     */
+    public function phoneVerify(string $message = null, string|array $trigger = ['change', 'blur']): static
+    {
+        return $this->patternVerify('/^1[3456789]\d{9}$/', $message, $trigger);
+    }
+
+    /**
      * @param string       $pattern
      * @param string|null  $message
      * @param string|array $trigger
@@ -167,7 +178,7 @@ trait Validate
             $message = $this->getLabel() . sprintf("长度限制为 %d", $length);
         }
 
-        return $this->addRule(['length' => $length], $message, $trigger);
+        return $this->addRule(['max' => $length], $message, $trigger);
     }
 
     /**

@@ -109,4 +109,11 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         $this->disableDownload = true;
         return $this;
     }
+
+    public function disableUpload(): static
+    {
+        $this->setVAttrs('disabled');
+
+        return $this;
+    }
 }

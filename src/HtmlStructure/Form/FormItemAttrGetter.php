@@ -46,6 +46,7 @@ interface FormItemAttrGetter
     public function getFail();
     public function getCol();
     public function getAfterCol();
+    public function getOffsetCol();
     public function getAutoComplete();
 
     /**
@@ -62,4 +63,5 @@ interface FormItemAttrGetter
     public function getRemoteSearch();
     public function getClosePage();
     public function getRules();
+    public function getOptionsRemote();
 }

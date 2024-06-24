@@ -14,6 +14,7 @@ trait Col
 {
     protected ?int $col = null;
     protected ?int $afterCol = null;
+    protected ?int $offsetCol = null;
 
     /**
      * @param int      $span     占比，最大 24
@@ -21,10 +22,11 @@ trait Col
      *
      * @return $this
      */
-    public function col(int $span, int $afterCol = null): static
+    public function col(int $span, int $afterCol = null, int $offset = null): static
     {
-        $this->col = $span;
-        $this->afterCol = $afterCol;
+        $this->col       = $span;
+        $this->afterCol  = $afterCol;
+        $this->offsetCol = $offset;
 
         return $this;
     }

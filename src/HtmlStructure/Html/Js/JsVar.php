@@ -61,6 +61,17 @@ class JsVar
         return new self($name, $value, self::SCENE_ASSIGN);
     }
 
+    /**
+     * @param string $name
+     * @param mixed  $value
+     *
+     * @return JsVar
+     */
+    public static function set(string $name, mixed $value): JsVar
+    {
+        return self::assign($name, $value);
+    }
+
     public function __toString(): string
     {
         return $this->toCode();
@@ -76,8 +87,13 @@ class JsVar
             }else{
                 if (is_array($this->value)) {
                     array_walk_recursive($this->value, function (&$value) {
-                        if (is_string($value) && str_contains($value, "\n")){
-                            $value = Grammar::mark($value, 'line');
+                        if (is_string($value)){
+                            if (str_contains($value, "\n")) {
+                                $value = Grammar::mark($value, 'line');
+                            }
+                            if (str_starts_with($value, '@')) {
+                                $value = Grammar::mark(substr($value, 1));
+                            }
                         }
                         if ($value instanceof JsFunc) {
                             $value = $value->toCode();

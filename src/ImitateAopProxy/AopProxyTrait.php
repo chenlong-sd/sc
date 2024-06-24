@@ -3,6 +3,9 @@
 namespace Sc\Util\ImitateAopProxy;
 
 /**
+ * 仿造AOP的代理类Trait
+ * 提示：引入此trait的类不要有存储实时数据的属性，因为会缓存代理类，重复调用的时候会直接到缓存获取类
+ *
  * Trait ProxyTrait
  * @method static static aop(bool $useAop = true)
  */
@@ -16,7 +19,7 @@ trait AopProxyTrait
      */
     public function proxy(): mixed
     {
-        return new ImitateAopProxy($this);
+        return ImitateAopProxy::getProxy($this);
     }
 
     public static function __callStatic(string $name, array $arguments)
@@ -26,7 +29,7 @@ trait AopProxyTrait
                 return new static();
             }
 
-            return new ImitateAopProxy(new static());
+            return ImitateAopProxy::getProxy(static::class);
         }
 
         throw new \BadMethodCallException();

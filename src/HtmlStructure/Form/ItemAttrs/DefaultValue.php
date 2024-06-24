@@ -37,7 +37,7 @@ trait DefaultValue
 
         array_map(function (FormItemInterface|FormItemAttrGetter $formItem) {
             // 默认值重设
-            if (method_exists($formItem, 'default') && !empty($this->default)) {
+            if (method_exists($formItem, 'default') && $this->default !== null) {
                 $defaultData = $formItem->getName()
                     ? $this->default[$formItem->getName()] ?? null
                     : $this->default;

@@ -19,7 +19,7 @@ use Sc\Util\HtmlElement\ElementHandle\LabelAttr;
 class SingleLabel extends AbstractHtmlElement
 {
     const PREDEFINE_LABEL = [
-        'img', 'br', 'meta', 'input', 'link', 'source', 'track'
+        'img', 'br', 'meta', 'input', 'link', 'source', 'track', 'hr'
     ];
 
     use LabelAttr;

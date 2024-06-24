@@ -156,6 +156,16 @@ class DoubleLabel extends AbstractHtmlElement
     }
 
     /**
+     * @param int $index
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function getChildrenByIndex(int $index): mixed
+    {
+        return $this->childrenNodes[$index] ?? null;
+    }
+
+    /**
      * 搜索子项返回索引位置
      *
      * @param AbstractHtmlElement $element

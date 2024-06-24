@@ -66,11 +66,23 @@ class Temporary implements VueComponentInterface
             }
         }
 
+        $this->config = Html::js()->vue->getTmpComponent();
+
+        if (!empty($this->config['onShow'])) {
+            $code->then(...$this->config['onShow']);
+        }
+
+        if (!empty(Html::js()->vue->getConfig('methods')['init'])) {
+            $code->then("this.init(row)");
+        }
+
         if (empty(Html::js()->vue->getConfig('methods')['onShow'])) {
             Html::js()->vue->addMethod('onShow', ['data'], $code);
         }
 
-        $this->config = Html::js()->vue->endMakeTmpComponent();
+        $this->config = Html::js()->vue->getTmpComponent();
+
+        Html::js()->vue->endMakeTmpComponent();
 
         return $this;
     }
@@ -98,6 +110,7 @@ class Temporary implements VueComponentInterface
             }
         }
 
+        unset($this->config['onShow']);
         return JsFunc::call("$registerVar.component", $this->getName(), $this->config)->toCode();
     }
 }

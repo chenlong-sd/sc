@@ -23,9 +23,15 @@ class WindowTheme implements WindowThemeInterface
     {
         $code = JsCode::create('// 打开弹窗');
         $code->thenIf('row === undefined', 'row = {}');
+        $rowData = [];
         foreach ($window->getRowData() as $key => $value) {
-            $code->then(JsVar::assign('row.' . $key, $value));
+            $rowData[$key] = $value;
         }
+        if ($rowData) {
+            $code->then(JsVar::assign('row', $rowData));
+        }
+
+        $window->getBeforeOpen() and $code->then($window->getBeforeOpen());
 
         mt_srand();
         $vModel = "VueWindow" . mt_rand(1, 999);
@@ -115,7 +121,7 @@ class WindowTheme implements WindowThemeInterface
         );
 
         // 设置iframe地址
-        Html::js()->vue->set("{$vModel}Query", $window->getQuery());
+        $code->then(JsVar::def('query', array_map(fn($v) => str_starts_with($v, '@') ? strtr($v, ['@' => '@row.']) : $v, $window->getQuery()) ?: '@{}'),);
         Html::js()->vue->addMethod("{$vModel}IframeBaseUrl", [], "return '{$window->getUrl()}';");
         $code->then(<<<JS
                 let parsedUrl = new URL(this['{$vModel}IframeBaseUrl']());
@@ -126,12 +132,8 @@ class WindowTheme implements WindowThemeInterface
                     }
                 })
                 
-                for(const key in this['{$vModel}Query']){
-                    let value = this['{$vModel}Query'][key];
-                    if (/^@/.test(value) && row.hasOwnProperty(value.substring(1))){
-                        parsedUrl.searchParams.set(key, row[value.substring(1)]);
-                        continue;
-                    }
+                for(const key in query){
+                    let value = query[key];
                     parsedUrl.searchParams.set(key, value);
                 }
                 
@@ -220,7 +222,7 @@ class WindowTheme implements WindowThemeInterface
         );
 
         $code->then(JsVar::def('f',
-            JsFunc::call('setTimeout', JsFunc::arrow()->code(
+            JsFunc::call('setInterval', JsFunc::arrow()->code(
                 JsCode::if("this.\$refs['{$vueComponent->getName()}'] !== undefined",
                     JsCode::create("this.\$refs['{$vueComponent->getName()}'].onShow(row)")
                         ->then("clearInterval(f)")
