@@ -46,6 +46,7 @@ final class ImitateAopProxy
         $key = is_string($class) ? $class : get_class($class);
 
         if (empty(self::$proxyContainers[$key])) {
+            $class = is_object($class) ? $class : new $class();
             self::$proxyContainers[$key] = new self($class);
         }
 
