@@ -394,11 +394,13 @@ class Table
      *
      * @param int $maxHeight
      *
-     * @return void
+     * @return Table
      */
-    public function setMaxHeight(int $maxHeight = -1): void
+    public function setMaxHeight(int $maxHeight = -60): static
     {
         $this->maxHeight = $maxHeight;
+
+        return $this;
     }
 
     public function getDraw(): array

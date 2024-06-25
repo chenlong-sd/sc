@@ -482,7 +482,7 @@ class TableTheme implements TableThemeInterface
      */
     private function heightRestrictions(Table $table, array &$attrs): void
     {
-        if (!$table->isOpenPagination() || !$table->getMaxHeight()) {
+        if (!$table->getMaxHeight()) {
             return;
         }
 
@@ -494,7 +494,7 @@ class TableTheme implements TableThemeInterface
         if ($table->getMaxHeight() < 0) {
             Html::js()->vue->event('mounted', JsCode::make(
                 JsFunc::call('setTimeout', JsFunc::arrow()->code(
-                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top - 60")),
+                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight())),
                 )
             ));
         }
