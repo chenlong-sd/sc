@@ -61,7 +61,7 @@ abstract class AbstractFormItemTheme
      */
     public function afterRender(FormItemInterface|FormItemAttrGetter $formItem, AbstractHtmlElement $el): AbstractHtmlElement
     {
-        if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml()) {
+        if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml() && $formItem->getCol() != -1) {
             $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
             if ($formItem->getAfterCol()) {
                 $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));

@@ -90,7 +90,10 @@ abstract class AbstractFormItem
         }
 
         if ($this->beforeRender) {
-            call_user_func($this->beforeRender, $el);
+            $res = call_user_func($this->beforeRender, $el);
+            if ($res instanceof AbstractHtmlElement) {
+                $el = $res;
+            }
         }
 
         return $el;

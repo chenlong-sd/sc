@@ -444,7 +444,7 @@ class TableTheme implements TableThemeInterface
             ':page-size'      => "{$table->getId()}PageSize",
             ':page-sizes'     => "[10, 15, 20, 50, 100, 200, 500, 1000]",
             "@current-change" => "{$table->getId()}PageChange",
-            "@size-change"    => "{$table->getId()}SizeChange"
+            "@size-change"    => "{$table->getId()}SizeChange",
         ]);
 
         Html::css()->addCss('.el-pagination{margin-top: 10px}');
