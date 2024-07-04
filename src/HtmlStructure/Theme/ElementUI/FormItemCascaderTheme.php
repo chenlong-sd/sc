@@ -10,44 +10,40 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCascader;
-use Sc\Util\HtmlStructure\Html\Html;
-use Sc\Util\HtmlStructure\Html\Js\Axios;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCascaderThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCustomizeThemeInterface;
 
-class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCascaderThemeInterface
+class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCustomizeThemeInterface
 {
     /**
-     * @param FormItemCascader|FormItemAttrGetter $formItemCascader
+     * @param FormItemCascader|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemCascader|FormItemAttrGetter $formItemCascader): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $base = $this->getBaseEl($formItemCascader);
+        $base = $this->getBaseEl($formItem);
 
-        if (!$optionsVar = $formItemCascader->getOptionsVarName()) {
+        if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
-            $optionsVar = $formItemCascader->getName() . 'Rand' .  mt_rand(1, 999);
+            $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
         }
 
-        $cascader = El::double($formItemCascader->isPanel() ? 'el-cascader-panel' : 'el-cascader')->setAttrs([
-            'v-model'  => $this->getVModel($formItemCascader),
-            'placeholder' => $formItemCascader->getPlaceholder(),
+        $cascader = El::double($formItem->isPanel() ? 'el-cascader-panel' : 'el-cascader')->setAttrs([
+            'v-model'  => $this->getVModel($formItem),
+            'placeholder' => $formItem->getPlaceholder(),
             ':options' => $optionsVar,
             'style'    => 'width:100%'
-        ])->setAttrs($formItemCascader->getVAttrs());
+        ])->setAttrs($formItem->getVAttrs());
 
-        $this->setOptions($formItemCascader, $optionsVar);
+        $this->setOptions($formItem, $optionsVar);
 
-        $formItemCascader->getCloseAfterSelection() and $this->closeAfterSelection($formItemCascader, $cascader);
+        $formItem->getCloseAfterSelection() and $this->closeAfterSelection($formItem, $cascader);
 
-        $this->addEvent($cascader, $formItemCascader->getEvents(), $formItemCascader->getName());
+        $this->addEvent($cascader, $formItem->getEvents(), $formItem->getName());
 
-        return $this->afterRender($formItemCascader, $formItemCascader->isPanel() ? $cascader : $base->append($cascader));
+        return $formItem->isPanel() ? $cascader : $base->append($cascader);
     }
 
     public function closeAfterSelection(FormItemCascader|FormItemAttrGetter $formItemCascader, DoubleLabel $el): void

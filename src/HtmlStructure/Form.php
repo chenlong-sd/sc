@@ -150,7 +150,7 @@ class Form
             return $formItem->setForm($this);
         }, $this->getFormItems());
 
-        return Theme::getRender(FormThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(FormThemeInterface::class, $theme)->render($this);
     }
 
     /**

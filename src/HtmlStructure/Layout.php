@@ -84,7 +84,7 @@ class Layout
      */
     public function render(string $theme = null): AbstractHtmlElement
     {
-        return Theme::getRender(LayoutThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(LayoutThemeInterface::class, $theme)->render($this);
     }
 
     /**

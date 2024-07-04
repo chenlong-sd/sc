@@ -61,9 +61,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemGroupThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemGroupThemeInterface::class, $theme)->render($this);
     }
 
     /**

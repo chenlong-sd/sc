@@ -15,29 +15,29 @@ use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemDatetimeThemeInterface;
 class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDatetimeThemeInterface
 {
     /**
-     * @param FormItemDatetime|FormItemAttrGetter $formItemDatetime
+     * @param FormItemDatetime|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemDatetime|FormItemAttrGetter $formItemDatetime): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $el = $this->getBaseEl($formItemDatetime);
+        $el = $this->getBaseEl($formItem);
 
         $datetime = El::double('el-date-picker')->setAttrs([
-            'v-model' => $this->getVModel($formItemDatetime),
-            'placeholder' => $formItemDatetime->getPlaceholder(),
-        ])->setAttrs($formItemDatetime->getVAttrs());
+            'v-model' => $this->getVModel($formItem),
+            'placeholder' => $formItem->getPlaceholder(),
+        ])->setAttrs($formItem->getVAttrs());
 
         $datetime->setAttrIfNotExist('type', 'datetime');
 
         $this->formatHandle($datetime);
 
-        if ($formItemDatetime->getCol()) {
+        if ($formItem->getCol()) {
             $datetime->setAttrIfNotExist('style', 'width:100%');
         }
 
-        return $this->afterRender($formItemDatetime, $el->append($datetime));
+        return $el->append($datetime);
     }
 
     /**

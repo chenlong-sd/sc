@@ -26,21 +26,21 @@ use Sc\Util\Tool;
 class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableThemeInterface
 {
     /**
-     * @param FormItemTable|FormItemAttrGetter $formItemTable
+     * @param FormItemTable|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemTable|FormItemAttrGetter $formItemTable): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $el = Table::create($this->getVModel($formItemTable), Tool::random('TR')->get(111, 999));
-        $elements = $this->addHandle($formItemTable, $el);
+        $el = Table::create($this->getVModel($formItem), Tool::random('TR')->get(111, 999));
+        $elements = $this->addHandle($formItem, $el);
 
         $el->setPagination(false);
 
-        $this->dataSortIdKeyHandle($el, $formItemTable);
+        $this->dataSortIdKeyHandle($el, $formItem);
 
-        $children  = $formItemTable->getChildren();
+        $children  = $formItem->getChildren();
 
         foreach ($children as $child) {
             if ($child instanceof FormItemSelect) {
@@ -71,12 +71,12 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             );
         }
 
-        $this->handleMake($el, $formItemTable);
+        $this->handleMake($el, $formItem);
 
         $el = El::double('el-form-item')->setAttr('label-width', 0)
             ->append($el->render("ElementUI"))->append($elements);
 
-        return $this->afterRender($formItemTable, $el);
+        return $el;
     }
 
     /**

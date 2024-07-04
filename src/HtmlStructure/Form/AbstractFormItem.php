@@ -78,28 +78,6 @@ abstract class AbstractFormItem
     }
 
     /**
-     * @param AbstractHtmlElement $el
-     *
-     * @return AbstractHtmlElement
-     * @date 2023/6/14
-     */
-    protected function ExecuteBeforeRendering(AbstractHtmlElement $el): AbstractHtmlElement
-    {
-        if (property_exists($this, 'attrs') && $this->attrs) {
-            $el->find('[v-model]')?->setAttrs($this->attrs);
-        }
-
-        if ($this->beforeRender) {
-            $res = call_user_func($this->beforeRender, $el);
-            if ($res instanceof AbstractHtmlElement) {
-                $el = $res;
-            }
-        }
-
-        return $el;
-    }
-
-    /**
      * @param string $name
      * @param mixed  $value
      *

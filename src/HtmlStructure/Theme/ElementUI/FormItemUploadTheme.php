@@ -23,19 +23,19 @@ use Sc\Util\Tool;
 class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploadThemeInterface
 {
     /**
-     * @param FormItemUpload|FormItemAttrGetter $formItemUpload
+     * @param FormItemUpload|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemUpload|FormItemAttrGetter $formItemUpload): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $el = $this->getBaseEl($formItemUpload);
+        $el = $this->getBaseEl($formItem);
 
-        $fileFormat = $this->fileFormat($formItemUpload);
-        $el->append($this->uploadMake($formItemUpload))->append($fileFormat);
+        $fileFormat = $this->fileFormat($formItem);
+        $el->append($this->uploadMake($formItem))->append($fileFormat);
 
-        return $this->afterRender($formItemUpload, $el);
+        return $el;
     }
 
     private function uploadMake(FormItemUpload|FormItemAttrGetter $formItemUpload): DoubleLabel

@@ -32,9 +32,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemUploadThemeInterface::class)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemUploadThemeInterface::class)->render($this);
     }
 
     public function getDefault()

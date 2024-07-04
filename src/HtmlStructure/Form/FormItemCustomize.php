@@ -19,9 +19,7 @@ class FormItemCustomize extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemCustomizeThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemCustomizeThemeInterface::class, $theme)->render($this);
     }
 
     public function getElement(): AbstractHtmlElement|string

@@ -145,10 +145,6 @@ class TableTheme implements TableThemeInterface
         // 设置数据变量和数组总数变量
         Html::js()->vue->set($dataVarName, is_string($data) ? [] : $data);
         Html::js()->vue->set($dataVarName . 'Total', is_string($data) ? 0 : count($data));
-        if ($table->isOpenPagination()) {
-            $query['page']     = Grammar::mark("this.{$dataVarName}Page");
-            $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
-        }
 
         if (is_array($data)) {
             Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
@@ -192,12 +188,12 @@ class TableTheme implements TableThemeInterface
             ];
 
             $query["temp"] = "@query";
-            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
-                is_array($table->getData())
-                    ? $this->dataGet($dataVarName, $query)
-                    : $this->remoteDataGet($table, $dataVarName, $query)
-            );
+            if ($table->isOpenPagination()) {
+                $query['page']     = Grammar::mark("this.{$dataVarName}Page");
+                $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
+            }
 
+            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'], $this->remoteDataGet($table, $dataVarName, $query));
         }
 
         Html::js()->vue->event('created', "this.{$dataVarName}GetData();");

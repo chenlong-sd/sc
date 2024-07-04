@@ -4,7 +4,6 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
-use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemRadio;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemRadioThemeInterface;
@@ -14,27 +13,31 @@ use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemRadioThemeInterface;
  */
 class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioThemeInterface
 {
-
-    public function render(FormItemRadio|FormItemAttrGetter $formItemRadio): AbstractHtmlElement
+    /**
+     * @param FormItemAttrGetter|FormItemRadio $formItem
+     *
+     * @return AbstractHtmlElement
+     */
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $base = $this->getBaseEl($formItemRadio);
+        $base = $this->getBaseEl($formItem);
 
-        if (!$optionsVar = $formItemRadio->getOptionsVarName()) {
+        if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
-            $optionsVar = $formItemRadio->getName() . 'Rand' .  mt_rand(1, 999);
+            $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
         }
 
         $checkbox = El::double('el-radio')->setAttrs([
             'v-for'   => "(item, index) in $optionsVar",
-            'v-model' => $this->getVModel($formItemRadio),
+            'v-model' => $this->getVModel($formItem),
             ':label'  => 'item.value',
             ':disabled' => "item.disabled",
-        ])->append('{{ item.label }}')->setAttrs($formItemRadio->getVAttrs());
+        ])->append('{{ item.label }}')->setAttrs($formItem->getVAttrs());
 
-        $this->addEvent($checkbox, $formItemRadio->getEvents(), $formItemRadio->getName());
+        $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName());
 
-        $this->setOptions($formItemRadio, $optionsVar);
+        $this->setOptions($formItem, $optionsVar);
 
-        return $this->afterRender($formItemRadio, $base->append($checkbox));
+        return $base->append($checkbox);
     }
 }

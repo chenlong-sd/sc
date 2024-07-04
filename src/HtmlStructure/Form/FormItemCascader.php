@@ -33,9 +33,7 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemCascaderThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemCascaderThemeInterface::class, $theme)->render($this);
     }
 
     /**

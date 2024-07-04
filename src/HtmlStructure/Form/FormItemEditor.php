@@ -5,18 +5,15 @@
 
 namespace Sc\Util\HtmlStructure\Form;
 
-use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultConstruct;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\UploadUrl;
-use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemEditorThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -64,9 +61,7 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
         // 隐藏logo
         Html::css()->addCss('#fr-logo{ display: none; }.fr-popup.fr-active{ z-index: 5 !important; }');
 
-        $el = Theme::getRender(FormItemEditorThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);
     }
 
     /**

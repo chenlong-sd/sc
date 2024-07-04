@@ -315,7 +315,7 @@ class Table
             }
         }
 
-        return Theme::getRender(TableThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(TableThemeInterface::class, $theme)->render($this);
     }
 
     /**

@@ -23,9 +23,7 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemCheckboxThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemCheckboxThemeInterface::class, $theme)->render($this);
     }
 
     /**

@@ -23,6 +23,7 @@ interface FormItemAttrGetter
     public function getAutoCompleteHandle();
     public function getAutoCompleteFormat();
     public function getVAttrs();
+    public function getBeforeRender();
     public function getLabel();
     public function getName();
 

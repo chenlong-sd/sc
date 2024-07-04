@@ -7,7 +7,6 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\TextCharacters;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCustomize;
-use Sc\Util\HtmlStructure\Form\FormItemDatetime;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCustomizeThemeInterface;
 
 /**
@@ -15,17 +14,21 @@ use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCustomizeThemeInterface;
  */
 class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCustomizeThemeInterface
 {
-
-    public function render(FormItemCustomize|FormItemAttrGetter $formItemCustomize): AbstractHtmlElement
+    /**
+     * @param FormItemAttrGetter|FormItemCustomize $formItem
+     *
+     * @return AbstractHtmlElement
+     */
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $element = El::get($formItemCustomize->getElement());
+        $element = El::get($formItem->getElement());
         if ($element instanceof TextCharacters) {
             $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px"></el-text>')->append($element);
         }
-        if ($formItemCustomize->getWhen()){
-            $element->setAttr('v-if', $formItemCustomize->getWhen());
+        if ($formItem->getWhen()){
+            $element->setAttr('v-if', $formItem->getWhen());
         }
-        if ($attrs = $formItemCustomize->getVAttrs()){
+        if ($attrs = $formItem->getVAttrs()){
             if (isset($attrs['style'])) {
                 $element->setAttr('style', $element->getAttr('style') . ';' . $attrs['style']);
                 unset($attrs['style']);
@@ -33,13 +36,6 @@ class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCu
             $attrs and $element->setAttrs($attrs);
         }
 
-        $res = El::double('el-col')->setAttr(':span', $formItemCustomize->getCol())->append($element);
-        if ($formItemCustomize->getAfterCol()) {
-            $res->after(El::double('el-col')->setAttr(':span', $formItemCustomize->getAfterCol()));
-        }
-        if ($formItemCustomize->getOffsetCol()) {
-            $res->setAttr(':offset', $formItemCustomize->getOffsetCol());
-        }
-        return $res->getParent() ?: $res;
+        return $element;
     }
 }

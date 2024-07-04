@@ -24,9 +24,7 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemTableThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemTableThemeInterface::class, $theme)->render($this);
     }
 
     /**

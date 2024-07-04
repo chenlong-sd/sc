@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCascader;
@@ -19,6 +20,19 @@ use Sc\Util\HtmlStructure\Html\Js\JsVar;
  */
 abstract class AbstractFormItemTheme
 {
+
+    protected function renderFormItem($formItem): AbstractHtmlElement
+    {
+        return El::fictitious();
+    }
+
+    public function render(FormItemInterface|FormItemAttrGetter $formItem): AbstractHtmlElement
+    {
+        $el = $this->renderFormItem($formItem);
+
+        return $this->afterRender($formItem, $el);
+    }
+
     public function getBaseEl(FormItemInterface|FormItemAttrGetter $formItem): AbstractHtmlElement
     {
         $el = El::double('el-form-item')->setAttr('label', $formItem->getLabel());
@@ -59,21 +73,23 @@ abstract class AbstractFormItemTheme
      *
      * @return AbstractHtmlElement
      */
-    public function afterRender(FormItemInterface|FormItemAttrGetter $formItem, AbstractHtmlElement $el): AbstractHtmlElement
+    private function afterRender(FormItemInterface|FormItemAttrGetter $formItem, AbstractHtmlElement $el): AbstractHtmlElement
     {
-        if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml() && $formItem->getCol() != -1) {
-            $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
-            if ($formItem->getAfterCol()) {
-                $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
-            }
-            if ($formItem->getOffsetCol()) {
-                $res->setAttr(':offset', $formItem->getOffsetCol());
-            }
-            $el = $res->getParent() ?: $res;
-        }
+        $el = $this->addCol($formItem, $el);
 
         if ($formItem->getWhen()){
             $el->find('el-col')->setAttr('v-if', $formItem->getWhen());
+        }
+
+        if ($formItem->getVAttrs()) {
+            $el->find('[v-model]')?->setAttrs($formItem->getVAttrs());
+        }
+
+        if ($formItem->getBeforeRender()) {
+            $res = call_user_func($formItem->getBeforeRender(), $el);
+            if ($res instanceof AbstractHtmlElement) {
+                $el = $res;
+            }
         }
 
         return $el;
@@ -97,5 +113,27 @@ abstract class AbstractFormItemTheme
 
             Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}"));
         }
+    }
+
+    /**
+     * @param FormItemInterface|FormItemAttrGetter $formItem
+     * @param AbstractHtmlElement                  $el
+     *
+     * @return AbstractHtmlElement|DoubleLabel
+     */
+    private function addCol(FormItemInterface|FormItemAttrGetter $formItem, AbstractHtmlElement $el): DoubleLabel|AbstractHtmlElement
+    {
+        if (empty($formItem->getForm()?->getConfig()[':inline']) && $el->toHtml() && $formItem->getCol() != -1) {
+            $res = El::double('el-col')->setAttr(':span', $formItem->getCol())->append($el);
+            if ($formItem->getAfterCol()) {
+                $res->after(El::double('el-col')->setAttr(':span', $formItem->getAfterCol()));
+            }
+            if ($formItem->getOffsetCol()) {
+                $res->setAttr(':offset', $formItem->getOffsetCol());
+            }
+            $el = $res->getParent() ?: $res;
+        }
+
+        return $el;
     }
 }

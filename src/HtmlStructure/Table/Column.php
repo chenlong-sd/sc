@@ -212,7 +212,7 @@ class Column
      */
     public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null): AbstractHtmlElement
     {
-        return Theme::getRender(TableColumnThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(TableColumnThemeInterface::class, $theme)->render($this);
     }
 
     /**

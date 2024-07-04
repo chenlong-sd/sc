@@ -43,6 +43,6 @@ class Tag
 
     public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null)
     {
-        return Theme::getRender(TagThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(TagThemeInterface::class, $theme)->render($this);
     }
 }

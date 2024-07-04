@@ -23,8 +23,6 @@ class FormItemRadio extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemRadioThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemRadioThemeInterface::class, $theme)->render($this);
     }
 }

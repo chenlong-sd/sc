@@ -9,37 +9,33 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSwitch;
-use Sc\Util\HtmlStructure\Form\FormItemText;
-use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSwitchThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 
 class FormItemSwitchTheme extends AbstractFormItemTheme implements FormItemSwitchThemeInterface
 {
     /**
-     * @param FormItemSwitch|FormItemAttrGetter $formItemSwitch
+     * @param FormItemSwitch|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemSwitch|FormItemAttrGetter $formItemSwitch): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $base = $this->getBaseEl($formItemSwitch);
+        $base = $this->getBaseEl($formItem);
 
-        list($openOption, $closeOptions) = $formItemSwitch->getOptions();
+        list($openOption, $closeOptions) = $formItem->getOptions();
 
         $input = El::double('el-switch')->setAttrs([
-            'v-model'         => $this->getVModel($formItemSwitch),
+            'v-model'         => $this->getVModel($formItem),
             'inline-prompt'   => '',
             'active-text'     => $openOption['label'],
             'inactive-text'   => $closeOptions['label'],
             ':active-value'   => $openOption['value'],
             ':inactive-value' => $closeOptions['value'],
-        ])->setAttrs($formItemSwitch->getVAttrs());
+        ])->setAttrs($formItem->getVAttrs());
 
-        $this->addEvent($input, $formItemSwitch->getEvents(), $formItemSwitch->getName());
+        $this->addEvent($input, $formItem->getEvents(), $formItem->getName());
 
-
-        return $this->afterRender($formItemSwitch, $base->append($input));
+        return $base->append($input);
     }
 }

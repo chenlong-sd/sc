@@ -13,29 +13,33 @@ use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSelectThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSwitchThemeInterface;
 
 /**
  * Class FormItemSelectThem
  */
-class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelectThemeInterface
+class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitchThemeInterface
 {
-
-    public function render(FormItemSelect|FormItemAttrGetter $formItemSelect): AbstractHtmlElement
+    /**
+     * @param FormItemAttrGetter|FormItemSelect $formItem
+     *
+     * @return AbstractHtmlElement
+     */
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $base = $this->getBaseEl($formItemSelect);
+        $base = $this->getBaseEl($formItem);
 
         $select = El::double('el-select')->setAttrs([
-            'v-model'     => $this->getVModel($formItemSelect),
-            'placeholder' => $formItemSelect->getPlaceholder(),
+            'v-model'     => $this->getVModel($formItem),
+            'placeholder' => $formItem->getPlaceholder(),
             'clearable'   => '',
             'filterable'  => '',
         ]);
-        $select->setAttrs($formItemSelect->getVAttrs());
+        $select->setAttrs($formItem->getVAttrs());
 
-        if (!$optionsVar = $formItemSelect->getOptionsVarName()) {
+        if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
-            $optionsVar = $formItemSelect->getName() . 'Rand' .  mt_rand(1, 999);
+            $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
         }
 
         $options = El::double('el-option')->setAttrs([
@@ -46,24 +50,24 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSelec
             ':disabled' => "item.disabled",
         ]);
 
-        if ($formItemSelect->getOptions() && !is_array($formItemSelect->getDefault()) && array_search($formItemSelect->getDefault(), array_column($formItemSelect->getOptions(), 'value')) === false) {
-            $formItemSelect->default(null);
+        if ($formItem->getOptions() && !is_array($formItem->getDefault()) && array_search($formItem->getDefault(), array_column($formItem->getOptions(), 'value')) === false) {
+            $formItem->default(null);
         }
 
-        if ($formItemSelect->getMultiple()) {
+        if ($formItem->getMultiple()) {
             $select->setAttr('multiple');
         }
-        if ($formItemSelect->getCol()) {
+        if ($formItem->getCol()) {
             $select->setAttrIfNotExist('style', 'width:100%');
         }
 
-        $this->remoteSearch($formItemSelect, $select, $optionsVar);
+        $this->remoteSearch($formItem, $select, $optionsVar);
 
-        $this->addEvent($select, $formItemSelect->getEvents(), $formItemSelect->getName());
+        $this->addEvent($select, $formItem->getEvents(), $formItem->getName());
 
-        $this->setOptions($formItemSelect, $optionsVar);
+        $this->setOptions($formItem, $optionsVar);
 
-        return $this->afterRender($formItemSelect, $base->append($select->append($options)));
+        return $base->append($select->append($options));
     }
 
     private function remoteSearch(FormItemSelect|FormItemAttrGetter $formItemSelect, DoubleLabel $select, string $optionsVar): void

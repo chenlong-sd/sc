@@ -24,34 +24,34 @@ use Sc\Util\Tool;
 class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmitThemeInterface
 {
     /**
-     * @param FormItemSubmit|FormItemAttrGetter $formItemSubmit
+     * @param FormItemSubmit|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemSubmit|FormItemAttrGetter $formItemSubmit): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $formId = $formItemSubmit->getForm()->getId();
+        $formId = $formItem->getForm()->getId();
 
-        $el = $this->getBaseEl($formItemSubmit)->setAttr('submit-sign');
+        $el = $this->getBaseEl($formItem)->setAttr('submit-sign');
 
         $submitButton = El::double('el-button')->setAttrs([
             'type'      => 'primary',
             '@click'    => $formId . "Submit",
             'v-loading' => Html::js()->vue->bind($formId . "Loading", false),
             ':disabled' => $formId . "Loading",
-        ])->append($formItemSubmit->getSubmitText());
+        ])->append($formItem->getSubmitText());
 
         $reset = El::double('el-button')->setAttrs([
             '@click' => $formId . "Reset"
-        ])->append($formItemSubmit->getResetText());
+        ])->append($formItem->getResetText());
 
-        $this->resetEvent($formItemSubmit, $formId);
-        $this->submitEvent($formItemSubmit, $formId);
+        $this->resetEvent($formItem, $formId);
+        $this->submitEvent($formItem, $formId);
 
-        $el->append($submitButton)->append($formItemSubmit->getResetText() ? $reset : '');
+        $el->append($submitButton)->append($formItem->getResetText() ? $reset : '');
 
-        return $this->afterRender($formItemSubmit, $el);
+        return $el;
     }
 
     private function submitEvent(FormItemSubmit|FormItemAttrGetter $formItemSubmit, string $formId): void
