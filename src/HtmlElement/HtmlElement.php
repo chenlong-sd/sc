@@ -56,4 +56,22 @@ class HtmlElement
     {
         return is_string($element) ? El::fromCode($element) : $element;
     }
+
+    /**
+     * @param string $name
+     * @param array $arguments
+     * @return AbstractHtmlElement
+     */
+    public static function __callStatic(string $name, array $arguments)
+    {
+        $name = strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $name));
+
+        $el = self::double($name);
+
+        if ($arguments) {
+            $el->append(...$arguments);
+        }
+
+        return $el;
+    }
 }

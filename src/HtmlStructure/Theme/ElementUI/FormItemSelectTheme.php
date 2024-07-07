@@ -126,6 +126,8 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             ))
         ));
 
-        Html::js()->vue->event('mounted', JsFunc::call("this.$method", '', '@this.' . $formItemSelect->getForm()->getId() . '.' . $formItemSelect->getName()));
+        if ($formItemSelect->getForm()) {
+            Html::js()->vue->event('mounted', JsFunc::call("this.$method", '', '@this.' . $formItemSelect->getForm()->getId() . '.' . $formItemSelect->getName()));
+        }
     }
 }

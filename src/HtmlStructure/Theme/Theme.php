@@ -30,6 +30,7 @@ class Theme
     const DEFAULT_THEME = 'ElementUI';
 
     private static array $renderer = [];
+    private static array $themeResource = [];
 
     /**
      * 根据主题获取渲染类
@@ -53,7 +54,25 @@ class Theme
             self::$renderer[$theme][$interfaceClass] = self::makeRenderer($theme, $interfaceClass);
         }
 
+        self::themeResourceLoad($theme);
+
         return self::$renderer[$theme][$interfaceClass];
+    }
+
+    private static function themeResourceLoad(string $theme): void
+    {
+        if (empty(self::$themeResource[$theme])) {
+            $themeBaseNamespace = preg_replace('/Theme$/', '', self::class);
+
+            if (class_exists($resource = $themeBaseNamespace . $theme . "\\ResourceTheme")) {
+                self::$themeResource[$theme] = new $resource();
+            }else{
+                self::$themeResource[$theme] = true;
+            }
+        }
+        if (self::$themeResource[$theme] instanceof ResourceThemeInterface) {
+            self::$themeResource[$theme]->load();
+        }
     }
 
     /**
@@ -64,17 +83,8 @@ class Theme
      */
     private static function makeRenderer(?string $theme, string $interfaceClass): mixed
     {
-        $themeBaseNamespace = preg_replace('/Theme$/', '', self::class);
-
         $themeClass = preg_replace('/Interfaces/', $theme, $interfaceClass);
         $themeClass = preg_replace('/Interface$/', '', $themeClass);
-
-        if (class_exists($resource = $themeBaseNamespace . $theme . "\\ResourceTheme")) {
-            $resource = new $resource();
-            if ($resource instanceof ResourceThemeInterface) {
-                $resource->load();
-            }
-        }
 
         return new $themeClass();
     }
