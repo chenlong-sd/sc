@@ -12,7 +12,7 @@ class JsTimer
 
     private string|\Stringable $code;
 
-    public function __construct(private string $name, private string $type, private string $time,)
+    public function __construct(private readonly string $name, private readonly string $type, private readonly int $time,)
     {
     }
 
