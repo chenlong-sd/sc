@@ -34,6 +34,17 @@ class JsServiceTheme implements JsServiceThemeInterface
         return JsFunc::call("$this->callVar.\$message", $this->jsService->serviceConfig);
     }
 
+    public function prompt(): string
+    {
+        $serviceConfig = array_merge(['confirmButtonText' => '确定', 'cancelButtonText' => '取消',], $this->jsService->serviceConfig);
+
+        $then = $serviceConfig['then'];
+        unset($serviceConfig['then']);
+
+        return JsFunc::call("$this->callVar.\$prompt", $serviceConfig['message'], '提示', $serviceConfig)
+            ->call('then', JsFunc::arrow(['value'], $then instanceof JsFunc ? $then->code : $then));
+    }
+
     public function confirm(): string
     {
         $serviceConfig = array_merge(['confirmButtonText' => '确定', 'cancelButtonText' => '取消',], $this->jsService->serviceConfig);

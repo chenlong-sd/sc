@@ -16,4 +16,6 @@ interface JsServiceThemeInterface
     public function confirm(): string;
 
     public function loading(): string;
+
+    public function prompt(): string;
 }
