@@ -13,27 +13,25 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemEditor;
-use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemEditorThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 
 class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEditorThemeInterface
 {
     /**
-     * @param FormItemEditor|FormItemAttrGetter $formItemEditor
+     * @param FormItemEditor|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemEditor|FormItemAttrGetter $formItemEditor): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
         $this->resourceLoad();
 
-        $editorEl = $this->initialize($formItemEditor);
-        $baseEl   = $this->getBaseEl($formItemEditor);
+        $editorEl = $this->initialize($formItem);
+        $baseEl   = $this->getBaseEl($formItem);
 
-        return $this->afterRender($formItemEditor, $baseEl->append($editorEl));
+        return $baseEl->append($editorEl);
     }
 
     private function initialize(FormItemEditor|FormItemAttrGetter $formItemEditor): AbstractHtmlElement

@@ -10,7 +10,6 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCheckboxThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSwitchThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -41,9 +40,7 @@ class FormItemSwitch extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemSwitchThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemSwitchThemeInterface::class, $theme)->render($this);
     }
 
     /**

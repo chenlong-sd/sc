@@ -34,9 +34,7 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemTextThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemTextThemeInterface::class, $theme)->render($this);
     }
 
     /**

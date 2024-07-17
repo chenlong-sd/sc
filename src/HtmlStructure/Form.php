@@ -112,7 +112,7 @@ class Form
             if ($v->getName()) {
                 $value = $v->getDefault();
                 if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea || is_string($value)) {
-                    $value = Grammar::mark($v->getDefault() ?: '', 'line');
+                    $value = Grammar::mark($v->getDefault() !== null ? $v->getDefault() : '', 'line');
                 }
                 return [$v->getName() => $value];
             }
@@ -150,7 +150,7 @@ class Form
             return $formItem->setForm($this);
         }, $this->getFormItems());
 
-        return Theme::getRender(FormThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(FormThemeInterface::class, $theme)->render($this);
     }
 
     /**

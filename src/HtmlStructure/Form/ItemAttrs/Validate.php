@@ -43,6 +43,9 @@ trait Validate
      */
     public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur'])
     {
+
+        return $this->setVAttrs(':required', $when);
+
         return $this->customizeVerify(JsFunc::anonymous(['rule', 'value', 'callback'])->code(
             JsIf::when("!value && $when")->then(
                 JsFunc::call("callback", $message ?: $this->getLabel() . "不能为空")
@@ -93,6 +96,17 @@ trait Validate
         }
 
         return $this->addRule(['type' => $type,], $message, $trigger);
+    }
+
+    /**
+     * @param string|null  $message
+     * @param string|array $trigger
+     *
+     * @return $this
+     */
+    public function phoneVerify(string $message = null, string|array $trigger = ['change', 'blur']): static
+    {
+        return $this->patternVerify('/^1[3456789]\d{9}$/', $message, $trigger);
     }
 
     /**

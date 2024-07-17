@@ -38,7 +38,7 @@ trait LabelAttr
     public function setAttr(string $attr, string|int|null $value = ''): static
     {
         if ($value === null) {
-            unset($this->attrs[$attr]);
+            $this->removeAttr($attr);
         }else{
             $this->attrs[$attr] = preg_replace_callback("/\{#([\w\-_@:|]+)}/", function ($match){
                 $matchAttr = explode('|', $match[1]);
@@ -60,7 +60,7 @@ trait LabelAttr
      */
     public function setAttrIfNotExist(string $attr, string|int $value = ''): static
     {
-        if (isset($this->attrs[$attr])) {
+        if ($this->hasAttr($attr)) {
             return $this;
         }
 
@@ -121,7 +121,7 @@ trait LabelAttr
      */
     public function appendAttr(string $attr, string|int $value): static
     {
-        if (!isset($this->attrs[$attr])) {
+        if (!$this->hasAttr($attr)) {
             $this->setAttr($attr);
         }
 
@@ -172,11 +172,7 @@ trait LabelAttr
      */
     public function addClass(string $class): static
     {
-        if ($this->hasAttr('class')) {
-            return $this->appendAttr('class', " $class");
-        }
-
-        return $this->setAttr('class', $class);
+        return  $this->appendAttr('class', " $class");
     }
 
     /**

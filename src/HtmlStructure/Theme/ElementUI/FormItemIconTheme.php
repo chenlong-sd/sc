@@ -9,32 +9,30 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemIcon;
-use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\IconSelector;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemIconThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 
 class FormItemIconTheme extends AbstractFormItemTheme implements FormItemIconThemeInterface
 {
     /**
-     * @param FormItemIcon|FormItemAttrGetter $formItemIcon
+     * @param FormItemIcon|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemIcon|FormItemAttrGetter $formItemIcon): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $base = $this->getBaseEl($formItemIcon);
+        $base = $this->getBaseEl($formItem);
 
         $input = El::double('icon-selector')->setAttrs([
-            'v-model' => $this->getVModel($formItemIcon),
-        ])->setAttrs($formItemIcon->getVAttrs());
+            'v-model' => $this->getVModel($formItem),
+        ])->setAttrs($formItem->getVAttrs());
 
-        $this->addEvent($input, $formItemIcon->getEvents(), $formItemIcon->getName());
+        $this->addEvent($input, $formItem->getEvents(), $formItem->getName());
 
         Html::js()->vue->addComponents(new IconSelector());
 
-        return $this->afterRender($formItemIcon, $base->append($input));
+        return $base->append($input);
     }
 }

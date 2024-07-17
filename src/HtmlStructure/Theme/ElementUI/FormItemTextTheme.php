@@ -22,18 +22,18 @@ use Sc\Util\Tool;
 class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThemeInterface
 {
     /**
-     * @param FormItemText|FormItemAttrGetter $formItemText
+     * @param FormItemText|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemText|FormItemAttrGetter $formItemText): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        if ($formItemText->getOptions() || $formItemText->getAutoCompleteHandle()) {
-            return $this->autoCompleteRender($formItemText);
+        if ($formItem->getOptions() || $formItem->getAutoCompleteHandle()) {
+            return $this->autoCompleteRender($formItem);
         }
 
-        return $this->textRender($formItemText);
+        return $this->textRender($formItem);
     }
 
     /**
@@ -53,7 +53,7 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
 
         $this->addEvent($input, $formItemText->getEvents(), $formItemText->getName());
 
-        return $this->afterRender($formItemText, $base->append($input));
+        return $base->append($input);
     }
 
     /**
@@ -85,7 +85,7 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
             $autoComplete->append($format);
         }
 
-        return $this->afterRender($formItemText, $base->append($autoComplete));
+        return $base->append($autoComplete);
     }
 
     /**

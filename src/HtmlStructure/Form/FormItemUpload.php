@@ -32,9 +32,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemUploadThemeInterface::class)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemUploadThemeInterface::class)->render($this);
     }
 
     public function getDefault()
@@ -107,6 +105,13 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     public function disableDownload(bool $disable = true): static
     {
         $this->disableDownload = true;
+        return $this;
+    }
+
+    public function disableUpload(): static
+    {
+        $this->setVAttrs('disabled');
+
         return $this;
     }
 }

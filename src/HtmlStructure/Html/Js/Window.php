@@ -22,6 +22,7 @@ class Window
     private ?VueComponentInterface $component = null;
     protected array $rowData = [];
     protected ?JsCode $beforeOpen = null;
+    private string $id = '';
 
     public function __construct(private readonly string $title)
     {
@@ -190,5 +191,16 @@ class Window
     public function getBeforeOpen(): ?JsCode
     {
         return $this->beforeOpen;
+    }
+
+    public function setId(string $id): Window
+    {
+        $this->id = $id;
+        return $this;
+    }
+
+    public function getId(): string
+    {
+        return $this->id;
     }
 }

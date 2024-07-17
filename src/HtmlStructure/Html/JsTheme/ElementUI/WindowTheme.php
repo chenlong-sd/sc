@@ -22,7 +22,7 @@ class WindowTheme implements WindowThemeInterface
     public function render(Window $window): string
     {
         $code = JsCode::create('// 打开弹窗');
-        $code->thenIf('row === undefined', 'row = {}');
+        $code->thenIf('typeof row === "undefined"', 'row = {}');
         $rowData = [];
         foreach ($window->getRowData() as $key => $value) {
             $rowData[$key] = $value;
@@ -34,7 +34,7 @@ class WindowTheme implements WindowThemeInterface
         $window->getBeforeOpen() and $code->then($window->getBeforeOpen());
 
         mt_srand();
-        $vModel = "VueWindow" . mt_rand(1, 999);
+        $vModel = $window->getId() ?: "VueWindow" . mt_rand(1, 999);
 
         $attrs    = array_map(fn($v) => $v instanceof \Stringable ? (string)$v : $v, $window->getConfig());
         $isIframe = $window->getUrl();
@@ -160,7 +160,7 @@ class WindowTheme implements WindowThemeInterface
             }
 
             $submit = $elements->find('[submit-sign]');
-            $code->then(JsCode::if('row !== undefined && row.id',
+            $code->then(JsCode::if('typeof row !== "undefined" && row.hasOwnProperty("id") && row.id',
                 JsVar::assign("this.{$vModel}Url", "@this.{$vModel}UpdateUrl"),
                 JsVar::assign("this.{$vModel}Url", "@this.{$vModel}CreateUrl"))
             );

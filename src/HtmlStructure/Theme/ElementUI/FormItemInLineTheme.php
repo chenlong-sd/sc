@@ -9,28 +9,28 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItemInLine;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemInLineThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemIconThemeInterface;
 
-class FormItemInLineTheme extends AbstractFormItemTheme implements FormItemInLineThemeInterface
+class FormItemInLineTheme extends AbstractFormItemTheme implements FormItemIconThemeInterface
 {
     /**
-     * @param FormItemInLine|FormItemAttrGetter $formItemInLine
+     * @param FormItemInLine|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemInLine|FormItemAttrGetter $formItemInLine): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
         $el = El::double('el-form-item')->setAttr('label-width', 0);
 
-        $children  = $formItemInLine->getChildren();
+        $children  = $formItem->getChildren();
         $col       = $this->colCalc($children);
 
         foreach ($children as $child) {
             $el->append($child->col($child->getCol() ?: $col)->render("ElementUI"));
         }
 
-        return $this->afterRender($formItemInLine, $el);
+        return $el;
     }
 
     /**

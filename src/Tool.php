@@ -18,6 +18,7 @@ use Sc\Util\Tool\ClassProxy;
 use Sc\Util\Tool\Dir;
 use Sc\Util\Tool\HtmlDocument;
 use Sc\Util\Tool\JWT;
+use Sc\Util\Tool\Lock;
 use Sc\Util\Tool\Nickname;
 use Sc\Util\Tool\Random;
 use Sc\Util\Tool\RemoteResourceDownload;
@@ -42,6 +43,7 @@ use Sc\Util\Tool\XlsWriter;
  * @method static Ciphertext ciphertext(string $secret)
  * @method static Random random(?string $prefix = null)
  * @method static XlsWriter xls(array|string $config)
+ * @method static Lock lock(string $key, int $ttl = 5, int $waitTime = 0)
  *
  * @date 2022/2/20
  */

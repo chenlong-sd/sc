@@ -12,11 +12,9 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemIconThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
 /**
@@ -31,9 +29,7 @@ class FormItemIcon extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemIconThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemIconThemeInterface::class, $theme)->render($this);
     }
 
 }

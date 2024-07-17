@@ -53,7 +53,7 @@ class Temporary implements VueComponentInterface
             $vModel = $this->content->getAttr(':model');
 
             $code->then(JsVar::def('row', '@data'));
-            $code->then(JsVar::assign("this.{$vModel}Url", "@row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
+            $code->then(JsVar::assign("this.{$vModel}Url", "@typeof row != 'undefined' && row.hasOwnProperty('id') && row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
 
             if ($this->content->hasAttr("v-loading")) {
                 $code->then(

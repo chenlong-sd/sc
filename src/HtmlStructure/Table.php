@@ -67,6 +67,7 @@ class Table
     ];
     private bool $statusToggleButtonsNewLine = false;
     private array $trash = [];
+    private $virtual = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -108,6 +109,32 @@ class Table
     public function getAttrs(): array
     {
         return $this->attrs;
+    }
+
+    /**
+     * 条件渲染，用于后续事件，或者闭包里面的事件
+     *
+     * @param bool          $condition true: 渲染，false: 不渲染
+     * @param callable|null $callback
+     *
+     * @return Table|$this|object
+     */
+    public function when(bool $condition, callable $callback = null): mixed
+    {
+        if (!$this->virtual) {
+            $this->virtual = new class
+            {
+                public function __call(string $name, array $arguments){}
+            };
+        }
+
+        $table = $condition ? $this : $this->virtual;
+
+        if ($callback) {
+            $callback($table);
+        }
+
+        return $table;
     }
 
     /**
@@ -288,7 +315,7 @@ class Table
             }
         }
 
-        return Theme::getRender(TableThemeInterface::class, $theme)->render($this);
+        return Theme::getRenderer(TableThemeInterface::class, $theme)->render($this);
     }
 
     /**
@@ -367,11 +394,13 @@ class Table
      *
      * @param int $maxHeight
      *
-     * @return void
+     * @return Table
      */
-    public function setMaxHeight(int $maxHeight = -1): void
+    public function setMaxHeight(int $maxHeight = -60): static
     {
         $this->maxHeight = $maxHeight;
+
+        return $this;
     }
 
     public function getDraw(): array

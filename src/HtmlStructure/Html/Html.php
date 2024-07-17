@@ -107,7 +107,7 @@ class Html
      */
     public static function loadThemeResource(#[ExpectedValues(Theme::AVAILABLE_THEME)] ?string $theme = null): void
     {
-        Theme::getRender(ResourceThemeInterface::class, $theme)->load();
+        Theme::getRenderer(ResourceThemeInterface::class, $theme)->load();
     }
 
     /**

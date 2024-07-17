@@ -16,12 +16,12 @@ use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemGroupThemeInterface;
 class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupThemeInterface
 {
     /**
-     * @param FormItemGroup|FormItemAttrGetter $formItemGroup
+     * @param FormItemGroup|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemGroup|FormItemAttrGetter $formItemGroup): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
         $el = El::double('el-card')->addClass('vue--form-card');
 
@@ -30,10 +30,10 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         Html::css()->addCss(".el-form-item .vue--form-card{margin-bottom:0;}");
         Html::css()->addCss(".el-form-item .vue--form-card .el-form-item{margin-bottom:18px;}");
 
-        $children  = $formItemGroup->getChildren();
-        if ($formItemGroup->getPlain() && $formItemGroup->getLabel()) {
+        $children  = $formItem->getChildren();
+        if ($formItem->getPlain() && $formItem->getLabel()) {
             $children = [
-                FormItem::customize($formItemGroup->getLabel()),
+                FormItem::customize($formItem->getLabel()),
                 ...$children
             ];
         }
@@ -43,19 +43,19 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         foreach ($children as $child) {
             $row->append($child->render("ElementUI"));
         }
-        if ($formItemGroup->getPlain()) {
+        if ($formItem->getPlain()) {
             $el = $row;
         }else{
             $el->append($row);
-            if ($formItemGroup->getLabel()) {
+            if ($formItem->getLabel()) {
                 $el->append(
                     El::double('template')->setAttr('#header')->append(
-                        El::double('el-text')->setAttr('size', 'large')->append($formItemGroup->getLabel())
+                        El::double('el-text')->setAttr('size', 'large')->append($formItem->getLabel())
                     )
                 );
             }
         }
 
-        return $this->afterRender($formItemGroup, $el);
+        return $el;
     }
 }

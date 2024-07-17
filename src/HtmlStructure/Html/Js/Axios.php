@@ -18,6 +18,7 @@ class Axios
     private JsCode $fail;
     private ?string $loadingText = null;
     private ?string $confirmMessage = null;
+    private ?string $promptMessage = null;
 
     public function __construct(private array $options)
     {
@@ -150,13 +151,22 @@ class Axios
                 ->call('finally', $this->finallyCallable)
         );
 
-        return ($this->confirmMessage
-            ? JsService::confirm([
+        if ($this->confirmMessage) {
+            $code = JsService::confirm([
                 'message' => Grammar::mark("`$this->confirmMessage`"),
                 'then'    => $code,
                 'type'    => 'warning'
-            ])
-            : $code)->toCode();
+            ]);
+        } elseif ($this->promptMessage) {
+            $code = JsService::prompt([
+                'message' => Grammar::mark("`$this->promptMessage`"),
+                'then'    => $code,
+                'type'    => 'text'
+            ]);
+        }
+
+
+        return $code->toCode();
     }
 
     public function __toString(): string
@@ -196,6 +206,19 @@ class Axios
     public function fail(#[Language('JavaScript')] mixed $fail): Axios
     {
         $this->fail->then($fail);
+
+        return $this;
+    }
+
+    public function prompt(string $message, string $inputName = 'prompt_value'): static
+    {
+        $this->promptMessage = $message;
+
+        if (strtoupper($this->options['method']) === "POST") {
+            $this->options['data'][$inputName] = Grammar::mark("value.value");
+        }else{
+            $this->options['params'][$inputName] = Grammar::mark("value.value");
+        }
 
         return $this;
     }

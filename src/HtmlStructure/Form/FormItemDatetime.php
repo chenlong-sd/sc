@@ -30,9 +30,7 @@ class FormItemDatetime extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemDatetimeThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemDatetimeThemeInterface::class, $theme)->render($this);
     }
 
     /**

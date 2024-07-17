@@ -146,68 +146,55 @@ class TableTheme implements TableThemeInterface
         Html::js()->vue->set($dataVarName, is_string($data) ? [] : $data);
         Html::js()->vue->set($dataVarName . 'Total', is_string($data) ? 0 : count($data));
 
-        if (!is_string($data)) return $dataVarName;
+        if (is_array($data)) {
+            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
+                $this->dataGet($dataVarName, [])
+            );
+        }else{
+            // 字符不是http开头
+            if(!str_starts_with($data, 'http')) return $data;
 
-        // 字符不是http开头
-        if(!str_starts_with($data, 'http')) return $data;
+            /**
+             * 如果是字符串，且是http开头则识别为请求地址
+             * 设置搜索参数数据:       dataVar + Search
+             * 设置搜索地址获取method: dataVar + Url
+             * 设置获取数据method:    dataVar + GetData
+             *
+             * *** 根据以上规则可在渲染完成后，重新设置对应代码，可替换 ***
+             */
+            Html::js()->vue->set($dataVarName . 'Search', new \stdClass());
+            Html::js()->vue->addMethod($dataVarName . 'Url', [], "return '$data';");
+            Html::js()->vue->set('urlSearch', '@location.search');
+            Html::js()->vue->addMethod('getUrlSearch', [], JsCode::make(
+                JsVar::def('urlSearch'),
+                JsIf::when('this.urlSearch')
+                    ->then(JsCode::make(
+                        JsVar::assign('urlSearch', '@this.urlSearch.substring(1)'),
+                        JsVar::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
+                    ))->else(
+                        JsVar::assign('urlSearch', '')
+                    ),
+                JsCode::create('return urlSearch;')
+            ));
 
-        /**
-         * 如果是字符串，且是http开头则识别为请求地址
-         * 设置搜索参数数据:       dataVar + Search
-         * 设置搜索地址获取method: dataVar + Url
-         * 设置获取数据method:    dataVar + GetData
-         *
-         * *** 根据以上规则可在渲染完成后，重新设置对应代码，可替换 ***
-         */
-        Html::js()->vue->set($dataVarName . 'Search', new \stdClass());
-        Html::js()->vue->addMethod($dataVarName . 'Url', [], "return '$data';");
-        Html::js()->vue->set('urlSearch', '@location.search');
-        Html::js()->vue->addMethod('getUrlSearch', [], JsCode::make(
-            JsVar::def('urlSearch'),
-            JsIf::when('this.urlSearch')
-                ->then(JsCode::make(
-                    JsVar::assign('urlSearch', '@this.urlSearch.substring(1)'),
-                    JsVar::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
-                ))->else(
-                    JsVar::assign('urlSearch', '')
-                ),
-            JsCode::create('return urlSearch;')
-        ));
+            $query = [
+                'search' => [
+                    "search"      => Grammar::mark("this.{$dataVarName}Search"),
+                    "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
+                    "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
+                ],
+                'order' => Grammar::mark("this.{$dataVarName}Sort"),
+                'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
+            ];
 
-        $query = [
-            'search' => [
-                "search"      => Grammar::mark("this.{$dataVarName}Search"),
-                "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
-                "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
-            ],
-            'order' => Grammar::mark("this.{$dataVarName}Sort"),
-            'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
-        ];
-        if ($table->isOpenPagination()) {
-            $query['page']     = Grammar::mark("this.{$dataVarName}Page");
-            $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
+            $query["temp"] = "@query";
+            if ($table->isOpenPagination()) {
+                $query['page']     = Grammar::mark("this.{$dataVarName}Page");
+                $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
+            }
+
+            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'], $this->remoteDataGet($table, $dataVarName, $query));
         }
-        $query["temp"] = "@query";
-        Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
-            JsCode::create(JsVar::assign($table->getId() . 'Loading', true))
-                ->then(
-                    JsVar::assign('query', '@query ? query : {}'),
-                    Axios::get(
-                        url: Grammar::mark("this.{$dataVarName}Url()"),
-                        query: $query
-                    )->then(JsFunc::arrow(["{ data }"], JsCode::make(
-                        JsVar::assign("this.{$table->getId()}Loading", false),
-                        JsIf::when('data.code === 200')
-                            ->then(
-                                JsVar::assign("this.{$dataVarName}", '@data.data.data'),
-                                JsVar::assign("this.{$dataVarName}Total", '@data.data.total')
-                            )->else(
-                                "this.\$message.warning(data.msg)"
-                            )
-                    )))
-                )
-        );
-
 
         Html::js()->vue->event('created', "this.{$dataVarName}GetData();");
 
@@ -453,7 +440,7 @@ class TableTheme implements TableThemeInterface
             ':page-size'      => "{$table->getId()}PageSize",
             ':page-sizes'     => "[10, 15, 20, 50, 100, 200, 500, 1000]",
             "@current-change" => "{$table->getId()}PageChange",
-            "@size-change"    => "{$table->getId()}SizeChange"
+            "@size-change"    => "{$table->getId()}SizeChange",
         ]);
 
         Html::css()->addCss('.el-pagination{margin-top: 10px}');
@@ -482,7 +469,7 @@ class TableTheme implements TableThemeInterface
      */
     private function heightRestrictions(Table $table, array &$attrs): void
     {
-        if (!$table->isOpenPagination() || !$table->getMaxHeight()) {
+        if (!$table->getMaxHeight()) {
             return;
         }
 
@@ -494,7 +481,7 @@ class TableTheme implements TableThemeInterface
         if ($table->getMaxHeight() < 0) {
             Html::js()->vue->event('mounted', JsCode::make(
                 JsFunc::call('setTimeout', JsFunc::arrow()->code(
-                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top - 60")),
+                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight())),
                 )
             ));
         }
@@ -678,5 +665,43 @@ class TableTheme implements TableThemeInterface
                 ))
                 ->fail("this.\$message(data.msg ? data.msg : '服务器错误')")
         ));
+    }
+
+    /**
+     * @param Table  $table
+     * @param string $dataVarName
+     * @param array  $query
+     *
+     * @return JsCode
+     */
+    private function remoteDataGet(Table $table, string $dataVarName, array $query): JsCode
+    {
+        return JsCode::create(JsVar::assign($table->getId() . 'Loading', true))
+            ->then(
+                JsVar::assign('query', '@query ? query : {}'),
+                Axios::get(
+                    url: Grammar::mark("this.{$dataVarName}Url()"),
+                    query: $query
+                )->then(JsFunc::arrow(["{ data }"], JsCode::make(
+                    JsVar::assign("this.{$table->getId()}Loading", false),
+                    JsIf::when('data.code === 200')
+                        ->then(
+                            JsVar::assign("this.{$dataVarName}", '@data.data.data'),
+                            JsVar::assign("this.{$dataVarName}Total", '@data.data.total')
+                        )->else(
+                            "this.\$message.warning(data.msg)"
+                        )
+                )))
+            );
+    }
+
+    private function dataGet(string $dataVarName, array $query): JsCode
+    {
+        return JsCode::make(
+            JsIf::when("this.{$dataVarName}Page")->then(
+                JsCode::create("return this.{$dataVarName}.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
+            ),
+            JsCode::create("return this.{$dataVarName};")
+        );
     }
 }

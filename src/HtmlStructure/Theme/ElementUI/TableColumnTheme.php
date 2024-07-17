@@ -180,9 +180,13 @@ class TableColumnTheme implements TableColumnThemeInterface
     {
         $f = El::fictitious();
         foreach ($config['options'] as $value => $option) {
-            $f->append(El::get($option)->setAttr('v-if', "@$value == {$column->getAttr('prop')}"));
+            if ($f->getChildren()) {
+                $f->append(El::get($option)->setAttr('v-else-if', "@$value == {$column->getAttr('prop')}"));
+            }else{
+                $f->append(El::get($option)->setAttr('v-if', "@$value == {$column->getAttr('prop')}"));
+            }
         }
-
+        $f->append(El::double("el-text")->setAttr('v-else')->append('——'));
         $column->setFormat($f);
     }
 

@@ -14,13 +14,13 @@ use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemHiddenThemeInterface;
 class FormItemHiddenTheme extends AbstractFormItemTheme implements FormItemHiddenThemeInterface
 {
     /**
-     * @param FormItemHidden|FormItemAttrGetter $formItemHidden
+     * @param FormItemHidden|FormItemAttrGetter $formItem
      *
      * @return AbstractHtmlElement
      * @date 2023/6/4
      */
-    public function render(FormItemHidden|FormItemAttrGetter $formItemHidden): AbstractHtmlElement
+    public function renderFormItem($formItem): AbstractHtmlElement
     {
-        return $this->afterRender($formItemHidden, El::fictitious());
+        return El::fictitious();
     }
 }

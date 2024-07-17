@@ -8,7 +8,6 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
@@ -43,9 +42,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        $el = Theme::getRender(FormItemSubmitThemeInterface::class, $theme)->render($this);
-
-        return $this->ExecuteBeforeRendering($el);
+        return Theme::getRenderer(FormItemSubmitThemeInterface::class, $theme)->render($this);
     }
 
     public function setSubmit(#[Language('JavaScript')] string $jsCode): static
