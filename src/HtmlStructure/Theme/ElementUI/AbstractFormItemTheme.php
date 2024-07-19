@@ -78,7 +78,7 @@ abstract class AbstractFormItemTheme
         $el = $this->addCol($formItem, $el);
 
         if ($formItem->getWhen()){
-            $el->find('el-col')->setAttr('v-if', $formItem->getWhen());
+            $el->setAttr('v-if', $formItem->getWhen());
         }
 
         if ($formItem->getVAttrs()) {
