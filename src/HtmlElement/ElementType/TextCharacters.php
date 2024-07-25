@@ -21,7 +21,14 @@ class TextCharacters extends AbstractHtmlElement
 
     public function toHtml(): string
     {
-        return "\r\n" . $this->getCurrentRetraction() . preg_replace('/[\r\n]+(\s*)/', "\r\n$1" . $this->getCurrentRetraction(), trim($this->text),);
+        if (!str_contains($this->text,"\n")) {
+            return trim($this->text);
+        }
+
+        $retraction = "\r\n" . $this->getCurrentRetraction();
+        $content = preg_replace('/[\r\n]+(\s*)/', "\r\n$1" . $this->getCurrentRetraction(), trim($this->text),);
+        $this->setRetraction($this->getRetraction() - 4);
+        return $retraction . $content . "\r\n" . $this->getCurrentRetraction();
     }
 
     /**

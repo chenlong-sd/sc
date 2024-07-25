@@ -61,7 +61,7 @@ class DoubleLabel extends AbstractHtmlElement
                     $this->getCurrentRetraction(),
                     $this->label,
                     $this->attrToString(),
-                    trim((string)$this->getChildren()[0])
+                    $this->getChildren()[0]->toHtml()
                 );
             }
 
