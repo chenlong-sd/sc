@@ -14,8 +14,10 @@ use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Form\FormItemTextarea;
+use Sc\Util\HtmlStructure\Html\Common;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
@@ -112,7 +114,13 @@ class Form
             if ($v->getName()) {
                 $value = $v->getDefault();
                 if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea || is_string($value)) {
-                    $value = Grammar::mark($v->getDefault() !== null ? $v->getDefault() : '', 'line');
+                    if ($value && str_contains($value, '`')) {
+                        $defJsFnBase64Decode = Common::defJsFnBase64Decode();
+                        $value = base64_encode($value);
+                        $value = Grammar::mark("$defJsFnBase64Decode(`$value`)");
+                    }else{
+                        $value = Grammar::mark($value !== null ? $value : '', 'line');
+                    }
                 }
                 return [$v->getName() => $value];
             }
