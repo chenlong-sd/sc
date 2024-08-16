@@ -21,6 +21,7 @@ abstract class AbstractHtmlElement
     use ElementQuery;
 
     private DoubleLabel|null $parent = null;
+    private int $retraction = 4;
 
     /**
      * 渲染自身 htmlCode
@@ -92,8 +93,17 @@ abstract class AbstractHtmlElement
      */
     public function getCurrentRetraction(): string
     {
-        if ($this->getParent() && !$this->getParent() instanceof FictitiousLabel) {
-            return $this->getParent()->getCurrentRetraction() . '    ';
+        if ($this->getParent() && !($this->getParent() instanceof FictitiousLabel)) {
+            $parentRetraction = $this->getParent()->getCurrentRetraction();
+            if ($this->retraction > 0) {
+                return $parentRetraction . str_repeat(' ', $this->retraction);
+            }
+
+            if ($this->retraction < 0) {
+                return substr($parentRetraction, 0, $this->retraction);
+            }
+
+            return $parentRetraction;
         }
 
         return '';
@@ -142,5 +152,24 @@ abstract class AbstractHtmlElement
         }
 
         $this->parent->remove($this);
+    }
+
+    /**
+     * 设置输出时的缩进数量
+     *
+     * @param int $space
+     *
+     * @return $this
+     */
+    public function setRetraction(int $space = 4): static
+    {
+        $this->retraction = $space;
+
+        return $this;
+    }
+
+    public function getRetraction(): int
+    {
+        return $this->retraction;
     }
 }

@@ -48,6 +48,26 @@ trait ElementQuery
     }
 
     /**
+     * 循环子集元素
+     *
+     * @param callable $callable
+     *
+     * @return $this
+     */
+    public function eachChildren(callable $callable): static
+    {
+        if (!$this instanceof DoubleLabel) {
+            return $this;
+        }
+
+        foreach ($this->getChildren() as $element) {
+            $callable($element);
+        }
+
+        return $this;
+    }
+
+    /**
      * @param AbstractHtmlElement $element
      * @param array|callable[]    $filters
      *

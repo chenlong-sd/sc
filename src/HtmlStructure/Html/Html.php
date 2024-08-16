@@ -124,6 +124,10 @@ class Html
         $css and self::html()->find('head')->append(El::double('style')->append(El::text($css)));
         $js  and self::html()->find('html')->append(El::double('script')->append(El::text($js)));
 
+        self::html()->find('html')->eachChildren(function (AbstractHtmlElement $element) {
+            $element->setRetraction(0);
+        });
+
         return trim(El::fictitious()->append(El::text('<!DOCTYPE html>'), self::html())->toHtml());
     }
 

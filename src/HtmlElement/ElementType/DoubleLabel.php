@@ -61,7 +61,7 @@ class DoubleLabel extends AbstractHtmlElement
                     $this->getCurrentRetraction(),
                     $this->label,
                     $this->attrToString(),
-                    trim((string)$this->getChildren()[0])
+                    $this->getChildren()[0]->toHtml()
                 );
             }
 
@@ -107,6 +107,18 @@ class DoubleLabel extends AbstractHtmlElement
         if ($elements) {
             array_push($this->childrenNodes, ...$this->getElements($elements));
         }
+
+        return $this;
+    }
+
+    /**
+     * @param string $text
+     *
+     * @return DoubleLabel|$this
+     */
+    public function text(string $text): DoubleLabel|static
+    {
+        $this->append(new TextCharacters($text));
 
         return $this;
     }

@@ -230,7 +230,7 @@ class Vue
      *
      * @date 2023/5/19
      */
-    public function event(#[ExpectedValues(self::EVENTS)] string $event, #[Language('JavaScript')] string $code = ''): void
+    public function event(#[ExpectedValues(self::EVENTS)] string $event, #[Language('JavaScript')] mixed $code = ''): void
     {
         if ($this->makeComponent) {
             $this->makeComponent[$event][] = $code;

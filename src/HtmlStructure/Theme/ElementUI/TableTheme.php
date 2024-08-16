@@ -676,7 +676,7 @@ class TableTheme implements TableThemeInterface
      */
     private function remoteDataGet(Table $table, string $dataVarName, array $query): JsCode
     {
-        return JsCode::create(JsVar::assign($table->getId() . 'Loading', true))
+        return JsCode::create(JsVar::assign("this." . $table->getId() . "Loading", true))
             ->then(
                 JsVar::assign('query', '@query ? query : {}'),
                 Axios::get(

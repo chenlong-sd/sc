@@ -96,7 +96,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
         Html::js()->vue->set($queryValue, null);
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['query', 'cquery'])->code(
             Js\JsVar::def('options', $optionsVar),
-            Js\JsIf::when('this.' . $queryValue . ' === query')->then(
+            Js\JsIf::when("this.$queryValue === query")->then(
                 'return;'
             ),
             Js\JsVar::assign('this.' . $queryValue, '@query'),
