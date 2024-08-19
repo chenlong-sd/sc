@@ -28,6 +28,8 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
 
     public function __construct(FormItemInterface|string ...$children)
     {
+        if (empty($children)) return;
+
         if (is_string($children[0])){
             $this->label = $children[0];
             $this->name  = $children[1] ?? null;

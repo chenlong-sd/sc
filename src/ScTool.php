@@ -28,7 +28,7 @@ use Sc\Util\Tool\Url;
 use Sc\Util\Tool\XlsWriter;
 
 /**
- *  Class Tool.
+ * Class Tool.
  * @method static Tree tree(array $data, bool $currentIsTreeData = false)
  * @method static RemoteResourceDownload download()
  * @method static HtmlDocument dom(string $tag = '', bool $isASingleLabel = false)
@@ -45,14 +45,21 @@ use Sc\Util\Tool\XlsWriter;
  * @method static XlsWriter xls(array|string $config)
  * @method static Lock lock(string $key, int $ttl = 5, int $waitTime = 0)
  *
- * @see ScTool
  * @date 2022/2/20
- * @deprecated 后续可继续使用，但是不提供代码提示的编写，新的转移到ScTool类中,以便更好的代码提示
  */
-class Tool
+#[StaticCallAttribute('download', RemoteResourceDownload::class)]
+#[StaticCallAttribute('dom', HtmlDocument::class)]
+#[StaticCallAttribute('stringToDom', HtmlDocument::class, 'fromCode')]
+#[StaticCallAttribute('baiduFanYi', BaiduFanYi::class)]
+#[StaticCallAttribute('jwt', JWT::class)]
+#[StaticCallAttribute('xls', XlsWriter::class)]
+class ScTool extends StaticCall
 {
-    public static function __callStatic(string $name, array $arguments)
+    /**
+     * @date 2022/2/20
+     */
+    protected static function getClassFullyQualifiedName(string $shortClassName): string
     {
-        return ScTool::$name(...$arguments);
+        return "Sc\\Util\\Tool\\{$shortClassName}";
     }
 }
