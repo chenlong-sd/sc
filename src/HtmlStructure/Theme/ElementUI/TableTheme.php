@@ -217,8 +217,8 @@ class TableTheme implements TableThemeInterface
          * 让处理程序和事件 dom 关联
          */
         $eventHandlers = $table->getRowEvents();
-
-        $eventLabels = $this->rowGroupEventHandle($table->getRowGroupEvents(), $eventHandlers);
+        $eventLabels   = [];
+        $groupEventLabels = $this->rowGroupEventHandle($table->getRowGroupEvents(), $eventHandlers);
 
         foreach ($eventHandlers as $name => ['el' => $el, 'handler' => $handler]) {
             $el = $this->getEl($el)->setAttr('link');
@@ -227,6 +227,7 @@ class TableTheme implements TableThemeInterface
 
             Html::js()->vue->addMethod($name, ['scope'], JsCode::create(JsVar::def('row', '@scope.row'))->then($handler));
         }
+        $eventLabels = array_merge($eventLabels, $groupEventLabels);
         if (!$eventLabels) {
             return;
         }
@@ -405,6 +406,7 @@ class TableTheme implements TableThemeInterface
                 align-items: center;
                 display: inline-block;
                 line-height: 23px;
+                margin: 0 5px;
             }');
 
             Html::js()->vue->addMethod($handlers, $handlerFun);
