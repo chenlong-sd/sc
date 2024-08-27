@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableColumnThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
+use function Composer\Autoload\includeFile;
 
 /**
  * Class Column
@@ -102,6 +103,10 @@ class Column
     {
         if (!$formItem instanceof FormItemInterface) {
             $formItem = $this->autoMakeFormItem($formItem, $type);
+        }else{
+            if (!$formItem->getPlaceholder()) {
+                $formItem->placeholder($this->getAttr("label"));
+            }
         }
 
         $this->search = [
