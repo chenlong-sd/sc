@@ -17,6 +17,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
+use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
 class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThemeInterface
@@ -33,7 +34,13 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
             return $this->autoCompleteRender($formItem);
         }
 
-        return $this->textRender($formItem);
+        $render = $this->textRender($formItem);
+
+        if ($formItem->isNumber()) {
+            $this->numberHandle($render, $formItem);
+        }
+
+        return $render;
     }
 
     /**
@@ -119,6 +126,35 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
         ])->success(JsCode::make("cb(data.data)"));
 
         Html::js()->vue->addMethod($search, ['searchStr', 'cb'], $axios);
+    }
+
+    /**
+     * @param AbstractHtmlElement             $render
+     * @param FormItemText|FormItemAttrGetter $formItemText
+     *
+     * @return void
+     */
+    private function numberHandle(AbstractHtmlElement $render, FormItemText|FormItemAttrGetter $formItemText): void
+    {
+        $input = $render->find('[v-model]');
+        if ($input->getAttr('@change')) {
+            return;
+        }
+        $precision  = $formItemText->getNumberPrecision();
+        $methodName = ScTool::random('changeNumber')->get();
+
+        $input->setAttr('@change', $methodName);
+
+        Html::js()->vue->addMethod($methodName, JsFunc::anonymous(['val'])->code(
+            JsCode::raw('const newValue = parseFloat(val)'),
+            JsIf::when('!isNaN(newValue)')->then(
+                JsCode::raw("val = newValue")
+            ),
+            JsIf::when("$precision >= 0")->then(
+                JsCode::raw("val = val.toFixed($precision)")
+            ),
+            JsVar::set("this." . $input->getAttr('v-model'), '@val')
+        ));
     }
 
 }

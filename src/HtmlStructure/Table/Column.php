@@ -49,6 +49,14 @@ class Column
         return $this;
     }
 
+    public function width(int|string $width, $showOverflowTooltip = true): static
+    {
+        $this->setAttr('width', $width);
+        $this->setAttr(':show-overflow-tooltip', $showOverflowTooltip);
+
+        return $this;
+    }
+
     /**
      * @return $this
      */

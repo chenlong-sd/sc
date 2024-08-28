@@ -23,7 +23,7 @@ class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCu
     {
         $element = El::get($formItem->getElement());
         if ($element instanceof TextCharacters) {
-            $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px"></el-text>')->append($element);
+            $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px;margin-left: 10px"></el-text>')->append($element);
         }
         if ($formItem->getWhen()){
             $element->setAttr('v-if', $formItem->getWhen());

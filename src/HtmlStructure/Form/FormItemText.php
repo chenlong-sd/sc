@@ -31,6 +31,10 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
 
     protected string|JsFunc $autoCompleteHandle = '';
     protected \Stringable|string $autoCompleteFormat = '';
+    /**
+     * @var int|null
+     */
+    public ?int $numberPrecision = null;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -66,5 +70,27 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
         $this->setVAttrs(['type' => 'password', 'show-password' => '']);
 
         return $this;
+    }
+
+    /**
+     * @param int $precision 精度, 0表示整数
+     *
+     * @return $this
+     */
+    public function toNumber(int $precision = 0): static
+    {
+        $this->numberPrecision = $precision;
+
+        return $this;
+    }
+
+    public function isNumber(): bool
+    {
+        return $this->numberPrecision !== null;
+    }
+
+    public function getNumberPrecision(): ?int
+    {
+        return $this->numberPrecision;
     }
 }
