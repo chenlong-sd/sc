@@ -53,6 +53,9 @@ class Column
     {
         $this->setAttr('width', $width);
         $this->setAttr(':show-overflow-tooltip', $showOverflowTooltip);
+        if (!$showOverflowTooltip) {
+            $this->align('left');
+        }
 
         return $this;
     }
