@@ -283,6 +283,11 @@ class Column
         } else if ($name === 'event') {
             $initAttr['label']      = $arguments[0] ?? '操作';
             $initAttr['mark-event'] = true;
+            $initAttr['class-name'] = 'sc-event-column';
+
+            Html::css()->addCss('.sc-event-column .el-button+.el-button{ margin-left: 0 }');
+            Html::css()->addCss('.sc-event-column .el-button:not(:last-child){ margin-right: 12px }');
+
         } else if ($name === 'index') {
             $initAttr['label'] = $arguments[0] ?? '序号';
             $initAttr['type']  = $name;

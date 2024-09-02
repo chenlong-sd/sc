@@ -651,6 +651,7 @@ class TableTheme implements TableThemeInterface
                 'bg' => '',
                 'text'  => '',
                 'icon'  => 'RefreshLeft',
+                'v-if'  => 'isTrash',
                 '@click' => $recoverMethod
             ])->append("恢复数据")
         );
