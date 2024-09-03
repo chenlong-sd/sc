@@ -70,12 +70,11 @@ class Html
     private function __construct(string $title, #[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = Theme::DEFAULT_THEME)
     {
         $this->html = El::fromCode(self::BASE_CODE);
-
         $this->html->find('title')->append($title);
 
-        $this->js = new Js();
-
+        $this->js  = new Js();
         $this->css = new Css();
+        $this->css->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
 
         $this->theme = $theme;
     }
