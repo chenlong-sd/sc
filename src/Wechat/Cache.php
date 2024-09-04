@@ -15,8 +15,14 @@ class Cache
      */
     private ?CacheInterface $cacheEngine;
 
-    public function __construct(?CacheInterface $cacheEngine = null)
+    public function __construct(mixed $cacheEngine = null)
     {
+        if (is_string($cacheEngine)) {
+            $cacheEngine = new $cacheEngine();
+        } elseif (is_callable($cacheEngine)) {
+            $cacheEngine = $cacheEngine();
+        }
+
         $this->cacheEngine = $cacheEngine;
     }
 
