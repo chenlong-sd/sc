@@ -60,8 +60,8 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
 //        if ($formItem->getCol()) {
 //            $select->setAttrIfNotExist('style', 'width:100%');
 //        }
-        if ((isset($formItem->getForm()->getConfig()[':inline']) && $formItem->getForm()->getConfig()[':inline'] === 'true')
-            || isset($formItem->getForm()->getConfig()['inline'])
+        if ((isset($formItem->getForm()?->getConfig()[':inline']) && $formItem->getForm()?->getConfig()[':inline'] === 'true')
+            || isset($formItem->getForm()?->getConfig()['inline'])
         ) {
             $select->setAttrIfNotExist('style', 'width:192px');
         }
