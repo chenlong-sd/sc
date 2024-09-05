@@ -12,7 +12,7 @@ use JetBrains\PhpStorm\ExpectedValues;
  * @property-read string $serial_no      支付序列号
  * @property-read string $appid
  * @property-read string $secret
- * @property-read string $cacheEngine    缓存静态调用类
+ * @property-read mixed $cacheEngine    缓存静态调用类
  * @property-read string $cert           证书路径
  * @property-read string $cert_key       证书密钥路径
  * @property-read string $pub_token      公众号域名配置token
@@ -33,7 +33,7 @@ class Config
         'serial_no'      => '', // 支付序列号
         'appid'          => '', //
         'secret'         => '', //
-        'cacheEngine'    => '', // 缓存静态调用类
+        'cacheEngine'    => '', // 缓存静态调用类,可是类名，函数，对象
         'cert'           => '', // 证书内容
         'cert_key'       => '', // 证书密钥内容
         'pub_token'      => '', // 公众号域名验证token

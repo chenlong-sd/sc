@@ -53,8 +53,6 @@ class TableTheme implements TableThemeInterface
             $attrs['ref'] = $table->getId();
         }
 
-        Html::css()->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
-
         if (empty($attrs['header-cell-class-name'])) {
             Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
             $attrs['header-cell-class-name'] = 'vue--table-header-center';
