@@ -79,6 +79,8 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
 
         if (!$isMultiple) {
             $this->default = $this->default !== null ? $this->default : '';
+        }else{
+            $this->multiple();
         }
 
         return $this;
