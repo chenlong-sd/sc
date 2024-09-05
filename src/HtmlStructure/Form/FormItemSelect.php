@@ -42,6 +42,7 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
     public function multiple(): static
     {
         $this->multiple = true;
+        $this->default($this->default ?: []);
 
         return $this;
     }
