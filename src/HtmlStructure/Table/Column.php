@@ -4,13 +4,16 @@ namespace Sc\Util\HtmlStructure\Table;
 
 use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
+use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\FictitiousLabel;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableColumnThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
+use function Composer\Autoload\includeFile;
 
 /**
  * Class Column
@@ -44,6 +47,17 @@ class Column
         $attrs = is_string($attr) ? [$attr => $value] : $attr;
 
         $this->attrs = [...$this->attrs, ...$attrs];
+
+        return $this;
+    }
+
+    public function width(int|string $width, $showOverflowTooltip = true): static
+    {
+        $this->setAttr('width', $width);
+        $this->setAttr(':show-overflow-tooltip', $showOverflowTooltip);
+        if (!$showOverflowTooltip) {
+            $this->align('left');
+        }
 
         return $this;
     }
@@ -102,6 +116,10 @@ class Column
     {
         if (!$formItem instanceof FormItemInterface) {
             $formItem = $this->autoMakeFormItem($formItem, $type);
+        }else{
+            if (!$formItem->getPlaceholder()) {
+                $formItem->placeholder($this->getAttr("label"));
+            }
         }
 
         $this->search = [
@@ -115,17 +133,27 @@ class Column
     /**
      * 设置展示模板
      *
-     * @param string|\Stringable $format 参数规则依照vue语法
+     * @param string|\Stringable|array $format 参数规则依照vue语法
      *                                   行参数： 直接使用，例：id => {{ id }}  , <span :name="id"></span>
      *                                   其他参数：前面加@，例：location => {{ @location }}  , <span :name="@location"></span>
+     *                                   数组： ["描述" => '值'] =>   <div><b>描述</b>值</div> ，可配合 width(300, false)使用
      *
      * @return $this
      */
-    public function setFormat(#[Language('Vue')]string|\Stringable $format): static
+    public function setFormat(#[Language('Vue')]string|\Stringable|array $format): static
     {
-        $this->format     = $format;
+        $this->format = is_array($format) ? $this->arrayFormat($format) : $format;
 
         return $this;
+    }
+
+    private function arrayFormat(array $data): FictitiousLabel
+    {
+        $el = El::fictitious();
+        foreach ($data as $des => $value) {
+            $el->append(El::double('div')->append(El::double('b')->append($des))->append($value));
+        }
+        return $el;
     }
 
     /**
@@ -155,6 +183,8 @@ class Column
      * @param array $options 这里传值与tag的映射
      *
      * @return $this
+     * @deprecated
+     * @link showTags()
      */
     public function showTag(array $options): static
     {
@@ -162,6 +192,23 @@ class Column
             'type' => 'tag',
             'config' => [
                 'options'  => $options,
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
+     * @param ColumnTags $tags
+     *
+     * @return $this
+     */
+    public function showTags(ColumnTags $tags): static
+    {
+        $this->show = [
+            'type' => 'tag',
+            'config' => [
+                'options'  => $tags->getTags(),
             ]
         ];
 
@@ -232,10 +279,15 @@ class Column
         $initAttr = [];
         if ($name === 'normal') {
             $initAttr['label'] = $arguments[0] ?? '';
-            empty($arguments[0]) || $initAttr['prop'] = $arguments[1];
+            empty($arguments[1]) || $initAttr['prop'] = $arguments[1];
         } else if ($name === 'event') {
             $initAttr['label']      = $arguments[0] ?? '操作';
             $initAttr['mark-event'] = true;
+            $initAttr['class-name'] = 'sc-event-column';
+
+            Html::css()->addCss('.sc-event-column .el-button+.el-button{ margin-left: 0 }');
+            Html::css()->addCss('.sc-event-column .el-button:not(:last-child){ margin-right: 12px }');
+
         } else if ($name === 'index') {
             $initAttr['label'] = $arguments[0] ?? '序号';
             $initAttr['type']  = $name;

@@ -134,7 +134,9 @@ class WindowTheme implements WindowThemeInterface
                 
                 for(const key in query){
                     let value = query[key];
-                    parsedUrl.searchParams.set(key, value);
+                    if (!parsedUrl.searchParams.get(key)){
+                        parsedUrl.searchParams.set(key, value);
+                    }
                 }
                 
                 this['{$vModel}IframeUrl'] = parsedUrl.href;

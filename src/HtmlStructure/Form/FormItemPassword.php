@@ -5,19 +5,6 @@
 
 namespace Sc\Util\HtmlStructure\Form;
 
-use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\Attrs;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultConstruct;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
-use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
-use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Theme;
-
 /**
  * Class FormItemPassword
  *
@@ -26,10 +13,10 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemPassword extends FormItemText
 {
-    public function render(string $theme = null): AbstractHtmlElement
+    public function __construct(?string $name = null, ?string $label = null)
     {
-        $this->toPassword();
+        parent::__construct($name, $label);
 
-        return parent::render($theme);
+        $this->toPassword();
     }
 }

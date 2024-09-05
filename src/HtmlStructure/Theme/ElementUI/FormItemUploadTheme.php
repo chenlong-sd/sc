@@ -221,6 +221,12 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ":before-upload" => $beforeMethod,
         ]);
 
+        if (empty($formItemUpload->getVAttrs()['limit']) && empty($formItemUpload->getVAttrs()[':limit']) && !isset($formItemUpload->getVAttrs()['multiple'])) {
+            $upload->setAttrs([
+                ':limit' => 1,
+            ]);
+        }
+
         Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], JsCode::make(
             JsIf::when('response.code !== 200 || !response.data')
                 ->then(JsCode::make(

@@ -40,7 +40,7 @@ class Constant
         $embellish  = $this->isFinal ? 'final ' : '';
         $label      = $this->isEnum ? 'case' : 'const';
 
-        $contents[] = "{$embellish}{$this->publicScope}$label $this->name" . ($default ? " = " . $default : "") . ';';
+        $contents[] = "{$embellish}{$this->publicScope}$label $this->name" . ($default === null ? "" : " = " . $default) . ';';
 
         return "\r\n    " . implode("\r\n    ", $contents);
     }

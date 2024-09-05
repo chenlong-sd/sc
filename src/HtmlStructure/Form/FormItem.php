@@ -13,6 +13,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
  *
  * @method static FormItemHidden hidden(string $name = null)
  * @method static FormItemText text(string $name = null, ?string $label = null)
+ * @method static FormItemNumber number(string $name = null, ?string $label = null)
  * @method static FormItemPassword password(string $name = null, ?string $label = null)
  * @method static FormItemSelect select(string $name = null, ?string $label = null)
  * @method static FormItemCheckbox checkbox(string $name = null, ?string $label = null)

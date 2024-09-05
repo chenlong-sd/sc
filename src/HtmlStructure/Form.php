@@ -32,6 +32,7 @@ class Form
      */
     private array $formItems = [];
     private array $submitHandle = [];
+    private array $extraData = [];
 
     public function __construct(private readonly string $id) { }
 
@@ -86,6 +87,15 @@ class Form
         return $this;
     }
 
+    public function setExtraData(array $data, bool $isReplace = false): void
+    {
+        if ($isReplace) {
+            $this->extraData = $data;
+            return;
+        }
+        $this->extraData = array_merge($this->extraData, $data);
+    }
+
     /**
      * @return string
      */
@@ -110,7 +120,7 @@ class Form
      */
     public function getDefaults(): array
     {
-        return array_merge(...array_map(function ($v) {
+        $data = array_merge(...array_map(function ($v) {
             if ($v->getName()) {
                 $value = $v->getDefault();
                 if ($v instanceof FormItemEditor || $v instanceof FormItemText || $v instanceof FormItemTextarea || is_string($value)) {
@@ -127,6 +137,8 @@ class Form
 
             return $v->getDefault();
         }, array_filter($this->getFormItems(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
+
+        return array_merge($this->extraData, $data);
     }
 
     /**

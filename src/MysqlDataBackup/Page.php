@@ -199,7 +199,7 @@ class Page
         );
         Html::js()->vue->addMethod('remove', ['filename'],
             JsFunc::call('this.$prompt', '请输入验证码', '提示', [
-                'inputPattern' => Grammar::mark('/^\w{10}$/'),
+                'inputPattern' => Grammar::mark('/^\\\w{10}$/'),
                 'inputErrorMessage' => '请输入正确的验证码',
                 'cancelButtonText' => '取消',
                 'confirmButtonText' => '确认',

@@ -53,8 +53,6 @@ class TableTheme implements TableThemeInterface
             $attrs['ref'] = $table->getId();
         }
 
-        Html::css()->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
-
         if (empty($attrs['header-cell-class-name'])) {
             Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
             $attrs['header-cell-class-name'] = 'vue--table-header-center';
@@ -217,8 +215,8 @@ class TableTheme implements TableThemeInterface
          * 让处理程序和事件 dom 关联
          */
         $eventHandlers = $table->getRowEvents();
-
-        $eventLabels = $this->rowGroupEventHandle($table->getRowGroupEvents(), $eventHandlers);
+        $eventLabels   = [];
+        $groupEventLabels = $this->rowGroupEventHandle($table->getRowGroupEvents(), $eventHandlers);
 
         foreach ($eventHandlers as $name => ['el' => $el, 'handler' => $handler]) {
             $el = $this->getEl($el)->setAttr('link');
@@ -227,6 +225,7 @@ class TableTheme implements TableThemeInterface
 
             Html::js()->vue->addMethod($name, ['scope'], JsCode::create(JsVar::def('row', '@scope.row'))->then($handler));
         }
+        $eventLabels = array_merge($eventLabels, $groupEventLabels);
         if (!$eventLabels) {
             return;
         }
@@ -405,6 +404,7 @@ class TableTheme implements TableThemeInterface
                 align-items: center;
                 display: inline-block;
                 line-height: 23px;
+                margin: 0 5px;
             }');
 
             Html::js()->vue->addMethod($handlers, $handlerFun);
@@ -649,6 +649,7 @@ class TableTheme implements TableThemeInterface
                 'bg' => '',
                 'text'  => '',
                 'icon'  => 'RefreshLeft',
+                'v-if'  => 'isTrash',
                 '@click' => $recoverMethod
             ])->append("恢复数据")
         );

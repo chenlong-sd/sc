@@ -14,12 +14,21 @@ class FormItemCustomize extends AbstractFormItem implements FormItemInterface
 {
     use Attrs;
 
+    protected ?string $label = null;
+
     public function __construct(protected AbstractHtmlElement|string $element)
     {}
 
     public function render(string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemCustomizeThemeInterface::class, $theme)->render($this);
+    }
+
+    public function setLabel(string $label): static
+    {
+        $this->label = $label;
+
+        return $this;
     }
 
     public function getElement(): AbstractHtmlElement|string
