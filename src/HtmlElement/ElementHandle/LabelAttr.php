@@ -5,6 +5,8 @@
 
 namespace Sc\Util\HtmlElement\ElementHandle;
 
+use Sc\Util\HtmlElement\El;
+
 /**
  * 标签属性
  *
@@ -47,6 +49,20 @@ trait LabelAttr
         }
 
         return $this;
+    }
+
+    /**
+     * 设置属性
+     *
+     * @param string $attrStr  aa="asd" ass="asdsad" 等
+     *
+     * @return $this
+     */
+    public function setAttrFromStr(string $attrStr): static
+    {
+        $attr = El::getAttrFromStr($attrStr);
+
+        return $this->setAttrs($attr);
     }
 
     /**

@@ -42,9 +42,11 @@ class Column
      *
      * @return $this
      */
-    public function setAttr(string|array $attr, mixed $value): static
+    public function setAttr(string|array $attr, mixed $value = ""): static
     {
-        $attrs = is_string($attr) ? [$attr => $value] : $attr;
+        $attrs = is_string($attr)
+            ? ($value === "" ? El::getAttrFromStr($attr) : [$attr => $value])
+            : $attr;
 
         $this->attrs = [...$this->attrs, ...$attrs];
 

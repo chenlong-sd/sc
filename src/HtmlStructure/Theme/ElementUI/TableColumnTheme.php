@@ -206,11 +206,7 @@ class TableColumnTheme implements TableColumnThemeInterface
     private function mappingHandle(Column $column, array $config): void
     {
         if (count($config['options']) === count($config['options'], COUNT_RECURSIVE)) {
-            $new = [];
-            foreach ($config['options'] as $value => $label) {
-                $new[] = compact('value', 'label');
-            }
-            $config['options'] = $new;
+            $config['options'] = kv_to_form_options($config['options']);
         }
 
         $mappingName = $column->getAttr('prop') . "Mapping";

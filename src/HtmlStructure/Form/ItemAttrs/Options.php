@@ -43,11 +43,7 @@ trait Options
     protected function getOptions(): array
     {
         if (count($this->options) === count($this->options, COUNT_RECURSIVE)) {
-            $options = [];
-            foreach ($this->options as $value => $label) {
-                $options[] = ['value' => $value, 'label' => $label];
-            }
-            return $options;
+            return kv_to_form_options($this->options);
         }
 
         return $this->options;

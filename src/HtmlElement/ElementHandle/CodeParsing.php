@@ -89,7 +89,7 @@ class CodeParsing
      *
      * @return array
      */
-    private static function attrParsing(string $attrString): array
+    public static function attrParsing(string $attrString): array
     {
         preg_match_all('/(?<name>[:@#a-zA-Z][:@#\.\w\-]*)(=(?<q>[\"\'])(?<value>.*?[^\\\\]?)\k<q>)?/', $attrString, $match);
 

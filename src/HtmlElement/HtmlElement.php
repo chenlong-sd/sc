@@ -41,6 +41,11 @@ class HtmlElement
         return new FictitiousLabel();
     }
 
+    public static function getAttrFromStr(string $attrStr): array
+    {
+        return CodeParsing::attrParsing($attrStr);
+    }
+
     public static function fromCode(string $code): AbstractHtmlElement
     {
         // 去除 html5 标头

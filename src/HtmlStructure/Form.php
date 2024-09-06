@@ -87,6 +87,14 @@ class Form
         return $this;
     }
 
+    /**
+     * 默认清空form只会接收有表单项的数据，如需额外的数据，则用此函数
+     *
+     * @param array $data
+     * @param bool  $isReplace
+     *
+     * @return void
+     */
     public function setExtraData(array $data, bool $isReplace = false): void
     {
         if ($isReplace) {
