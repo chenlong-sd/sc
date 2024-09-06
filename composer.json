@@ -4,7 +4,10 @@
     "autoload": {
         "psr-4": {
             "Sc\\Util\\": "src/"
-        }
+        },
+        "files": [
+            "src/Tool/Functions/helpers.php"
+        ]
     },
     "authors": [
         {
