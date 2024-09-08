@@ -35,11 +35,9 @@ class CodeParsing
         while ($code) {
             // 文本处理
             if (!str_starts_with($code, '<')) {
-                $index   = strpos($code, '<') ?: null;
-                if (trim($text = substr($code, 0, $index))) {
-                    $base->append(El::text($text));
-                }
-                $code    = $index === null ? "" : substr($code, $index);
+                preg_match('/^([^<]|<[^\w\/])*/', $code, $match);
+                $code = preg_replace('/^([^<]|<[^\w\/])*/', '', $code);
+                $base->append(El::text($match[0]));
                 continue;
             }
 

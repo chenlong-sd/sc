@@ -75,6 +75,7 @@ class TableColumnTheme implements TableColumnThemeInterface
         if (!$format) return;
 
         $columnEl->append(El::double('template')->setAttr('#default', 'scope')->append($format));
+
         $columnEl->each(function (AbstractHtmlElement $currentColumn) {
             if ($currentColumn instanceof TextCharacters) {
                 $currentColumn->setText(preg_replace_callback('/{{(.+)}}/', function ($match){

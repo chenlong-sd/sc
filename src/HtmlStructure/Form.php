@@ -34,6 +34,8 @@ class Form
     private array $submitHandle = [];
     private array $extraData = [];
 
+    private bool $readonly = false;
+
     public function __construct(private readonly string $id) { }
 
     /**
@@ -174,6 +176,9 @@ class Form
 
                 $formItem->default($defaultData);
             }
+            if ($this->readonly) {
+                $formItem->readonly();
+            }
 
             return $formItem->setForm($this);
         }, $this->getFormItems());
@@ -198,6 +203,12 @@ class Form
     {
         $this->submitHandle[] = $submitHandle;
 
+        return $this;
+    }
+
+    public function readonly(bool $readonly = true): Form
+    {
+        $this->readonly = $readonly;
         return $this;
     }
 }

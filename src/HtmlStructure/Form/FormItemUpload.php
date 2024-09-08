@@ -80,7 +80,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         if (!$isMultiple) {
             $this->default = $this->default !== null ? $this->default : '';
         }else{
-            $this->multiple();
+            $this->setVAttrs('multiple');
         }
 
         return $this;
@@ -106,14 +106,21 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
      */
     public function disableDownload(bool $disable = true): static
     {
-        $this->disableDownload = true;
+        $this->disableDownload = $disable;
         return $this;
     }
 
-    public function disableUpload(): static
+    public function disableUpload(bool $disable = true): static
     {
-        $this->setVAttrs('disabled');
+        if ($disable){
+            $this->setVAttrs('disabled');
+        }
 
         return $this;
+    }
+
+    public function readonly(): static
+    {
+        return $this->disableUpload();
     }
 }
