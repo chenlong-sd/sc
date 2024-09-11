@@ -191,7 +191,7 @@ class TableTheme implements TableThemeInterface
                 $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
             }
 
-            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'], $this->remoteDataGet($table, $dataVarName, $query));
+            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query', 'notLoading'], $this->remoteDataGet($table, $dataVarName, $query));
         }
 
         Html::js()->vue->event('created', "this.{$dataVarName}GetData();");
@@ -677,23 +677,25 @@ class TableTheme implements TableThemeInterface
      */
     private function remoteDataGet(Table $table, string $dataVarName, array $query): JsCode
     {
-        return JsCode::create(JsVar::assign("this." . $table->getId() . "Loading", true))
-            ->then(
-                JsVar::assign('query', '@query ? query : {}'),
-                Axios::get(
-                    url: Grammar::mark("this.{$dataVarName}Url()"),
-                    query: $query
-                )->then(JsFunc::arrow(["{ data }"], JsCode::make(
-                    JsVar::assign("this.{$table->getId()}Loading", false),
-                    JsIf::when('data.code === 200')
-                        ->then(
-                            JsVar::assign("this.{$dataVarName}", '@data.data.data'),
-                            JsVar::assign("this.{$dataVarName}Total", '@data.data.total')
-                        )->else(
-                            "this.\$message.warning(data.msg)"
-                        )
-                )))
-            );
+        return JsCode::make(
+            JsIf::when('!notLoading')->then(
+                JsVar::assign("this." . $table->getId() . "Loading", true)
+            ),
+            JsVar::assign('query', '@query ? query : {}'),
+            Axios::get(
+                url: Grammar::mark("this.{$dataVarName}Url()"),
+                query: $query
+            )->then(JsFunc::arrow(["{ data }"], JsCode::make(
+                JsVar::assign("this.{$table->getId()}Loading", false),
+                JsIf::when('data.code === 200')
+                    ->then(
+                        JsVar::assign("this.{$dataVarName}", '@data.data.data'),
+                        JsVar::assign("this.{$dataVarName}Total", '@data.data.total')
+                    )->else(
+                        "this.\$message.warning(data.msg)"
+                    )
+            )))
+        );
     }
 
     private function dataGet(string $dataVarName, array $query): JsCode
