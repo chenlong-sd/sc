@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Form\ItemAttrs;
 
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
+use Sc\Util\HtmlStructure\Form\FormItemTable;
 
 trait DefaultValue
 {
@@ -31,7 +32,7 @@ trait DefaultValue
      */
     protected function childrenDefault(): void
     {
-        if (!property_exists($this, 'children')){
+        if (!property_exists($this, 'children') || $this instanceof FormItemTable){
             return;
         }
 

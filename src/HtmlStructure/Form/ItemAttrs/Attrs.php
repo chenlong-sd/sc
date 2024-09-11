@@ -5,6 +5,8 @@
 
 namespace Sc\Util\HtmlStructure\Form\ItemAttrs;
 
+use Sc\Util\HtmlElement\El;
+
 trait Attrs
 {
     protected array $attrs = [];
@@ -20,7 +22,7 @@ trait Attrs
     public function setVAttrs(array|string $attr, mixed $value = ''): static
     {
         if (!is_array($attr)){
-            $attr = [$attr => $value];
+            $attr = $value === '' ? El::getAttrFromStr($attr) : [$attr => $value];
         }
 
         $this->attrs = array_merge($this->attrs, $attr);

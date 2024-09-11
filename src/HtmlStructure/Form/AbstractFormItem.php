@@ -97,4 +97,13 @@ abstract class AbstractFormItem
     {
         return $this->setting[$name] ?? null;
     }
+
+    public function readonly(): static
+    {
+        if (method_exists($this, 'setVAttrs')) {
+            $this->setVAttrs("readonly");
+        }
+
+        return $this;
+    }
 }

@@ -11,7 +11,9 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemUpload;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFor;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
@@ -34,6 +36,10 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         $fileFormat = $this->fileFormat($formItem);
         $el->append($this->uploadMake($formItem))->append($fileFormat);
+
+        if ($formItem->getUploadType() === FormItemUpload::UPLOAD_TYPE_IMAGE) {
+            $el->append($this->imageEnlarge($formItem));
+        }
 
         return $el;
     }
@@ -109,20 +115,20 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             JsCode::create("this.$notify.close();")
         ));
 
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'],
+        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
             JsVar::assign("this.$notify", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,
                 'type'      => 'warning',
                 'showClose' => false
-            ]))
-        );
+            ])),
+        ));
 
         $uploadEl = El::fictitious()->append(
             El::double('el-image')->setAttrs([
                 'v-if'  => $VModel,
                 ':src'  => $VModel,
-                'class' => "sc-avatar"
+                'class' => "sc-avatar",
             ])
         )->append(
             El::double('el-icon')->setAttr('v-else', )->addClass('sc-avatar-uploader-icon')->append(
@@ -214,7 +220,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         $successMethod = "UISuccess" . $rand;
         $beforeMethod  = "UIBefore" . $rand;
         $notify        = "UINotify" . $rand;
-        Html::js()->vue->set($notify, '');
+        Html::js()->vue->set($notify, []);
 
         $upload->setAttrs([
             ":on-success"    => $successMethod,
@@ -235,18 +241,19 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                 ))->else(
                     JsCode::create("this.\$notify({message: '上传成功', type:'success'});")
                 ),
-            JsCode::create("this.$notify.close()")
+            JsCode::create("this.{$notify}['I' + uploadFile.uid].close()"),
+            JsCode::create("delete this.{$notify}['I' + uploadFile.uid]"),
         ));
 
 
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'],
-            JsVar::assign("this.$notify", JsFunc::call('this.$notify', [
+        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
+            JsVar::assign("this.{$notify}['I' + UploadRawFile.uid]", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,
                 'type'      => 'warning',
                 'showClose' => false
-            ]))
-        );
+            ])),
+        ));
 
         $submitVar = preg_replace('/^.+\./', '', $VModel);
 
@@ -324,6 +331,47 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         }
 
         return El::double('el-text')->setAttr('style', 'margin-left:5px')->append($tip);
+    }
+
+    private function imageEnlarge(FormItemAttrGetter|FormItemUpload $formItem): DoubleLabel
+    {
+        Html::loadThemeResource('Layui');
+
+        $icon   = El::double('el-icon')->addClass('single-image-enlarge')->append("<Search/>");
+        $vModel = $this->getVModel($formItem);
+        $icon->setAttr('v-if', $vModel)->setAttr('@click', "imageEnlarge({$vModel})");
+
+        Html::js()->vue->addMethod("imageEnlarge", JsFunc::anonymous(['url'])->code(
+            JsIf::when("typeof url === 'string'")->then(
+                JsVar::set('url', '@[url]')
+            ),
+            JsVar::def('data', []),
+            JsFor::loop('let i = 0; i < url.length; i++')->then(
+                JsCode::raw('data.push({src:url[i]})')
+            ),
+            JsFunc::call('layer.photos', [
+                "photos" => [
+                    'start' => 0,
+                    'data' => Grammar::mark('data')
+                ]
+            ])
+        ));
+
+        Html::css()->addCss(<<<CSS
+        .single-image-enlarge{
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            color: rgba(0, 0, 0, .45);
+        }
+        .single-image-enlarge:hover{
+            color: #00B7EE;
+        }
+        CSS);
+
+        return $icon;
     }
 
 }
