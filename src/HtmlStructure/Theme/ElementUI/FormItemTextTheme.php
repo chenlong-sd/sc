@@ -149,6 +149,8 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
             JsCode::raw('const newValue = parseFloat(val)'),
             JsIf::when('!isNaN(newValue)')->then(
                 JsCode::raw("val = newValue")
+            )->else(
+                JsCode::raw("val = 0")
             ),
             JsIf::when("$precision >= 0")->then(
                 JsCode::raw("val = val.toFixed($precision)")
