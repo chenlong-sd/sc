@@ -6,6 +6,7 @@ use Psr\SimpleCache\InvalidArgumentException;
 use Sc\Util\Wechat\Config;
 use Sc\Util\Wechat\Execption\WechatException;
 use Sc\Util\Wechat\PublicPlatform\AccessToken;
+use Sc\Util\Wechat\PublicPlatform\Applet\Data\AuthPhoneInfo;
 use Sc\Util\Wechat\Request;
 
 /**
@@ -28,5 +29,10 @@ class PhoneNumber
         $response = Request::post(sprintf(self::HOST, AccessToken::get($this->config)), compact('code'));
 
         return $response->getData('phone_info') ?: [];
+    }
+
+    public function getAuthInfo(string $code): AuthPhoneInfo
+    {
+        return new AuthPhoneInfo($this->get($code));
     }
 }
