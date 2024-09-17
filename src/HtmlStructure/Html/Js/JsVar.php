@@ -97,7 +97,7 @@ class JsVar
                             }
                             if (str_contains($value, '"')) {
                                 $defJsFnBase64Decode = Common::defJsFnBase64Decode();
-                                $value = base64_encode($value);
+                                $value = base64_encode(Grammar::extract($value));
                                 $value = Grammar::mark("$defJsFnBase64Decode(`$value`)");
                             }
                         }
