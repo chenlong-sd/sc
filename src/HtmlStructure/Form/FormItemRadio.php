@@ -28,6 +28,9 @@ class FormItemRadio extends AbstractFormItem implements FormItemInterface
 
     public function readonly(): static
     {
+        if (isset($this->getVAttrs()[':disabled']) || isset($this->getVAttrs()['disabled'])) {
+            return $this;
+        }
         return $this->setVAttrs(':disabled', 'true');
     }
 }

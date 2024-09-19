@@ -31,6 +31,7 @@ class Column
     private array $search = [];
     protected ?string $fixedPosition = null;
     protected ?string $sortField = null;
+    private string|\Stringable $emptyShowTemplate = '';
 
     public function __construct(private array $attrs = []){}
 
@@ -49,6 +50,13 @@ class Column
             : $attr;
 
         $this->attrs = [...$this->attrs, ...$attrs];
+
+        return $this;
+    }
+
+    public function emptyShow(string|\Stringable $content)
+    {
+        $this->emptyShowTemplate = $content;
 
         return $this;
     }
@@ -428,5 +436,10 @@ class Column
         ];
 
         return $this;
+    }
+
+    public function getEmptyShowTemplate(): \Stringable|string
+    {
+        return $this->emptyShowTemplate;
     }
 }

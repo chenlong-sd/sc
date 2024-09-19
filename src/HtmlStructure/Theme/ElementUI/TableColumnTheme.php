@@ -56,7 +56,7 @@ class TableColumnTheme implements TableColumnThemeInterface
         }
 
         $this->formatConfig($columnEl, $column->getFormat());
-
+        $this->emptyValueHandle($column->getEmptyShowTemplate(), $columnEl, $column);
         $this->attrHandle($column->getAttr(), $columnEl);
 
         return $columnEl;
@@ -250,5 +250,31 @@ class TableColumnTheme implements TableColumnThemeInterface
                     $column->getAttr('prop') => "@{$column->getAttr('prop')}",
                 ])
         ));
+    }
+
+    private function emptyValueHandle(\Stringable|string $getEmptyShowTemplate, DoubleLabel $columnEl, Column $column): void
+    {
+        if (!$getEmptyShowTemplate) {
+            return;
+        }
+
+        $getEmptyShowTemplate = El::get($getEmptyShowTemplate);
+
+        $template = $columnEl->find('template');
+        if (!$template) {
+            $template = El::double('template')->setAttr('#default', 'scope')->append("{{ {$column->getAttr('prop')} }}");
+            $columnEl->append($template);
+        }
+
+        $content = $template->getChildren();
+
+        $template->setChildren([
+            El::double('template')->setAttr('v-if', "scope.row.{$column->getAttr('prop')}")->setChildren($content),
+            El::double('template')->setAttr('v-else')->append(
+                $getEmptyShowTemplate instanceof TextCharacters
+                    ? El::double('el-text')->append($getEmptyShowTemplate)
+                    : $getEmptyShowTemplate
+            )
+        ]);
     }
 }

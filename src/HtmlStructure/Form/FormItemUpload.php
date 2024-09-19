@@ -112,6 +112,10 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
 
     public function disableUpload(bool $disable = true): static
     {
+        if (isset($this->getVAttrs()['disabled']) || isset($this->getVAttrs()[':disabled'])) {
+            return $this;
+        }
+
         if ($disable){
             $this->setVAttrs('disabled');
         }
