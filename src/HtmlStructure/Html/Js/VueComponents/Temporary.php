@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructure\Html\Js\VueComponents;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
@@ -52,12 +53,12 @@ class Temporary implements VueComponentInterface
 
             $vModel = $this->content->getAttr(':model');
 
-            $code->then(JsVar::def('row', '@data'));
-            $code->then(JsVar::assign("this.{$vModel}Url", "@typeof row != 'undefined' && row.hasOwnProperty('id') && row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
+            $code->then(Js::let('row', '@data'));
+            $code->then(Js::assign("this.{$vModel}Url", "@typeof row != 'undefined' && row.hasOwnProperty('id') && row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
 
             if ($this->content->hasAttr("v-loading")) {
                 $code->then(
-                    JsIf::when("this['{$vModel}GetDefaultData'] !== undefined")
+                    Js::if("this['{$vModel}GetDefaultData'] !== undefined")
                         ->then("this['{$vModel}GetDefaultData'](row.id)")
                         ->else("this.{$vModel}Default(row)")
                 );

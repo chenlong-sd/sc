@@ -11,6 +11,7 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlElement\ElementType\TextCharacters;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -159,19 +160,21 @@ class TableColumnTheme implements TableColumnThemeInterface
 
         $value1 = $format->getAttr(':active-value');
         $value2 = $format->getAttr(':inactive-value');
-        $failHandle = JsCode::create(JsVar::assign("scope.row.$prop", "@scope.row.$prop === var1 ? var2 : var1"));
+        $failHandle = Js::code(Js::assign("scope.row.$prop", "@scope.row.$prop === var1 ? var2 : var1"));
 
         Html::js()->vue->addMethod("{$prop}switchChange", ['scope'],
-            JsCode::create(JsVar::def('var1', $value1))
-                ->then(JsVar::def('var2', $value2))
-                ->then(
-                    Axios::post($requestUrl, [
-                        'id'  => Grammar::mark('scope.row.id'),
-                        $prop => Grammar::mark('scope.row.' . $prop)
-                    ])->then(JsFunc::arrow(['{ data }'])->code(
-                        JsCode::if('data.code !== 200', (clone $failHandle)->then(JsService::message(Grammar::mark("data.msg"), 'error')))
-                    ))->catch(JsFunc::arrow()->code($failHandle->then(JsService::message("操作失败", 'error'))))
-                )
+            Js::code(
+                Js::let('var1', $value1),
+                Js::let('var2', $value2),
+                Axios::post($requestUrl, [
+                    'id'  => Js::grammar('scope.row.id'),
+                    $prop => Js::grammar('scope.row.' . $prop)
+                ])->then(JsFunc::arrow(['{ data }'])->code(
+                    Js::if('data.code !== 200', (clone $failHandle)->then(JsService::message(Js::grammar("data.msg"), 'error')))
+                ))->catch(JsFunc::arrow()->code(
+                    $failHandle->then(JsService::message("操作失败", 'error'))
+                ))
+            )
         );
 
         $column->setFormat($format);
@@ -242,7 +245,7 @@ class TableColumnTheme implements TableColumnThemeInterface
         $column->setFormat($element);
 
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['scope'])->code(
-            JsVar::def('row', '@scope.row'),
+            Js::let('row', '@scope.row'),
             Window::open("查看【{{$column->getAttr('prop')}}】详情")
                 ->setConfig($config['config'])
                 ->setUrl($config['url'], [

@@ -10,6 +10,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFor;
@@ -104,13 +105,12 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
     private function optionsSearch(string $search, FormItemText|FormItemAttrGetter $formItemText): void
     {
         Html::js()->vue->set($search . 'Data', $formItemText->getOptions());
-        Html::js()->vue->addMethod($search, ['searchStr', 'cb'], JsCode::make(
-            JsVar::def('res', []),
-            JsFor::loop("let i = 0; i < this.{$search}Data.length; i++")->then(
-                JsIf::when("this.{$search}Data[i].value.includes(searchStr)")
-                    ->then("res.push(this.{$search}Data[i])")
+        Html::js()->vue->addMethod($search, ['searchStr', 'cb'], Js::code(
+            Js::let('res', []),
+            Js::for("let i = 0; i < this.{$search}Data.length; i++")->then(
+                Js::if("this.{$search}Data[i].value.includes(searchStr)", "res.push(this.{$search}Data[i])")
             ),
-            JsCode::make("return cb(res);")
+            Js::code("return cb(res);")
         ));
     }
 
@@ -123,7 +123,7 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
 
         $axios = Axios::get($autoCompleteHandle, [
             'search' => '@searchStr'
-        ])->success(JsCode::make("cb(data.data)"));
+        ])->success("cb(data.data)");
 
         Html::js()->vue->addMethod($search, ['searchStr', 'cb'], $axios);
     }
@@ -146,16 +146,10 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
         $input->setAttr('@change', $methodName);
 
         Html::js()->vue->addMethod($methodName, JsFunc::anonymous(['val'])->code(
-            JsCode::raw('const newValue = parseFloat(val)'),
-            JsIf::when('!isNaN(newValue)')->then(
-                JsCode::raw("val = newValue")
-            )->else(
-                JsCode::raw("val = 0")
-            ),
-            JsIf::when("$precision >= 0")->then(
-                JsCode::raw("val = val.toFixed($precision)")
-            ),
-            JsVar::set("this." . $input->getAttr('v-model'), '@val')
+            Js::code('const newValue = parseFloat(val)'),
+            Js::if('!isNaN(newValue)',"val = newValue", "val = 0"),
+            Js::if("$precision >= 0", "val = val.toFixed($precision)"),
+            Js::assign("this." . $input->getAttr('v-model'), '@val')
         ));
     }
 

@@ -11,6 +11,7 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemUpload;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFor;
@@ -105,18 +106,18 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         ]);
 
         Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], JsCode::make(
-            JsIf::when('response.code === 200 && response.data')
+            Js::if('response.code === 200 && response.data')
                 ->then(
-                    JsCode::create("this.$VModel = response.data"),
-                    JsCode::create("this.\$notify({message: '上传成功', type:'success'});"),
+                    Js::code("this.$VModel = response.data"),
+                    Js::code("this.\$notify({message: '上传成功', type:'success'});"),
                 )->else(
-                    JsCode::create("this.\$notify({message: response.msg, type:'error'});"),
+                    Js::code("this.\$notify({message: response.msg, type:'error'});"),
                 ),
-            JsCode::create("this.$notify.close();")
+            Js::code("this.$notify.close();")
         ));
 
         Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
-            JsVar::assign("this.$notify", JsFunc::call('this.$notify', [
+            Js::assign("this.$notify", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,
                 'type'      => 'warning',
@@ -153,16 +154,13 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         Html::js()->vue->set("UIImageUrl$rand", '');
 
         Html::js()->vue->addMethod($removeMethod, ['uploadFile', 'uploadFiles'], 'console.log(uploadFile, uploadFiles)');
-        Html::js()->vue->addMethod($previewMethod, ['uploadFile'],
-            JsCode::create(JsVar::assign("this.UIVisible$rand", true))
-                ->then(JsVar::assign("this.UIImageUrl$rand", '@uploadFile.url'))
-        );
+        Html::js()->vue->addMethod($previewMethod, ['uploadFile'], Js::code(
+            Js::assign("this.UIVisible$rand", true),
+            Js::assign("this.UIImageUrl$rand", '@uploadFile.url')
+        ));
 
 
-        $el = El::double('el-icon')->addClass('sc-avatar-uploader-icon')
-            ->append(
-                El::double('plus')
-            );
+        $el = El::double('el-icon')->addClass('sc-avatar-uploader-icon')->append(El::double('plus'));
 
         Html::html()->find('#app')->append(<<<HTML
               <el-dialog v-model="UIVisible$rand">
@@ -233,21 +231,20 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ]);
         }
 
-        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], JsCode::make(
-            JsIf::when('response.code !== 200 || !response.data')
-                ->then(JsCode::make(
-                    JsCode::create("this.$VModel.pop()"),
-                    JsCode::create("this.\$notify({message: response.msg, type:'error'})"),
-                ))->else(
-                    JsCode::create("this.\$notify({message: '上传成功', type:'success'});")
-                ),
-            JsCode::create("this.{$notify}['I' + uploadFile.uid].close()"),
-            JsCode::create("delete this.{$notify}['I' + uploadFile.uid]"),
+        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], Js::code(
+            Js::if('response.code !== 200 || !response.data')->then(
+                Js::code("this.$VModel.pop()"),
+                Js::code("this.\$notify({message: response.msg, type:'error'})"),
+            )->else(
+                Js::code("this.\$notify({message: '上传成功', type:'success'});")
+            ),
+            Js::code("this.{$notify}['I' + uploadFile.uid].close()"),
+            Js::code("delete this.{$notify}['I' + uploadFile.uid]"),
         ));
 
 
         Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
-            JsVar::assign("this.{$notify}['I' + UploadRawFile.uid]", JsFunc::call('this.$notify', [
+            Js::assign("this.{$notify}['I' + UploadRawFile.uid]", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,
                 'type'      => 'warning',
@@ -300,11 +297,11 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ->setAttr('cell-class-name', null);
 
         Html::js()->vue->addMethod( 'uprm' . strtr($formItemUpload->getName(), ['.' => '_']), JsFunc::anonymous(['scope'])->code(
-            JsCode::create("this.$data.splice(scope.\$index, 1)")
+            Js::code("this.$data.splice(scope.\$index, 1)")
         ));
 
 
-        return El::double('div')->setAttr('style', 'width:100%')->append($table);
+        return El::div($table)->setAttr('style', 'width:100%');
     }
 
     private function limitHandle(DoubleLabel $upload): void
@@ -330,7 +327,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             return $tip;
         }
 
-        return El::double('el-text')->setAttr('style', 'margin-left:5px')->append($tip);
+        return El::elText($tip)->setAttr('style', 'margin-left:5px');
     }
 
     private function imageEnlarge(FormItemAttrGetter|FormItemUpload $formItem): DoubleLabel
@@ -342,17 +339,17 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         $icon->setAttr('v-if', $vModel)->setAttr('@click', "imageEnlarge({$vModel})");
 
         Html::js()->vue->addMethod("imageEnlarge", JsFunc::anonymous(['url'])->code(
-            JsIf::when("typeof url === 'string'")->then(
-                JsVar::set('url', '@[url]')
+            Js::if("typeof url === 'string'")->then(
+                Js::let('url', '@[url]')
             ),
-            JsVar::def('data', []),
-            JsFor::loop('let i = 0; i < url.length; i++')->then(
-                JsCode::raw('data.push({src:url[i]})')
+            Js::let('data', []),
+            Js::for('let i = 0; i < url.length; i++')->then(
+                Js::code('data.push({src:url[i]})')
             ),
             JsFunc::call('layer.photos', [
                 "photos" => [
                     'start' => 0,
-                    'data' => Grammar::mark('data')
+                    'data' => Js::grammar('data')
                 ]
             ])
         ));

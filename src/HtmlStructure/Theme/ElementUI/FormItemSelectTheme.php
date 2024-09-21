@@ -50,7 +50,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             ':disabled' => "item.disabled",
         ]);
 
-        if ($formItem->getOptions() && !is_array($formItem->getDefault()) && array_search($formItem->getDefault(), array_column($formItem->getOptions(), 'value')) === false) {
+        if ($formItem->getOptions() && !is_array($formItem->getDefault()) && !in_array($formItem->getDefault(), array_column($formItem->getOptions(), 'value'))) {
             $formItem->default(null);
         }
 
@@ -100,16 +100,16 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
         $queryValue = "selectSearchValue" . $formItemSelect->getName();
         Html::js()->vue->set($queryValue, null);
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['query', 'cquery'])->code(
-            Js\JsVar::def('options', $optionsVar),
-            Js\JsIf::when("this.$queryValue === query")->then(
+            Js::let('options', $optionsVar),
+            Js::if("this.$queryValue === query")->then(
                 'return;'
             ),
-            Js\JsVar::assign('this.' . $queryValue, '@query'),
+            Js::assign('this.' . $queryValue, '@query'),
             Axios::get($remoteSearch['url'], [
                 'search' => [
                     'search' => [
-                        $field => Grammar::mark('query'),
-                        $defaultSearchField => Grammar::mark('cquery')
+                        $field => Js::grammar('query'),
+                        $defaultSearchField => Js::grammar('cquery')
                     ],
                     'searchType' => [
                         $field => 'like'
@@ -117,17 +117,17 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
                 ],
                 'page' => 1,
                 'pageSize' => 20
-            ])->success(JsCode::make(
-                Js\JsFor::loop('let i = 0; i < data.data.data.length; i++')->then(
-                    Js\JsIf::when("!data.data.data[i].hasOwnProperty('value')")->then(
+            ])->success(Js::code(
+                Js::for('let i = 0; i < data.data.data.length; i++')->then(
+                    Js::for("!data.data.data[i].hasOwnProperty('value')")->then(
                         "data.data.data[i].value = data.data.data[i].id"
                     ),
-                    Js\JsIf::when("!data.data.data[i].hasOwnProperty('label')")->then(
+                    Js::if("!data.data.data[i].hasOwnProperty('label')")->then(
                         "data.data.data[i].label = data.data.data[i].$showField"
                     ),
                 ),
-                Js\JsVar::assign("this[options]", '@data.data.data'),
-                $remoteSearch['afterSearchHandle'] ?: "",
+                Js::assign("this[options]", '@data.data.data'),
+                Js::code($remoteSearch['afterSearchHandle'] ?: ""),
             ))
         ));
 

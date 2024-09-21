@@ -9,6 +9,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Form;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -36,7 +37,7 @@ class FormTheme implements FormThemeInterface
             ->setAttrs($config);
 
         $items  = array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems());
-        $el->append(El::double('el-row')->append(...$items))->append();
+        $el->append(El::double('el-row')->append(...$items));
 
         return $el;
     }
@@ -77,7 +78,7 @@ class FormTheme implements FormThemeInterface
 
         if (isset($config['dataUrl'])) {
             Html::js()->vue->addMethod("{$form->getId()}GetDefaultData", ['id'],
-                Axios::get($config['dataUrl'], ['id' => Grammar::mark('id')])
+                Axios::get($config['dataUrl'], ['id' => Js::grammar('id')])
                     ->then(JsFunc::arrow(['{ data }'])->code(<<<JS
                         if (data.code !== 200) return;
                         for (const k in this['{$form->getId()}']){
@@ -93,11 +94,11 @@ class FormTheme implements FormThemeInterface
 
         // 默认值设置，用函数保存，避免被污染
         Html::js()->vue->addMethod("{$form->getId()}Default", ['defaultValues'], JsCode::make(
-            JsVar::assign("this.{$form->getId()}", $form->getDefaults()),
-            JsIf::when("defaultValues")->then(
-                JsFor::loop("const k in this.{$form->getId()}")->then(
-                    JsIf::when("defaultValues.hasOwnProperty(k)")->then(
-                        JsVar::assign("this.{$form->getId()}[k]", "@defaultValues[k]")
+            Js::assign("this.{$form->getId()}", $form->getDefaults()),
+            Js::if("defaultValues")->then(
+                Js::for("const k in this.{$form->getId()}")->then(
+                    Js::if("defaultValues.hasOwnProperty(k)")->then(
+                        Js::assign("this.{$form->getId()}[k]", "@defaultValues[k]")
                     )
                 )
             )

@@ -6,10 +6,15 @@
 namespace Sc\Util\HtmlStructure\Html;
 
 
+use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\El;
+use Sc\Util\HtmlStructure\Html\Js\JsCode;
+use Sc\Util\HtmlStructure\Html\Js\JsFor;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
+use Sc\Util\HtmlStructure\Html\Js\JsIf;
+use Sc\Util\HtmlStructure\Html\Js\JsLog;
 use Sc\Util\HtmlStructure\Html\Js\Layui;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Vue;
@@ -205,6 +210,50 @@ class Js
     public function getUnitCodeBlock(string $key): string
     {
         return $this->unitCodeBlock[$key] ?? '';
+    }
+
+    public static function if(#[Language('JavaScript')] string $condition, #[Language('JavaScript')] string $then = null, #[Language('JavaScript')] string $else = null): JsIf
+    {
+        $if = JsIf::when($condition);
+        $then and $if->then($if);
+        $else and $if->else($else);
+
+        return $if;
+    }
+
+    public static function for(#[Language('JavaScript')] string $condition): JsFor
+    {
+        return JsFor::loop($condition);
+    }
+
+    public static function let(string $name, mixed $value = null): JsVar
+    {
+        return JsVar::def($name, $value);
+    }
+
+    public static function assign(string $name, mixed $value): JsVar
+    {
+        return JsVar::assign($name, $value);
+    }
+
+    public static function var(string $name, mixed $value = null): JsVar
+    {
+        return JsVar::def($name, $value, 'var');
+    }
+
+    public static function log(string $log): string
+    {
+        return JsLog::print($log);
+    }
+
+    public static function code(#[Language('JavaScript')] string ...$name): JsCode
+    {
+        return JsCode::make(...$name);
+    }
+
+    public static function grammar(#[Language("JavaScript")] string $jsCode, #[ExpectedValues(['grammar', 'line'])] string $mode = 'grammar'): string
+    {
+        return Grammar::mark($jsCode, $mode);
     }
 }
 

@@ -6,6 +6,7 @@
 namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -46,8 +47,8 @@ class ResourceTheme implements ResourceThemeInterface
     private function utilMethodDef(): void
     {
         // 地址注入搜索参数
-        Html::js()->defFunc("urlInjectSearch", ['url', 'tableId'], JsCode::make(
-            JsCode::create(<<<JS
+        Html::js()->defFunc("urlInjectSearch", ['url', 'tableId'], Js::code(
+            Js::code(<<<JS
             function buildQuery(obj, parentPrefix = null) {
               var parts = [];
               for (let key in obj) {
@@ -67,15 +68,15 @@ class ResourceTheme implements ResourceThemeInterface
               return parts.join('&');
             }
             JS),
-            JsVar::def('urlObj', '@new URL(url)'),
-            JsVar::def("search", JsFunc::call('buildQuery', [
+            Js::let('urlObj', '@new URL(url)'),
+            Js::let("search", JsFunc::call('buildQuery', [
                 'search' => [
                     "search"      => Grammar::mark('VueApp[`${tableId}Search`]'),
                     "searchType"  => Grammar::mark('VueApp[`${tableId}SearchType`]'),
                     "searchField" => Grammar::mark('VueApp[`${tableId}SearchField`]'),
                 ]
             ])),
-            JsCode::create("return  urlObj.origin + urlObj.pathname + '?' +search + urlObj.hash;")
+            Js::code("return urlObj.origin + urlObj.pathname + '?' +search + urlObj.hash;")
         ));
     }
 }

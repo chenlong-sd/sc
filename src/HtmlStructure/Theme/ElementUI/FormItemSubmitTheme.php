@@ -9,6 +9,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -73,16 +74,16 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
                 }
 
                 if ($closePage['page'] == 'parent') {
-                    $closeCode = JsCode::create("parent.$closeCode");
+                    $closeCode = Js::code("parent.$closeCode");
                     if ($closePage['theme'] != 'ElementUI') {
-                        $closeCode = JsCode::make(
-                            JsVar::def('index', '@parent.layer.getFrameIndex(window.name)'),
+                        $closeCode = Js::code(
+                            Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
                             $closeCode
                         );
                     }
                 }
 
-                $successHandle = JsCode::create($formItemSubmit->getSuccessTipCode())
+                $successHandle = Js::code($formItemSubmit->getSuccessTipCode())
                     ->then($success)
                     ->then("this.{$formId}Reset()")
                     ->then($closeCode);
@@ -90,23 +91,21 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
 
 
             $submitHandle = Axios::post(
-                url: Grammar::mark("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
+                url: Js::grammar("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
                 data: "@data"
             )->then(JsFunc::arrow(['{ data }'])->code(
-                JsIf::when('data.code === 200')
-                    ->then($successHandle)
-                    ->else(JsCode::create('this.$message.error(data.msg)')),
+                Js::if('data.code === 200', $successHandle, 'this.$message.error(data.msg)'),
                 $formItemSubmit->getFail()
             ))->catch(JsFunc::arrow(['error'])->code(
-                JsCode::create('console.log(error)')->then('this.$message.error(error)')
-            ))->finally(JsFunc::arrow()->code(JsVar::assign("this.{$formId}Loading", false)));
+                Js::code('console.log(error)')->then('this.$message.error(error)')
+            ))->finally(JsFunc::arrow()->code(Js::assign("this.{$formId}Loading", false)));
         }
 
         Html::js()->vue->addMethod($formId . "Submit", [], JsCode::make(
-            JsVar::def('data', "@this.{$formItemSubmit->getFormModel()}"),
+            Js::let('data', "@this.{$formItemSubmit->getFormModel()}"),
             $formItemSubmit->getForm()->getSubmitHandle(),
             $this->verifyData($formItemSubmit->getForm(), JsCode::make(
-                JsVar::assign("this.{$formId}Loading", true),
+                Js::assign("this.{$formId}Loading", true),
                 $submitHandle
             ))
         ),
@@ -131,9 +130,7 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     private function verifyData(Form $form, mixed $submitCode): Obj
     {
         return JsFunc::call("this.\$refs.{$form ->getId()}.validate", JsFunc::arrow(['valid'])->code(
-            JsIf::when('!valid')->then(
-                JsCode::create("return false;")
-            ),
+            Js::if('!valid')->then("return false;"),
             $submitCode,
         ));
     }

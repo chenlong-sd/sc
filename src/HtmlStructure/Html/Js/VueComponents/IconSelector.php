@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructure\Html\Js\VueComponents;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
@@ -28,7 +29,7 @@ class IconSelector implements VueComponentInterface
             'props'    => ['modelValue'],
             'emits'    => ['update:modelValue'],
             'data'     => JsFunc::anonymous()->code(
-                JsCode::create(JsVar::def('icons', []))
+                Js::code(Js::let('icons', []))
                     ->then(<<<JS
                         for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
                             icons.push({ value: key })
@@ -38,8 +39,8 @@ class IconSelector implements VueComponentInterface
             ),
             'methods'  => [
                 'selected' => JsFunc::anonymous(['value'])->code(
-                    JsCode::create(JsVar::assign('this.iconv', '@value'))
-                        ->then(JsVar::assign('this.pv', '@false'))
+                    Js::code(Js::assign('this.iconv', '@value'))
+                        ->then(Js::assign('this.pv', '@false'))
                         ->then("this.\$emit('update:modelValue', this.iconv)")
                 )
             ],

@@ -13,6 +13,7 @@ use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Form\FormItemTable;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsFor;
@@ -103,18 +104,18 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         }
 
         $icon = El::double('el-icon')->addClass('sc-ft-add')->setAttr('@click', $method)->append(El::double('Circle-Plus'));
-        $text = El::double('el-text')->setAttrs([
+        $text = El::elText("当前可按 Enter 快捷添加行")->setAttrs([
             'type'  => 'warning',
             'style' => 'line-height:28px'
-        ])->append("当前可按 Enter 快捷添加行");
+        ]);
 
         $layout = Layout::create()->addCol(2, $icon)->addCol(21, $text);
 
-        Html::js()->vue->addMethod($method, [], JsCode::make(
-            JsVar::def('defaultRows', $rowDefault),
-            JsCode::create('defaultRows._id_ = "it-" + Math.random();'),
+        Html::js()->vue->addMethod($method, [], Js::code(
+            Js::let('defaultRows', $rowDefault),
+            Js::code('defaultRows._id_ = "it-" + Math.random();'),
             JsFunc::call("this.{$this->getVModel($formItemTable)}.push", '@defaultRows'),
-            JsCode::create("this.\$nextTick(() => this.\$refs['{$table->getId()}I0' + (this.{$this->getVModel($formItemTable)}.length - 1)].focus())")
+            Js::code("this.\$nextTick(() => this.\$refs['{$table->getId()}I0' + (this.{$this->getVModel($formItemTable)}.length - 1)].focus())")
         ));
 
         Html::js()->vue->event("created", <<<JS
@@ -150,9 +151,9 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             ))
         );
 
-        Html::js()->vue->event('mounted', JsCode::make(
-            JsVar::def("ElTable{$table->getId()}", "@this.\$refs['{$table->getId()}']"),
-            JsVar::def("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
+        Html::js()->vue->event('mounted', Js::code(
+            Js::let("ElTable{$table->getId()}", "@this.\$refs['{$table->getId()}']"),
+            Js::let("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
             JsFunc::call('new Sortable', "@ElDraw{$table->getId()}", [
                 "handle"    => ".sc-ft-draw",
                 "animation" => 150,
@@ -163,13 +164,13 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             ])
         ));
 
-        Html::js()->vue->event('created', JsCode::make(
+        Html::js()->vue->event('created', Js::code(
             JsFunc::call('setTimeout', JsFunc::arrow()->code(
 //                JsCode::make("this.{$this->getVModel($formItem)}[0]")
             ), 20)
         ));
 
-        Html::js()->vue->addMethod('tableFormRowDel', ['scope', 'data'], JsCode::make(
+        Html::js()->vue->addMethod('tableFormRowDel', ['scope', 'data'], Js::code(
             'let index = scope.$index',
             "this.{$table->getData()}.splice(index, 1)"
         ));
@@ -186,8 +187,8 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         $el->setAttr('row-key', '_id_');
 
         $formItemTable->getForm()->setSubmitHandle(JsCode::make(
-            JsVar::assign("data", '@JSON.parse(JSON.stringify(data))'),
-            JsFor::loop("var i = 0; i < data.{$formItemTable->getName()}.length; i++")->then(
+            Js::assign("data", '@JSON.parse(JSON.stringify(data))'),
+            Js::for("var i = 0; i < data.{$formItemTable->getName()}.length; i++")->then(
                 "delete data.{$formItemTable->getName()}[i]._id_;"
             )
         ));

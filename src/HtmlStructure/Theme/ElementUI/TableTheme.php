@@ -13,6 +13,7 @@ use Sc\Util\HtmlElement\ElementType\TextCharacters;
 use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFor;
@@ -105,13 +106,13 @@ class TableTheme implements TableThemeInterface
         $initSortMethodName = "{$table->getId()}InitSort";
         Html::js()->load(StaticResource::SORT_ABLE_JS);
         Html::js()->vue->addMethod($initSortMethodName, JsFunc::anonymous()->code(
-            JsVar::def("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
+            Js::let("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
             JsFunc::call('new Sortable', "@ElDraw{$table->getId()}", [
                 "handle"    => ".sc-ft-draw",
                 "animation" => 150,
                 'onUpdate'  => JsFunc::arrow(['evt'])->code(
-                    JsCode::create("const currRow = this.{$table->getId()}.splice(evt.oldIndex, 1)[0];"),
-                    JsCode::create("this.{$table->getId()}.splice(evt.newIndex, 0, currRow)"),
+                    Js::code("const currRow = this.{$table->getId()}.splice(evt.oldIndex, 1)[0];"),
+                    Js::code("this.{$table->getId()}.splice(evt.newIndex, 0, currRow)"),
                     JsFunc::call('setTimeout', JsFunc::arrow()->code(
                         $draw['updateHandle']
                     ))
@@ -120,8 +121,8 @@ class TableTheme implements TableThemeInterface
             ])
         ));
 
-        Html::js()->vue->event('mounted', JsCode::make(
-            JsCode::create("this.$initSortMethodName()")
+        Html::js()->vue->event('mounted', Js::code(
+            Js::code("this.$initSortMethodName()")
         ));
     }
 
@@ -164,31 +165,31 @@ class TableTheme implements TableThemeInterface
             Html::js()->vue->addMethod($dataVarName . 'Url', [], "return '$data';");
             Html::js()->vue->set('urlSearch', '@location.search');
             Html::js()->vue->addMethod('getUrlSearch', [], JsCode::make(
-                JsVar::def('urlSearch'),
-                JsIf::when('this.urlSearch')
-                    ->then(JsCode::make(
-                        JsVar::assign('urlSearch', '@this.urlSearch.substring(1)'),
-                        JsVar::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
+                Js::let('urlSearch'),
+                Js::if('this.urlSearch')
+                    ->then(Js::code(
+                        Js::assign('urlSearch', '@this.urlSearch.substring(1)'),
+                        Js::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
                     ))->else(
-                        JsVar::assign('urlSearch', '')
+                        Js::assign('urlSearch', '')
                     ),
-                JsCode::create('return urlSearch;')
+                Js::code('return urlSearch;')
             ));
 
             $query = [
                 'search' => [
-                    "search"      => Grammar::mark("this.{$dataVarName}Search"),
-                    "searchType"  => Grammar::mark("this.{$dataVarName}SearchType"),
-                    "searchField" => Grammar::mark("this.{$dataVarName}SearchField"),
+                    "search"      => Js::grammar("this.{$dataVarName}Search"),
+                    "searchType"  => Js::grammar("this.{$dataVarName}SearchType"),
+                    "searchField" => Js::grammar("this.{$dataVarName}SearchField"),
                 ],
-                'order' => Grammar::mark("this.{$dataVarName}Sort"),
-                'query' => Tool::url($data)->getQueryParam('query', '') ?: Grammar::mark("this.getUrlSearch()")
+                'order' => Js::grammar("this.{$dataVarName}Sort"),
+                'query' => Tool::url($data)->getQueryParam('query', '') ?: Js::grammar("this.getUrlSearch()")
             ];
 
             $query["temp"] = "@query";
             if ($table->isOpenPagination()) {
-                $query['page']     = Grammar::mark("this.{$dataVarName}Page");
-                $query['pageSize'] = Grammar::mark("this.{$dataVarName}PageSize");
+                $query['page']     = Js::grammar("this.{$dataVarName}Page");
+                $query['pageSize'] = Js::grammar("this.{$dataVarName}PageSize");
             }
 
             Html::js()->vue->addMethod($dataVarName . 'GetData', ['query', 'notLoading'], $this->remoteDataGet($table, $dataVarName, $query));
@@ -223,7 +224,7 @@ class TableTheme implements TableThemeInterface
 
             $eventLabels[] = $el->setAttr('@click', sprintf("%s(@scope)", $name));
 
-            Html::js()->vue->addMethod($name, ['scope'], JsCode::create(JsVar::def('row', '@scope.row'))->then($handler));
+            Html::js()->vue->addMethod($name, ['scope'], Js::code(Js::let('row', '@scope.row'))->then($handler));
         }
         $eventLabels = array_merge($eventLabels, $groupEventLabels);
         if (!$eventLabels) {
@@ -279,7 +280,7 @@ class TableTheme implements TableThemeInterface
 
             $position === 'left' ? $left->append($el) : $right->append($el);
 
-            $code = JsCode::create("let row,selection = this.{$table->getId()}Selection;");
+            $code = Js::code("let row,selection = this.{$table->getId()}Selection;");
 
             // 检查后续是否有使用 selection ,有的话则增加判断
             $handler = (string)$handler;
@@ -386,10 +387,10 @@ class TableTheme implements TableThemeInterface
                             ->append(...$this->getEl($handler['el'])->getChildren())
                     );
 
-                    Html::js()->vue->addMethod('Command' . $command, ['scope'], JsCode::create('let row = scope.row;')->then($handler['handler']));
+                    Html::js()->vue->addMethod('Command' . $command, ['scope'], Js::code('let row = scope.row;')->then($handler['handler']));
 
                     $handlerFun->appendCode(
-                        JsIf::when("command.command === '$command'")->then(
+                        Js::if("command.command === '$command'")->then(
                             JsFunc::call("this.Command$command", '@command.scope')
                         )
                     );
@@ -445,14 +446,14 @@ class TableTheme implements TableThemeInterface
 
         Html::css()->addCss('.el-pagination{margin-top: 10px}');
 
-        Html::js()->vue->addMethod("{$table->getId()}PageChange", ['current'], JsCode::make(
-            JsVar::assign("this.{$table->getId()}Page", '@current'),
+        Html::js()->vue->addMethod("{$table->getId()}PageChange", ['current'], Js::code(
+            Js::assign("this.{$table->getId()}Page", '@current'),
             JsFunc::call("this.{$table->getId()}GetData")
         ));
 
-        Html::js()->vue->addMethod("{$table->getId()}SizeChange", ['size'], JsCode::make(
-            JsVar::assign("this.{$table->getId()}PageSize", '@size'),
-            JsVar::assign("this.{$table->getId()}Page", 1),
+        Html::js()->vue->addMethod("{$table->getId()}SizeChange", ['size'], Js::code(
+            Js::assign("this.{$table->getId()}PageSize", '@size'),
+            Js::assign("this.{$table->getId()}Page", 1),
             JsFunc::call("this.{$table->getId()}GetData")
         ));
 
@@ -479,9 +480,9 @@ class TableTheme implements TableThemeInterface
         Html::js()->vue->set("vueWindowHeight", "@window.innerHeight");
 
         if ($table->getMaxHeight() < 0) {
-            Html::js()->vue->event('mounted', JsCode::make(
+            Html::js()->vue->event('mounted', Js::code(
                 JsFunc::call('setTimeout', JsFunc::arrow()->code(
-                    JsVar::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight())),
+                    Js::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight())),
                 )
             ));
         }
@@ -513,9 +514,9 @@ class TableTheme implements TableThemeInterface
         Html::js()->vue->set("{$table->getId()}SearchType", $searchType);
         Html::js()->vue->set("{$table->getId()}SearchField", $searchFields);
 
-        $searchForms[] = Form\FormItem::submit('搜索')->setSubmit(JsCode::make(
-            JsVar::assign("this.{$table->getId()}Page", 1),
-            JsVar::assign("this.{$table->getId()}SearchLoading", false),
+        $searchForms[] = Form\FormItem::submit('搜索')->setSubmit(Js::code(
+            Js::assign("this.{$table->getId()}Page", 1),
+            Js::assign("this.{$table->getId()}SearchLoading", false),
             JsFunc::call("this.{$table->getId()}GetData")
         ));
 
@@ -544,8 +545,8 @@ class TableTheme implements TableThemeInterface
 
             Html::js()->vue->set($statusVarName, null);
             Html::js()->vue->addMethod($method, JsFunc::anonymous(['status'])->code(
-                JsVar::assign("this.{$table->getId()}Search['{$toggleButton['searchField']}']", '@status'),
-                JsVar::assign("this.$statusVarName", '@status'),
+                Js::assign("this.{$table->getId()}Search['{$toggleButton['searchField']}']", '@status'),
+                Js::assign("this.$statusVarName", '@status'),
                 JsFunc::call("this.{$table->getId()}GetData")
             ));
 
@@ -599,13 +600,13 @@ class TableTheme implements TableThemeInterface
         Html::js()->vue->set("{$table->getId()}SortFieldMap", $fieldMap);
         $sortMethod = Html::js()->vue->getAvailableMethod($table->getId() . 'SortMethod');
 
-        Html::js()->vue->addMethod($sortMethod, ['{ column, prop, order }'], JsCode::make(
-            JsLog::print("@column, prop, order"),
-            JsVar::assign("this.{$table->getId()}Sort", [
-                'order' => Grammar::mark("order"),
-                'field' => Grammar::mark("this.{$table->getId()}SortFieldMap.hasOwnProperty(prop) ? this.{$table->getId()}SortFieldMap[prop] : prop")
+        Html::js()->vue->addMethod($sortMethod, ['{ column, prop, order }'], Js::code(
+            Js::log("@column, prop, order"),
+            Js::assign("this.{$table->getId()}Sort", [
+                'order' => Js::grammar("order"),
+                'field' => Js::grammar("this.{$table->getId()}SortFieldMap.hasOwnProperty(prop) ? this.{$table->getId()}SortFieldMap[prop] : prop")
             ]),
-            JsLog::printVar("this.{$table->getId()}Sort"),
+            Js::log("@this.{$table->getId()}Sort"),
             JsFunc::call("this.{$table->getId()}GetData"),
         ));
 
@@ -654,13 +655,13 @@ class TableTheme implements TableThemeInterface
             ])->append("恢复数据")
         );
 
-        Html::js()->vue->addMethod($recoverMethod, [], JsCode::make(
-            JsVar::def('selection',  "@this.{$table->getId()}Selection"),
+        Html::js()->vue->addMethod($recoverMethod, [], Js::code(
+            Js::let('selection',  "@this.{$table->getId()}Selection"),
             Axios::post($recoverUrl, [
                 'ids' => "@selection.map(v => v.id)"
             ])->addLoading()
                 ->confirmMessage("确认恢复该数据吗？")
-                ->success(JsCode::make(
+                ->success(Js::code(
                     JsService::message("恢复成功"),
                     JsFunc::call("this.{$table->getId()}GetData")
                 ))
@@ -677,20 +678,20 @@ class TableTheme implements TableThemeInterface
      */
     private function remoteDataGet(Table $table, string $dataVarName, array $query): JsCode
     {
-        return JsCode::make(
-            JsIf::when('!notLoading')->then(
-                JsVar::assign("this." . $table->getId() . "Loading", true)
+        return Js::code(
+            Js::if('!notLoading')->then(
+                Js::assign("this." . $table->getId() . "Loading", true)
             ),
-            JsVar::assign('query', '@query ? query : {}'),
+            Js::assign('query', '@query ? query : {}'),
             Axios::get(
-                url: Grammar::mark("this.{$dataVarName}Url()"),
+                url: Js::grammar("this.{$dataVarName}Url()"),
                 query: $query
-            )->then(JsFunc::arrow(["{ data }"], JsCode::make(
-                JsVar::assign("this.{$table->getId()}Loading", false),
-                JsIf::when('data.code === 200')
+            )->then(JsFunc::arrow(["{ data }"], Js::code(
+                Js::assign("this.{$table->getId()}Loading", false),
+                Js::if('data.code === 200')
                     ->then(
-                        JsVar::assign("this.{$dataVarName}", '@data.data.data'),
-                        JsVar::assign("this.{$dataVarName}Total", '@data.data.total')
+                        Js::assign("this.{$dataVarName}", '@data.data.data'),
+                        Js::assign("this.{$dataVarName}Total", '@data.data.total')
                     )->else(
                         "this.\$message.warning(data.msg)"
                     )
@@ -700,11 +701,11 @@ class TableTheme implements TableThemeInterface
 
     private function dataGet(string $dataVarName, array $query): JsCode
     {
-        return JsCode::make(
-            JsIf::when("this.{$dataVarName}Page")->then(
-                JsCode::create("return this.{$dataVarName}.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
+        return Js::code(
+            Js::if("this.{$dataVarName}Page")->then(
+                Js::code("return this.{$dataVarName}.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
             ),
-            JsCode::create("return this.{$dataVarName};")
+            Js::code("return this.{$dataVarName};")
         );
     }
 }

@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCascader;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -107,8 +108,8 @@ abstract class AbstractFormItemTheme
         Html::js()->vue->set($varName, Html::js()->vue->get($varName, $formItemCascader->getOptions()));
 
         if ($remote = $formItemCascader->getOptionsRemote()) {
-            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success(JsCode::make(
-                JsVar::set("this.$varName", "@{$remote['valueCode']}")
+            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success(Js::code(
+                Js::assign("this.$varName", "@{$remote['valueCode']}")
             )));
 
             Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}"));

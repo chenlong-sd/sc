@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructure\Html\Js;
 
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 
 /**
@@ -22,8 +23,8 @@ class Axios
 
     public function __construct(private array $options)
     {
-        $this->success = JsCode::create('// success code');
-        $this->fail    = JsCode::create('// fail code');
+        $this->success = Js::code('// success code');
+        $this->fail    = Js::code('// fail code');
 
         $this->then(JsFunc::arrow(["{ data }"], "// nothing"));
         $this->catch(JsFunc::arrow(["error"], JsService::message(Grammar::mark('error'), 'error')));
@@ -136,12 +137,12 @@ class Axios
 
         $code = JsCode::create('// 请求开始');
         if ($this->loadingText) {
-            $code->then(JsVar::def('load', JsService::loading($this->loadingText)));
+            $code->then(Js::let('load', JsService::loading($this->loadingText)));
             $this->finallyCallable->appendCode('load.close()');
         }
 
         if ($this->thenCallable->code === '// nothing') {
-            $this->thenCallable->code(JsCode::if('data.code === 200', $this->success, $this->fail));
+            $this->thenCallable->code(Js::if('data.code === 200', $this->success, $this->fail));
         }
 
         $code->then(
@@ -153,13 +154,13 @@ class Axios
 
         if ($this->confirmMessage) {
             $code = JsService::confirm([
-                'message' => Grammar::mark("`$this->confirmMessage`"),
+                'message' => Js::grammar("`$this->confirmMessage`"),
                 'then'    => $code,
                 'type'    => 'warning'
             ]);
         } elseif ($this->promptMessage) {
             $code = JsService::prompt([
-                'message' => Grammar::mark("`$this->promptMessage`"),
+                'message' => Js::grammar("`$this->promptMessage`"),
                 'then'    => $code,
                 'type'    => 'text'
             ]);
