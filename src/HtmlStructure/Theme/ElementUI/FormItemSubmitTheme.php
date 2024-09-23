@@ -11,16 +11,11 @@ use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
-use Sc\Util\HtmlStructure\Html\Js\JsIf;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Obj;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
-use Sc\Util\Tool;
 
 class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmitThemeInterface
 {
@@ -101,10 +96,10 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             ))->finally(JsFunc::arrow()->code(Js::assign("this.{$formId}Loading", false)));
         }
 
-        Html::js()->vue->addMethod($formId . "Submit", [], JsCode::make(
+        Html::js()->vue->addMethod($formId . "Submit", [], Js::code(
             Js::let('data', "@this.{$formItemSubmit->getFormModel()}"),
             $formItemSubmit->getForm()->getSubmitHandle(),
-            $this->verifyData($formItemSubmit->getForm(), JsCode::make(
+            $this->verifyData($formItemSubmit->getForm(), Js::code(
                 Js::assign("this.{$formId}Loading", true),
                 $submitHandle
             ))

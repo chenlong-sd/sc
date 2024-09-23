@@ -14,10 +14,7 @@ use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Form\FormItemTable;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\JsFor;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Layout;
 use Sc\Util\HtmlStructure\Table;
@@ -186,7 +183,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
     {
         $el->setAttr('row-key', '_id_');
 
-        $formItemTable->getForm()->setSubmitHandle(JsCode::make(
+        $formItemTable->getForm()->setSubmitHandle(Js::code(
             Js::assign("data", '@JSON.parse(JSON.stringify(data))'),
             Js::for("var i = 0; i < data.{$formItemTable->getName()}.length; i++")->then(
                 "delete data.{$formItemTable->getName()}[i]._id_;"

@@ -12,13 +12,8 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemUpload;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
-use Sc\Util\HtmlStructure\Html\Js\Grammar;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
-use Sc\Util\HtmlStructure\Html\Js\JsFor;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
 use Sc\Util\Tool;
@@ -105,7 +100,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ":before-upload"    => $beforeMethod,
         ]);
 
-        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], JsCode::make(
+        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], Js::code(
             Js::if('response.code === 200 && response.data')
                 ->then(
                     Js::code("this.$VModel = response.data"),
@@ -116,7 +111,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             Js::code("this.$notify.close();")
         ));
 
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
+        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], Js::code(
             Js::assign("this.$notify", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,
@@ -243,7 +238,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         ));
 
 
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], JsCode::make(
+        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], Js::code(
             Js::assign("this.{$notify}['I' + UploadRawFile.uid]", JsFunc::call('this.$notify', [
                 'message'   => '文件上传中,请稍后...',
                 'duration'  => 0,

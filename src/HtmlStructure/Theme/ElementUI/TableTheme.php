@@ -11,18 +11,12 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlElement\ElementType\FictitiousLabel;
 use Sc\Util\HtmlElement\ElementType\TextCharacters;
 use Sc\Util\HtmlStructure\Form;
-use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
-use Sc\Util\HtmlStructure\Html\Js\JsFor;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\Grammar;
-use Sc\Util\HtmlStructure\Html\Js\JsIf;
-use Sc\Util\HtmlStructure\Html\Js\JsLog;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
@@ -164,7 +158,7 @@ class TableTheme implements TableThemeInterface
             Html::js()->vue->set($dataVarName . 'Search', new \stdClass());
             Html::js()->vue->addMethod($dataVarName . 'Url', [], "return '$data';");
             Html::js()->vue->set('urlSearch', '@location.search');
-            Html::js()->vue->addMethod('getUrlSearch', [], JsCode::make(
+            Html::js()->vue->addMethod('getUrlSearch', [], Js::code(
                 Js::let('urlSearch'),
                 Js::if('this.urlSearch')
                     ->then(Js::code(

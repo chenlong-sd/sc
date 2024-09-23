@@ -11,12 +11,7 @@ use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\Grammar;
-use Sc\Util\HtmlStructure\Html\Js\JsFor;
-use Sc\Util\HtmlStructure\Html\Js\JsIf;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 
 class FormTheme implements FormThemeInterface
@@ -93,7 +88,7 @@ class FormTheme implements FormThemeInterface
         }
 
         // 默认值设置，用函数保存，避免被污染
-        Html::js()->vue->addMethod("{$form->getId()}Default", ['defaultValues'], JsCode::make(
+        Html::js()->vue->addMethod("{$form->getId()}Default", ['defaultValues'], Js::code(
             Js::assign("this.{$form->getId()}", $form->getDefaults()),
             Js::if("defaultValues")->then(
                 Js::for("const k in this.{$form->getId()}")->then(

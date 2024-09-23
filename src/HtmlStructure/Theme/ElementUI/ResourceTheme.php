@@ -7,11 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
-use Sc\Util\HtmlStructure\Html\Js\Grammar;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
-use Sc\Util\HtmlStructure\Html\Js\JsLog;
-use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\ElementIcon;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\ResourceThemeInterface;
@@ -28,7 +24,7 @@ class ResourceTheme implements ResourceThemeInterface
     {
         // 引入 ElementPlus, 这里先引入 ElementPlus 的原因是保证 Vue 在ElementPlus之前初始化并加载
         Html::js()->vue->use(['@ElementPlus', [
-            'locale' => Grammar::mark("ElementPlusLocaleZhCn"),
+            'locale' => Js::grammar("ElementPlusLocaleZhCn"),
         ]]);
 
         // 加载ElementUI的CDN资源
@@ -71,9 +67,9 @@ class ResourceTheme implements ResourceThemeInterface
             Js::let('urlObj', '@new URL(url)'),
             Js::let("search", JsFunc::call('buildQuery', [
                 'search' => [
-                    "search"      => Grammar::mark('VueApp[`${tableId}Search`]'),
-                    "searchType"  => Grammar::mark('VueApp[`${tableId}SearchType`]'),
-                    "searchField" => Grammar::mark('VueApp[`${tableId}SearchField`]'),
+                    "search"      => Js::grammar('VueApp[`${tableId}Search`]'),
+                    "searchType"  => Js::grammar('VueApp[`${tableId}SearchType`]'),
+                    "searchField" => Js::grammar('VueApp[`${tableId}SearchField`]'),
                 ]
             ])),
             Js::code("return urlObj.origin + urlObj.pathname + '?' +search + urlObj.hash;")

@@ -16,8 +16,6 @@ use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Form\FormItemTextarea;
 use Sc\Util\HtmlStructure\Html\Common;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
-use Sc\Util\HtmlStructure\Html\Js\JsCode;
-use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
