@@ -1,16 +1,5 @@
 <?php
-function kv_to_form_options(array $options, bool $keyIsInt = false): array
-{
-    $result = [];
-    foreach ($options as $value => $label) {
-        $result[] = [
-            'value' => $keyIsInt ? (int)$value : $value,
-            'label' => $label
-        ];
-    }
 
-    return $result;
-}
 
 if (! function_exists('kv_to_form_options')) {
 
