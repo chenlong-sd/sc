@@ -139,31 +139,26 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     {
         $previewMethod = "UIPreview" . $rand;
         $removeMethod  = "UIRemove" . $rand;
-
+        Html::loadThemeResource('Layui');
         $upload->setAttrs([
             'list-type'   => 'picture-card',
             ':on-preview' => $previewMethod,
             ':on-remove'  => $removeMethod,
         ]);
-        Html::js()->vue->set("UIVisible$rand", false);
-        Html::js()->vue->set("UIImageUrl$rand", '');
 
         Html::js()->vue->addMethod($removeMethod, ['uploadFile', 'uploadFiles'], 'console.log(uploadFile, uploadFiles)');
         Html::js()->vue->addMethod($previewMethod, ['uploadFile'], Js::code(
-            Js::assign("this.UIVisible$rand", true),
-            Js::assign("this.UIImageUrl$rand", '@uploadFile.url')
+            JsFunc::call('layer.photos', [
+                "photos" => [
+                    'start' => 0,
+                    'data' => Js::grammar('[{src:uploadFile.url}]')
+                ]
+            ])
         ));
 
-
-        $el = El::double('el-icon')->addClass('sc-avatar-uploader-icon')->append(El::double('plus'));
-
-        Html::html()->find('#app')->append(<<<HTML
-              <el-dialog v-model="UIVisible$rand">
-                <el-image :src="UIImageUrl$rand" alt="Preview Image" style="width: 100%;" ></el-image>
-              </el-dialog>
-        HTML);
-
-        return $el;
+        return El::double('el-icon')
+            ->addClass('sc-avatar-uploader-icon')
+            ->append(El::double('plus'));
     }
 
     private function imageCss()
@@ -248,7 +243,6 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         ));
 
         $submitVar = preg_replace('/^.+\./', '', $VModel);
-
         $formItemUpload->getForm()?->setSubmitHandle(<<<JS
                 let newD$rand = [];
                 for(var i = 0; i < data.$submitVar.length; i++) {
@@ -335,7 +329,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         Html::js()->vue->addMethod("imageEnlarge", JsFunc::anonymous(['url'])->code(
             Js::if("typeof url === 'string'")->then(
-                Js::let('url', '@[url]')
+                Js::assign('url', '@[url]')
             ),
             Js::let('data', []),
             Js::for('let i = 0; i < url.length; i++')->then(

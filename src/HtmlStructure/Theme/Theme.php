@@ -27,7 +27,11 @@ class Theme
     /**
      * 全局默认主题
      */
-    const DEFAULT_THEME = 'ElementUI';
+    const DEFAULT_THEME = self::THEME_ELEMENT_UI;
+
+    const THEME_ELEMENT_UI = 'ElementUI';
+
+    const THEME_LAYUI = 'Layui';
 
     private static array $renderer = [];
     private static array $themeResource = [];

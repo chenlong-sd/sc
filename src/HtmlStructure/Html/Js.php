@@ -255,5 +255,7 @@ class Js
     {
         return Grammar::mark($jsCode, $mode);
     }
+
+
 }
 
