@@ -25,6 +25,12 @@ trait Attrs
             $attr = $value === '' ? El::getAttrFromStr($attr) : [$attr => $value];
         }
 
+        foreach ($attr as $key => &$value) {
+            if (is_bool($value)){
+                $value = $value ? 'true' : 'false';
+            }
+        }
+
         $this->attrs = array_merge($this->attrs, $attr);
 
         return $this;

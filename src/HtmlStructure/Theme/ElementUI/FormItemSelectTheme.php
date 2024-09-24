@@ -117,7 +117,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
                 'pageSize' => 20
             ])->success(Js::code(
                 Js::for('let i = 0; i < data.data.data.length; i++')->then(
-                    Js::for("!data.data.data[i].hasOwnProperty('value')")->then(
+                    Js::if("!data.data.data[i].hasOwnProperty('value')")->then(
                         "data.data.data[i].value = data.data.data[i].id"
                     ),
                     Js::if("!data.data.data[i].hasOwnProperty('label')")->then(
