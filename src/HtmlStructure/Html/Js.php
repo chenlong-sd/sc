@@ -215,7 +215,7 @@ class Js
     public static function if(#[Language('JavaScript')] string $condition, #[Language('JavaScript')] string $then = null, #[Language('JavaScript')] string $else = null): JsIf
     {
         $if = JsIf::when($condition);
-        $then and $if->then($if);
+        $then and $if->then($then);
         $else and $if->else($else);
 
         return $if;

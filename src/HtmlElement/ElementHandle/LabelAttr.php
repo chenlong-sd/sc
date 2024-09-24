@@ -5,6 +5,7 @@
 
 namespace Sc\Util\HtmlElement\ElementHandle;
 
+use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\El;
 
 /**
@@ -47,6 +48,20 @@ trait LabelAttr
                 return $this->getAttr($matchAttr[0]) !== null ? $this->getAttr($matchAttr[0]) : ($matchAttr[1] ?? null);
             }, $value);
         }
+
+        return $this;
+    }
+
+    public function setStyle(#[Language("CSS")] $style): static
+    {
+        $this->setAttr('style', trim($style, '{}'));
+
+        return $this;
+    }
+
+    public function appendStyle(#[Language("CSS")] $style): static
+    {
+        $this->appendAttr('style',  trim($style, '{}'));
 
         return $this;
     }
