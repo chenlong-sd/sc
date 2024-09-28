@@ -22,6 +22,8 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
      */
     protected array $children = [];
 
+    protected array $columnAttrs = [];
+
     public function render(string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemTableThemeInterface::class, $theme)->render($this);
@@ -36,6 +38,22 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
     {
         $this->children = array_merge($this->children, $formItem);
         return $this;
+    }
+
+    public function setColumnAttrs(int $index, array $columnAttrs): static
+    {
+        $this->columnAttrs[$index] = $columnAttrs;
+
+        return $this;
+    }
+
+    public function getColumnAttrs(int $index = null): array
+    {
+        if ($index === null) {
+            return $this->columnAttrs;
+        }
+
+        return $this->columnAttrs[$index] ?? [];
     }
 
     protected function getDefault()

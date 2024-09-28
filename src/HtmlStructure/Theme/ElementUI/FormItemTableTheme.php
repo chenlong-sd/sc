@@ -40,12 +40,12 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         $children  = $formItem->getChildren();
 
-        foreach ($children as $child) {
+        foreach ($children as $index => $child) {
             if ($child instanceof FormItemSelect) {
                 $child->setVAttrs('style', 'width:100%');
             }
             $el->addColumns(
-                Table\Column::normal($child->getLabel(), $child->getName())->setFormat(
+                Table\Column::normal($child->getLabel(), $child->getName())->setAttr($formItem->getColumnAttrs($index))->setFormat(
                     $child->render("ElementUI")->each(function (AbstractHtmlElement $element){
                         if ($element instanceof TextCharacters) {
                             preg_replace_callback("/\{\{(.*)}}/", function ($match) use ($element) {

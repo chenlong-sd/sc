@@ -47,6 +47,16 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
+    public function default(mixed $default): static
+    {
+        if ($this->multiple && !is_array($default)) {
+            $default = [];
+        }
+        $this->default = $default;
+
+        return $this;
+    }
+
     /**
      * @param string|Url                  $url
      * @param string|\Closure|JsFunc|null $searchFieldOrCode      为字符串时识别为搜索和显示的字段，否则为搜索处理代码
