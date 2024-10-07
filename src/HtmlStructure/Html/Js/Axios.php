@@ -65,6 +65,43 @@ class Axios
         return array_map(fn($v) => Grammar::check($v) ? Grammar::mark(substr($v, 1)) : $v, $data);
     }
 
+    /**
+     * @param array $data
+     *
+     * @return $this
+     */
+    public function data(array $data): static
+    {
+        $this->options['data'] = self::dataHandle($data);
+
+        return $this;
+    }
+
+    /**
+     * @param string $key
+     * @param mixed  $value
+     *
+     * @return $this
+     */
+    public function options(string $key, mixed $value): static
+    {
+        $this->options[$key] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @param array $params
+     *
+     * @return $this
+     */
+    public function params(array $params): static
+    {
+        $this->options['params'] = self::dataHandle($params);
+
+        return $this;
+    }
+
     public static function get(string|\Stringable $url = '', mixed $query = []): Axios
     {
         return new self([
