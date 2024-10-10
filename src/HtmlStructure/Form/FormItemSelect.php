@@ -36,6 +36,13 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
         return Theme::getRenderer(FormItemSelectThemeInterface::class, $theme)->render($this);
     }
 
+    public function addEmptyValues(...$value): static
+    {
+        $this->setVAttrs(':empty-values', json_encode([...$value, null]));
+        $this->setVAttrs(':value-on-clear', current($value));
+        return $this;
+    }
+
     /**
      * @return $this
      */
