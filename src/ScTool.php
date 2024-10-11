@@ -16,6 +16,8 @@ use Sc\Util\Tool\BaiduFanYi;
 use Sc\Util\Tool\Ciphertext;
 use Sc\Util\Tool\ClassProxy;
 use Sc\Util\Tool\Dir;
+use Sc\Util\Tool\Excel;
+use Sc\Util\Tool\Excel\XlsWriter;
 use Sc\Util\Tool\HtmlDocument;
 use Sc\Util\Tool\JWT;
 use Sc\Util\Tool\Lock;
@@ -25,7 +27,6 @@ use Sc\Util\Tool\RemoteResourceDownload;
 use Sc\Util\Tool\SensitiveWord;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
-use Sc\Util\Tool\XlsWriter;
 
 /**
  * Class Tool.
@@ -42,7 +43,7 @@ use Sc\Util\Tool\XlsWriter;
  * @method static SensitiveWord SensitiveWord(string ...$text)
  * @method static Ciphertext ciphertext(string $secret)
  * @method static Random random(?string $prefix = null)
- * @method static XlsWriter xls(array|string $config)
+ * @method static Excel\ExcelInterface xls(array|string $config)
  * @method static Lock lock(string $key, int $ttl = 5, int $waitTime = 0)
  *
  * @date 2022/2/20
@@ -52,7 +53,7 @@ use Sc\Util\Tool\XlsWriter;
 #[StaticCallAttribute('stringToDom', HtmlDocument::class, 'fromCode')]
 #[StaticCallAttribute('baiduFanYi', BaiduFanYi::class)]
 #[StaticCallAttribute('jwt', JWT::class)]
-#[StaticCallAttribute('xls', XlsWriter::class)]
+#[StaticCallAttribute('xls', Excel::class, 'getHandler')]
 class ScTool extends StaticCall
 {
     /**

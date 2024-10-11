@@ -1,7 +1,8 @@
 <?php
 
-namespace Sc\Util\Tool;
+namespace Sc\Util\Tool\Excel;
 
+use Hyperf\HttpServer\Contract\ResponseInterface;
 use Vtiful\Kernel\Excel;
 use Vtiful\Kernel\Format;
 
@@ -10,7 +11,7 @@ use Vtiful\Kernel\Format;
  *
  * Class XlsWriter
  */
-class XlsWriter extends Excel
+class XlsWriter extends Excel implements ExcelInterface
 {
     private static array $chars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
@@ -165,6 +166,10 @@ class XlsWriter extends Excel
      */
     public function headers(array $headers): void
     {
+        if (count($headers) === count($headers, COUNT_RECURSIVE)) {
+            $headers = array_map(fn($title) => ['title' => $title], $headers);
+        }
+
         $currentColumn = 0;
         $currentRow    = 1;
         foreach ($headers as $header) {
@@ -229,45 +234,57 @@ class XlsWriter extends Excel
      */
     public static function columnTag(int $columnIndex): string
     {
-        if ($columnIndex == 0) return self::$chars[0];
-
-        $res = [];
-        while ($columnIndex > 0) {
-            $res[] = $columnIndex % 26;
-            $columnIndex = floor($columnIndex / 26);
-        }
-
-        $end = array_shift($res);
-        return implode(array_map(fn($v) => self::$chars[--$v], array_reverse($res))) . self::$chars[$end];
+        return \Sc\Util\Tool\Excel::columnTag($columnIndex);
     }
 
     /**
      * @param string $filename
-     *
+     * @param ResponseInterface $response
      * @return void
      */
-    public function download(string $filename): void
+    public function download(string $filename, $response = null): void
     {
-        header('Content-Disposition: attachment; filename=' . $filename);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Transfer-Encoding: binary');
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-
         $filepath = $this->output();
 
-        ob_end_flush();
-        ob_implicit_flush();
+        if ($response) {
+            if ($response instanceof ResponseInterface) {
+                $response->download($filepath, $filename);
+            }
+            if (is_callable($response)) {
+                $response($filepath);
+            }
 
-        $fd = fopen($filepath, 'r');
+            return;
+        }else{
+            header('Content-Disposition: attachment; filename=' . $filename);
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header('Content-Transfer-Encoding: binary');
+            header('Cache-Control: must-revalidate');
+            header('Pragma: public');
 
-        while (!feof($fd)) {
-            echo fread($fd, 8192);
+            @ob_end_flush();
+            @ob_implicit_flush();
+
+            $fd = fopen($filepath, 'r');
+
+            while (!feof($fd)) {
+                echo fread($fd, 8192);
+            }
+
+            fclose($fd);
         }
 
-        fclose($fd);
 
         @unlink($filepath);
     }
 
+    public function getExcelHandle(): \PhpOffice\PhpSpreadsheet\Spreadsheet|Excel
+    {
+       return $this;
+    }
+
+    public function save(): void
+    {
+        $filepath = $this->output();
+    }
 }

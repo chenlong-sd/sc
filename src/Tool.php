@@ -11,11 +11,11 @@ declare(strict_types=1);
  */
 namespace Sc\Util;
 
-use Sc\Util\Attributes\StaticCallAttribute;
 use Sc\Util\Tool\BaiduFanYi;
 use Sc\Util\Tool\Ciphertext;
 use Sc\Util\Tool\ClassProxy;
 use Sc\Util\Tool\Dir;
+use Sc\Util\Tool\Excel\XlsWriter;
 use Sc\Util\Tool\HtmlDocument;
 use Sc\Util\Tool\JWT;
 use Sc\Util\Tool\Lock;
@@ -25,7 +25,6 @@ use Sc\Util\Tool\RemoteResourceDownload;
 use Sc\Util\Tool\SensitiveWord;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
-use Sc\Util\Tool\XlsWriter;
 
 /**
  *  Class Tool.
