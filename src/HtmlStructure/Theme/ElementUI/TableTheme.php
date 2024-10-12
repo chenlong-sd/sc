@@ -21,6 +21,7 @@ use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
+use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
 /**
@@ -177,10 +178,14 @@ class TableTheme implements TableThemeInterface
                     "searchField" => Js::grammar("this.{$dataVarName}SearchField"),
                 ],
                 'order' => Js::grammar("this.{$dataVarName}Sort"),
-                'query' => Tool::url($data)->getQueryParam('query', '') ?: Js::grammar("this.getUrlSearch()")
+                'query' => ScTool::url($data)->getQueryParam('query', '') ?: Js::grammar("this.getUrlSearch()")
             ];
 
             $query["temp"] = "@query";
+            if ($table->isOpenExportExcel()) {
+                Html::js()->vue->addMethod($dataVarName . 'ExportData', $this->exportDataGet($table, $dataVarName, $query));
+            }
+
             if ($table->isOpenPagination()) {
                 $query['page']     = Js::grammar("this.{$dataVarName}Page");
                 $query['pageSize'] = Js::grammar("this.{$dataVarName}PageSize");
@@ -256,6 +261,11 @@ class TableTheme implements TableThemeInterface
                 return Table\EventHandler::window("回收站")->setUrl(
                     "@location.href", ['is_delete' => 1]
                 );
+            });
+        }
+        if ($table->isOpenExportExcel()) {
+            $table->setHeaderRightEvent(["@primary.export.导出"], function () use ($table){
+                return Js::code("this.{$table->getId()}ExportData()");
             });
         }
 
@@ -700,6 +710,88 @@ class TableTheme implements TableThemeInterface
                 Js::code("return this.{$dataVarName}.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
             ),
             Js::code("return this.{$dataVarName};")
+        );
+    }
+
+    private function exportDataGet(Table $table, string $dataVarName, array $query): JsFunc
+    {
+        Html::js()->load('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+
+        $titles  = $showMap = [];
+        $formatCode = Js::switch("keys[i]");
+        foreach ($table->getColumns() as $column) {
+            if (!$column->getAttr('prop')) {
+                continue;
+            }
+            if ($column->getShow() && empty($column->getShow()['type'])) {
+                continue;
+            }
+            $titles[$column->getAttr('prop')] = $column->getAttr("label");
+            if ($column->getShow() && in_array($column->getShow()['type'], ['switch', 'tag', 'mapping'])) {
+                $options = $column->getShow()['config']['options'];
+                $showMap[$column->getAttr('prop')] = count($options) == count($options, COUNT_RECURSIVE)
+                    ? $options
+                    : array_column($options, 'label', 'value');
+
+                $showMap[$column->getAttr('prop')] = array_map(fn($v) => $v instanceof AbstractHtmlElement ? $v->getContent() : (string)$v, $showMap[$column->getAttr('prop')]);
+            }elseif ($column->getFormat()){
+                $format = strip_tags((string)$column->getFormat());
+                $format = preg_replace('/^\{\{/', '(', $format);
+                $format = preg_replace('/}}$/', ')', $format);
+                $useKey = [];
+                $format = strtr($format, ['{{' => '" + (', '}}' => ') + "', "\r" => '', "\n" => '']);
+                preg_replace_callback('/\((.*)\)/', function ($match) use (&$useKey){
+                    preg_match_all('/\w++/', $match[1], $useKey);
+                    $useKey = $useKey[0];
+                }, $format);
+
+                $useKey = implode(', ', array_unique($useKey));
+                $formatCode->case($column->getAttr('prop'), Js::code(
+                    Js::code("{"),
+                    Js::code($useKey ? "let { $useKey } = data.data.data[j]" : ''),
+                    JsFunc::call('row.push',  $format),
+                    Js::code("}")
+                ));
+            }
+        }
+        $formatCode->default(Js::code("row.push(data.data.data[j][keys[i]])"));
+
+        return JsFunc::anonymous()->code(
+            Js::let("loading", JsService::loading()),
+            Js::let('query', '@{}'),
+            Axios::get(
+                url: Js::grammar("this.{$dataVarName}Url()"),
+                query: $query
+            )->then(JsFunc::arrow(["{ data }"], Js::code(
+                Js::code("loading.close();"),
+                Js::if('data.code === 200')->then(
+                    Js::if("data.data.data.length <= 0")->then(
+                        "return;"
+                    ),
+                    Js::let("titlesMap", $titles),
+                    Js::let("showMap", $showMap),
+                    Js::let("keys", "@Object.keys(titlesMap)"),
+                    Js::let('exportData', []),
+                    Js::for("let j = 0; j < data.data.data.length; j++")->then(
+                        Js::let("row", []),
+                        Js::for("let i = 0; i < keys.length; i++")->then(
+                            Js::if("showMap.hasOwnProperty(keys[i])")->then(
+                                Js::code("row.push(showMap[keys[i]][data.data.data[j][keys[i]]])"),
+                            )->else(
+                                $formatCode->toCode()
+                            )
+                        ),
+                        Js::code('exportData.push(row)')
+                    ),
+                    Js::let("worksheet", "@XLSX.utils.json_to_sheet(exportData)"),
+                    Js::let("workbook", "@XLSX.utils.book_new()"),
+                    Js::code('XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")'),
+                    Js::code('XLSX.utils.sheet_add_aoa(worksheet, [Object.values(titlesMap)], { origin: "A1" })'),
+                    Js::code('XLSX.writeFile(workbook, "Presidents.xlsx", { compression: true })')
+                )->else(
+                    "this.\$message.warning(data.msg)"
+                )
+            )))
         );
     }
 }

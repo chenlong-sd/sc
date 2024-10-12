@@ -15,6 +15,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsIf;
 use Sc\Util\HtmlStructure\Html\Js\JsLog;
+use Sc\Util\HtmlStructure\Html\Js\JsSwitch;
 use Sc\Util\HtmlStructure\Html\Js\Layui;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Vue;
@@ -256,6 +257,9 @@ class Js
         return Grammar::mark($jsCode, $mode);
     }
 
-
+    public static function switch(string $param): JsSwitch
+    {
+        return new JsSwitch($param);
+    }
 }
 

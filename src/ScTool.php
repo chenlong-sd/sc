@@ -43,7 +43,7 @@ use Sc\Util\Tool\Url;
  * @method static SensitiveWord SensitiveWord(string ...$text)
  * @method static Ciphertext ciphertext(string $secret)
  * @method static Random random(?string $prefix = null)
- * @method static Excel\ExcelInterface xls(array|string $config)
+ * @method static Excel\ExcelInterface xls(array|string $filepath)
  * @method static Lock lock(string $key, int $ttl = 5, int $waitTime = 0)
  *
  * @date 2022/2/20

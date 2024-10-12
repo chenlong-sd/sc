@@ -3,15 +3,16 @@
 namespace Sc\Util\Tool;
 
 use Sc\Util\Tool\Excel\Spreadsheet;
+use Sc\Util\Tool\Excel\XlsWriter;
 
 class Excel
 {
     private const CHARS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
-    public static function getHandler(array|string $config): Excel|Spreadsheet
+    public static function getHandler(array|string $config): XlsWriter|Spreadsheet
     {
         if (class_exists("Vtiful\\Kernel\\Excel")) {
-            return new Excel($config);
+            return new XlsWriter($config);
         }
 
         return new Spreadsheet($config);

@@ -65,6 +65,10 @@ class Table
     private bool $statusToggleButtonsNewLine = false;
     private array $trash = [];
     private $virtual = null;
+    /**
+     * @var true
+     */
+    private bool $exportExcel = false;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -447,5 +451,15 @@ class Table
     public function getTrash(): array
     {
         return $this->trash;
+    }
+
+    public function openExportExcel(): void
+    {
+        $this->exportExcel = true;
+    }
+
+    public function isOpenExportExcel(): bool
+    {
+        return $this->exportExcel;
     }
 }
