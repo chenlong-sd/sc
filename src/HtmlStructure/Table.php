@@ -68,7 +68,8 @@ class Table
     /**
      * @var true
      */
-    private bool $exportExcel = false;
+    private bool   $exportExcel = false;
+    private ?string $excelFilename = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -453,13 +454,19 @@ class Table
         return $this->trash;
     }
 
-    public function openExportExcel(): void
+    public function openExportExcel(string $filename = 'export.xlsx'): void
     {
         $this->exportExcel = true;
+        $this->excelFilename = preg_replace('/\.xlsx$/', '', $filename) . date('Y-m-d');
     }
 
     public function isOpenExportExcel(): bool
     {
         return $this->exportExcel;
+    }
+
+    public function getExcelFilename(): ?string
+    {
+        return $this->excelFilename;
     }
 }

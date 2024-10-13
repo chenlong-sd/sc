@@ -255,6 +255,7 @@ class TableTheme implements TableThemeInterface
         $left  = El::double('div');
         $right = El::double('div');
         $header = El::double('div')->setAttr('style', 'display:flex;justify-content: space-between;');
+        $headerBox = El::fictitious();
 
         if ($table->getTrash() && is_string($table->getData())) {
             $table->setHeaderRightEvent(["@danger.delete.回收站", ['v-if' => 'is_super']], function () use ($table){
@@ -264,14 +265,14 @@ class TableTheme implements TableThemeInterface
             });
         }
         if ($table->isOpenExportExcel()) {
-            $table->setHeaderRightEvent(["@primary.export.导出"], function () use ($table){
+            $table->setHeaderRightEvent(["@primary.TakeawayBox.导出"], function () use ($table){
                 return Js::code("this.{$table->getId()}ExportData()");
             });
         }
 
         $statusToggleButtons = $this->statusToggleButtonsHandle($table);
         if (!$statusToggleButtons->isEmpty()) {
-            $left->append($statusToggleButtons);
+            $headerBox->append($statusToggleButtons);
         }
 
         foreach ($table->getHeaderEvents() as $name => ['el' => $el, 'handler' => $handler, 'position' => $position]) {
@@ -296,7 +297,7 @@ class TableTheme implements TableThemeInterface
             );
         }
 
-        return $header->append($left, $right);
+        return $headerBox->append($header->append($left, $right));
     }
 
     /**
@@ -717,8 +718,8 @@ class TableTheme implements TableThemeInterface
     {
         Html::js()->load('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
 
-        $titles  = $showMap = [];
-        $formatCode = Js::switch("keys[i]");
+        $titles  = $showMap = $useKeys = [];
+        $formatCode = Js::switch("titlesMap[keys[i]]");
         foreach ($table->getColumns() as $column) {
             if (!$column->getAttr('prop')) {
                 continue;
@@ -735,22 +736,8 @@ class TableTheme implements TableThemeInterface
 
                 $showMap[$column->getAttr('prop')] = array_map(fn($v) => $v instanceof AbstractHtmlElement ? $v->getContent() : (string)$v, $showMap[$column->getAttr('prop')]);
             }elseif ($column->getFormat()){
-                $format = strip_tags((string)$column->getFormat());
-                $format = preg_replace('/^\{\{/', '(', $format);
-                $format = preg_replace('/}}$/', ')', $format);
-                $useKey = [];
-                $format = strtr($format, ['{{' => '" + (', '}}' => ') + "', "\r" => '', "\n" => '']);
-                preg_replace_callback('/\((.*)\)/', function ($match) use (&$useKey){
-                    preg_match_all('/\w++/', $match[1], $useKey);
-                    $useKey = $useKey[0];
-                }, $format);
-
-                $useKey = implode(', ', array_unique($useKey));
-                $formatCode->case($column->getAttr('prop'), Js::code(
-                    Js::code("{"),
-                    Js::code($useKey ? "let { $useKey } = data.data.data[j]" : ''),
-                    JsFunc::call('row.push',  $format),
-                    Js::code("}")
+                $formatCode->case($column->getAttr('label'), Js::code(
+                    $this->exportFormatHandle($column, $useKeys)
                 ));
             }
         }
@@ -778,6 +765,7 @@ class TableTheme implements TableThemeInterface
                             Js::if("showMap.hasOwnProperty(keys[i])")->then(
                                 Js::code("row.push(showMap[keys[i]][data.data.data[j][keys[i]]])"),
                             )->else(
+                                Js::code($useKeys ? "let { ". implode(', ', array_unique($useKeys)) ." } = data.data.data[j];" : ""),
                                 $formatCode->toCode()
                             )
                         ),
@@ -787,11 +775,89 @@ class TableTheme implements TableThemeInterface
                     Js::let("workbook", "@XLSX.utils.book_new()"),
                     Js::code('XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")'),
                     Js::code('XLSX.utils.sheet_add_aoa(worksheet, [Object.values(titlesMap)], { origin: "A1" })'),
-                    Js::code('XLSX.writeFile(workbook, "Presidents.xlsx", { compression: true })')
+                    Js::code("XLSX.writeFile(workbook, '{$table->getExcelFilename()}.xlsx', { compression: true })")
                 )->else(
                     "this.\$message.warning(data.msg)"
                 )
             )))
         );
+    }
+
+    /**
+     * @param mixed $column
+     * @param $useKeys
+     * @return JsCode
+     */
+    private function exportFormatHandle(Column $column, &$useKeys): JsCode
+    {
+        $code    = Js::code();
+
+        /** @var Js\JsIf $if */
+        $if = null;
+        $format = El::get($column->getFormat());
+        if (!method_exists($format, 'getChildren') || !$format->getChildren()) {
+            $format = El::fictitious()->append($format);
+        }
+        $format->eachChildren(function (AbstractHtmlElement $element) use ($code, &$if, &$useKeys){
+            if ($element instanceof TextCharacters) {
+                $currentCode = $this->exportDataParamHandle($element->getText(), $useKeys);
+                $currentCode = preg_replace('/@(\w)/', '$1', $currentCode);
+                $code->then($if ?: '')->then($currentCode);
+                $if = null;
+                return;
+            }
+
+            $currentCode = $this->exportDataParamHandle($element->getContent(), $useKeys);
+            $currentCode = preg_replace('/@(\w)/', '$1', $currentCode);
+            if ($element->getAttr('v-if')) {
+                $code->then($if ?: '');
+                $this->exportFormatWhereHandle($element->getAttr('v-if'), $useKeys);
+                $if = Js::if($element->getAttr('v-if'))->then(
+                    $currentCode
+                );
+            }elseif ($element->getAttr('v-else-if')) {
+                $this->exportFormatWhereHandle($element->getAttr('v-else-if'), $useKeys);
+                $if->elseIf($element->getAttr('v-else-if'))->then(
+                    $currentCode
+                );
+            }elseif ($element->hasAttr('v-else')){
+                $if->else($currentCode);
+            } else {
+                $code->then($if ?: '')->then($currentCode);
+                $if = null;
+            }
+        });
+
+        return $code->then($if ?: '');
+    }
+
+    private function exportDataParamHandle(string $format, &$useKeys): JsCode
+    {
+        $format = strtr(strip_tags(strtr($format, ['<=' => '=<'])), ['=<' => '<=']);
+        $format = preg_replace('/^\{\{/', '" + (', $format);
+        $format = preg_replace('/}}$/', ') + "', $format);
+        $format = strtr($format, ['{{' => '" + (', '}}' => ') + "', "\r" => '', "\n" => '']);
+
+        preg_replace_callback('/\((.*)\)/', function ($match) use (&$useKeys) {
+            preg_match_all('/(((?<!@|\w|\.|\[])[a-zA-Z]\w*).*?)+/', $match[1], $useKey);
+            $useKeys = array_merge($useKeys, array_unique($useKey[0]));
+        }, $format);
+
+        return Js::code(
+            JsFunc::call("row.push", $format)
+        );
+    }
+
+    /**
+     * @param string $where
+     * @param $useKeys
+     * @return void
+     */
+    function exportFormatWhereHandle(string $where, &$useKeys): void
+    {
+        preg_match_all('/(((?<!@|\w|\.|\[])[a-zA-Z]\w*).*?)+/', $where, $useKey);
+        if ($useKey) {
+            $useKeys = array_merge($useKeys, array_unique($useKey[0]));
+        }
     }
 }
