@@ -37,6 +37,9 @@ class CodeParsing
             if (!str_starts_with($code, '<')) {
                 preg_match('/^([^<]|<[^\w\/])*/', $code, $match);
                 $code = preg_replace('/^([^<]|<[^\w\/])*/', '', $code);
+                if (!trim($match[0])){
+                    continue;
+                }
                 $base->append(El::text($match[0]));
                 continue;
             }

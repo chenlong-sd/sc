@@ -737,7 +737,7 @@ class TableTheme implements TableThemeInterface
                 $showMap[$column->getAttr('prop')] = array_map(fn($v) => $v instanceof AbstractHtmlElement ? $v->getContent() : (string)$v, $showMap[$column->getAttr('prop')]);
             }elseif ($column->getFormat()){
                 $formatCode->case($column->getAttr('label'), Js::code(
-                    $this->exportFormatHandle($column, $useKeys)
+                    $this->exportFormatHandle($column->getFormat(), $useKeys)
                 ));
             }
         }
@@ -784,25 +784,22 @@ class TableTheme implements TableThemeInterface
     }
 
     /**
-     * @param mixed $column
+     * @param AbstractHtmlElement $format
      * @param $useKeys
      * @return JsCode
      */
-    private function exportFormatHandle(Column $column, &$useKeys): JsCode
+    private function exportFormatHandle($format, &$useKeys): JsCode
     {
         $code    = Js::code();
-
         /** @var Js\JsIf $if */
         $if = null;
-        $format = El::get($column->getFormat());
-        if (!method_exists($format, 'getChildren') || !$format->getChildren()) {
-            $format = El::fictitious()->append($format);
-        }
+
+        $format = El::fictitious()->append($format);
         $format->eachChildren(function (AbstractHtmlElement $element) use ($code, &$if, &$useKeys){
             if ($element instanceof TextCharacters) {
                 $currentCode = $this->exportDataParamHandle($element->getText(), $useKeys);
                 $currentCode = preg_replace('/@(\w)/', '$1', $currentCode);
-                $code->then($if ?: '')->then($currentCode);
+                $code->then($if ?: '')->then(JsFunc::call('row.push', $currentCode));
                 $if = null;
                 return;
             }
@@ -813,17 +810,27 @@ class TableTheme implements TableThemeInterface
                 $code->then($if ?: '');
                 $this->exportFormatWhereHandle($element->getAttr('v-if'), $useKeys);
                 $if = Js::if($element->getAttr('v-if'))->then(
-                    $currentCode
+                    JsFunc::call('row.push', $currentCode)
                 );
             }elseif ($element->getAttr('v-else-if')) {
                 $this->exportFormatWhereHandle($element->getAttr('v-else-if'), $useKeys);
                 $if->elseIf($element->getAttr('v-else-if'))->then(
-                    $currentCode
+                    JsFunc::call('row.push', $currentCode)
                 );
             }elseif ($element->hasAttr('v-else')){
-                $if->else($currentCode);
+                $if->else(JsFunc::call('row.push', $currentCode));
+            }elseif ($element->getAttr('v-for')){
+                $for = Js::for($element->getAttr('v-for'));
+                if(str_contains($element->getAttr('v-for'), '(')){
+                    preg_match('/\(\s*(\w+)\s*,\s*(\w+)\)\s*in\s*(\w+)/', $element->getAttr('v-for'), $match);
+                    $useKeys[] = $match[3];
+                }else{
+                    preg_match('/\s*(\w+)\s*in\s*(\w+)/', $element->getAttr('v-for'), $match);
+                    $useKeys[] = $match[2];
+                }
+                $for->then($this->exportFormatHandle($element, $useKeys));
             } else {
-                $code->then($if ?: '')->then($currentCode);
+                $code->then($if ?: '')->then(JsFunc::call('row.push', $currentCode));
                 $if = null;
             }
         });
@@ -831,7 +838,7 @@ class TableTheme implements TableThemeInterface
         return $code->then($if ?: '');
     }
 
-    private function exportDataParamHandle(string $format, &$useKeys): JsCode
+    private function exportDataParamHandle(string $format, &$useKeys): string
     {
         $format = strtr(strip_tags(strtr($format, ['<=' => '=<'])), ['=<' => '<=']);
         $format = preg_replace('/^\{\{/', '" + (', $format);
@@ -843,9 +850,7 @@ class TableTheme implements TableThemeInterface
             $useKeys = array_merge($useKeys, array_unique($useKey[0]));
         }, $format);
 
-        return Js::code(
-            JsFunc::call("row.push", $format)
-        );
+        return $format;
     }
 
     /**
@@ -853,7 +858,7 @@ class TableTheme implements TableThemeInterface
      * @param $useKeys
      * @return void
      */
-    function exportFormatWhereHandle(string $where, &$useKeys): void
+    private function exportFormatWhereHandle(string $where, &$useKeys): void
     {
         preg_match_all('/(((?<!@|\w|\.|\[])[a-zA-Z]\w*).*?)+/', $where, $useKey);
         if ($useKey) {

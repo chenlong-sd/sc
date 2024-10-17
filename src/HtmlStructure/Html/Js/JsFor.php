@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructure\Html\Js;
 
 use JetBrains\PhpStorm\Language;
+use Sc\Util\HtmlStructure\Html\Js;
 
 /**
  * Class JsFor
@@ -10,12 +11,13 @@ use JetBrains\PhpStorm\Language;
 class JsFor
 {
     /**
-     * @var string
+     * @var JsCode|null
      */
-    private string $code = '';
+    private ?JsCode $code;
 
     public function __construct(private readonly string $expression)
     {
+        $this->code = Js::code("// for start");
     }
 
     public static function loop(#[Language('JavaScript')] string $expression): JsFor
@@ -25,7 +27,7 @@ class JsFor
 
     public function then(#[Language('JavaScript')] string ...$code): static
     {
-        $this->code = JsCode::make(...$code);
+        $this->code->then(...$code);
 
         return $this;
     }

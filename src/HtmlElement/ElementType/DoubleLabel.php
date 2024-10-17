@@ -56,7 +56,7 @@ class DoubleLabel extends AbstractHtmlElement
         if ($this->getChildren()) {
             // 子项为纯文本时
             if (count($this->getChildren()) === 1 && $this->getChildren()[0] instanceof TextCharacters) {
-                return sprintf('%s%s<%s%s>%s</%3$s>%2$s',
+                return sprintf('%s%s<%s%s>%s</%3$s>',
                     "\r\n",
                     $this->getCurrentRetraction(),
                     $this->label,
@@ -65,7 +65,7 @@ class DoubleLabel extends AbstractHtmlElement
                 );
             }
 
-            return sprintf('%s%s<%s%s>%s%1$s%2$s</%3$s>%2$s',
+            return sprintf('%s%s<%s%s>%s%1$s%2$s</%3$s>',
                 "\r\n",
                 $this->getCurrentRetraction(),
                 $this->label,
@@ -75,12 +75,12 @@ class DoubleLabel extends AbstractHtmlElement
         }
 
         // 无子项时
-        return sprintf('%s%s<%s%s></%3$s>%2$s',
+        return sprintf('%s%s<%s%s></%3$s>',
             "\r\n",
             $this->getCurrentRetraction(),
             $this->label,
             $this->attrToString(),
-            );
+        );
     }
 
     /**
