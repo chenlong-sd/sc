@@ -799,13 +799,13 @@ class TableTheme implements TableThemeInterface
             if ($element instanceof TextCharacters) {
                 $currentCode = $this->exportDataParamHandle($element->getText(), $useKeys);
                 $currentCode = preg_replace('/@(\w)/', 'this.$1', $currentCode);
-                $code->then($if ?: '')->then(JsFunc::call("$saveVar.push", $currentCode));
+                $code->then($if ?: '')->then(JsFunc::call("$saveVar.push", strtr($currentCode, ['@' => ''])));
                 $if = null;
                 return;
             }
 
             $currentCode = $this->exportDataParamHandle($element->getContent(), $useKeys);
-            $currentCode = preg_replace('/@(\w)/', 'this.$1', $currentCode);
+            $currentCode = preg_replace('/@(\w)/', 'this.$1', strtr($currentCode, ['@' => '']));
             if ($element->getAttr('v-if')) {
                 $code->then($if ?: '');
                 $where = $this->exportFormatWhereHandle($element->getAttr('v-if'), $useKeys);
@@ -855,6 +855,7 @@ class TableTheme implements TableThemeInterface
             preg_match_all('/(((?<!@|\w|\.|\[])[a-zA-Z]\w*).*?)+/', $match[1], $useKey);
             $useKeys = array_merge($useKeys, array_unique($useKey[0]));
         }, $format);
+
 
         $format = strtr($format, ['@item' => 'item']);
 
