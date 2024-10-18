@@ -798,14 +798,14 @@ class TableTheme implements TableThemeInterface
         $format->eachChildren(function (AbstractHtmlElement $element) use ($code, &$if, &$useKeys, $saveVar){
             if ($element instanceof TextCharacters) {
                 $currentCode = $this->exportDataParamHandle($element->getText(), $useKeys);
-                $currentCode = preg_replace('/@(\w)/', '$1', $currentCode);
+                $currentCode = preg_replace('/@(\w)/', 'this.$1', $currentCode);
                 $code->then($if ?: '')->then(JsFunc::call("$saveVar.push", $currentCode));
                 $if = null;
                 return;
             }
 
             $currentCode = $this->exportDataParamHandle($element->getContent(), $useKeys);
-            $currentCode = preg_replace('/@(\w)/', '$1', $currentCode);
+            $currentCode = preg_replace('/@(\w)/', 'this.$1', $currentCode);
             if ($element->getAttr('v-if')) {
                 $code->then($if ?: '');
                 $where = $this->exportFormatWhereHandle($element->getAttr('v-if'), $useKeys);
@@ -829,11 +829,12 @@ class TableTheme implements TableThemeInterface
                     empty($match[2]) and $useKeys[] = $match[3];
                     $forVarName = empty($match[2]) ? $match[3] : "this.$match[3]";
                 }
+                $forFormat = ScTool::random('for')->get();
                 $for = Js::for("let index in $forVarName")->then(Js::let($match[1], "@{$forVarName}[index]"));
-                $for->then($this->exportFormatHandle($element->getContent(), $useKeys, 'for_item'));
-                $code->then(Js::let('for_item', []))
+                $for->then($this->exportFormatHandle($element->getContent(), $useKeys, $forFormat));
+                $code->then(Js::let($forFormat, []))
                     ->then($for)
-                    ->then("$saveVar.push(for_item.join(''));");
+                    ->then("$saveVar.push($forFormat.join(''));");
             } else {
                 $code->then($if ?: '')->then(JsFunc::call("$saveVar.push", $currentCode));
                 $if = null;
@@ -854,6 +855,8 @@ class TableTheme implements TableThemeInterface
             preg_match_all('/(((?<!@|\w|\.|\[])[a-zA-Z]\w*).*?)+/', $match[1], $useKey);
             $useKeys = array_merge($useKeys, array_unique($useKey[0]));
         }, $format);
+
+        $format = strtr($format, ['@item' => 'item']);
 
         return $format;
     }
