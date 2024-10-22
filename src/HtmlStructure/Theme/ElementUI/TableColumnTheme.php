@@ -79,7 +79,9 @@ class TableColumnTheme implements TableColumnThemeInterface
                 $currentColumn->setText(preg_replace_callback('/{{(.+)}}/', function ($match){
                     $new = preg_replace('/(((?<!@|\w|\.|\[\])[a-zA-Z]\w*).*?)+/', "scope.row.$2", $match[1]);
                     $new = preg_replace('/@(\w)/', '$1', $new);
-
+                    $new = preg_replace_callback('/(?<y>[\'"])(?<c>.*?)\k<y>/', function ($match){
+                        return $match['y'] . strtr($match['c'], ['scope.row.' => '']) . $match['y'];
+                    }, $new);
                     return sprintf("{{%s}}", $new);
                 }, $currentColumn->getText()));
                 return;
