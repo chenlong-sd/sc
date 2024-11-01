@@ -119,7 +119,16 @@ class ClassFileConstruction
             "}",
         ];
 
-        return implode("\r\n", $code);
+        $content = implode("\r\n", $code);
+
+        foreach ($this->uses as $use) {
+           $content = strtr($content, [
+                "\"$use\"" => self::getClassShortName($use) . '::class',
+                "'$use'"   => self::getClassShortName($use) . '::class',
+           ]);
+        }
+
+        return $content;
     }
 
     private function traitsOut(): string
@@ -127,7 +136,7 @@ class ClassFileConstruction
         $out = [];
         foreach ($this->traits as $classTrait) {
             $classTraitShortName = array_reverse(explode('\\', $classTrait))[0];
-            $outStr = "use " . (in_array($classTrait, $this->uses) ? $classTraitShortName : $classTrait);
+            $outStr = "use " . (in_array($classTrait, $this->uses) ? $classTraitShortName : "\\" .$classTrait);
 
             $aliasArr = [];
             foreach ($this->traitsAlise as $alias => $item) {
@@ -186,6 +195,14 @@ class ClassFileConstruction
         }
 
         return true;
+    }
+
+    public function removeTraits(string $classTrait): void
+    {
+        $this->traits = array_diff($this->traits, [trim($classTrait, '\\')]);
+        if ($alias = array_search($classTrait, $this->traitsAlise)) {
+            unset($this->traitsAlise[$alias]);
+        }
     }
 
     public function hasClassUse(string $className): bool
@@ -290,11 +307,11 @@ class ClassFileConstruction
     public function addMethods(Method|callable ...$classMethods): ClassFileConstruction
     {
         foreach ($classMethods as $method) {
-            if ($method instanceof Method) {
-                $this->methods[] = $method;
-            }else{
-                $this->methods[] = $method();
+            if (!$method instanceof Method) {
+                $method = $method();
             }
+
+            $this->methods[$method->getName()] = $method;
         }
 
         return $this;
@@ -425,6 +442,11 @@ class ClassFileConstruction
         $methods = array_filter($this->methods, fn($method) => $method->getName() === $name);
 
         return $methods ? current($methods) : null;
+    }
+
+    public function removeMethod(string $name): void
+    {
+        unset($this->methods[$name]);
     }
 
     public function setOriginReflexClass(?\ReflectionClass $originReflexClass): ClassFileConstruction

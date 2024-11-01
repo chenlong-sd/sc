@@ -223,4 +223,44 @@ class Dir
 
         return $children;
     }
+
+    /**
+     * @param array $relativelyDir
+     *
+     * @return array
+     */
+    public function getAllFiles(array $relativelyDir = []): array
+    {
+        $files = [];
+
+        try {
+            $realpath = realpath($this->dir . DIRECTORY_SEPARATOR . implode(DIRECTORY_SEPARATOR, $relativelyDir));
+
+            $fd = opendir($realpath);
+            while ($current = readdir($fd)) {
+                if ($current === '.' || $current === '..') continue;
+
+                $path = $realpath . DIRECTORY_SEPARATOR . $current;
+                if (is_dir(realpath($path))) {
+                    $files[] = [
+                        "filename" => $current,
+                        "path"     => $path,
+                        "type"     => "dir",
+                        "children" => $this->getAllFiles([...$relativelyDir, $current]),
+                    ];
+                    continue;
+                }
+
+                $files[] = [
+                    "filename" => $current,
+                    "path"     => $path,
+                    "type"     => "file",
+                ];
+            }
+        } finally {
+            empty($fd) or closedir($fd);
+        }
+
+        return $files;
+    }
 }

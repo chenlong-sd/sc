@@ -7,6 +7,7 @@ use Sc\Util\ClassFile\Components\ClassFileConstruction;
 use Sc\Util\ClassFile\Components\Constant;
 use Sc\Util\ClassFile\Components\Method;
 use Sc\Util\ClassFile\Components\FunctionParam;
+use Sc\Util\ClassFile\Components\Out\RawOut;
 use Sc\Util\ClassFile\Components\Property;
 
 /**
@@ -56,7 +57,7 @@ class ClassFileResolve
         $classFileConstruction->addProperties(...$this->propertyResolve($reflectionClass, $classFileConstruction));
         $classFileConstruction->addTraits(...$reflectionClass->getTraitNames());
         $classFileConstruction->addTraitsAlise($reflectionClass->getTraitAliases());
-        $classFileConstruction->addConstants(...$this->constantResolve($reflectionClass));
+        $classFileConstruction->addConstants(...$this->constantResolve($reflectionClass, $classFileConstruction));
 
         if (!$reflectionClass->isEnum()) {
             $classFileConstruction->setIsFinal($reflectionClass->isFinal());
@@ -102,11 +103,13 @@ class ClassFileResolve
                 continue;
             }
 
+            $default = $this->classNameValueResolve($classFileConstruction, $reflectionProperty->getDefaultValue());
+
             $property = new Property($reflectionProperty->name);
             $property->setType($reflectionProperty->getType(), $classFileConstruction);
             $property->setIsStatic($reflectionProperty->isStatic());
             $property->setDocBlockComment($reflectionProperty->getDocComment());
-            $property->setDefault($reflectionProperty->getDefaultValue());
+            $property->setDefault($default);
             $property->setPublicScope($reflectionProperty->isPrivate()
                     ? "private"
                     : ($reflectionProperty->isProtected() ? "protected" : "public")
@@ -127,7 +130,7 @@ class ClassFileResolve
         return $properties;
     }
 
-    private function constantResolve(\ReflectionClass $reflectionClass): array
+    private function constantResolve(\ReflectionClass $reflectionClass, ClassFileConstruction $classFileConstruction): array
     {
         $constants = [];
         foreach ($reflectionClass->getConstants() as $name => $value) {
@@ -135,7 +138,7 @@ class ClassFileResolve
             if ($classConstant->getDeclaringClass()->getName() !== $reflectionClass->getName()) {
                 continue;
             }
-
+            $value = $this->classNameValueResolve($classFileConstruction, $value);
             $constant = new Constant($name);
             $constant->setValue($value);
             $constant->setDocBlockComment($classConstant->getDocComment());
@@ -242,4 +245,12 @@ class ClassFileResolve
         }
     }
 
+    private function classNameValueResolve(ClassFileConstruction $classFileConstruction, $value)
+    {
+        if (is_string($value) && $classFileConstruction->hasClassUse($value)) {
+            return new RawOut($value);
+        }
+
+        return $value;
+    }
 }
