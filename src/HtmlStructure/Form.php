@@ -175,6 +175,9 @@ class Form
                 $formItem->default($defaultData);
             }
             if ($this->readonly) {
+                if ($formItem instanceof FormItemSubmit) {
+                    $formItem->setHide(true);
+                }
                 $formItem->readonly();
             }
 
