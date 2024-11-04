@@ -81,7 +81,7 @@ class Method
             return $this;
         }
 
-        $this->returnType = $returnType;
+        $this->returnType = $returnType ? $classFileConstruction->getAppropriateClassName($returnType) : null;
         return $this;
     }
 
