@@ -81,7 +81,11 @@ class Method
             return $this;
         }
 
-        $this->returnType = $returnType ? $classFileConstruction->getAppropriateClassName($returnType) : null;
+        if (is_string($returnType) && str_contains($returnType, '\\')) {
+            $returnType = $classFileConstruction->getAppropriateClassName($returnType);
+        }
+
+        $this->returnType = $returnType;
         return $this;
     }
 

@@ -34,6 +34,10 @@ class ValueOut
             $res = preg_replace("/(?<=\[)$target/", sprintf("\r\n%s$target\r\n%s", str_repeat(' ', $indentation + 4), str_repeat(' ', $indentation)), $res);
         }
 
+        $res = preg_replace_callback('/([\'"])([\w\\\]+)\1/', function ($match){
+            return class_exists($match[2]) ? "$match[2]::class" : $match[0];
+        }, $res);
+
         return $res;
     }
 

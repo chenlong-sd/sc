@@ -35,6 +35,10 @@ class FunctionParam
             return $this;
         }
 
+        if (is_string($type) && str_contains($type, '\\')) {
+            $type = $classFileConstruction->getAppropriateClassName($type);
+        }
+
         $this->type = $type ? [$type] : [];
         return $this;
     }
