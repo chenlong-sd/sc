@@ -576,9 +576,7 @@ class TableTheme implements TableThemeInterface
                 ])->append($value));
             }
 
-            if ($table->getStatusToggleButtonsNewLine()) {
-                $status = El::double('div')->setAttr('style', 'margin-bottom:10px')->append($status);
-            }
+            $status = El::double('div')->setAttr('style', 'margin-bottom:10px')->append($status);
 
             $el->append($status);
         }
