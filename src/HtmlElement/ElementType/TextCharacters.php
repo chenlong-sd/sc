@@ -16,8 +16,9 @@ namespace Sc\Util\HtmlElement\ElementType;
 class TextCharacters extends AbstractHtmlElement
 {
     public function __construct(
-        protected string $text
-    ) { }
+        protected ?string $text
+    ) {
+    }
 
     public function toHtml(): string
     {

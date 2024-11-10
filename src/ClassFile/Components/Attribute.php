@@ -21,7 +21,10 @@ class Attribute
 
         $params = [];
         foreach ($this->params as ['name' => $name, 'value' => $value]) {
-            $params[] = ($name ? $name . ': ' : '') . preg_replace("/ *[\r\n] */", '', ValueOut::out($value, 0));
+            $value = is_array($value)
+                ? preg_replace("/ *[\r\n] */", '', ValueOut::out($value, 0))
+                : ValueOut::out($value, 0);
+            $params[] = ($name ? $name . ': ' : '') . $value;
         }
         $attribute = $params ? ($this->attribute . '(' .implode(', ', $params) . ')') : $this->attribute;
 

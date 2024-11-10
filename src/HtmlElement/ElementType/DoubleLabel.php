@@ -116,7 +116,7 @@ class DoubleLabel extends AbstractHtmlElement
      *
      * @return DoubleLabel|$this
      */
-    public function text(string $text): DoubleLabel|static
+    public function text(?string $text): DoubleLabel|static
     {
         $this->append(new TextCharacters($text));
 
