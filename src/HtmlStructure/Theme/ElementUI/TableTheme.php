@@ -576,7 +576,16 @@ class TableTheme implements TableThemeInterface
                 ])->append($value));
             }
 
-            $status = El::double('div')->setAttr('style', 'margin-bottom:10px')->append($status);
+            $label = '';
+            if (!empty($toggleButton['label'])) {
+                $label = $toggleButton['label'] instanceof DoubleLabel
+                    ? $toggleButton['label']
+                    : El::elText("{$toggleButton['label']}：")->setAttr('style', 'margin-right: 10px;font-weight: bold');
+            }
+
+            $status = El::double('div')->setAttr('style', 'margin-bottom:10px')
+                ->append($label)
+                ->append($status);
 
             $el->append($status);
         }

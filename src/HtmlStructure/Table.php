@@ -321,14 +321,15 @@ class Table
     }
 
     /**
-     * @param string $searchField 切换时搜索的字段名
-     * @param array  $mapping     可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
+     * @param string      $searchField 切换时搜索的字段名
+     * @param array       $mapping     可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
+     * @param string|null $label
      *
      * @return Table
      */
-    public function addStatusToggleButtons(string $searchField, array $mapping): static
+    public function addStatusToggleButtons(string $searchField, array $mapping, string $label = null): static
     {
-        $this->statusToggleButtons[] = compact('searchField', 'mapping');
+        $this->statusToggleButtons[] = compact('searchField', 'mapping', 'label');
 
         return $this;
     }
