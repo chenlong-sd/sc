@@ -201,7 +201,8 @@ class TableColumnTheme implements TableColumnThemeInterface
                 ":src"               => $column->getAttr('prop'),
                 ":preview-src-list"  => "[ {$column->getAttr('prop')} ]",
                 'fit'                => 'scale-down',
-                ':preview-teleported' => '@true'
+                ':preview-teleported' => '@true',
+                'v-if'               => "{$column->getAttr('prop')}.length > 0"
             ])
         );
     }
