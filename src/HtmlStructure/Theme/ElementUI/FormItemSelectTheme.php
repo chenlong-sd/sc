@@ -47,6 +47,9 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             ':label' => "item.label",
             ':disabled' => "item.disabled",
         ]);
+        if ($formItem->getFormat()) {
+            $options->append($formItem->getFormat());
+        }
 
         if ($formItem->getOptions() && !is_array($formItem->getDefault()) && !in_array($formItem->getDefault(), array_column($formItem->getOptions(), 'value'))) {
             $formItem->default(null);
@@ -55,9 +58,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
         if ($formItem->getMultiple()) {
             $select->setAttr('multiple');
         }
-//        if ($formItem->getCol()) {
-//            $select->setAttrIfNotExist('style', 'width:100%');
-//        }
+
         if ((isset($formItem->getForm()?->getConfig()[':inline']) && $formItem->getForm()?->getConfig()[':inline'] === 'true')
             || isset($formItem->getForm()?->getConfig()['inline'])
         ) {
@@ -81,7 +82,8 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
         $method = Html::js()->vue->getAvailableMethod($formItemSelect->getName() . "RemoteSearch");
         $select->setAttrs([
             ":remote" => 'true',
-            ':remote-method' => $method
+            ':remote-method' => $method,
+            ':loading' => Html::js()->vue->bind($optionsVar . 'Loading', false),
         ]);
 
         if ($remoteSearch['code'] instanceof JsFunc) {
@@ -89,11 +91,8 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             return;
         }
 
-        $field     = $remoteSearch['code'] ?: $formItemSelect->getName();
-        $fields    = explode('.', $field);
-        $showField = count($fields) == 2 ? $fields[1] : $fields[0];
-
-        $defaultSearchField = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : 'id');
+        $field = $remoteSearch['code'] ?: $formItemSelect->getName();
+        [$showField, $defaultSearchField] = $this->labelAndValue($remoteSearch, $formItemSelect);
 
         $queryValue = "selectSearchValue" . $formItemSelect->getName();
         Html::js()->vue->set($queryValue, null);
@@ -103,6 +102,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
                 'return;'
             ),
             Js::assign('this.' . $queryValue, '@query'),
+            Js::assign("this.{$optionsVar}Loading", true),
             Axios::get($remoteSearch['url'], [
                 'search' => [
                     'search' => [
@@ -126,11 +126,26 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
                 ),
                 Js::assign("this[options]", '@data.data.data'),
                 Js::code($remoteSearch['afterSearchHandle'] ?: ""),
+                Js::assign("this.{$optionsVar}Loading", false),
             ))
         ));
 
         if ($formItemSelect->getForm()) {
             Html::js()->vue->event('mounted', JsFunc::call("this.$method", '', '@this.' . $formItemSelect->getForm()->getId() . '.' . $formItemSelect->getName()));
         }
+    }
+
+    private function labelAndValue($remoteSearch, FormItemSelect|FormItemAttrGetter $formItemSelect): array
+    {
+        $field     = $remoteSearch['code'] ?: $formItemSelect->getName();
+        if (str_contains($field, '&')){
+            $field = explode('&', $field)[0];
+        }
+
+        $fields = explode('.', $field);
+        $label = count($fields) == 2 ? $fields[1] : $fields[0];
+        $value = $remoteSearch['defaultSearchField'] ?: (count($fields) == 2 ? $fields[0] . '.id' : 'id');
+
+        return [$label, $value];
     }
 }

@@ -17,6 +17,7 @@ interface FormItemAttrGetter
 {
     public function getDefault();
     public function getOptions();
+    public function getFormat();
     public function getOptionsVarName();
     public function getLabelWidth();
     public function getPlaceholder();

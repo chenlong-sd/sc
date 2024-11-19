@@ -11,6 +11,8 @@ trait Options
     protected ?string $optionsVarName = null;
     protected array $optionsRemote = [];
 
+    protected ?string $format = null;
+
     /**
      * @param array $options
      *
@@ -58,6 +60,18 @@ trait Options
     public function remoteGetOptions(string $url, string $valueCode = "data.data"): static
     {
         $this->optionsRemote = compact('url', 'valueCode');
+
+        return $this;
+    }
+
+    /**
+     * @param string|\Stringable $stringable 模板内容， 当前项目变量 item, 例： {{ item.label }}
+     *
+     * @return $this
+     */
+    public function format(string|\Stringable $stringable): static
+    {
+        $this->format = $stringable;
 
         return $this;
     }
