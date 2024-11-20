@@ -58,6 +58,28 @@ class Request
     }
 
     /**
+     * @param string $url
+     * @param string $sign
+     *
+     * @return Response
+     * @throws WechatException
+     */
+    public static function getV3(string $url, string $sign): Response
+    {
+        $header = [
+            "User-Agent"    => 'Sc-util(version:1.0)',
+            'Accept'        => 'application/json',
+            'Authorization' => "WECHATPAY2-SHA256-RSA2048  " . $sign,
+        ];
+
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, array_map(fn($k, $v) => "$k:$v", array_keys($header), array_values($header)));
+
+        return self::execution($curl);
+    }
+
+
+    /**
      * POST 请求
      *
      * @param string $url

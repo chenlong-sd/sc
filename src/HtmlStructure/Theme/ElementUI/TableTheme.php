@@ -98,6 +98,16 @@ class TableTheme implements TableThemeInterface
 
         $table->setRowEvent(is_string($draw['el']) ? [$draw['el'], ['class' => 'sc-ft-draw']] : $draw['el']->addClass('sc-ft-draw'), " ");
 
+        $updateHandle = is_array($draw['updateHandle'])
+            ? $draw['updateHandle'][0]
+            : Js::code(
+                Js::code("const currRow = this.{$table->getId()}.splice(evt.oldIndex, 1)[0];"),
+                Js::code("this.{$table->getId()}.splice(evt.newIndex, 0, currRow)"),
+                JsFunc::call('setTimeout', JsFunc::arrow()->code(
+                    $draw['updateHandle']
+                ))
+            );
+
         $initSortMethodName = "{$table->getId()}InitSort";
         Html::js()->load(StaticResource::SORT_ABLE_JS);
         Html::js()->vue->addMethod($initSortMethodName, JsFunc::anonymous()->code(
@@ -106,11 +116,7 @@ class TableTheme implements TableThemeInterface
                 "handle"    => ".sc-ft-draw",
                 "animation" => 150,
                 'onUpdate'  => JsFunc::arrow(['evt'])->code(
-                    Js::code("const currRow = this.{$table->getId()}.splice(evt.oldIndex, 1)[0];"),
-                    Js::code("this.{$table->getId()}.splice(evt.newIndex, 0, currRow)"),
-                    JsFunc::call('setTimeout', JsFunc::arrow()->code(
-                        $draw['updateHandle']
-                    ))
+                    $updateHandle
                 ),
                 ...$draw['config']
             ])

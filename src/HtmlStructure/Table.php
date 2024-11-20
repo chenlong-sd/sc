@@ -418,7 +418,7 @@ class Table
      *                                                         可使用：@success.icon.title, 会生成 success 风格的包含icon图标，内容为title的button，icon可省略
      *                                                         更复杂的请示使用{@see AbstractHtmlElement}
      *                                                         数组时，第一个元素为数组，会识别为元素的属性值, 例：["@primary.Exit.编辑", ["v-if" => "id == 1"]]
-     * @param callable|JsCode|string           $updateCallable 更新排序时的处理回调代码   this.{$table->getId()} 表格数据， evt 事件对象
+     * @param callable|JsCode|string           $updateCallable 更新排序时的处理回调代码 ,如果是闭包，则完全由此代码处理  this.{$table->getId()} 表格数据， evt 事件对象
      * @param array                            $sortConfig     更多Sortable实例的配置
      *
      * @return void
@@ -428,7 +428,7 @@ class Table
         $this->draw = [
             'able'         => true,
             'el'           => $element,
-            'updateHandle' => $updateCallable instanceof \Closure ? $updateCallable() : $updateCallable,
+            'updateHandle' => $updateCallable instanceof \Closure ? [$updateCallable()] : $updateCallable,
             'config'       => $sortConfig
         ];
     }
