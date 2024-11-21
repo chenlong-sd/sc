@@ -6,6 +6,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -118,23 +119,23 @@ class Page
                 JsVar::def('getMsg', JsFunc::call('setInterval', JsFunc::arrow()->code(
                     Axios::post('', ['getMessage' => 1, 'seek' => Grammar::mark('seek')])
                         ->then(JsFunc::arrow(['{ data }'])->code(
-                            JsCode::if('data.code !== 200',
-
-                                JsCode::create('clearInterval(getMsg)')
-                                    ->then('this.status = "wait"'),
-
-                                JsCode::create('this.messages.push(...data.messages)')
-                                    ->then('seek = data.seek')
-                                    ->then('this.status = data.type')
-                                    ->thenIf("data.messages.includes('END')",
-                                        JsCode::create('clearInterval(getMsg)')->then('this.status = "wait"')
-                                    )
-                                    ->then('let scrollArea = this.$refs["scrollArea"]')
-                                    ->then('setTimeout(() => scrollArea.setScrollTop(999999999999), 5)')
-                            )
-                        ))),
-                    100
-                ))
+                            Js::if('data.code !== 200')->then(
+                                Js::code('clearInterval(getMsg)'),
+                                Js::code('this.status = "wait"'),
+                            ),
+                            Js::code(
+                                Js::code('this.messages.push(...data.messages)'),
+                                Js::code('seek = data.seek'),
+                                Js::code('this.status = data.type'),
+                                Js::if("data.messages.includes('END')")->then(
+                                    Js::code('clearInterval(getMsg)'),
+                                    Js::code('this.status = "wait"'),
+                                ),
+                                Js::code('let scrollArea = this.$refs["scrollArea"]'),
+                                Js::code('setTimeout(() => scrollArea.setScrollTop(999999999999), 5)'),
+                            ),
+                        ))
+                ), 100))
             ));
 
         // 取消备份

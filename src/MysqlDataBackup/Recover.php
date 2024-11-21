@@ -9,7 +9,7 @@ use Sc\Util\Tool;
 
 class Recover
 {
-    public function __construct(private readonly Connect $connect, private readonly string $filePath = '') { }
+    public function __construct(private readonly Connect $connect, private readonly string $filePath = '', private readonly ?ExecutionProgress $progress = null) { }
 
     /**
      * 恢复数据
@@ -21,7 +21,8 @@ class Recover
     {
         $startTime = microtime(true);
         try {
-            ExecutionProgress::writeProgress('recover', $fd);
+            $this->progress->start();
+            $this->progress->write('recover', );
 
             $splFileObject = new \SplFileObject($this->filePath);
 
@@ -35,19 +36,19 @@ class Recover
                     // 执行sql
                     $this->connect->getPDO()->prepare($currentSql)->execute();
 
-                    ExecutionProgress::writeProgress(
+                    $this->progress->write(
                         sprintf("已恢复：%d/%d 已耗时[%f]", $recoverSize += strlen($currentSql), $size, microtime(true) - $startTime),
-                        $fd);
+                        );
 
                     $currentSql = '';
                 }
             }
         } catch (\Throwable $exception) {
-            ExecutionProgress::writeProgress("ERROR:" . $exception->getMessage(), $fd);
+            $this->progress->write("ERROR:" . $exception->getMessage(), );
             $result = ['code' => 202, 'msg' => $exception->getMessage()];
         } finally {
-            ExecutionProgress::writeProgress('总耗时：' . (microtime(true) - $startTime), $fd);
-            ExecutionProgress::writeProgress('END', $fd);
+            $this->progress->write('总耗时：' . (microtime(true) - $startTime), );
+            $this->progress->write('END', );
         }
 
         return $result ?? ['code' => 200];
