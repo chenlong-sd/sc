@@ -32,6 +32,10 @@ class Column
     protected ?string $fixedPosition = null;
     protected ?string $sortField = null;
     private string|\Stringable $emptyShowTemplate = '';
+    /**
+     * @var array|string[]|\Stringable[]
+     */
+    private array $tip = [];
 
     public function __construct(private array $attrs = []){}
 
@@ -441,5 +445,21 @@ class Column
     public function getEmptyShowTemplate(): \Stringable|string
     {
         return $this->emptyShowTemplate;
+    }
+
+    public function addTip( string|\Stringable $tip, string|\Stringable $icon = 'WarningFilled', array $attrs = []): static
+    {
+        $this->tip = [
+            'icon'  => $icon,
+            'tip'   => $tip,
+            'attrs' => $attrs
+        ];
+
+        return $this;
+    }
+
+    public function getTip(): array
+    {
+        return $this->tip;
     }
 }

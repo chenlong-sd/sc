@@ -56,6 +56,7 @@ class TableColumnTheme implements TableColumnThemeInterface
         $this->formatConfig($columnEl, $column->getFormat());
         $this->emptyValueHandle($column->getEmptyShowTemplate(), $columnEl, $column);
         $this->attrHandle($column->getAttr(), $columnEl);
+        $this->tipHandle($column->getTip(), $columnEl);
 
         return $columnEl;
     }
@@ -279,5 +280,34 @@ class TableColumnTheme implements TableColumnThemeInterface
                     : $getEmptyShowTemplate
             )
         ]);
+    }
+
+    private function tipHandle(array $tip, DoubleLabel $columnEl): void
+    {
+        if (empty($tip)) return;
+        $template = $columnEl->getChildrenByIndex(0);
+        if (!$template instanceof DoubleLabel || !$columnEl->getChildrenByIndex(0)->hasAttr('#default')){
+            $template = El::template("{{ scope.row.{$columnEl->getAttr('prop')} }}")->setAttr('#default', 'scope');
+        }
+
+        $icon = El::get($tip['icon']);
+        if ($icon instanceof TextCharacters) {
+            $icon = El::double('el-icon')->append(El::double(preg_replace('/([a-z])([A-Z])/', '$1-$2', $tip['icon'])));
+        }
+        $icon->appendStyle("{cursor:pointer;}");
+        if ($icon->getLabel() === 'el-icon' && $iconLabel = $icon->getChildrenByIndex(0)?->getLabel()) {
+            $icon->getChildrenByIndex(0)->setLabel(preg_replace('/([a-z])([A-Z])/', '$1-$2', $iconLabel));
+        }
+
+        $icon = El::template($icon)->setAttr('#reference');
+        $template->append(
+            El::double('el-popover')->setAttrs([
+                'trigger' => 'click',
+                ...$tip['attrs']
+            ])->append($icon)
+            ->append($tip['tip'] ?? '无')
+        );
+
+        $columnEl->setChildren($template);
     }
 }
