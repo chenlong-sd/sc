@@ -124,11 +124,13 @@ class Request
 
         $result = curl_exec($curl);
 
-        curl_close($curl);
-
         if (curl_errno($curl)) {
-            throw new WechatException(sprintf('%s(code:%d)', curl_error($curl), curl_errno($curl)));
+            $error   = curl_error($curl);
+            $errorNo = curl_errno($curl);
+            curl_close($curl);
+            throw new WechatException(sprintf('%s(code:%d)',$error, $errorNo));
         }
+        curl_close($curl);
 
         $result = new Response($result);
 
