@@ -266,7 +266,7 @@ class TableColumnTheme implements TableColumnThemeInterface
 
         $template = $columnEl->find('template');
         if (!$template) {
-            $template = El::double('template')->setAttr('#default', 'scope')->append("{{ {$column->getAttr('prop')} }}");
+            $template = El::double('template')->setAttr('#default', 'scope')->append("{{ scope.row.{$column->getAttr('prop')} }}");
             $columnEl->append($template);
         }
 
