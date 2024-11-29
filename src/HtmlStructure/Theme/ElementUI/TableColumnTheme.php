@@ -203,7 +203,7 @@ class TableColumnTheme implements TableColumnThemeInterface
                 ":preview-src-list"  => "[ {$column->getAttr('prop')} ]",
                 'fit'                => 'scale-down',
                 ':preview-teleported' => '@true',
-                'v-if'               => "{$column->getAttr('prop')}.length > 0"
+                'v-if'               => "{$column->getAttr('prop')}?.length > 0"
             ])
         );
     }
