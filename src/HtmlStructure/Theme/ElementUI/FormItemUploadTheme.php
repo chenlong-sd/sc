@@ -90,6 +90,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     {
         $successMethod = "UISuccess" . $rand;
         $beforeMethod  = "UIBefore" . $rand;
+        $errorMethod   = "UIError" . $rand;
         $notify        = "UINotify" . $rand;
         Html::js()->vue->set($notify, '');
 
@@ -98,6 +99,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             'v-model:file-list' => null,
             ":on-success"       => $successMethod,
             ":before-upload"    => $beforeMethod,
+            ":on-error"         => $errorMethod,
         ]);
 
         Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], Js::code(
@@ -118,6 +120,11 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                 'type'      => 'warning',
                 'showClose' => false
             ])),
+        ));
+
+        Html::js()->vue->addMethod($errorMethod, [], Js::code(
+            Js::code("this.$notify.close();"),
+            Js::code("this.\$notify({message: '上传失败', type:'error'});"),
         ));
 
         $uploadEl = El::fictitious()->append(
@@ -208,11 +215,13 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         $successMethod = "UISuccess" . $rand;
         $beforeMethod  = "UIBefore" . $rand;
         $notify        = "UINotify" . $rand;
+        $errorMethod   = "UIError" . $rand;
         Html::js()->vue->set($notify, []);
 
         $upload->setAttrs([
             ":on-success"    => $successMethod,
             ":before-upload" => $beforeMethod,
+            ":on-error"      => $errorMethod,
         ]);
 
         if (empty($formItemUpload->getVAttrs()['limit']) && empty($formItemUpload->getVAttrs()[':limit']) && !isset($formItemUpload->getVAttrs()['multiple'])) {
@@ -240,6 +249,12 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                 'type'      => 'warning',
                 'showClose' => false
             ])),
+        ));
+
+        Html::js()->vue->addMethod($errorMethod, ['res', 'uploadFile'], Js::code(
+            Js::code("this.$VModel.pop()"),
+            Js::code("this.{$notify}['I' + uploadFile.raw.uid].close()"),
+            Js::code("this.\$notify({message: uploadFile.raw.name + ' 上传失败', type:'error'})"),
         ));
 
         $submitVar = preg_replace('/^.+\./', '', $VModel);
