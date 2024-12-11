@@ -122,9 +122,9 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ])),
         ));
 
-        Html::js()->vue->addMethod($errorMethod, [], Js::code(
+        Html::js()->vue->addMethod($errorMethod, ['res', 'uploadFiles'], Js::code(
             Js::code("this.$notify.close();"),
-            Js::code("this.\$notify({message: '上传失败', type:'error'});"),
+            Js::code("this.\$notify({message: '上传失败' + res, type:'error'});"),
         ));
 
         $uploadEl = El::fictitious()->append(
@@ -254,7 +254,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         Html::js()->vue->addMethod($errorMethod, ['res', 'uploadFile'], Js::code(
             Js::code("this.$VModel.pop()"),
             Js::code("this.{$notify}['I' + uploadFile.raw.uid].close()"),
-            Js::code("this.\$notify({message: uploadFile.raw.name + ' 上传失败', type:'error'})"),
+            Js::code("this.\$notify({message: uploadFile.raw.name + ' 上传失败，' + res, type:'error'})"),
         ));
 
         $submitVar = preg_replace('/^.+\./', '', $VModel);
