@@ -3,9 +3,11 @@
 namespace Sc\Util\HtmlStructure\Html\Js;
 
 use JetBrains\PhpStorm\Language;
+use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\StaticResource;
+use Sc\Util\Tool\Url;
 
 /**
  * Class Axios
@@ -20,6 +22,8 @@ class Axios
     private ?string $loadingText = null;
     private ?string $confirmMessage = null;
     private ?string $promptMessage = null;
+
+    private ?Window $mountIframeInfo = null;
 
     public function __construct(private array $options)
     {
@@ -73,6 +77,23 @@ class Axios
     public function data(array $data): static
     {
         $this->options['data'] = self::dataHandle($data);
+
+        return $this;
+    }
+
+    /**
+     * 挂载在iframe的信息， iframe只支持layui
+     *
+     * @param Window $window
+     *
+     * @return Axios
+     */
+    public function mountIframe(Window $window): static
+    {
+        if (empty($window->getConfig()['width'])) {
+            $window->setConfig(['width' => '1000px']);
+        }
+        $this->mountIframeInfo = $window;
 
         return $this;
     }
@@ -179,6 +200,10 @@ class Axios
         }
 
         if ($this->thenCallable->code === '// nothing') {
+            if ($this->mountIframeInfo) {
+                $this->success->then("layer.close(index)");
+            }
+
             $this->thenCallable->code(Js::if('data.code === 200', $this->success, $this->fail));
         }
 
@@ -204,8 +229,33 @@ class Axios
         }
 
 
-        return $code->toCode();
+        return $this->mountIframeHandle($code->toCode());
     }
+
+    private function mountIframeHandle(string $code): string
+    {
+        if (empty($this->mountIframeInfo)) {
+            return $code;
+        }
+
+        /**
+         * 重新设置一下elementUI的层级，避免层级不够展示在下面了
+         */
+        Html::css()->addCss('.el-message, .is-message-box {
+          z-index: 999999991 !important; /* 设置你想要的z-index值 */
+        }');
+        if (!Html::html()->find('el-config-provider')) {
+            Html::html()->prepend(El::double('el-config-provider')->setAttr(':z-index', '99999999'));
+        }
+
+        $this->mountIframeInfo
+            ->setConfig('btn', [$this->mountIframeInfo->getTitle()])
+            ->setConfig('btnAlign', 'c')
+            ->setConfig('yes', JsFunc::arrow(['index'])->code($code));
+
+        return $this->mountIframeInfo->toCode();
+    }
+
 
     public function __toString(): string
     {
