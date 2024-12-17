@@ -2,7 +2,9 @@
 
 namespace Sc\Util\HtmlStructure\Html\Js;
 
+use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\VueComponentInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\JsTheme;
@@ -23,6 +25,7 @@ class Window
     protected array $rowData = [];
     protected ?JsCode $beforeOpen = null;
     private string $id = '';
+    private ?Window $mountIframeInfo = null;
 
     public function __construct(private readonly string $title)
     {
@@ -110,6 +113,24 @@ class Window
         return $this;
     }
 
+
+    /**
+     * 挂载在iframe的信息， iframe只支持layui
+     * 关闭挂载窗口 layer.closeAll()
+     * @param Window $window
+     *
+     * @return Window
+     */
+    public function mountIframe(Window $window): static
+    {
+        if (empty($window->getConfig()['width'])) {
+            $window->setConfig(['width' => '1000px']);
+        }
+        $this->mountIframeInfo = $window;
+
+        return $this;
+    }
+
     public function toCode(string $theme = null)
     {
         if ($theme === null && $this->url) {
@@ -119,8 +140,33 @@ class Window
         $theme = JsTheme::getTheme(WindowThemeInterface::class, $theme);
         $theme = new $theme();
 
-        return $theme->render($this);
+        return $this->mountIframeHandle($theme->render($this));
     }
+
+    private function mountIframeHandle(string $code): string
+    {
+        if (empty($this->mountIframeInfo)) {
+            return $code;
+        }
+
+        /**
+         * 重新设置一下elementUI的层级，避免层级不够展示在下面了
+         */
+        Html::css()->addCss('.el-message, .is-message-box {
+          z-index: 999999991 !important; /* 设置你想要的z-index值 */
+        }');
+        if (!Html::html()->find('el-config-provider')) {
+            Html::html()->prepend(El::double('el-config-provider')->setAttr(':z-index', '99999999'));
+        }
+
+        $this->mountIframeInfo
+            ->setConfig('btn', [$this->mountIframeInfo->getTitle()])
+            ->setConfig('btnAlign', 'c')
+            ->setConfig('yes', JsFunc::arrow(['index'])->code($code));
+
+        return $this->mountIframeInfo->toCode();
+    }
+
 
     public function render(string $theme = null)
     {
