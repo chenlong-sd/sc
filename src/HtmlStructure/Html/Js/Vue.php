@@ -137,6 +137,22 @@ class Vue
     }
 
     /**
+     * 存在dataKey
+     *
+     * @param string $name
+     *
+     * @return bool
+     */
+    public function hasVar(string $name): bool
+    {
+        if ($this->makeComponent) {
+            return isset($this->makeComponent['data'][$name]);
+        }
+
+        return isset($this->data[$name]);
+    }
+
+    /**
      * Vue methods 设置
      *
      * @param string       $name

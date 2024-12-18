@@ -869,8 +869,15 @@ class TableTheme implements TableThemeInterface
             $useKeys = array_merge($useKeys, array_unique($useKey[0]));
         }, $format);
 
-
         $format = strtr($format, ['@item' => 'item']);
+
+        if (preg_match_all('/@(\w+)/', $format, $vars)) {
+            foreach ($vars[1] as $var) {
+                if (Html::js()->vue->hasVar($var)){
+                    $format = strtr($format, ['@'.$var => 'this.'.$var]);
+                }
+            }
+        }
 
         return $format;
     }
