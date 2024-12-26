@@ -833,14 +833,23 @@ class TableTheme implements TableThemeInterface
             }elseif ($element->hasAttr('v-else')){
                 $if->else(JsFunc::call("$saveVar.push", $currentCode));
             }elseif ($element->getAttr('v-for')){
-                if(str_contains($element->getAttr('v-for'), '(')){
+                if(str_starts_with(trim($element->getAttr('v-for')), '(')){
                     preg_match('/\(\s*(\w+)\s*,\s*(\w+)\)\s*in\s*(@?)(\w+)/', $element->getAttr('v-for'), $match);
                     empty($match[3]) and $useKeys[] = $match[4];
                     $forVarName = empty($match[3]) ? $match[4] : "this.$match[4]";
                 }else{
-                    preg_match('/\s*(\w+)\s*in\s*(@?)(\w+)/', $element->getAttr('v-for'), $match);
-                    empty($match[2]) and $useKeys[] = $match[3];
-                    $forVarName = empty($match[2]) ? $match[3] : "this.$match[3]";
+                    preg_match('/\s*(\w+)\s*in\s*(@?)(\S+)/', $element->getAttr('v-for'), $match);
+                    if(empty($match[2])){
+                        if (preg_match('/^\w+$/', $match[3])) {
+                            $forVarName = $useKeys[] = $match[3];
+                        }else{
+                            preg_match('/^\w+/', strtr($match[3], ['scope.row.' => '']), $match1);
+                            $useKeys[] = $match1[0];
+                            $forVarName = strtr($match[3], ['scope.row.' => '']);
+                        }
+                    }else{
+                        $forVarName = "this.$match[3]";
+                    }
                 }
                 $forFormat = ScTool::random('for')->get();
                 $for = Js::for("let index in $forVarName")->then(Js::let($match[1], "@{$forVarName}[index]"));
@@ -871,15 +880,7 @@ class TableTheme implements TableThemeInterface
 
         $format = strtr($format, ['@item' => 'item']);
 
-        if (preg_match_all('/@(\w+)/', $format, $vars)) {
-            foreach ($vars[1] as $var) {
-                if (Html::js()->vue->hasVar($var)){
-                    $format = strtr($format, ['@'.$var => 'this.'.$var]);
-                }
-            }
-        }
-
-        return $format;
+        return $this->globalVarHandle($format);
     }
 
     /**
@@ -895,6 +896,29 @@ class TableTheme implements TableThemeInterface
             $useKeys = array_merge($useKeys, array_unique($useKey[0]));
         }
 
-        return strtr($where, ['@item' => 'item', '@' => 'this.']);
+        $where = strtr($where, ['@item' => 'item']);
+
+        return $this->globalVarHandle($where, true);
+    }
+
+    /**
+     * @param string $format
+     * @param bool   $isWhere
+     *
+     * @return string
+     */
+    private function globalVarHandle(string $format, $isWhere = false): string
+    {
+        if (preg_match_all('/@(\w+)/', $format, $vars)) {
+            foreach ($vars[1] as $var) {
+                if (Html::js()->vue->hasVar($var)) {
+                    $format = strtr($format, ['@' . $var => 'this.' . $var]);
+                }
+                if ($isWhere){
+                    $format = strtr($format, ['@' => '']);
+                }
+            }
+        }
+        return $format;
     }
 }

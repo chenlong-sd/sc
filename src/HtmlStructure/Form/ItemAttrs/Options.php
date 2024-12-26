@@ -5,6 +5,8 @@
 
 namespace Sc\Util\HtmlStructure\Form\ItemAttrs;
 
+use Sc\Util\HtmlElement\El;
+
 trait Options
 {
     protected array $options = [];
@@ -12,6 +14,8 @@ trait Options
     protected array $optionsRemote = [];
 
     protected ?string $format = null;
+
+    protected array $optionsAttrs = [];
 
     /**
      * @param array $options
@@ -74,5 +78,33 @@ trait Options
         $this->format = $stringable;
 
         return $this;
+    }
+
+    /**
+     * 设置选项属性
+     *
+     * @param array|string $attr
+     * @param mixed        $value
+     *
+     * @return $this
+     */
+    public function setOptionsAttrs(array|string $attr, mixed $value = ''): static
+    {
+        if (!is_array($attr)){
+            $attr = $value === '' ? El::getAttrFromStr($attr) : [$attr => $value];
+        }
+
+        foreach ($attr as $key => &$value) {
+            if (is_bool($value)){
+                $value = $value ? 'true' : 'false';
+            }
+        }
+        $this->optionsAttrs = array_merge($this->optionsAttrs, $attr);
+        return $this;
+    }
+
+    public function getOptionsAttrs(): array
+    {
+        return $this->optionsAttrs;
     }
 }

@@ -37,6 +37,8 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             ':disabled' => "item.disabled"
         ])->append('{{ item.label }}');
 
+        $checkbox->setAttrs($formItem->getOptionsAttrs());
+
         $this->addEvent($box, $formItem->getEvents(), $formItem->getName());
 
         $this->setOptions($formItem, $optionsVar);

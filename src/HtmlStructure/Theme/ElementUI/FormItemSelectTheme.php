@@ -46,7 +46,7 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             ':value' => "item.value",
             ':label' => "item.label",
             ':disabled' => "item.disabled",
-        ]);
+        ])->setAttrs($formItem->getOptionsAttrs());
         if ($formItem->getFormat()) {
             $options->append($formItem->getFormat());
         }

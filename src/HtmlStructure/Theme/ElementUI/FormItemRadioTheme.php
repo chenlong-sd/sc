@@ -32,7 +32,9 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
             'v-model' => $this->getVModel($formItem),
             ':value'  => 'item.value',
             ':disabled' => "item.disabled",
-        ])->append('{{ item.label }}')->setAttrs($formItem->getVAttrs());
+        ])->append('{{ item.label }}')
+            ->setAttrs($formItem->getVAttrs())
+            ->setAttrs($formItem->getOptionsAttrs());
 
         $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName());
 
