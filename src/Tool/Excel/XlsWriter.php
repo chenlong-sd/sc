@@ -287,4 +287,9 @@ class XlsWriter extends Excel implements ExcelInterface
     {
         $filepath = $this->output();
     }
+
+    public function getData(string $filepath, string $sheetName = null): array
+    {
+        return $this->openFile($filepath)->openSheet($sheetName)->getSheetData();
+    }
 }

@@ -3,6 +3,7 @@
 namespace Sc\Util\Tool\Excel;
 use Hyperf\HttpMessage\Stream\SwooleFileStream;
 use Hyperf\HttpServer\Contract\ResponseInterface;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Sc\Util\Tool\Excel;
@@ -261,5 +262,13 @@ class Spreadsheet implements ExcelInterface
     {
         $xlsx = new Xlsx($this->spreadsheet);
         $xlsx->save($this->filepath);
+    }
+
+    public function getData(string $filepath, string $sheetName = null): array
+    {
+        $this->spreadsheet = IOFactory::load($this->filepath . $filepath);
+        return $sheetName
+            ? $this->spreadsheet->getSheetByName($sheetName)->toArray()
+            : $this->spreadsheet->getActiveSheet()->toArray();
     }
 }

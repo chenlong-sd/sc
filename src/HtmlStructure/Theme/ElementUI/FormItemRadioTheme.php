@@ -36,9 +36,9 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
             ->setAttrs($formItem->getVAttrs())
             ->setAttrs($formItem->getOptionsAttrs());
 
-        $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName());
-
         $this->setOptions($formItem, $optionsVar);
+
+        $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName());
 
         return $base->append($checkbox);
     }

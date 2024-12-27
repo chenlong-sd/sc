@@ -34,4 +34,6 @@ interface ExcelInterface
     public function getExcelHandle(): \PhpOffice\PhpSpreadsheet\Spreadsheet|Excel;
 
     public function save();
+
+    public function getData(string $filepath, string $sheetName = null): array;
 }

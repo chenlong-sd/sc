@@ -95,19 +95,33 @@ abstract class AbstractFormItemTheme
 
 
     /**
-     * @param FormItemAttrGetter|AbstractFormItem $formItemCascader
+     * @param FormItemAttrGetter|AbstractFormItem $formItem
      * @param string                              $varName
      *
      * @return void
      */
-    protected function setOptions(FormItemAttrGetter|AbstractFormItem $formItemCascader, string $varName): void
+    protected function setOptions(FormItemAttrGetter|AbstractFormItem $formItem, string $varName): void
     {
-        Html::js()->vue->set($varName, Html::js()->vue->get($varName, $formItemCascader->getOptions()));
+        Html::js()->vue->set($varName, Html::js()->vue->get($varName, $formItem->getOptions()));
 
-        if ($remote = $formItemCascader->getOptionsRemote()) {
-            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success(Js::code(
+        if ($remote = $formItem->getOptionsRemote()) {
+            $dataCode = Js::code(
                 Js::assign("this.$varName", "@{$remote['valueCode']}")
-            )));
+            );
+            if (!empty($remote['valueName']) || !empty($remote['labelName'])) {
+                $map = JsFunc::call("this.$varName.map", JsFunc::arrow(['item'])->code(
+                    empty($remote['valueName']) ? "" : Js::assign("item.value", "@item.{$remote['valueName']}"),
+                    empty($remote['labelName']) ? "" : Js::assign("item.label", "@item.{$remote['labelName']}"),
+                ));
+
+                $dataCode->then($map);
+            }
+
+            if (empty($formItem->getEvents()['blur'])) {
+                $formItem->on('blur', "refresh{$varName}()");
+            }
+
+            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success($dataCode));
 
             Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}"));
         }

@@ -65,11 +65,11 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             $select->setAttrIfNotExist('style', 'width:192px');
         }
 
+        $this->setOptions($formItem, $optionsVar);
+
         $this->remoteSearch($formItem, $select, $optionsVar);
 
         $this->addEvent($select, $formItem->getEvents(), $formItem->getName());
-
-        $this->setOptions($formItem, $optionsVar);
 
         return $base->append($select->append($options));
     }

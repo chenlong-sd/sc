@@ -39,9 +39,10 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
 
         $checkbox->setAttrs($formItem->getOptionsAttrs());
 
+        $this->setOptions($formItem, $optionsVar);
+
         $this->addEvent($box, $formItem->getEvents(), $formItem->getName());
 
-        $this->setOptions($formItem, $optionsVar);
 
         return $base->append($box->append($checkbox));
     }

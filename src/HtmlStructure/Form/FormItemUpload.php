@@ -127,4 +127,9 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     {
         return $this->disableUpload();
     }
+
+    public function accept(string $accept): FormItemUpload
+    {
+        return $this->setVAttrs('accept', $accept);
+    }
 }
