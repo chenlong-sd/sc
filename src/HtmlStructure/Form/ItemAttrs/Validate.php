@@ -41,11 +41,8 @@ trait Validate
      *
      * @return $this
      */
-    public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur'])
+    public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur']): static
     {
-
-        return $this->setVAttrs(':required', $when);
-
         return $this->customizeVerify(JsFunc::anonymous(['rule', 'value', 'callback'])->code(
             JsIf::when("!value && $when")->then(
                 JsFunc::call("callback", $message ?: $this->getLabel() . "不能为空")

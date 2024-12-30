@@ -43,6 +43,10 @@ class FormItemDatetime extends AbstractFormItem implements FormItemInterface
     public function setTimeType(#[ExpectedValues(['date', 'dates', 'datetime', 'month', 'year', 'week', 'datetimerange', 'daterange', 'monthrange'])] string $type): FormItemDatetime
     {
         $this->setVAttrs('type', $type);
+        if (in_array($type, ['date', 'dates', 'daterange'])) {
+            $this->valueFormat('YYYY-MM-DD');
+            $this->format('YYYY-MM-DD');
+        }
 
         return $this;
     }
