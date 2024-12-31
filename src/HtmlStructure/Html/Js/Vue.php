@@ -246,8 +246,10 @@ class Vue
      *
      * @date 2023/5/19
      */
-    public function event(#[ExpectedValues(self::EVENTS)] string $event, #[Language('JavaScript')] mixed $code = ''): void
+    public function event(#[ExpectedValues(self::EVENTS)] string $event, #[Language('JavaScript')] mixed $code = '', bool $isNextTick = false): void
     {
+        $code = $isNextTick ? "this.\$nextTick(() => {\n{$code}\n})" : $code;
+
         if ($this->makeComponent) {
             $this->makeComponent[$event][] = $code;
             return;
