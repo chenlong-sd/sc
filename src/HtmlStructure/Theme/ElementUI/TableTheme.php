@@ -729,17 +729,23 @@ class TableTheme implements TableThemeInterface
 
     private function exportDataGet(Table $table, string $dataVarName, array $query): JsFunc
     {
-        Html::js()->load('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+//        Html::js()->load('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+        Html::js()->load('/js/xlsx.full.min.js');
 
         $titles  = $showMap = $useKeys = [];
         $formatCode = Js::switch("titlesMap[keys[i]]");
-        foreach ($table->getColumns() as $column) {
-            if (!$column->getAttr('prop')) {
-                continue;
+        $columns = $table->getColumns(true);
+        $columns = array_filter($columns, fn(Column $column) => $column->getAttr('prop') && $column->getImportExcel()['allow']);
+        $sortIndex = 0;
+        $columns = array_map(function(Column $column) use (&$sortIndex){
+            if ($column->getImportExcel()['sort'] === null) {
+                $column->importExcel(true, $sortIndex++);
             }
-            if ($column->getShow() && empty($column->getShow()['type'])) {
-                continue;
-            }
+            return $column;
+        }, $columns);
+        usort($columns, fn(Column $a, Column $b) => $a->getImportExcel()['sort'] - $b->getImportExcel()['sort']);
+
+        foreach ($columns as $column) {
             $titles[$column->getAttr('prop')] = $column->getAttr("label");
             if ($column->getShow() && in_array($column->getShow()['type'], ['switch', 'tag', 'mapping'])) {
                 $options = $column->getShow()['config']['options'];

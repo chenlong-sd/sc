@@ -26,16 +26,65 @@ use function Composer\Autoload\includeFile;
  */
 class Column
 {
-    private string|\Stringable $format = '';
-    private array $show = [];
-    private array $search = [];
-    protected ?string $fixedPosition = null;
-    protected ?string $sortField = null;
-    private string|\Stringable $emptyShowTemplate = '';
     /**
+     * 展示模板
+     *
+     * @var string|\Stringable
+     */
+    private string|\Stringable $format = '';
+
+    /**
+     * 展示类型
+     *
+     * @var array
+     */
+    private array $show = [];
+
+    /**
+     * 搜索信息
+     *
+     * @var array
+     */
+    private array $search = [];
+
+
+    /**
+     * 固定位置
+     *
+     * @var string|null
+     */
+    protected ?string $fixedPosition = null;
+
+    /**
+     * 排序时的字段
+     *
+     * @var string|null
+     */
+    protected ?string $sortField = null;
+
+    /**
+     * 空置的显示模板
+     *
+     * @var string|\Stringable|array
+     */
+    private string|\Stringable $emptyShowTemplate = '';
+
+    /**
+     * 显示内容后面的感叹号设置信息
+     *
      * @var array|string[]|\Stringable[]
      */
     private array $tip = [];
+
+    /**
+     * 导出设置信息
+     *
+     * @var array
+     */
+    private array $importExcel = [
+        'sort' => null,
+        'allow' => true,
+    ];
 
     public function __construct(private array $attrs = []){}
 
@@ -171,6 +220,24 @@ class Column
     }
 
     /**
+     * 导出excel设置
+     *
+     * @param bool       $allow 是否允许导出
+     * @param float|null $sort  导出排序值，默认为null，不排序
+     *
+     * @return $this
+     */
+    public function importExcel(bool $allow = true, float $sort = null): static
+    {
+        $this->importExcel = [
+            'allow' => $allow,
+            'sort'  => $sort
+        ];
+
+        return $this;
+    }
+
+    /**
      * 显示开关
      *
      * @param array      $options
@@ -244,15 +311,20 @@ class Column
     /**
      * 不显示此列
      *
+     * @param bool       $confirm   是否不显示此列
+     * @param bool       $excelImport 是否支持导入此列
+     * @param float|null $excelSort  导入的排序值
+     *
      * @return $this
      */
-    public function notShow(bool $confirm = true): static
+    public function notShow(bool $confirm = true, bool $excelImport = false, float $excelSort = null): static
     {
         if ($confirm) {
             $this->show = [
                 'type' => null
             ];
         }
+        $this->importExcel($excelImport, $excelSort);
 
         return $this;
     }
@@ -461,5 +533,10 @@ class Column
     public function getTip(): array
     {
         return $this->tip;
+    }
+
+    public function getImportExcel(): array
+    {
+        return $this->importExcel;
     }
 }

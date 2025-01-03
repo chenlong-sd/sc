@@ -49,26 +49,87 @@ class Table
      * @var bool
      */
     private bool $openPagination = true;
+
+    /**
+     * 分组事件的组名
+     *
+     * @var string|null
+     */
     private ?string $rowGroup = null;
+
+    /**
+     * 分组的事件信息
+     *
+     * @var array
+     */
     private array $rowGroupEvent = [];
+
+    /**
+     * 搜索表单信息
+     *
+     * @var array
+     */
     protected array $searchForms = [];
+
+    /**
+     * 状态切换搜索按钮
+     *
+     * @var array
+     */
     protected array $statusToggleButtons = [];
 
+    /**
+     * 最大高度
+     *
+     * @var int
+     */
     protected int $maxHeight = 0;
 
+    /**
+     * 拖拽设置
+     *
+     * @var array
+     */
     protected array $draw = [
         'able'         => false,
         'el'           => null,
         'updateHandle' => "",
         'config'       => []
     ];
-    private bool $statusToggleButtonsNewLine = false;
-    private array $trash = [];
-    private $virtual = null;
+
     /**
+     * 多个状态切换按钮是否换行展示
+     *
+     * @var bool
+     */
+    private bool $statusToggleButtonsNewLine = false;
+
+    /**
+     * 回收站设置
+     *
+     * @var array
+     */
+    private array $trash = [];
+
+    /**
+     * 虚拟表格，按条件设置的时候，不满足条件时的设置
+     *
+     * @var null
+     */
+    private $virtual = null;
+
+    /**
+     * 开启导出excel
+     *
      * @var true
      */
     private bool   $exportExcel = false;
+
+    /**
+     * 导出的excel文件名
+     *
+     * @var string|null
+     */
     private ?string $excelFilename = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
@@ -356,8 +417,11 @@ class Table
     /**
      * @return array|Column[]
      */
-    public function getColumns(): array
+    public function getColumns(bool $isAll = false): array
     {
+        if ($isAll) {
+            return $this->columns;
+        }
         return array_values(array_filter($this->columns, fn(Column $column) => !empty($column->getShow()['type']) || !$column->getShow()));
     }
 
