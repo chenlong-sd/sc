@@ -35,12 +35,19 @@ class CodeParsing
         while ($code !== null && $code !== '') {
             // 文本处理
             if (!str_starts_with($code, '<')) {
-                preg_match('/^([^<]|<[^\w\/])*/', $code, $match);
-                $code = preg_replace('/^([^<]|<[^\w\/])*/', '', $code);
-                if (trim($match[0]) === ''){
-                    continue;
+                if (preg_match('/^([^<]|<[^\w\/])*/', $code, $match)){
+                    $code = preg_replace('/^([^<]|<[^\w\/])*/', '', $code);
+                    try {
+                        if (trim($match[0]) === ''){
+                            continue;
+                        }
+                    }catch (\Throwable $throwable){
+                        continue;
+                    }
+                    $base->append(El::text($match[0]));
+                }else{
+                    $base->append(El::text($code));
                 }
-                $base->append(El::text($match[0]));
                 continue;
             }
 
