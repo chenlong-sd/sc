@@ -126,6 +126,16 @@ class Column
     }
 
     /**
+     * @param int|string $width
+     * @return $this
+     */
+    public function minWidth(int|string $width): static
+    {
+        $this->setAttr('min-width', $width);
+        return $this;
+    }
+
+    /**
      * @return $this
      */
     public function enableSort(string $sortField = null): static
