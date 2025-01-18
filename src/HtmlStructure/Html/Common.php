@@ -12,10 +12,8 @@ class Common
      *
      * @return string
      */
-    public static function defJsFnBase64Decode(): string
+    public static function defJsFnBase64Decode($fnName = "scBase64Decode"): string
     {
-        $fnName = "scBase64Decode";
-
         Html::js()->defFunc($fnName, ['base64String'], <<<JS
             const binary = atob(base64String);
             const bytes = new Uint8Array(binary.length);
