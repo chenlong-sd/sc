@@ -339,6 +339,11 @@ class Column
         return $this;
     }
 
+    public function onlyImportExcel(float $excelSort = null): static
+    {
+        return $this->notShow(true, true, $excelSort);
+    }
+
     /**
      * @return string|\Stringable
      */
