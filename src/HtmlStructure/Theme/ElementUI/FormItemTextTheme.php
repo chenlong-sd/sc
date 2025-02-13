@@ -55,8 +55,8 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
             'clearable'   => ''
         ])->setAttrs($formItemText->getVAttrs());
 
-        if (!empty($formItemText->getForm()->getConfig()[':inline'])
-            || !empty($formItemText->getForm()->getConfig()['inline'])
+        if (!empty($formItemText->getForm()?->getConfig()[':inline'])
+            || !empty($formItemText->getForm()?->getConfig()['inline'])
         ){
             $input->appendStyle("{width:192px}");
         }
