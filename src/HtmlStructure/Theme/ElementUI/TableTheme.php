@@ -762,6 +762,7 @@ class TableTheme implements TableThemeInterface
         }
         $formatCode->default(Js::code("row.push(data.data.data[j][keys[i]])"));
 
+        $query['is_export'] = 1;
         return JsFunc::anonymous()->code(
             Js::let("loading", JsService::loading()),
             Js::let('query', '@{}'),
