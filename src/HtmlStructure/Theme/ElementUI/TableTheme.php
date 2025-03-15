@@ -188,7 +188,7 @@ class TableTheme implements TableThemeInterface
             ];
 
             $query["temp"] = "@query";
-            if ($table->isOpenExportExcel()) {
+            if ($table->isOpenImportExcel()) {
                 Html::js()->vue->addMethod($dataVarName . 'ExportData', $this->exportDataGet($table, $dataVarName, $query));
             }
 
@@ -270,7 +270,7 @@ class TableTheme implements TableThemeInterface
                 );
             });
         }
-        if ($table->isOpenExportExcel()) {
+        if ($table->isOpenImportExcel()) {
             $table->setHeaderRightEvent(["@primary.TakeawayBox.导出"], function () use ($table){
                 return Js::code("this.{$table->getId()}ExportData()");
             });

@@ -123,7 +123,7 @@ class Table
      *
      * @var true
      */
-    private bool   $exportExcel = false;
+    private bool $importExcel = false;
 
     /**
      * 导出的excel文件名
@@ -519,15 +519,25 @@ class Table
         return $this->trash;
     }
 
-    public function openExportExcel(string $filename = 'export.xlsx'): void
+    /**
+     * @param string $filename
+     * @return void
+     * @deprecated 使用 openImportExcel()
+     */
+    public function openExportExcel(string $filename = 'import.xlsx'): void
     {
-        $this->exportExcel = true;
+        $this->openImportExcel($filename);
+    }
+
+    public function openImportExcel(string $filename = 'import.xlsx'): void
+    {
+        $this->importExcel   = true;
         $this->excelFilename = preg_replace('/\.xlsx$/', '', $filename) . date('Y-m-d');
     }
 
-    public function isOpenExportExcel(): bool
+    public function isOpenImportExcel(): bool
     {
-        return $this->exportExcel;
+        return $this->importExcel;
     }
 
     public function getExcelFilename(): ?string
