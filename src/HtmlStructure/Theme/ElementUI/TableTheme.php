@@ -188,7 +188,7 @@ class TableTheme implements TableThemeInterface
             ];
 
             $query["temp"] = "@query";
-            if ($table->isOpenImportExcel()) {
+            if ($table->isOpenExportExcel()) {
                 Html::js()->vue->addMethod($dataVarName . 'ExportData', $this->exportDataGet($table, $dataVarName, $query));
             }
 
@@ -270,7 +270,7 @@ class TableTheme implements TableThemeInterface
                 );
             });
         }
-        if ($table->isOpenImportExcel()) {
+        if ($table->isOpenExportExcel()) {
             $table->setHeaderRightEvent(["@primary.TakeawayBox.导出"], function () use ($table){
                 return Js::code("this.{$table->getId()}ExportData()");
             });
@@ -735,15 +735,15 @@ class TableTheme implements TableThemeInterface
         $titles  = $showMap = $useKeys = [];
         $formatCode = Js::switch("titlesMap[keys[i]]");
         $columns = $table->getColumns(true);
-        $columns = array_filter($columns, fn(Column $column) => $column->getAttr('prop') && $column->getImportExcel()['allow']);
+        $columns = array_filter($columns, fn(Column $column) => $column->getAttr('prop') && $column->getExportExcel()['allow']);
         $sortIndex = 0;
         $columns = array_map(function(Column $column) use (&$sortIndex){
-            if ($column->getImportExcel()['sort'] === null) {
+            if ($column->getExportExcel()['sort'] === null) {
                 $column->importExcel(true, $sortIndex++);
             }
             return $column;
         }, $columns);
-        usort($columns, fn(Column $a, Column $b) => $a->getImportExcel()['sort'] - $b->getImportExcel()['sort']);
+        usort($columns, fn(Column $a, Column $b) => $a->getExportExcel()['sort'] - $b->getExportExcel()['sort']);
 
         foreach ($columns as $column) {
             $titles[$column->getAttr('prop')] = $column->getAttr("label");

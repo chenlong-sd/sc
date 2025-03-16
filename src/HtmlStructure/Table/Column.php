@@ -13,7 +13,6 @@ use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableColumnThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
-use function Composer\Autoload\includeFile;
 
 /**
  * Class Column
@@ -81,7 +80,7 @@ class Column
      *
      * @var array
      */
-    private array $importExcel = [
+    private array $exportExcel = [
         'sort' => null,
         'allow' => true,
     ];
@@ -239,7 +238,20 @@ class Column
      */
     public function importExcel(bool $allow = true, float $sort = null): static
     {
-        $this->importExcel = [
+        return $this->exportExcel($allow, $sort);
+    }
+
+    /**
+     * 导出excel设置
+     *
+     * @param bool       $allow 是否允许导出
+     * @param float|null $sort  导出排序值，默认为null，不排序
+     *
+     * @return $this
+     */
+    public function exportExcel(bool $allow = true, float $sort = null): static
+    {
+        $this->exportExcel = [
             'allow' => $allow,
             'sort'  => $sort
         ];
@@ -322,24 +334,34 @@ class Column
      * 不显示此列
      *
      * @param bool       $confirm   是否不显示此列
-     * @param bool       $excelImport 是否支持导入此列
+     * @param bool       $excelExport 是否支持导入此列
      * @param float|null $excelSort  导入的排序值
      *
      * @return $this
      */
-    public function notShow(bool $confirm = true, bool $excelImport = false, float $excelSort = null): static
+    public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): static
     {
         if ($confirm) {
             $this->show = [
                 'type' => null
             ];
         }
-        $this->importExcel($excelImport, $excelSort);
+        $this->importExcel($excelExport, $excelSort);
 
         return $this;
     }
 
+    /**
+     * @param float|null $excelSort
+     * @return $this
+     * @deprecated 使用 onlyExportExcel()
+     */
     public function onlyImportExcel(float $excelSort = null): static
+    {
+        return $this->onlyExportExcel($excelSort);
+    }
+
+    public function onlyExportExcel(float $excelSort = null): static
     {
         return $this->notShow(true, true, $excelSort);
     }
@@ -550,8 +572,8 @@ class Column
         return $this->tip;
     }
 
-    public function getImportExcel(): array
+    public function getExportExcel(): array
     {
-        return $this->importExcel;
+        return $this->exportExcel;
     }
 }
