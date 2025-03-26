@@ -10,7 +10,7 @@ use Sc\Util\Tool\Lock;
 class RedisLock implements LockInterface
 {
     private ?Lock $lockInfo = null;
-    private float $startTime;
+    private string $lockId = '';
 
     public function __construct(
         /**
@@ -21,42 +21,54 @@ class RedisLock implements LockInterface
     {}
 
     /**
-     * @throws \RedisException
+     * @return bool
      */
     public function locking(): bool
     {
-        $waitTime = $this->lockInfo->waitTime;
-        $res = $this->redis->set($this->lockInfo->key, 1, ['nx', 'ex' => $this->lockInfo->ttl]);
+        try {
+            $waitTime = $this->lockInfo->waitTime;
+            $this->lockId = uniqid("r", true);
+            $res = $this->redis->set($this->lockInfo->key, $this->lockId, ['nx', 'ex' => $this->lockInfo->ttl]);
 
-        if (!$res && $waitTime <= 0) {
-            return false;
-        }
-
-        while (!$res) {
-            $microseconds = 10000;
-            $waitTime -= $microseconds / 1000000;
-            usleep($microseconds);
-
-            if ($waitTime <= 0) {
+            if (!$res && $waitTime <= 0) {
                 return false;
             }
 
-            $res = $this->redis->set($this->lockInfo->key, 1, ['nx', 'ex' => $this->lockInfo->ttl]);
-        }
+            $waitTime = $waitTime * 1000000;
+            $microseconds = 10000;
+            while (!$res) {
+                $waitTime -= $microseconds;
+                usleep($microseconds);
 
-        $this->startTime = microtime(true);
+                if ($waitTime <= 0) {
+                    return false;
+                }
+
+                $res = $this->redis->set($this->lockInfo->key, $this->lockId, ['nx', 'ex' => $this->lockInfo->ttl]);
+            }
+        } catch (\RedisException $e) {
+            $this->unlock();
+            return false;
+        }
 
         return true;
     }
 
+    /**
+     * @return void
+     * @throws \RedisException
+     */
     public function unlock(): void
     {
-        try {
-            if (empty($this->lockInfo->ttl) || microtime(true) - $this->startTime < $this->lockInfo->ttl) {
-                $this->redis->del($this->lockInfo->key);
-            }
-        } catch (\RedisException $e) {
-        }
+        $luaScript = <<<LUA
+            if redis.call("GET", KEYS[1]) == ARGV[1] then
+                return redis.call("DEL", KEYS[1])
+            else
+                return 0
+            end
+            LUA;
+
+        $this->redis->eval($luaScript, [$this->lockInfo->key, $this->lockId], 1);
     }
 
     public function setLock(?Lock $lock): void
