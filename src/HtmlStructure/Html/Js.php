@@ -72,7 +72,7 @@ class Js
 
     /**
      * 加载js
-     *
+     * @see StaticResource
      * @param string|array $jsPath
      *
      * @date 2023/5/25
