@@ -57,6 +57,7 @@ interface FormItemAttrGetter
     public function getChildren(): array;
     public function getTimeType();
     public function getUploadType();
+    public function getProgress();
     public function getUploadEl();
     public function getSubmitText();
     public function getResetText();
