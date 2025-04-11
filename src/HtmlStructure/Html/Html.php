@@ -130,6 +130,11 @@ class Html
         return trim(El::fictitious()->append(El::text('<!DOCTYPE html>'), self::html())->toHtml());
     }
 
+    public static function addDeviceAdaptation(): void
+    {
+        self::html()->find('head')->append(El::double('meta')->setAttr('name', 'viewport')->setAttr('content', 'width=device-width, initial-scale=1.0'));
+    }
+
     public static function __callStatic(string $name, array $arguments)
     {
         return self::getGlobalHtml()->{$name};

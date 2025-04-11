@@ -29,6 +29,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     protected string $uploadType = self::UPLOAD_TYPE_FILE;
     protected string|AbstractHtmlElement $tip;
     protected bool $disableDownload = false;
+    protected bool $progress = false;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -119,6 +120,19 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         if ($disable){
             $this->setVAttrs('disabled');
         }
+
+        return $this;
+    }
+
+    /**
+     * 展示进度条，图片模式无效
+     *
+     * @param bool $isShow
+     * @return $this
+     */
+    public function showProgress(bool $isShow = true): static
+    {
+        $this->progress = $isShow;
 
         return $this;
     }
