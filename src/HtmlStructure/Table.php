@@ -123,7 +123,7 @@ class Table
      *
      * @var true
      */
-    private bool $importExcel = false;
+    private bool $exportExcel = false;
 
     /**
      * 导出的excel文件名
@@ -522,22 +522,16 @@ class Table
     /**
      * @param string $filename
      * @return void
-     * @deprecated 使用 openImportExcel()
      */
-    public function openExportExcel(string $filename = 'import.xlsx'): void
+    public function openExportExcel(string $filename = 'export.xlsx'): void
     {
-        $this->openImportExcel($filename);
-    }
-
-    public function openImportExcel(string $filename = 'import.xlsx'): void
-    {
-        $this->importExcel   = true;
+        $this->exportExcel   = true;
         $this->excelFilename = preg_replace('/\.xlsx$/', '', $filename) . date('Y-m-d');
     }
 
-    public function isOpenImportExcel(): bool
+    public function isOpenExportExcel(): bool
     {
-        return $this->importExcel;
+        return $this->exportExcel;
     }
 
     public function getExcelFilename(): ?string

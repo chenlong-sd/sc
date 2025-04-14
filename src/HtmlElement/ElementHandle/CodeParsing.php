@@ -47,6 +47,7 @@ class CodeParsing
                     $base->append(El::text($match[0]));
                 }else{
                     $base->append(El::text($code));
+                    $code = "";
                 }
                 continue;
             }

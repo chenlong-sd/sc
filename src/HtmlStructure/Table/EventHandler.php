@@ -56,6 +56,12 @@ class EventHandler
         return Axios::get($url, $data)->success($successHandler)->fail($errorMessage);
     }
 
+    /**
+     * @param string|\Stringable $url
+     * @param mixed|null $data 在列事件时，取列数据用 @row.prop, prop替换为列字段
+     * @param string|\Stringable $successHandler
+     * @return Axios
+     */
     public static function post(string|\Stringable $url = '', mixed $data = null, #[Language('JavaScript')] string|\Stringable $successHandler = "console.log(data.data)"): Axios
     {
         $errorMessage   = JsService::message(Grammar::mark("data.msg ? data.msg : '服务器错误'"), 'error');
