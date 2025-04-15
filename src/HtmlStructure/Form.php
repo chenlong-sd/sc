@@ -19,7 +19,7 @@ use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
-class Form extends \Sc\Util\HtmlElement\ElementType\AbstractHtmlElement
+class Form
 {
     /**
      * @var array|mixed
