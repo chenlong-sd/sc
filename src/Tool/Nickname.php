@@ -29,9 +29,13 @@ class Nickname
      */
     public function generate(): string
     {
-        return mt_rand(0, 1) > 0
-            ? $this->getRoundValue('ADJECTIVE') . '的' . $this->getRoundValue('NOUN')
-            : $this->getRoundValue('NOUN') . $this->getRoundValue('extra') . $this->getRoundValue('NOUN');
+        mt_srand();
+        return match (mt_rand(0, 3)) {
+            0 => $this->getRoundValue('ADJECTIVE') . '的' . $this->getRoundValue('NOUN'),
+            1 => $this->getRoundValue('ADJECTIVE') . '又' . $this->getRoundValue('ADJECTIVE'),
+            2 => $this->getRoundValue('ADJECTIVE') . '但' . $this->getRoundValue('ADJECTIVE'),
+            default => $this->getRoundValue('NOUN') . $this->getRoundValue('extra') . $this->getRoundValue('NOUN')
+        };
     }
 
     /**
@@ -60,6 +64,7 @@ class Nickname
      */
     private function getRoundValue(#[ExpectedValues(['ADJECTIVE', 'NOUN', 'extra'])]string $target): string
     {
+        mt_srand();
         return match ($target) {
             'ADJECTIVE' => self::ADJECTIVE[mt_rand(0, self::ADJECTIVE_LENGTH)],
             'NOUN'      => self::NOUN[mt_rand(0, self::NOUN_LENGTH)],
