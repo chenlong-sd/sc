@@ -278,9 +278,21 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             return '';
         }
 
+        $progress = $formItemUpload->getProgress() ? El::double('el-progress')->setAttrs([
+            ":text-inside" => "@true",
+            ":stroke-width" => "24",
+            ":percentage" =>"percentage",
+            "v-if" => "percentage < 100"
+        ])->setStyle("{position: absolute;top: 0;left: 0;z-index:-1;width: 100%;}") : '';
+
         $data = $formItemUpload->getForm()?->getId() ? $formItemUpload->getForm()?->getId() . '.' . $formItemUpload->getName() : $formItemUpload->getName();
         $table =  Table::create([], 'upts' . strtr($formItemUpload->getName(), ['.' => '_']))->addColumns(
-            Table\Column::normal('文件名', 'name'),
+            Table\Column::normal('文件名', 'name')->setFormat(
+                El::div()->setStyle("{position:relative;}")->append(
+                    El::elText("{{ name }}"),
+                    $progress
+                )
+            ),
             Table\Column::event('下载', '')->setAttr('width', 80)->setFormat(El::double('el-link')->setAttrs([
                 'type' => 'primary',
                 ':href' => 'url',

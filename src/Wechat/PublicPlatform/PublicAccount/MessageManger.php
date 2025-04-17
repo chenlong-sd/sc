@@ -72,12 +72,11 @@ class MessageManger
                 "MsgType"      => "text",                   // 是	消息类型，文本为text
                 "Content"      => $res,                     // 是	回复的消息内容（换行：在content中能够换行，微信客户端就支持换行显示）
             ];
-
-            if ($isEncrypt) {
-                $res = $this->messageEncrypt($res);
-            }
         }
 
+        if ($isEncrypt) {
+            $res = $this->messageEncrypt($res);
+        }
         return $res;
     }
 
