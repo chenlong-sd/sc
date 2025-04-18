@@ -49,6 +49,9 @@ class ExecutionProgress
 
     public function write(string $message): void
     {
+        if ($this->redis === true) {
+            return;
+        }
         if ($this->isBreak()) {
             throw new \Exception('已中断操作');
         }
@@ -57,6 +60,9 @@ class ExecutionProgress
 
     public function break(): void
     {
+        if ($this->redis === true) {
+            return;
+        }
         if (!$this->isBreak() && $this->isProcess()) {
             $this->redis->setnx(self::SIGNAL_KEY, self::SIGNAL_BREAK);
             $this->redis->lPush(self::PROGRESS_KEY, "中断操作");
@@ -65,6 +71,9 @@ class ExecutionProgress
 
     public function start(): void
     {
+        if ($this->redis === true) {
+            return;
+        }
         if (!$this->isBreak() && !$this->isProcess()) {
             $this->redis->setnx(self::SIGNAL_KEY, self::SIGNAL_PROCESS);
             return;

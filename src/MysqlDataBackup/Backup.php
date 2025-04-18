@@ -16,7 +16,7 @@ class Backup
      * @param string     $saveDir    备份文件保存位置
      * @param string     $verifyCode 重要操作验证码，验证码为10位字母数字组合，为验证码的md5值
      *                               例：md5('AbcdefGH10'), 此为示例，生产应为md5结果值
-     * @param mixed|\Redis $redis
+     * @param mixed|\Redis $redis    为 true 时，不记录备份进度
      *
      * @author chenlong<vip_chenlong@163.com>
      * @date   2023/6/17
@@ -27,7 +27,7 @@ class Backup
         private readonly string $verifyCode,
         private readonly mixed $redis = null) {
         try {
-            if (!$this->redis->isConnected()) {
+            if ($this->redis !== true && !$this->redis->isConnected()) {
                 throw new \Exception("无法链接redis,");
             }
         } catch (\Throwable $e) {
@@ -36,7 +36,20 @@ class Backup
         $this->progress = new ExecutionProgress($this->redis);
     }
 
-
+    /**
+     * @param array $postParam
+     * 空置时 返回页面
+     * $postParam['start'] 不为空时 执行备份,
+     * $postParam['tables'] 执行备份时需要传需要备份的数据库
+     * $postParam['cancel'] 不为空时 取消备份
+     * $postParam['remove'] 不为空时 删除备份文件
+     * $postParam['recover'] 不为空时 执行恢复
+     * $postParam['getRecover'] 不为空时 获取备份文件
+     * $postParam['getMessage'] 不为空时 获取当前备份明细
+     *
+     * @return array|string
+     * @throws \Exception
+     */
     public function render(array $postParam): array|string
     {
         // 默认返回html页面
