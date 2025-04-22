@@ -67,4 +67,5 @@ interface FormItemAttrGetter
     public function getClosePage();
     public function getRules();
     public function getOptionsRemote();
+    public function getIsArrayValue();
 }
