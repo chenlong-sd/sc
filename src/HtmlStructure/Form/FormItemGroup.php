@@ -75,6 +75,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
      */
     public function getDefault(): array
     {
+        if ($this->default) {
+            return $this->default;
+        }
+
         $childrenDefault = array_merge(...array_map(function ($v) {
             if ($v->getName()) {
                 return [$v->getName() => $v->getDefault()];
