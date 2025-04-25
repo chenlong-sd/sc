@@ -10,7 +10,7 @@ namespace Sc\Util;
  *
  * Trait ArrayDataGetter
  */
-trait ArrayDataGetter
+abstract class ArrayDataGetter implements \ArrayAccess
 {
     private array $__GetterData;
 
@@ -38,9 +38,7 @@ trait ArrayDataGetter
 
     private function childrenData($data): object
     {
-        return new class ($data) {
-            use ArrayDataGetter;
-
+        return new class ($data) extends ArrayDataGetter{
             public function __construct(array $data)
             {
                 $this->setGetterData($data);
@@ -51,5 +49,25 @@ trait ArrayDataGetter
     public function getData(): array
     {
         return $this->__GetterData;
+    }
+
+    public function offsetExists(mixed $offset): bool
+    {
+        return isset($this->__GetterData[$offset]);
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->__get($offset);
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        $this->__GetterData[$offset] = $value;
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+        unset($this->__GetterData[$offset]);
     }
 }
