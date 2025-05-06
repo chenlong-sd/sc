@@ -25,7 +25,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
  * @method static FormItemIcon icon(string $name = null, ?string $label = null)
  * @method static FormItemCascader cascader(string $name = null, ?string $label = null)
  * @method static FormItemInLine inLine(FormItemInterface ...$children)
- * @method static FormItemGroup group(FormItemInterface|string ...$children)
+ * @method static FormItemGroup group(FormItemInterface|string ...$children) 如果是字符串时则只识别两个参数为 label, name
  * @method static FormItemTable table(string $name = null, ?string $label = null)
  * @method static FormItemDatetime datetime(string $name = null, ?string $label = null)
  * @method static FormItemUpload upload(string $name = null, ?string $label = null)

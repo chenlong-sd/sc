@@ -19,6 +19,9 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
 {
     use FormOrigin, Events,LabelWidth;
 
+    const CLOSE_PAGE_CURRENT = 'current';
+    const CLOSE_PAGE_PARENT  = 'parent';
+
     protected string $createUrl = '';
     protected string $updateUrl = '';
     protected string $resetHandle = '';
@@ -27,7 +30,10 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     protected string $fail = '';
     protected string $success = '';
     protected string $successTipCode = 'this.$message.success("成功")';
-    protected array $closePage = ['page' => 'current', 'theme' => 'ElementUI'];
+    protected array $closePage = [
+        'page' => self::CLOSE_PAGE_CURRENT,
+        'theme' => Theme::THEME_ELEMENT_UI
+    ];
 
     /**
      * @param string $submitText
@@ -70,7 +76,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     /**
      * 成功关闭
      *
-     * @param string      $page
+     * @param string|null $page
      * @param string|null $theme
      *
      * @return $this
@@ -81,7 +87,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     ])] ?string $page, #[ExpectedValues([...Theme::AVAILABLE_THEME, null])] ?string $theme = null): static
     {
         if ($theme === null) {
-            $theme = $page == 'parent' ? 'Layui' : 'ElementUI';
+            $theme = $page == 'parent' ? Theme::THEME_LAYUI : Theme::THEME_ELEMENT_UI;
         }
 
         $this->closePage = compact('page', 'theme');

@@ -16,6 +16,7 @@ use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemSubmit;
 use Sc\Util\HtmlStructure\Html\Js\Obj;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSubmitThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Theme;
 
 class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmitThemeInterface
 {
@@ -62,15 +63,15 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
                 $successHandle = preg_replace("/^@strict/", '', $success);
             }else{
                 $closePage = $formItemSubmit->getClosePage();
-                if ($closePage['theme'] == "ElementUI") {
+                if ($closePage['theme'] == Theme::THEME_ELEMENT_UI) {
                     $closeCode = "VueApp.closeWindow()";
                 }else{
                     $closeCode = "layer.close(index);";
                 }
 
-                if ($closePage['page'] == 'parent') {
+                if ($closePage['page'] == FormItemSubmit::CLOSE_PAGE_PARENT) {
                     $closeCode = Js::code("parent.$closeCode");
-                    if ($closePage['theme'] != 'ElementUI') {
+                    if ($closePage['theme'] != Theme::THEME_ELEMENT_UI) {
                         $closeCode = Js::code(
                             Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
                             $closeCode
