@@ -59,6 +59,7 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
         if ($this->multiple && !is_array($default)) {
             $default = [];
         }
+        $this->setInitDefault($default);
         $this->default = $default;
 
         return $this;

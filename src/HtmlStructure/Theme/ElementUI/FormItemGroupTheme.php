@@ -60,7 +60,7 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             );
 
             Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous()->code(
-                JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.push", current($formItem->getDefault()))
+                JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.push", current($formItem->getInitDefault() ?: $formItem->getDefault()))
             ));
             Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_del", JsFunc::anonymous(['index'])->code(
                 JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.splice", '@index', 1)

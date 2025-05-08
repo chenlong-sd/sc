@@ -76,6 +76,13 @@ class Column
     private array $tip = [];
 
     /**
+     * 预设的内容后面追加显示的内容
+     *
+     * @var array
+     */
+    private array $appendContent = [];
+
+    /**
      * 导出设置信息
      *
      * @var array
@@ -575,5 +582,22 @@ class Column
     public function getExportExcel(): array
     {
         return $this->exportExcel;
+    }
+
+    public function getAppendContent(): array
+    {
+        return $this->appendContent;
+    }
+
+    /**
+     * 用于已经设置了展示内容的追加，如未设置展示内容，则使用 setFormat
+     *
+     * @param $content
+     * @return $this
+     */
+    public function appendContent($content): static
+    {
+        $this->appendContent[] = $content;
+        return $this;
     }
 }

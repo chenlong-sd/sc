@@ -3,6 +3,8 @@
 namespace Sc\Util;
 
 
+use Closure;
+
 /**
  * 已知数组利用对象的IDE提示来获取数据
  * 比如配置文件，配置文件可以利用这个特性来获取数据
@@ -10,40 +12,50 @@ namespace Sc\Util;
  *
  * Trait ArrayDataGetter
  */
-abstract class ArrayDataGetter implements \ArrayAccess
+abstract class ArrayDataGetter implements \ArrayAccess, \Iterator
 {
     private array $__GetterData;
 
-    protected function setGetterData(array $data): void
+    public function __construct(array $data)
     {
-        $this->__GetterData = $data;
+        $this->__GetterData = $this->dataConversion($data);
+    }
+
+    private function dataConversion(array $data): array
+    {
+        foreach ($data as &$value) {
+            if (is_array($value)) {
+                if (array_is_list($value)) {
+                    $value = $this->dataConversion($value);
+                } else {
+                    $value = $this->arrayDataGetter($value);
+                }
+            }
+        }
+
+        return $data;
+    }
+
+    public function toArray(): array
+    {
+        foreach ($this->__GetterData as &$value) {
+            if (!$value instanceof ArrayDataGetter){
+                continue;
+            }
+            $value = $value->toArray();
+        }
+
+        return $this->__GetterData;
     }
 
     public function __get(string $name)
     {
-        $data = $this->__GetterData[$name];
-        if (is_array($data)) {
-            if (!array_is_list($data)) {
-                $this->__GetterData[$name] = $this->childrenData($data);
-            }else{
-                $newData = [];
-                foreach ($data as $datum) {
-                    $newData[] = is_array($datum) ? $this->childrenData($datum) : $datum;
-                }
-                $this->__GetterData[$name] = $newData;
-            }
-        }
         return $this->__GetterData[$name];
     }
 
-    private function childrenData($data): object
+    private function arrayDataGetter($data): object
     {
-        return new class ($data) extends ArrayDataGetter{
-            public function __construct(array $data)
-            {
-                $this->setGetterData($data);
-            }
-        };
+        return new class ($data) extends ArrayDataGetter {};
     }
 
     public function getData(): array
@@ -58,16 +70,35 @@ abstract class ArrayDataGetter implements \ArrayAccess
 
     public function offsetGet(mixed $offset): mixed
     {
-        return $this->__get($offset);
+        return $this->__GetterData[$offset] ?? null;
     }
 
-    public function offsetSet(mixed $offset, mixed $value): void
+    public function offsetSet(mixed $offset, mixed $value): void {}
+
+    public function offsetUnset(mixed $offset): void{}
+
+    public function current(): mixed
     {
-        $this->__GetterData[$offset] = $value;
+        return current($this->__GetterData);
     }
 
-    public function offsetUnset(mixed $offset): void
+    public function next(): void
     {
-        unset($this->__GetterData[$offset]);
+        next($this->__GetterData);
+    }
+
+    public function key(): mixed
+    {
+        return key($this->__GetterData);
+    }
+
+    public function valid(): bool
+    {
+        return current($this->__GetterData) !== false;
+    }
+
+    public function rewind(): void
+    {
+        reset($this->__GetterData);
     }
 }

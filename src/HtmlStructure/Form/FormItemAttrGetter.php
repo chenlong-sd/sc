@@ -16,6 +16,7 @@ use Sc\Util\HtmlStructure\Form;
 interface FormItemAttrGetter
 {
     public function getDefault();
+    public function getInitDefault();
     public function getOptions();
     public function getFormat();
     public function getOptionsVarName();

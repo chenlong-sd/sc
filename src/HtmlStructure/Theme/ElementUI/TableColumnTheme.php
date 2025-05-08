@@ -58,6 +58,10 @@ class TableColumnTheme implements TableColumnThemeInterface
         $this->attrHandle($column->getAttr(), $columnEl);
         $this->tipHandle($column->getTip(), $columnEl);
 
+        $column->getAppendContent() and $columnEl->getChildrenByIndex(0)?->append(
+            ...$column->getAppendContent()
+        );
+
         return $columnEl;
     }
 
