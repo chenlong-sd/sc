@@ -5,6 +5,8 @@
 
 namespace Sc\Util\MysqlDataBackup;
 
+use Sc\Util\ScTool;
+
 class Backup
 {
     private ExecutionProgress $progress;
@@ -12,12 +14,13 @@ class Backup
     /**
      * BackUp constructor.
      *
-     * @param Connect    $connect    数据库连接信息
-     * @param string     $saveDir    备份文件保存位置
-     * @param string     $verifyCode 重要操作验证码，验证码为10位字母数字组合，为验证码的md5值
+     * @param Connect $connect 数据库连接信息
+     * @param string $saveDir 备份文件保存位置
+     * @param string $verifyCode 重要操作验证码，验证码为10位字母数字组合，为验证码的md5值
      *                               例：md5('AbcdefGH10'), 此为示例，生产应为md5结果值
-     * @param mixed|\Redis $redis    为 true 时，不记录备份进度
-     *
+     * @param mixed|\Redis $redis 为 true 时，不记录备份进度
+     * @param int $numberOfFilesToKeep
+     * @throws \Exception
      * @author chenlong<vip_chenlong@163.com>
      * @date   2023/6/17
      */
@@ -25,7 +28,9 @@ class Backup
         private readonly Connect $connect,
         private readonly string $saveDir,
         private readonly string $verifyCode,
-        private readonly mixed $redis = null) {
+        private readonly mixed $redis = null,
+        private readonly int $numberOfFilesToKeep = 30
+    ) {
         try {
             if ($this->redis !== true && !$this->redis->isConnected()) {
                 throw new \Exception("无法链接redis,");
@@ -217,6 +222,25 @@ class Backup
             $this->progress->write('备份结束');
             $this->progress->write('总耗时：' . (microtime(true) - $startTime));
             $this->progress->write('END');
+        }
+
+        $this->filesRetain();
+    }
+
+    private function filesRetain(): void
+    {
+        $files = ScTool::dir($this->saveDir)->getFiles();
+
+        if (count($files) <= $this->numberOfFilesToKeep) {
+            return;
+        }
+
+        $saveDir = realpath($this->saveDir);
+        usort($files, fn($a, $b) => filemtime($saveDir . DIRECTORY_SEPARATOR . $a) <=> filemtime($saveDir . DIRECTORY_SEPARATOR . $b));
+
+        $delNumber = count($files) - $this->numberOfFilesToKeep;
+        for ($i = 0; $i < $delNumber; $i++) {
+            unlink($saveDir . DIRECTORY_SEPARATOR . $files[$i]);
         }
     }
 

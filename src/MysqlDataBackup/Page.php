@@ -153,11 +153,11 @@ class Page
                 <template #header>备份数据</template> 
                 <div :style="{height:recoverHeight + 'px'}">
                     <el-scrollbar >
-                        <p v-for="item in backUpFile">
+                        <p v-for="(item, index) in backUpFile">
                             <span style="width: 300px;text-align: left; display: inline-block">
                                 <el-popover placement="left" title="备份信息" :width="400" trigger="hover">
                                     <template #reference>
-                                      <el-text class="mx-1">{{ item.filename }}</el-text>
+                                      <el-text class="mx-1">{{ index + 1 }}、{{ item.filename }}</el-text>
                                     </template>
                                     <template #default>
                                         <el-scrollbar :height="500">

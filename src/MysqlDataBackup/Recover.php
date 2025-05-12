@@ -5,6 +5,7 @@
 
 namespace Sc\Util\MysqlDataBackup;
 
+use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
 class Recover
@@ -66,7 +67,7 @@ class Recover
     {
         $backUpData = [];
         if (is_dir($saveDir)) {
-            Tool::dir($saveDir)->each(function (Tool\Dir\EachFile $file) use (&$backUpData){
+            ScTool::dir($saveDir)->each(function (Tool\Dir\EachFile $file) use (&$backUpData){
                 $handle = fopen($file->filepath, 'r');
                 $des = [];
                 while ($con = fgets($handle)) {
@@ -80,10 +81,14 @@ class Recover
                 fclose($handle);
                 $filesize = bcmul($filesize, '1', 0);
                 $backUpData[] = [
+                    'filemtime' => filemtime($file->filepath),
                     'filename' => $file->filename,
                     'filesize' => bcdiv($filesize, 1024 * 1024, 2)  . ' MB',
                     'des'      => $des
                 ];
+            });
+            usort($backUpData, function ($a, $b) {
+                return  $b['filemtime'] <=> $a['filemtime'];
             });
         }
 
