@@ -760,45 +760,56 @@ class TableTheme implements TableThemeInterface
                 ));
             }
         }
-        $formatCode->default(Js::code("row.push(data.data.data[j][keys[i]])"));
+        $formatCode->default(Js::code("row.push(data[j][keys[i]])"));
 
         $query['is_export'] = 1;
+
+        Html::js()->vue->addMethod('excelWrite', JsFunc::anonymous(['data'])->code(
+            Js::let("titlesMap", $titles),
+            Js::let("showMap", $showMap),
+            Js::let("keys", "@Object.keys(titlesMap)"),
+            Js::let('exportData', []),
+            Js::for("let j = 0; j < data.length; j++")->then(
+                Js::let("row", []),
+                Js::for("let i = 0; i < keys.length; i++")->then(
+                    Js::if("showMap.hasOwnProperty(keys[i])")->then(
+                        Js::code("row.push(showMap[keys[i]][data[j][keys[i]]])"),
+                    )->else(
+                        Js::code($useKeys ? "let { ". implode(', ', array_unique($useKeys)) ." } = data[j];" : ""),
+                        $formatCode->toCode()
+                    )
+                ),
+                Js::code('exportData.push(row)')
+            ),
+            Js::let("worksheet", "@XLSX.utils.json_to_sheet(exportData)"),
+            Js::let("workbook", "@XLSX.utils.book_new()"),
+            Js::code('XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")'),
+            Js::code('XLSX.utils.sheet_add_aoa(worksheet, [Object.values(titlesMap)], { origin: "A1" })'),
+            Js::code("XLSX.writeFile(workbook, '{$table->getExcelFilename()}.xlsx', { compression: true })")
+        ));
+
+
         return JsFunc::anonymous()->code(
             Js::let("loading", JsService::loading()),
             Js::let('query', '@{}'),
+            Js::if("this.{$dataVarName}Selection.length > 0")->then(
+                JsFunc::call("this.excelWrite", "@this.{$dataVarName}Selection"),
+                Js::code("loading.close();"),
+                Js::code('return;')
+            ),
             Axios::get(
                 url: Js::grammar("this.{$dataVarName}Url()"),
                 query: $query
             )->then(JsFunc::arrow(["{ data }"], Js::code(
-                Js::code("loading.close();"),
                 Js::if('data.code === 200')->then(
                     Js::if("data.data.data.length <= 0")->then(
                         "return;"
                     ),
-                    Js::let("titlesMap", $titles),
-                    Js::let("showMap", $showMap),
-                    Js::let("keys", "@Object.keys(titlesMap)"),
-                    Js::let('exportData', []),
-                    Js::for("let j = 0; j < data.data.data.length; j++")->then(
-                        Js::let("row", []),
-                        Js::for("let i = 0; i < keys.length; i++")->then(
-                            Js::if("showMap.hasOwnProperty(keys[i])")->then(
-                                Js::code("row.push(showMap[keys[i]][data.data.data[j][keys[i]]])"),
-                            )->else(
-                                Js::code($useKeys ? "let { ". implode(', ', array_unique($useKeys)) ." } = data.data.data[j];" : ""),
-                                $formatCode->toCode()
-                            )
-                        ),
-                        Js::code('exportData.push(row)')
-                    ),
-                    Js::let("worksheet", "@XLSX.utils.json_to_sheet(exportData)"),
-                    Js::let("workbook", "@XLSX.utils.book_new()"),
-                    Js::code('XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")'),
-                    Js::code('XLSX.utils.sheet_add_aoa(worksheet, [Object.values(titlesMap)], { origin: "A1" })'),
-                    Js::code("XLSX.writeFile(workbook, '{$table->getExcelFilename()}.xlsx', { compression: true })")
+                    JsFunc::call("this.excelWrite", '@data.data.data')
                 )->else(
                     "this.\$message.warning(data.msg)"
-                )
+                ),
+                Js::code("loading.close();"),
             )))
         );
     }
@@ -863,7 +874,7 @@ class TableTheme implements TableThemeInterface
                 $for->then($this->exportFormatHandle($element->getContent(), $useKeys, $forFormat));
                 $code->then(Js::let($forFormat, []))
                     ->then($for)
-                    ->then("$saveVar.push($forFormat.join(''));");
+                    ->then("$saveVar.push($forFormat.join('；'));");
             } else {
                 $code->then($if ?: '')->then(JsFunc::call("$saveVar.push", $currentCode));
                 $if = null;
