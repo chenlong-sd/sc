@@ -140,13 +140,20 @@ class ClassFileResolve
             }
             $value = $this->classNameValueResolve($classFileConstruction, $value);
             $constant = new Constant($name);
-            $constant->setValue($value);
             $constant->setDocBlockComment($classConstant->getDocComment());
             $constant->setPublicScope($classConstant->isPrivate() ? "private" : ($classConstant->isProtected() ? "protected" : "public"));
             $constant->setIsFinal($classConstant->isFinal());
 
             if ($reflectionClass->isEnum() && is_object($value)) {
                 $constant->setIsEnum(true);
+                $value = $value->{"value"};
+            }
+            $constant->setValue($value);
+
+            foreach ($classConstant->getAttributes() as $attribute) {
+                $propertyAttribute = new Attribute($classFileConstruction->getAppropriateClassName($attribute->getName()));
+                array_map(fn($param) => $propertyAttribute->addParam($param), $attribute->getArguments());
+                $constant->addAttribute($propertyAttribute);
             }
 
             $constants[] = $constant;

@@ -11,9 +11,7 @@ class DocComment
 
     public function __construct(string|array $docComment)
     {
-        if ($docComment) {
-            $this->handle($docComment);
-        }
+        $this->setDocComment($docComment);
     }
 
     private function handle($docComment): void
@@ -24,6 +22,18 @@ class DocComment
         $docComment = array_filter($docComment, fn($v) => trim($v) !== '/**' && trim($v) !== '*/' && trim($v) !== '/');
 
         $this->docComment = $docComment;
+    }
+
+    public function setDocComment(string|array $document): void
+    {
+        if ($document) {
+            $this->handle($document);
+        }
+    }
+
+    public function addDocComment(string $comment): void
+    {
+        $this->docComment[] = preg_replace('/^\s*\**\s*/', '', trim($comment));
     }
 
     public function getCode(): array

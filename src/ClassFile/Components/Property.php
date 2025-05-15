@@ -127,4 +127,9 @@ class Property
     {
         return $this->name;
     }
+
+    public function getDefault(): mixed
+    {
+        return $this->default;
+    }
 }

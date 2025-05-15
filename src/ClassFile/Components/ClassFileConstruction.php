@@ -19,7 +19,9 @@ class ClassFileConstruction
      * @var array |Method[]
      */
     private array $methods = [];
-
+    /**
+     * @var array|Constant[]
+     */
     private array $constants = [];
 
     private array $traits = [];
@@ -33,8 +35,15 @@ class ClassFileConstruction
     private ?DocComment $docBlock = null;
 
     private ?string $extends = '';
+
+    /**
+     * @var array|string[]
+     */
     private array $implements = [];
 
+    /**
+     * @var array|Attribute[]
+     */
     private array $attributes = [];
 
     private array $classFileContent = [];
@@ -129,6 +138,11 @@ class ClassFileConstruction
         }
 
         return $content;
+    }
+
+    public function getCode(): string
+    {
+        return $this->out();
     }
 
     private function traitsOut(): string
@@ -304,6 +318,19 @@ class ClassFileConstruction
         return $this;
     }
 
+    /**
+     * @param string $attributeName
+     * @return false|mixed|Attribute|null
+     */
+    public function getAttribute(string $attributeName): mixed
+    {
+        $filter = array_filter($this->attributes, function ($attribute) use ($attributeName) {
+            return $attribute->getName() === $attributeName;
+        });
+
+        return current($filter) ?: null;
+    }
+
     public function addMethods(Method|callable ...$classMethods): ClassFileConstruction
     {
         foreach ($classMethods as $method) {
@@ -405,6 +432,11 @@ class ClassFileConstruction
     public function getProperties(): array
     {
         return $this->properties;
+    }
+
+    public function getProperty(string $name)
+    {
+        return current(array_filter($this->properties, fn($property) => $property->getName() === $name)) ?: null;
     }
 
     public function removeClassProperties(string ...$name): void
@@ -526,6 +558,16 @@ class ClassFileConstruction
     public function getGlobalClassname(): string
     {
         return $this->getNamespace() . '\\' . $this->getName();
+    }
+
+    public function getDocBlock(): ?DocComment
+    {
+        return $this->docBlock;
+    }
+
+    public function getConstants(): array
+    {
+        return $this->constants;
     }
 
 }

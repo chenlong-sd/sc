@@ -17,6 +17,9 @@ class Constant
 
     protected bool $isFinal = false;
     protected bool $isEnum = false;
+    /**
+     * @var array|Attribute[]
+     */
     protected array $attributes = [];
 
     public function __construct(private readonly string $name)
@@ -87,6 +90,15 @@ class Constant
         return $this;
     }
 
+    /**
+     * @param string $attribute
+     * @return false|Attribute|null
+     */
+    public function getAttribute(string $attribute)
+    {
+        return current(array_filter($this->attributes, fn($attr) => $attr->getName() === $attribute)) ?: null;
+    }
+
     public function setPublicScope(string $publicScope): Constant
     {
         $this->publicScope = $publicScope === 'public' ? '' : $publicScope . ' ';
@@ -109,5 +121,20 @@ class Constant
     {
         $this->isEnum = $isEnum;
         return $this;
+    }
+
+    public function getValue(): mixed
+    {
+        return $this->value;
+    }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getAttributes(): array
+    {
+        return $this->attributes;
     }
 }
