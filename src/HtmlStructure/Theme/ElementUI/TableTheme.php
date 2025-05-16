@@ -441,8 +441,9 @@ class TableTheme implements TableThemeInterface
 
         // 如需自定义，重新设置JS变量值就可以了
 
+        $paginationConfig = $table->getPaginationConfig();
         Html::js()->vue->set("{$table->getId()}Page", 1);
-        Html::js()->vue->set("{$table->getId()}PageSize", 50);
+        Html::js()->vue->set("{$table->getId()}PageSize", $paginationConfig['pageSize'] ?? 50);
 
         $pagination = El::double('el-pagination')->setAttrs([
             'background'      => '',
@@ -450,7 +451,7 @@ class TableTheme implements TableThemeInterface
             ':total'          => "{$table->getId()}Total",
             ':current-page'   => "{$table->getId()}Page",
             ':page-size'      => "{$table->getId()}PageSize",
-            ':page-sizes'     => "[10, 15, 20, 50, 100, 200, 500, 1000]",
+            ':page-sizes'     => json_encode(empty($paginationConfig['pageSizes']) ? [10, 15, 20, 50, 100, 200, 500, 1000] : $paginationConfig['pageSizes']),
             "@current-change" => "{$table->getId()}PageChange",
             "@size-change"    => "{$table->getId()}SizeChange",
         ]);

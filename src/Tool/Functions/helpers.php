@@ -24,3 +24,30 @@ if (! function_exists('kv_to_form_options')) {
         return $result;
     }
 }
+
+if (! function_exists('h')){
+    /**
+     * 创建标签
+     *
+     * @param string $tag
+     * @param string|Stringable|array|null $content
+     * @param array $attrs
+     * @return mixed|\Sc\Util\HtmlElement\ElementType\DoubleLabel|\Sc\Util\HtmlElement\ElementType\SingleLabel
+     */
+    function h(string $tag, string|\Stringable|array $content = null, array $attrs = [])
+    {
+        if (in_array($tag, \Sc\Util\HtmlElement\ElementType\SingleLabel::PREDEFINE_LABEL)){
+            $el = \Sc\Util\HtmlElement\El::single($tag);
+        }else{
+            $el = \Sc\Util\HtmlElement\El::double($tag);
+        }
+        if ($attrs){
+            $el->setAttrs($attrs);
+        }
+        if ($content && $el instanceof \Sc\Util\HtmlElement\ElementType\DoubleLabel){
+            is_array($content) ? $el->setAttrs($content) : $el->append($content);
+        }
+
+        return $el;
+    }
+}

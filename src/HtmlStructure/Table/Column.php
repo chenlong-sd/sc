@@ -6,7 +6,7 @@ use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
-use Sc\Util\HtmlElement\ElementType\FictitiousLabel;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
@@ -226,11 +226,13 @@ class Column
         return $this;
     }
 
-    private function arrayFormat(array $data): FictitiousLabel
+    private function arrayFormat(array $data): DoubleLabel
     {
-        $el = El::fictitious();
+        $el = h('div');
         foreach ($data as $des => $value) {
-            $el->append(El::double('div')->append(El::double('b')->append($des))->append($value));
+            $el->append(
+                h('div', h('b', $des))->append($value)
+            );
         }
         return $el;
     }
@@ -488,8 +490,8 @@ class Column
         } else if (str_contains($name, 'time')) {
             $formItem = FormItem::datetime($name)
                 ->setVAttrs([
-                    'start-placeholder' => "开始时间",
-                    'end-placeholder'   => "结束时间",
+                    'start-placeholder' => "起始" . $this->attrs['label'],
+                    'end-placeholder'   => "结束" . $this->attrs['label'],
                 ])
                 ->setTimeType('datetimerange')->valueFormat();
         } else if (str_contains($name, 'date')) {

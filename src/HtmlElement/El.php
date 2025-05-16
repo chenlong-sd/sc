@@ -44,6 +44,7 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
  * @method static DoubleLabel elTable(string|AbstractHtmlElement $content = '', array $attr = [])
  * @method static DoubleLabel elForm(string|AbstractHtmlElement $content = '', array $attr = [])
  * @method static DoubleLabel elButton(string|AbstractHtmlElement $content = '', array $attr = [])
+ * @method static DoubleLabel elLink(string|AbstractHtmlElement $content = '', array $attr = [])
  *
  * @package Sc\Util\HtmlElement
  * @date    2023/4/14

@@ -131,6 +131,7 @@ class Table
      * @var string|null
      */
     private ?string $excelFilename = null;
+    private array $paginationConfig = [];
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -266,6 +267,12 @@ class Table
     public function setPagination(bool $open): static
     {
         $this->openPagination = $open;
+        return $this;
+    }
+
+    public function setPaginationConfig(int $pageSize, array $pageSizes = []): static
+    {
+        $this->paginationConfig = compact('pageSize', 'pageSizes');
         return $this;
     }
 
@@ -537,5 +544,10 @@ class Table
     public function getExcelFilename(): ?string
     {
         return $this->excelFilename;
+    }
+
+    public function getPaginationConfig(): array
+    {
+        return $this->paginationConfig;
     }
 }
