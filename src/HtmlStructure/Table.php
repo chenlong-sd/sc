@@ -505,6 +505,19 @@ class Table
     }
 
     /**
+     * setDraw 的别名
+     *
+     * @param string|AbstractHtmlElement|array $element
+     * @param callable|JsCode|string $updateCallable
+     * @param array $sortConfig
+     * @return void
+     */
+    public function openDraw(string|AbstractHtmlElement|array $element = "@primary.rank.", callable|JsCode|string $updateCallable = "", array $sortConfig = []): void
+    {
+        $this->setDraw($element, $updateCallable, $sortConfig);
+    }
+
+    /**
      * 启用回收站
      *
      * @param string|null $recoverUrl 恢复数据地址，不填则没有恢复数据操作
