@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlElement\ElementType;
 
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementHandle\ElementQuery;
+use Sc\Util\HtmlElement\ElementHandle\GetPHPCode;
 
 /**
  * 抽象元素
@@ -171,5 +172,15 @@ abstract class AbstractHtmlElement
     public function getRetraction(): int
     {
         return $this->retraction;
+    }
+
+    /**
+     * @param int $retraction
+     * @return string
+     * @throws \Exception
+     */
+    public function getPHPCode(int $retraction = 1): string
+    {
+        return (new GetPHPCode($this))->getPHPCode($retraction);
     }
 }

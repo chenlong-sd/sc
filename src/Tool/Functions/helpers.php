@@ -51,3 +51,16 @@ if (! function_exists('h')){
         return $el;
     }
 }
+
+if (! function_exists('t')){
+    /**
+     * 纯文本
+     *
+     * @param string $text
+     * @return \Sc\Util\HtmlElement\ElementType\TextCharacters
+     */
+    function t(string $text): \Sc\Util\HtmlElement\ElementType\TextCharacters
+    {
+        return \Sc\Util\HtmlElement\El::text($text);
+    }
+}

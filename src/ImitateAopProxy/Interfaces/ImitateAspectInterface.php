@@ -3,7 +3,7 @@
 namespace Sc\Util\ImitateAopProxy\Interfaces;
 
 /**
- * 切面注解
+ * 切面接口
  *
  * Interface ImitateAspectInterface
  */
