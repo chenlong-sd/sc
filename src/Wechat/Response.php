@@ -44,13 +44,13 @@ class Response
         return $this->errcode;
     }
 
-    public function getData(string $key = null): mixed
+    public function getData(string $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
             return $this->data;
         }
 
-        return $this->data[$key] ?? null;
+        return $this->data[$key] ?? $default;
     }
 
     public function getRaw(): mixed

@@ -37,7 +37,7 @@ class Tool
             'uri'       => $canonicalUrl,
             'timestamp' => time(),
             'nonce_str' => md5(microtime()),
-            'body'      => $method === 'GET' ? '' : json_encode($body)
+            'body'      => $method === 'GET' ? '' : json_encode($body, JSON_UNESCAPED_UNICODE)
         ];
 
         $signature    = $this->getSignature($signArr);

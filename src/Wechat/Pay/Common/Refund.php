@@ -108,7 +108,13 @@ class Refund
 
         $sign = Tool::config($this->config)->v3Sign(self::HOST, $data, 'POST');
 
-        return Request::postV3(self::HOST, $data, $sign);
+        $response = Request::postV3(self::HOST, $data, $sign);
+
+        if (!$response->getData('refund_id')){
+            throw new WechatException('微信支付退款失败:  ' . $response->getData('message', '未知'));
+        }
+
+        return $response;
     }
 
     /**
