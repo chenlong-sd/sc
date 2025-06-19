@@ -261,5 +261,10 @@ class Js
     {
         return new JsSwitch($param);
     }
+
+    public static function call(#[Language("JavaScript")] string $funcName, ...$params): Js\Obj
+    {
+        return JsFunc::call($funcName, ...$params);
+    }
 }
 

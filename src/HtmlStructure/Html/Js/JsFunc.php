@@ -136,8 +136,12 @@ class JsFunc
         $params = $this->params;
 
         array_walk_recursive($params, function (&$value) {
-            if (is_numeric($value) || ($value instanceof \Stringable && str_starts_with(get_class($value), 'Sc\\Util\\HtmlStructure\\Html\\Js'))){
+            if (is_numeric($value)
+                || ($value instanceof \Stringable && str_starts_with(get_class($value), 'Sc\\Util\\HtmlStructure\\Html\\Js'))
+            ){
                 $value = Grammar::mark($value);
+            }elseif (is_string($value) && str_starts_with($value, '@')){
+                $value = Grammar::mark(mb_substr($value, 1));
             }
         });
 
