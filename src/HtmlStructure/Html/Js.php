@@ -266,5 +266,16 @@ class Js
     {
         return JsFunc::call($funcName, ...$params);
     }
+
+    public static function return($data): JsCode
+    {
+        if (is_array($data)) {
+            $data = json_encode($data, JSON_UNESCAPED_UNICODE);
+        } elseif (is_object($data)) {
+            $data = (string)$data;
+        }
+
+        return Js::code("return $data;");
+    }
 }
 

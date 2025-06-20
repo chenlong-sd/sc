@@ -34,9 +34,11 @@ if (! function_exists('h')){
      * @param array $attrs
      * @return mixed|\Sc\Util\HtmlElement\ElementType\DoubleLabel|\Sc\Util\HtmlElement\ElementType\SingleLabel
      */
-    function h(string $tag, string|\Stringable|array $content = null, array $attrs = [])
+    function h(string $tag = '', string|\Stringable|array $content = null, array $attrs = [])
     {
-        if (in_array($tag, \Sc\Util\HtmlElement\ElementType\SingleLabel::PREDEFINE_LABEL)){
+        if ($tag == ''){
+            $el = \Sc\Util\HtmlElement\El::fictitious();
+        }else if (in_array($tag, \Sc\Util\HtmlElement\ElementType\SingleLabel::PREDEFINE_LABEL)){
             $el = \Sc\Util\HtmlElement\El::single($tag);
         }else{
             $el = \Sc\Util\HtmlElement\El::double($tag);
