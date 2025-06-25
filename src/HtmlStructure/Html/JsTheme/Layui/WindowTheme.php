@@ -46,9 +46,11 @@ class WindowTheme implements WindowThemeInterface
             $originCode = $baseConfig['success']->code;
         }
         $code->then(JsVar::def("childrenWin"));
+        $window = empty($baseConfig['parent']) ? 'window' : "parent";
         $baseConfig['success'] = JsFunc::anonymous(['layero', 'index', 'that'], <<<JS
             layero.find('.layui-layer-content').css('background', 'white')
-            childrenWin = window[layero.find('iframe')[0]['name']];
+            let childrenWin = {$window}[layero.find('iframe')[0]['name']];
+            childrenWin.LayerIndex = index;
             $originCode;
         JS);
 
