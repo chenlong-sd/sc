@@ -76,7 +76,8 @@ class WindowTheme implements WindowThemeInterface
 
         $this->registerCloseWindow();
 
-        return $code->then(JsVar::assign("this.$vModel", true));
+        return $code->then(JsVar::assign("this.$vModel", true))
+            ->then("this.\$nextTick(() => { {$window->getAfterOpen()} })");
     }
 
     /**

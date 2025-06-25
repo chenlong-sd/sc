@@ -20,8 +20,6 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
      */
     public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $formItem->getDefault() or $formItem->default([]);
-
         $base = $this->getBaseEl($formItem);
 
         if (!$optionsVar = $formItem->getOptionsVarName()) {
@@ -29,13 +27,19 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
         }
 
-        $box = El::double('el-checkbox-group')->setAttr('v-model', $this->getVModel($formItem))
-            ->setAttrs($formItem->getVAttrs());
         $checkbox = El::double('el-checkbox')->setAttrs([
             'v-for'   => "(item, index) in $optionsVar",
-            ':label'  => 'item.value',
+            ':value'  => 'item.value',
             ':disabled' => "item.disabled"
         ])->append('{{ item.label }}');
+        if (count($formItem->getOptions()) == 1 && !$formItem->getOptionsVarName()){
+            $box = El::fictitious();
+            $checkbox->setAttrs($formItem->getVAttrs())
+                ->setAttr('v-model', $this->getVModel($formItem));
+        }else{
+            $box = El::double('el-checkbox-group')->setAttr('v-model', $this->getVModel($formItem))
+                ->setAttrs($formItem->getVAttrs());
+        }
 
         $checkbox->setAttrs($formItem->getOptionsAttrs());
 

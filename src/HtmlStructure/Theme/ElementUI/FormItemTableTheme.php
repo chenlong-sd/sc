@@ -8,10 +8,12 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\TextCharacters;
+use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Form\FormItemSelect;
 use Sc\Util\HtmlStructure\Form\FormItemTable;
+use Sc\Util\HtmlStructure\Form\FormItemText;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -45,27 +47,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
                 $child->setVAttrs('style', 'width:100%');
             }
             $el->addColumns(
-                Table\Column::normal($child->getLabel(), $child->getName())->setAttr($formItem->getColumnAttrs($index))->setFormat(
-                    $child->render("ElementUI")->each(function (AbstractHtmlElement $element){
-                        if ($element instanceof TextCharacters) {
-                            preg_replace_callback("/\{\{(.*)}}/", function ($match) use ($element) {
-                                $element->setText(sprintf("{{ %s }}", preg_replace("/(?<!\w|\.)\w/", '@$0', $match[1])));
-                            }, $element->getText());
-                            return;
-                        }
-
-                        foreach ($element->getAttrs() as $attr => $value) {
-                            if (preg_match('/^[v:@]/', $attr)) {
-                                if ($attr === 'v-for') {
-                                    $element->setAttr($attr, preg_replace("/\w+$/", '@$0', $value));
-                                    continue;
-                                }
-
-                                $element->setAttr($attr, preg_replace("/(?<!\w|\.)\w/", '@$0', $value));
-                            }
-                        }
-                    })->find('el-form-item')->getContent()
-                )
+                $this->getColumn($child, $formItem, $index)
             );
         }
 
@@ -93,8 +75,11 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         foreach ($formItemTable->getChildren() as $index => $child) {
             $child->setVAttrs(':ref', "'{$table->getId()}I$index' + scope.\$index");
-            $child->setVAttrs('@focus', "$allowAdd = true");
-            $child->setVAttrs('@blur', "$allowAdd = false");
+            if ($child instanceof FormItemText) {
+                $child->setVAttrs('@focus', "$allowAdd = true");
+                $child->setVAttrs('@blur', "$allowAdd = false");
+            }
+
             if ($child->getName()) {
                 $rowDefault[$child->getName()] = $child->getDefault();
             }
@@ -111,7 +96,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         Html::js()->vue->addMethod($method, [], Js::code(
             Js::let('defaultRows', $rowDefault),
             Js::code('defaultRows._id_ = "it-" + Math.random();'),
-            JsFunc::call("this.{$this->getVModel($formItemTable)}.push", '@defaultRows'),
+            Js::call("this.{$this->getVModel($formItemTable)}.push", '@defaultRows'),
             Js::code("this.\$nextTick(() => this.\$refs['{$table->getId()}I0' + (this.{$this->getVModel($formItemTable)}.length - 1)].focus())")
         ));
 
@@ -141,35 +126,33 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         Html::css()->addCss('.sc-ft-h:hover{cursor: pointer}');
 
         $table->addColumns(
-            Table\Column::event('操作')->setAttr('width', 80)->setFormat(El::fictitious()->append(
-                El::double('el-icon')->addClass('sc-ft-draw')->addClass('sc-ft-h')->append(El::double('rank')),
-                El::double('el-icon')->addClass('sc-ft-delete')->addClass('sc-ft-h')->append(El::double('delete'))
+            Table\Column::event('操作')->setAttr('width', 80)->setFormat(h([
+                h('el-icon', h('rank'))->addClass('sc-ft-draw sc-ft-h'),
+                h('el-icon', h('delete'))->addClass('sc-ft-delete sc-ft-h')
                     ->setAttr('@click', "@tableFormRowDel(@scope, @{$table->getData()})"),
-            ))
+            ]))
         );
 
-        Html::js()->vue->event('mounted', Js::code(
-            Js::let("ElTable{$table->getId()}", "@this.\$refs['{$table->getId()}']"),
+        $formItem->getForm()->addAfterRender(Js::call("this.Draw{$table->getId()}"));
+
+        Html::js()->vue->addMethod("Draw{$table->getId()}", [], Js::code(
+            Js::if("!this.\$refs['{$table->getId()}']")->then(
+                Js::return("")
+            ),
             Js::let("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
             JsFunc::call('new Sortable', "@ElDraw{$table->getId()}", [
                 "handle"    => ".sc-ft-draw",
                 "animation" => 150,
                 'onUpdate'  => JsFunc::arrow(['evt'])->code(
-                    "const currRow = this.{$table->getData()}.splice(evt.oldIndex, 1)[0];",
-                    "this.{$table->getData()}.splice(evt.newIndex, 0, currRow)"
+                    Js::let('currRow', "@this.{$table->getData()}.splice(evt.oldIndex, 1)[0];"),
+                    Js::code("this.{$table->getData()}.splice(evt.newIndex, 0, currRow)")
                 )
             ])
         ));
 
-        Html::js()->vue->event('created', Js::code(
-            JsFunc::call('setTimeout', JsFunc::arrow()->code(
-//                JsCode::make("this.{$this->getVModel($formItem)}[0]")
-            ), 20)
-        ));
-
         Html::js()->vue->addMethod('tableFormRowDel', ['scope', 'data'], Js::code(
-            'let index = scope.$index',
-            "this.{$table->getData()}.splice(index, 1)"
+            Js::code('let index = scope.$index'),
+            Js::code("this.{$table->getData()}.splice(index, 1)")
         ));
     }
 
@@ -189,5 +172,38 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
                 "delete data.{$formItemTable->getName()}[i]._id_;"
             )
         ));
+    }
+
+    /**
+     * @param mixed|FormItemAttrGetter|AbstractFormItem $child
+     * @param FormItemTable|FormItemAttrGetter $formItem
+     * @param int|string $index
+     * @return Table\Column
+     */
+    private function getColumn(mixed $child, FormItemTable|FormItemAttrGetter $formItem, int|string $index): Table\Column
+    {
+        $format = $child->render("ElementUI")->each(function (AbstractHtmlElement $element) {
+            if ($element instanceof TextCharacters) {
+                preg_replace_callback("/\{\{(.*)}}/", function ($match) use ($element) {
+                    $element->setText(sprintf("{{ %s }}", preg_replace("/(?<!\w|\.)\w/", '@$0', $match[1])));
+                }, $element->getText());
+                return;
+            }
+
+            foreach ($element->getAttrs() as $attr => $value) {
+                if (preg_match('/^[v:@]/', $attr)) {
+                    if ($attr === 'v-for') {
+                        $element->setAttr($attr, preg_replace("/\w+$/", '@$0', $value));
+                        continue;
+                    }
+
+                    $element->setAttr($attr, preg_replace("/(?<!\w|\.)\w/", '@$0', $value));
+                }
+            }
+        })->find('el-form-item')->getContent();
+
+        return Table\Column::normal($child->getLabel(), $child->getName())
+            ->setAttr($formItem->getColumnAttrs($index))
+            ->setFormat($format);
     }
 }

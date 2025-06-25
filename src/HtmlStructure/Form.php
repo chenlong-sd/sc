@@ -31,6 +31,7 @@ class Form
     private array $formItems = [];
     private array $submitHandle = [];
     private array $extraData = [];
+    private array $afterRender = [];
 
     private bool $readonly = false;
 
@@ -211,5 +212,16 @@ class Form
     {
         $this->readonly = $readonly;
         return $this;
+    }
+
+    public function addAfterRender(\Stringable|string $afterRenderCode): static
+    {
+        $this->afterRender[] = $afterRenderCode;
+        return $this;
+    }
+
+    public function getAfterRender(): string
+    {
+        return implode(";\n", $this->afterRender);
     }
 }

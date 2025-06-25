@@ -34,6 +34,8 @@ class FormTheme implements FormThemeInterface
         $items  = array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems());
         $el->append(El::double('el-row')->append(...$items));
 
+        Html::js()->vue->event("mounted", $form->getAfterRender(), true);
+
         return $el;
     }
 

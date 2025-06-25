@@ -29,13 +29,15 @@ if (! function_exists('h')){
     /**
      * 创建标签
      *
-     * @param string $tag
+     * @param string|array $tag
      * @param string|Stringable|array|null $content
      * @param array $attrs
      * @return mixed|\Sc\Util\HtmlElement\ElementType\DoubleLabel|\Sc\Util\HtmlElement\ElementType\SingleLabel
      */
-    function h(string $tag = '', string|\Stringable|array $content = null, array $attrs = [])
+    function h(string|array $tag = '', string|\Stringable|array $content = null, array $attrs = [])
     {
+        if (is_array($tag)) return \Sc\Util\HtmlElement\El::fictitious()->append(...$tag);
+
         if ($tag == ''){
             $el = \Sc\Util\HtmlElement\El::fictitious();
         }else if (in_array($tag, \Sc\Util\HtmlElement\ElementType\SingleLabel::PREDEFINE_LABEL)){
