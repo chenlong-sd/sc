@@ -24,6 +24,7 @@ class Window
     private ?VueComponentInterface $component = null;
     protected array $rowData = [];
     protected ?JsCode $beforeOpen = null;
+    protected ?JsCode $afterOpen = null;
     private string $id = '';
     private ?Window $mountIframeInfo = null;
 
@@ -248,5 +249,19 @@ class Window
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function afterOpen(?JsCode $afterOpen): Window
+    {
+        $this->afterOpen = $afterOpen;
+        return $this;
+    }
+
+    /**
+     * @return JsCode|null
+     */
+    public function getAfterOpen(): ?JsCode
+    {
+        return $this->afterOpen;
     }
 }

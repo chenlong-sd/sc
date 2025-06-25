@@ -53,7 +53,29 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
 
     private function submitEvent(FormItemSubmit|FormItemAttrGetter $formItemSubmit, string $formId): void
     {
-        if (!$submitHandle = $formItemSubmit->getSubmitHandle()){
+        $closePage = $formItemSubmit->getClosePage();
+        if ($closePage['theme'] == Theme::THEME_ELEMENT_UI) {
+            $closeCode = "VueApp.closeWindow()";
+        }else{
+            $closeCode = "layer.close(index);";
+        }
+
+        if ($closePage['page'] == FormItemSubmit::CLOSE_PAGE_PARENT) {
+            $closeCode = Js::code("parent.$closeCode");
+            if ($closePage['theme'] != Theme::THEME_ELEMENT_UI) {
+                $closeCode = Js::code(
+                    Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
+                    $closeCode
+                );
+            }
+        }
+
+        if ($submitHandle = $formItemSubmit->getSubmitHandle()){
+            $submitHandle = Js::code(
+                $submitHandle,
+                $closeCode
+            );
+        }else{
             Html::js()->vue->set("{$formId}Url", '');
             Html::js()->vue->set("{$formId}CreateUrl", $formItemSubmit->getCreateUrl());
             Html::js()->vue->set("{$formId}UpdateUrl", $formItemSubmit->getUpdateUrl());
@@ -62,50 +84,33 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             if (str_contains($success, '@strict ')){
                 $successHandle = preg_replace("/^@strict/", '', $success);
             }else{
-                $closePage = $formItemSubmit->getClosePage();
-                if ($closePage['theme'] == Theme::THEME_ELEMENT_UI) {
-                    $closeCode = "VueApp.closeWindow()";
-                }else{
-                    $closeCode = "layer.close(index);";
-                }
-
-                if ($closePage['page'] == FormItemSubmit::CLOSE_PAGE_PARENT) {
-                    $closeCode = Js::code("parent.$closeCode");
-                    if ($closePage['theme'] != Theme::THEME_ELEMENT_UI) {
-                        $closeCode = Js::code(
-                            Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
-                            $closeCode
-                        );
-                    }
-                }
-
                 $successHandle = Js::code($formItemSubmit->getSuccessTipCode())
                     ->then($success)
                     ->then("this.{$formId}Reset()")
                     ->then($closeCode);
             }
 
-
-            $submitHandle = Axios::post(
-                url: Js::grammar("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
-                data: "@data"
-            )->then(JsFunc::arrow(['{ data }'])->code(
-                Js::if('data.code === 200', $successHandle, 'this.$message.error(data.msg)'),
-                $formItemSubmit->getFail()
-            ))->catch(JsFunc::arrow(['error'])->code(
-                Js::code('console.log(error)')->then('this.$message.error(error)')
-            ))->finally(JsFunc::arrow()->code(Js::assign("this.{$formId}Loading", false)));
+            $submitHandle = Js::code(
+                Js::assign("this.{$formId}Loading", true),
+                Axios::post(
+                    url: Js::grammar("data.id ? this.{$formId}UpdateUrl : this.{$formId}CreateUrl"),
+                    data: "@data"
+                )->then(JsFunc::arrow(['{ data }'])->code(
+                    Js::if('data.code === 200', $successHandle, 'this.$message.error(data.msg)'),
+                    $formItemSubmit->getFail()
+                ))->catch(JsFunc::arrow(['error'])->code(
+                    Js::code('console.log(error)')->then('this.$message.error(error)')
+                ))->finally(JsFunc::arrow()->code(
+                    Js::assign("this.{$formId}Loading", false))
+                )
+            );
         }
 
         Html::js()->vue->addMethod($formId . "Submit", [], Js::code(
             Js::let('data', "@this.{$formItemSubmit->getFormModel()}"),
             $formItemSubmit->getForm()->getSubmitHandle(),
-            $this->verifyData($formItemSubmit->getForm(), Js::code(
-                Js::assign("this.{$formId}Loading", true),
-                $submitHandle
-            ))
-        ),
-        );
+            $this->verifyData($formItemSubmit->getForm(), $submitHandle)
+        ),);
     }
 
     private function resetEvent(FormItemSubmit|FormItemAttrGetter $formItemSubmit, string $formId): void

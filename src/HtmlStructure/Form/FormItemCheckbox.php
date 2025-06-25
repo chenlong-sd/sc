@@ -31,7 +31,7 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
      */
     public function getDefault(): mixed
     {
-        return $this->default ?: [];
+        return $this->default === null ? [] : $this->default;
     }
 
 //    public function readonly(): static
