@@ -37,6 +37,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         $elements = $this->addHandle($formItem, $el);
 
         $el->setPagination(false);
+        $el->setOpenSetting(false);
 
         $this->dataSortIdKeyHandle($el, $formItem);
 
