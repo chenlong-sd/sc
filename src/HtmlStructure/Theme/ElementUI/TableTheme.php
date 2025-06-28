@@ -53,15 +53,6 @@ class TableTheme implements TableThemeInterface
             $attrs['ref'] = $table->getId();
         }
 
-        if (empty($attrs['header-cell-class-name'])) {
-            Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
-            $attrs['header-cell-class-name'] = 'vue--table-header-center';
-        }
-        if (empty($attrs['cell-class-name'])) {
-            Html::css()->addCss('.el-table .el-table__cell.vue--table-row-center{text-align: center;}');
-            $attrs['cell-class-name'] = 'vue--table-row-center';
-        }
-
         $attrs['style'] = ($attrs['style'] ?? '') . ';margin-top:5px';
         if ($sortMethod = $this->sortHandle($table)) {
             $attrs['@sort-change'] = $sortMethod;
@@ -169,14 +160,13 @@ class TableTheme implements TableThemeInterface
                     "name" => $label,
                     "show" => true,
                     "fixed" => $column->getFixedPosition(),
-                    "align" => 'center',
+                    "align" => $column->getAttr('align', 'center'),
                     "width" => $column->getAttr('width') ?? null,
                 ];
 
                 $column->setAttr("width", null);
                 $column->setAttr("fixed", null);
                 $column->setAttr("align", null);
-                $column->setAttr("AAA", 'AAA');
             }
 
             $content = $form->setData([
@@ -359,7 +349,9 @@ class TableTheme implements TableThemeInterface
             $eventColumn = Column::event()->fixed();
             $table->addColumns($eventColumn);
         }
-
+        if (!$eventColumn->getAttr('align')){
+            $eventColumn->align('center');
+        }
         $eventColumn->setFormat(El::fictitious()->append(...$eventLabels));
     }
 

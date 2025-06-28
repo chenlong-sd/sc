@@ -523,15 +523,7 @@ class Column
 
     public function align(#[ExpectedValues(['center', 'left', 'right'])] string $align): static
     {
-        if (!$className = $this->getAttr('class-name')) {
-            Html::css()->addCss(".el-table .sc-table-left{text-align: left!important;}");
-            Html::css()->addCss(".el-table .sc-table-right{text-align: right!important;}");
-
-            $this->setAttr('class-name', 'sc-table-' . $align);
-        }else{
-            Html::css()->addCss(".el-table .$className{text-align: $align!important;}");
-        }
-
+        $this->attrs['align'] = $align;
         return $this;
     }
 
