@@ -139,7 +139,8 @@ class TableTheme implements TableThemeInterface
                     ->setColumnAttrs(0, ['width' => '120px'])
                     ->setColumnAttrs(1, ['width' => '120px']),
                 Form\FormItem::submit("保存设置", '')->setSubmit(Js::code(
-                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))")
+                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))"),
+                    Js::code("localStorage.setItem(window.location.pathname + '@{$table->getId()}', JSON.stringify(this.$settingFormVarName))")
                 ))->successClose('current')
             );
 
@@ -176,7 +177,12 @@ class TableTheme implements TableThemeInterface
             ])->render();
 
             Html::js()->vue->event('created', Js::code(
-                Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))")
+                Js::if("localStorage.getItem(window.location.pathname + '@{$table->getId()}')")->then(
+                    Js::assign("this.$settingVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
+                    Js::assign("this.$settingFormVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
+                )->else(
+                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))")
+                )
             ));
 
             return Table\EventHandler::window("设置")->setConfig(['width' => "800px"])

@@ -21,14 +21,20 @@ class XlsWriter extends Excel implements ExcelInterface
      * @var null|int
      */
     private ?int $startNumber = null;
+    /**
+     * @var mixed|string
+     */
+    private string $filename;
 
-    public function __construct(array|string $config)
+    public function __construct(string $filepath)
     {
-        if (is_string($config)) {
-            $config = ['path' => $config];
-        }
+        $config = ['path' => dirname($filepath)];
+        $this->filename = basename($filepath);
+
 
         parent::__construct($config);
+
+        $this->fileName($this->filename);
     }
 
     /**
@@ -125,6 +131,8 @@ class XlsWriter extends Excel implements ExcelInterface
     }
 
     /**
+     * 插入数据
+     *
      * @param string       $cell 'A1'
      * @param string|array $data 为数组的时候， 以 cell 为起点，依次往后面列写入
      * @param string|null  $format
@@ -238,14 +246,14 @@ class XlsWriter extends Excel implements ExcelInterface
     }
 
     /**
-     * @param string $filename
-     * @param ResponseInterface $response
+     * @param string|null $filename
+     * @param mixed|null $response
      * @return void
      */
-    public function download(string $filename, $response = null): void
+    public function download(string $filename = null, mixed $response = null): void
     {
         $filepath = $this->output();
-
+        $filename = $filename ?: $this->filename;
         if ($response) {
             if ($response instanceof ResponseInterface) {
                 $response->download($filepath, $filename);
@@ -285,11 +293,11 @@ class XlsWriter extends Excel implements ExcelInterface
 
     public function save(): void
     {
-        $filepath = $this->output();
+        $this->output();
     }
 
-    public function getData(string $filepath, string $sheetName = null): array
+    public function getData(string $filepath = null, string $sheetName = null): array
     {
-        return $this->openFile($filepath)->openSheet($sheetName)->getSheetData();
+        return $this->openFile($filepath ?: $this->filename)->openSheet($sheetName)->getSheetData();
     }
 }
