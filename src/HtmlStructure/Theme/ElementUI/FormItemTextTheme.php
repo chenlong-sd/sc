@@ -63,6 +63,10 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
 
         $this->addEvent($input, $formItemText->getEvents(), $formItemText->getName());
 
+        foreach ($formItemText->getSlots() as $name => $slot) {
+            $input->append(h('template', $slot, ['#' . $name => '']));
+        }
+
         return $base->append($input);
     }
 

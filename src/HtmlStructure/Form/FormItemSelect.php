@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\Slots;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSelectThemeInterface;
@@ -23,7 +24,7 @@ use Sc\Util\Tool\Url;
  */
 class FormItemSelect extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate;
+    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate, Slots;
 
     /**
      * @var true

@@ -71,6 +71,10 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
 
         $this->addEvent($select, $formItem->getEvents(), $formItem->getName());
 
+        foreach ($formItem->getSlots() as $slotName => $slot) {
+            $select->append(h('template', $slot, ['#' . $slotName => '']));
+        }
+
         return $base->append($select->append($options));
     }
 
