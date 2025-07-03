@@ -132,6 +132,12 @@ class Table
      */
     private ?string $excelFilename = null;
     private array $paginationConfig = [];
+    /**
+     * 开启表格设置
+     *
+     * @var bool
+     */
+    private bool $openSetting = true;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -562,5 +568,16 @@ class Table
     public function getPaginationConfig(): array
     {
         return $this->paginationConfig;
+    }
+
+    public function setOpenSetting(bool $openSetting): Table
+    {
+        $this->openSetting = $openSetting;
+        return $this;
+    }
+
+    public function getOpenSetting(): bool
+    {
+        return $this->openSetting;
     }
 }

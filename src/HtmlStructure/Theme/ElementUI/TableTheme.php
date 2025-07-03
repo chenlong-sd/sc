@@ -37,6 +37,10 @@ class TableTheme implements TableThemeInterface
     {
         $el = El::double('el-table');
 
+        if ($table->getOpenSetting()){
+            $this->tableSettingHandle($table);
+        }
+
         $attrs = $table->getAttrs();
         if (empty($attrs['v-loading']) && is_string($table->getData())) {
             $attrs['v-loading'] = $table->getId() . 'Loading';
@@ -49,15 +53,6 @@ class TableTheme implements TableThemeInterface
             $attrs['ref'] = $table->getId();
         }
 
-        if (empty($attrs['header-cell-class-name'])) {
-            Html::css()->addCss('.vue--table-header-center{text-align: center !important;}');
-            $attrs['header-cell-class-name'] = 'vue--table-header-center';
-        }
-        if (empty($attrs['cell-class-name'])) {
-            Html::css()->addCss('.el-table .el-table__cell.vue--table-row-center{text-align: center;}');
-            $attrs['cell-class-name'] = 'vue--table-row-center';
-        }
-
         $attrs['style'] = ($attrs['style'] ?? '') . ';margin-top:5px';
         if ($sortMethod = $this->sortHandle($table)) {
             $attrs['@sort-change'] = $sortMethod;
@@ -66,14 +61,13 @@ class TableTheme implements TableThemeInterface
         $this->heightRestrictions($table, $attrs);
 
         $attrs = array_merge($attrs, ['highlight-current-row' => '']);
-
         $el->setAttr(':data', $dataVarName);
         $el->setAttrs($attrs);
 
         $this->rowEventHandle($table);
         $headerEl = $this->headerEventHandle($table);
 
-        $el->append(...array_map(fn($column) => $column->render('ElementUI'), $table->getColumns()));
+        $el->append($this->columnElHandle($table));
 
         $this->trashHandle($table, $el, $headerEl);
 
@@ -84,6 +78,120 @@ class TableTheme implements TableThemeInterface
 
         return El::fictitious()->append($search, $headerEl, $el, $pagination);
     }
+
+    private function columnElHandle(Table $table)
+    {
+        if (!$table->getOpenSetting()){
+            return h(array_map(fn($column) => $column->render('ElementUI'), $table->getColumns()));
+        }
+
+        $columns = $table->getColumns();
+        $eventColumn = array_pop($columns);
+        $settingVarName = "{$table->getId()}Setting";
+
+        $template = h('template', ['v-for' => "sett in $settingVarName.table_columns"])->setChildren(
+            array_map(fn($column) => $column->render('ElementUI'), $columns)
+        );
+
+        if ($eventColumn->getAttr('mark-event')){
+            return h([
+                $template,
+                $eventColumn->render('ElementUI')
+            ]);
+        }
+
+        $template->append($eventColumn->render('ElementUI'));
+
+        return $template;
+    }
+
+
+    private function tableSettingHandle(Table $table): void
+    {
+        $settingVarName = "{$table->getId()}Setting";
+        $settingFormVarName = "{$table->getId()}FormSetting";
+        $table->setAttr(':border', "{$settingVarName}.dividing_line");
+        $table->setAttr(':stripe', "{$settingVarName}.stripe");
+
+        $table->setHeaderRightEvent("@info.Setting.列设置", function () use ($table, $settingVarName, $settingFormVarName){
+            $form = Form::create($settingFormVarName)->addFormItems(
+                Form\FormItem::checkbox("dividing_line", '表格分割线')->col(6)->options(["开启"])->default(false),
+                Form\FormItem::checkbox("stripe", '表格斑马纹')->col(6)->options(["开启"])->default(false),
+                Form\FormItem::table("table_columns", '表格列')->addItems(
+                    Form\FormItem::customize("{{ scope.row.name }}")->setLabel('列名称'),
+                    Form\FormItem::checkbox("show", '是否展示')->options(['展示']),
+                    Form\FormItem::text("width", '宽度')->placeholder('自动'),
+                    Form\FormItem::select("fixed", '固定位置')->options([
+                        "left" => "左侧",
+                        "right" => "右侧",
+                    ]),
+                    Form\FormItem::select("align", '对齐')->options([
+                        "left" => "左对齐",
+                        "center" => "居中对齐",
+                        "right" => "右对齐",
+                    ])
+                )->beforeRender(function (DoubleLabel $element){
+                    $element->find(".sc-ft-delete")?->remove();
+                    $element->find(".sc-ft-add")?->getParent()?->remove();
+                    $element->find("el-form-item el-col")->remove();
+                    $element->find("[mark-event]")->setAttr('label', '排序');
+                })
+                    ->setColumnAttrs(0, ['width' => '120px'])
+                    ->setColumnAttrs(1, ['width' => '120px']),
+                Form\FormItem::submit("保存设置", '')->setSubmit(Js::code(
+                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))"),
+                    Js::code("localStorage.setItem(window.location.pathname + '@{$table->getId()}', JSON.stringify(this.$settingFormVarName))")
+                ))->successClose('current')
+            );
+
+            $settingDefault = [];
+            foreach ($table->getColumns() as $column) {
+                if ($column->getAttr('mark-event')) continue;
+                if (!$label = $column->getAttr('label')){
+                    $label = $column->getAttr('type') == 'selection' ? '选择列' : "";
+                    $column->setAttr(':show-overflow-tooltip', 'false');
+                }
+
+                $column->setAttr(':align', "sett.align");
+                $column->setAttr('v-if', "sett.show && sett.name == '$label'");
+                $column->setAttr(':fixed', "sett.fixed");
+                $column->setAttr(':width', "sett.width");
+
+                $settingDefault[] = [
+                    "name" => $label,
+                    "show" => true,
+                    "fixed" => $column->getFixedPosition(),
+                    "align" => $column->getAttr('align', 'center'),
+                    "width" => $column->getAttr('width') ?? null,
+                ];
+
+                $column->setAttr("width", null);
+                $column->setAttr("fixed", null);
+                $column->setAttr("align", null);
+            }
+
+            $content = $form->setData([
+                "dividing_line" => false,
+                "stripe" => false,
+                "table_columns" => $settingDefault
+            ])->render();
+
+            Html::js()->vue->event('created', Js::code(
+                Js::if("localStorage.getItem(window.location.pathname + '@{$table->getId()}')")->then(
+                    Js::assign("this.$settingVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
+                    Js::assign("this.$settingFormVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
+                )->else(
+                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))")
+                )
+            ));
+
+            return Table\EventHandler::window("设置")->setConfig(['width' => "800px"])
+                ->beforeOpen(Js::code(Js::assign("row" ,"@this.$settingFormVarName")))
+                ->setContent($content)
+                ->afterOpen(Js::code($form->getAfterRender()));
+        });
+    }
+
 
     private function drawHandle(Table $table): void
     {
@@ -247,7 +355,9 @@ class TableTheme implements TableThemeInterface
             $eventColumn = Column::event()->fixed();
             $table->addColumns($eventColumn);
         }
-
+        if (!$eventColumn->getAttr('align')){
+            $eventColumn->align('center');
+        }
         $eventColumn->setFormat(El::fictitious()->append(...$eventLabels));
     }
 

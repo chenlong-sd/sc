@@ -19,9 +19,9 @@ class Spreadsheet implements ExcelInterface
     private array                                 $columnKeys = [];
     private ?int                                   $startNumber = null;
 
-    public function __construct(array|string $config)
+    public function __construct(string $filepath)
     {
-        $this->filepath = $config;
+        $this->filepath = $filepath;
 
         $this->spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
     }
@@ -214,12 +214,13 @@ class Spreadsheet implements ExcelInterface
 
     /**
      * @param string $filename
-     * @param ResponseInterface $response
+     * @param mixed|null $response
      * @return void
      */
-    public function download(string $filename, $response = null): void
+    public function download(string $filename = null, mixed $response = null): void
     {
         $this->save();
+        $filename = $filename ?: basename($this->filepath);
 
         if ($response) {
             if ($response instanceof ResponseInterface) {
@@ -264,9 +265,9 @@ class Spreadsheet implements ExcelInterface
         $xlsx->save($this->filepath);
     }
 
-    public function getData(string $filepath, string $sheetName = null): array
+    public function getData(string $filepath = null, string $sheetName = null): array
     {
-        $this->spreadsheet = IOFactory::load($this->filepath . $filepath);
+        $this->spreadsheet = IOFactory::load($filepath ?: $this->filepath);
         return $sheetName
             ? $this->spreadsheet->getSheetByName($sheetName)->toArray()
             : $this->spreadsheet->getActiveSheet()->toArray();

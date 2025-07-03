@@ -36,7 +36,7 @@ class TableColumnTheme implements TableColumnThemeInterface
     public function render(Column $column): AbstractHtmlElement
     {
         $columnEl = El::double('el-table-column');
-        if ($column->getFixedPosition()) {
+        if ($column->getFixedPosition() && !$column->getAttr(':fixed')) {
             $column->setAttr('fixed', $column->getFixedPosition());
         }
         if ($column->getSortField()) {
