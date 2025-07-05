@@ -109,16 +109,24 @@ abstract class AbstractFormItemTheme
                 Js::assign("this.$varName", "@{$remote['valueCode']}")
             );
             if (!empty($remote['valueName']) || !empty($remote['labelName'])) {
-                $map = JsFunc::call("this.$varName.map", JsFunc::arrow(['item'])->code(
-                    empty($remote['valueName']) ? "" : Js::assign("item.value", "@item.{$remote['valueName']}"),
-                    empty($remote['labelName']) ? "" : Js::assign("item.label", "@item.{$remote['labelName']}"),
-                ));
+                $dataCode->then(
+                    Js::let("map", JsFunc::arrow(['d'])->code(
+                        Js::return(Js::call("d.map", JsFunc::arrow(['item'])->code(
+                            empty($remote['valueName']) ? "" : Js::assign("item.value", "@item.{$remote['valueName']}"),
+                            empty($remote['labelName']) ? "" : Js::assign("item.label", "@item.{$remote['labelName']}"),
+                            Js::if("item.children && item.children.length > 0")->then(
+                                Js::assign("item.children", Js::call("map", "@item.children"))
+                            ),
+                            Js::return("item")
+                        )))
+                    ))
+                );
 
-                $dataCode->then($map);
+                $dataCode->then(Js::assign("this.$varName", Js::call("map", "@this.$varName")));
             }
 
-            if (empty($formItem->getEvents()['blur'])) {
-                $formItem->on('blur', "refresh{$varName}()");
+            if (empty($formItem->getEvents()['visible-change'])) {
+                $formItem->on('visible-change', "refresh{$varName}()");
             }
 
             Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success($dataCode));

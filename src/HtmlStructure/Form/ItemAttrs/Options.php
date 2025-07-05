@@ -57,13 +57,13 @@ trait Options
 
     /**
      * @param string      $url
-     * @param string      $valueCode 获取值的js代码，默认为返回的 data.data值
+     * @param string      $valueCode 获取值的js代码，默认为返回的 data.data.data值
      * @param string|null $valueName value对应的字段名
      * @param string|null $labelName label对应的字段名
      *
      * @return $this
      */
-    public function remoteGetOptions(string $url, string $valueCode = "data.data", string $valueName = null, string $labelName = null): static
+    public function remoteGetOptions(string $url, string $valueCode = "data.data.data", string $valueName = null, string $labelName = null): static
     {
         $this->optionsRemote = compact('url', 'valueCode', 'valueName', 'labelName');
 

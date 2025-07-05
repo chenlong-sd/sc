@@ -29,6 +29,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
      * @var true
      */
     protected bool $isArrayValue = false;
+    /**
+     * @var callable
+     */
+    private $callback = null;
 
     public function __construct(FormItemInterface|string ...$children)
     {
@@ -67,6 +71,12 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
+        if ($this->callback) {
+            $this->children = array_map(function ($v) {
+                return ($this->callback)($v);
+            }, $this->children);
+        }
+
         return Theme::getRenderer(FormItemGroupThemeInterface::class, $theme)->render($this);
     }
 
@@ -144,6 +154,13 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             $child->readonly();
         }
 
+        return $this;
+    }
+
+
+    public function each(callable $callback)
+    {
+        $this->callback = $callback;
         return $this;
     }
 }

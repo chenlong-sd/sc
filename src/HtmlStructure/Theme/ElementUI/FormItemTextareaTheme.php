@@ -28,9 +28,16 @@ class FormItemTextareaTheme extends AbstractFormItemTheme implements FormItemTex
             'placeholder' => $formItem->getPlaceholder(),
             'type'        => 'textarea',
             ':rows'       => 4
-        ])->setAttrs($formItem->getVAttrs());
-
-        $this->addEvent($input, $formItem->getEvents(), $formItem->getName());
+        ]);
+        if ($formItem instanceof FormItemTextarea) {
+            $input->setAttrs($formItem->getVAttrs());
+            $this->addEvent($input, $formItem->getEvents(), $formItem->getName());
+        }else{
+            $input = h([
+                $input,
+                h('el-text', '提示：请安装富文本编辑器插件[UEditorPlus]')
+            ]);
+        }
 
         return $base->append($input);
     }

@@ -15,6 +15,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\UploadUrl;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemEditorThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTextareaThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 
 class FormItemEditor extends AbstractFormItem implements FormItemInterface
@@ -61,7 +62,11 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
         // 隐藏logo
         Html::css()->addCss('#fr-logo{ display: none; }.fr-popup.fr-active{ z-index: 5 !important; }');
 
-        return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);
+        try {
+            return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);
+        } catch (\Throwable $throwable) {
+            return Theme::getRenderer(FormItemTextareaThemeInterface::class, $theme)->render($this);
+        }
     }
 
     /**
