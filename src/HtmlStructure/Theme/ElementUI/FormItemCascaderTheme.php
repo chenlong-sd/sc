@@ -34,7 +34,8 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
             'v-model'  => $this->getVModel($formItem),
             'placeholder' => $formItem->getPlaceholder(),
             ':options' => $optionsVar,
-            'style'    => 'width:100%'
+            'style'    => 'width:100%',
+            'clearable' => ''
         ])->setAttrs($formItem->getVAttrs());
 
         $this->setOptions($formItem, $optionsVar);
