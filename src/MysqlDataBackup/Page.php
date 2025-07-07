@@ -27,10 +27,10 @@ class Page
 
     public function render(): string
     {
-        $layout    = Layout::create(["gutter" => 5, 'style' => 'width:1400px;margin:auto;']);
+        $layout    = Layout::create([":gutter" => 5, 'style' => 'width:1400px;margin:auto;']);
         $tablesBox = El::double('el-scrollbar')->setAttr(':height', "windowHeight");
         $msgBox    = clone $tablesBox;
-        $recoverBox    = clone $tablesBox;
+        $recoverBox = clone $tablesBox;
 
         $this->tablesShowRender($tablesBox);
         $this->messageShowCard($msgBox);
@@ -51,7 +51,7 @@ class Page
         $tables = Query::getTables($this->connect);
 
         $checkboxAll = FormItem::checkbox('checkAll')->options([1 => "全选"])->event('change', JsFunc::anonymous([],
-            JsCode::if('this.checkAll.length > 0',
+            JsCode::if('this.checkAll',
                 'this.tables = this.tablesOptions.map(v => v.value);',
                 'this.tables = []'
             )
@@ -63,7 +63,7 @@ class Page
                 ->setAttr('v-for', '(item, index) in tablesOptions');
         });
 
-        Html::js()->vue->set('checkAll', []);
+        Html::js()->vue->set('checkAll', false);
         Html::js()->vue->set('tables', []);
         Html::js()->vue->set('tablesOptions', array_map(function ($value) {
             return [

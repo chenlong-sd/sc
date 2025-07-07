@@ -32,9 +32,11 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             ':value'  => 'item.value',
             ':disabled' => "item.disabled"
         ])->append('{{ item.label }}');
+
+        $isBoolValue = false;
         if (count($formItem->getOptions()) == 1 && !$formItem->getOptionsVarName()){
-            $box = El::fictitious();
-            $checkbox->setAttrs($formItem->getVAttrs())
+            $isBoolValue = true;
+            $box = $checkbox->setAttrs($formItem->getVAttrs())
                 ->setAttr('v-model', $this->getVModel($formItem));
         }else{
             $box = El::double('el-checkbox-group')->setAttr('v-model', $this->getVModel($formItem))
@@ -48,6 +50,6 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
         $this->addEvent($box, $formItem->getEvents(), $formItem->getName());
 
 
-        return $base->append($box->append($checkbox));
+        return $base->append($isBoolValue ? $box : $box->append($checkbox));
     }
 }
