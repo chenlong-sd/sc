@@ -7,6 +7,7 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructure\Html\Common;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -41,15 +42,16 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
 
         $options['events']['contentChanged'] = JsFunc::anonymous([], "VueApp." . "{$this->getVModel($formItemEditor)} = $varName.html.get()");
 
+        $defJsFnBase64Decode = Common::defJsFnBase64Decode();
         // 创建编辑器
         $editor = Js::let($varName, JsFunc::call('new FroalaEditor', "div#{$editorId}",
             $options
             , JsFunc::anonymous([],
                 Js::code($formItemEditor->getFullScreen() ? "$varName.fullscreen.toggle()" : '')
-                    ->then("$varName.html.set(`{$formItemEditor->getDefault()}`)")
+                    ->then(Js::call("$varName.html.set", Js::call($defJsFnBase64Decode, base64_encode($formItemEditor->getDefault()))))
             )));
 
-        Html::js()->vue->event('created', JsFunc::call('setTimeout', JsFunc::arrow([], $editor)));
+        Html::js()->vue->event('created', $editor, true);
 
         return El::div()->setId($editorId);
     }
