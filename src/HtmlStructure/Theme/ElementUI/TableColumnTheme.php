@@ -275,14 +275,13 @@ class TableColumnTheme implements TableColumnThemeInterface
         }
 
         $content = $template->getChildren();
+        if ($getEmptyShowTemplate instanceof TextCharacters && count($content) == 1 && $content[0]->getLabel() == 'el-link') {
+            $getEmptyShowTemplate = $content[0]->copy()->setChildren($getEmptyShowTemplate);
+        }
 
         $template->setChildren([
-            El::double('template')->setAttr('v-if', "scope.row.{$column->getAttr('prop')}")->setChildren($content),
-            El::double('template')->setAttr('v-else')->append(
-                $getEmptyShowTemplate instanceof TextCharacters
-                    ? El::double('el-text')->append($getEmptyShowTemplate)
-                    : $getEmptyShowTemplate
-            )
+            h('template')->setAttr('v-if', "scope.row.{$column->getAttr('prop')}")->setChildren($content),
+            h('template')->setAttr('v-else')->append($getEmptyShowTemplate)
         ]);
     }
 
