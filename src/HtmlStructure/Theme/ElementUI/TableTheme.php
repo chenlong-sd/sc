@@ -247,7 +247,7 @@ class TableTheme implements TableThemeInterface
     {
         $id   = $table->getId();
         $data = $table->getData();
-        $dataVarName = $id ?: Tool::random('table')->get();
+        $dataVarName = $id ?: ScTool::random('table')->get();
         $table->setId($dataVarName);
 
         // 设置数据变量和数组总数变量

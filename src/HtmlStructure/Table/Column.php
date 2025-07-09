@@ -498,8 +498,8 @@ class Column
             $formItem = FormItem::datetime($name)
                 ->setTimeType('daterange')
                 ->setVAttrs([
-                    'start-placeholder' => "开始日期",
-                    'end-placeholder'   => "结束日期",
+                    'start-placeholder' => "起始" . $this->attrs['label'],
+                    'end-placeholder'   => "结束" . $this->attrs['label'],
                 ])
                 ->valueFormat('YYYY-MM-DD');
         } else if ($type === 'in') {
