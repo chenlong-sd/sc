@@ -196,6 +196,39 @@ class Tree
         return $this;
     }
 
+    /**
+     * 获取指定节点的数据
+     *
+     * @param mixed $nodeValue 节点值
+     * @param array|null $nodes
+     * @return Tree|null
+     */
+    public function getNode(mixed $nodeValue, array $nodes = null): ?Tree
+    {
+        // 若未提供节点数组，从根数据开始
+        if ($nodes === null) {
+            $nodes = $this->data;
+        }
+
+        // 遍历当前层级的所有节点
+        foreach ($nodes as $node) {
+            // 检查当前节点是否为目标节点
+            if (isset($node[$this->node]) && $node[$this->node] === $nodeValue) {
+                return new self([$node], true);
+            }
+
+            // 递归检查子节点数组
+            if (isset($node[$this->childrenNode]) && is_array($node[$this->childrenNode])) {
+                $result = $this->getNode($nodeValue, $node[$this->childrenNode]);
+                if ($result !== null) {
+                    return $result;
+                }
+            }
+        }
+
+        return null;
+    }
+
 
     /**
      * 数据键的节点字段，默认无

@@ -276,13 +276,13 @@ class TableTheme implements TableThemeInterface
             Html::js()->vue->addMethod('getUrlSearch', [], Js::code(
                 Js::let('urlSearch'),
                 Js::if('this.urlSearch')
-                    ->then(Js::code(
+                    ->then(
                         Js::assign('urlSearch', '@this.urlSearch.substring(1)'),
                         Js::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
-                    ))->else(
+                    )->else(
                         Js::assign('urlSearch', '')
                     ),
-                Js::code('return urlSearch;')
+                Js::return('urlSearch')
             ));
 
             $query = [
@@ -809,7 +809,7 @@ class TableTheme implements TableThemeInterface
     {
         return Js::code(
             Js::if('!notLoading')->then(
-                Js::assign("this." . $table->getId() . "Loading", true)
+                Js::assign("this.{$table->getId()}Loading", true)
             ),
             Js::assign('query', '@query ? query : {}'),
             Axios::get(
@@ -817,13 +817,14 @@ class TableTheme implements TableThemeInterface
                 query: $query
             )->then(JsFunc::arrow(["{ data }"], Js::code(
                 Js::assign("this.{$table->getId()}Loading", false),
-                Js::if('data.code === 200')
-                    ->then(
-                        Js::assign("this.{$dataVarName}", '@data.data.data'),
+                Js::if('data.code === 200')->then(
+                    Js::assign("this.{$dataVarName}", '@data.data.data'),
+                    Js::if("this.{$dataVarName}Page === 1")->then(
                         Js::assign("this.{$dataVarName}Total", '@data.data.total')
-                    )->else(
-                        "this.\$message.warning(data.msg)"
                     )
+                )->else(
+                    "this.\$message.warning(data.msg)"
+                )
             )))
         );
     }
@@ -832,9 +833,9 @@ class TableTheme implements TableThemeInterface
     {
         return Js::code(
             Js::if("this.{$dataVarName}Page")->then(
-                Js::code("return this.{$dataVarName}.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
+                Js::return(strtr("this.#v.slice((this.#vPage - 1) * this.#vPageSize, this.#vPageSize)", ['#v' => $dataVarName])),
             ),
-            Js::code("return this.{$dataVarName};")
+            Js::return("this.{$dataVarName};")
         );
     }
 
@@ -899,14 +900,13 @@ class TableTheme implements TableThemeInterface
             Js::code("XLSX.writeFile(workbook, '{$table->getExcelFilename()}.xlsx', { compression: true })")
         ));
 
-
         return JsFunc::anonymous()->code(
             Js::let("loading", JsService::loading()),
             Js::let('query', '@{}'),
             Js::if("this.{$dataVarName}Selection.length > 0")->then(
-                JsFunc::call("this.excelWrite", "@this.{$dataVarName}Selection"),
+                Js::call("this.excelWrite", "@this.{$dataVarName}Selection"),
                 Js::code("loading.close();"),
-                Js::code('return;')
+                Js::return()
             ),
             Axios::get(
                 url: Js::grammar("this.{$dataVarName}Url()"),
@@ -914,11 +914,11 @@ class TableTheme implements TableThemeInterface
             )->then(JsFunc::arrow(["{ data }"], Js::code(
                 Js::if('data.code === 200')->then(
                     Js::if("data.data.data.length <= 0")->then(
-                        "return;"
+                        Js::return()
                     ),
-                    JsFunc::call("this.excelWrite", '@data.data.data')
+                    Js::call("this.excelWrite", '@data.data.data')
                 )->else(
-                    "this.\$message.warning(data.msg)"
+                    Js::call("this.\$message.warning", '@data.msg')
                 ),
                 Js::code("loading.close();"),
             )))

@@ -247,9 +247,9 @@ class Js
         return JsLog::print($log);
     }
 
-    public static function code(#[Language('JavaScript')] string ...$name): JsCode
+    public static function code(#[Language('JavaScript')] string ...$code): JsCode
     {
-        return JsCode::make(...$name);
+        return JsCode::make(...$code);
     }
 
     public static function grammar(#[Language("JavaScript")] string $jsCode, #[ExpectedValues(['grammar', 'line'])] string $mode = 'grammar'): string
@@ -262,12 +262,12 @@ class Js
         return new JsSwitch($param);
     }
 
-    public static function call(#[Language("JavaScript")] string $funcName, ...$params): Js\Obj
+    public static function call(#[Language("JavaScript")] string $func, ...$params): Js\Obj
     {
-        return JsFunc::call($funcName, ...$params);
+        return JsFunc::call($func, ...$params);
     }
 
-    public static function return($data): JsCode
+    public static function return(#[Language("JavaScript")] $data = null): JsCode
     {
         if (is_array($data)) {
             $data = json_encode($data, JSON_UNESCAPED_UNICODE);

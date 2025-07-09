@@ -18,6 +18,8 @@ trait Options
     protected array $optionsAttrs = [];
 
     /**
+     * 设置选项
+     *
      * @param array $options
      *
      * @return $this
@@ -56,6 +58,8 @@ trait Options
     }
 
     /**
+     * 远程获取选项
+     *
      * @param string      $url
      * @param string      $valueCode 获取值的js代码，默认为返回的 data.data.data值
      * @param string|null $valueName value对应的字段名
@@ -71,6 +75,8 @@ trait Options
     }
 
     /**
+     * 设置选项格式
+     *
      * @param string|\Stringable $stringable 模板内容， 当前项目变量 item, 例： {{ item.label }}
      *
      * @return $this
