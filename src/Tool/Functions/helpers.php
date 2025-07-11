@@ -48,7 +48,7 @@ if (! function_exists('h')){
         if ($attrs){
             $el->setAttrs($attrs);
         }
-        if ($content && $el instanceof \Sc\Util\HtmlElement\ElementType\DoubleLabel){
+        if ($content && ($el instanceof \Sc\Util\HtmlElement\ElementType\DoubleLabel || $el instanceof \Sc\Util\HtmlElement\ElementType\SingleLabel)){
             is_array($content) ? $el->setAttrs($content) : $el->append($content);
         }
 
