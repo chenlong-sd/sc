@@ -275,7 +275,7 @@ class TableColumnTheme implements TableColumnThemeInterface
         }
 
         $content = $template->getChildren();
-        if ($getEmptyShowTemplate instanceof TextCharacters && count($content) == 1 && $content[0]->getLabel() == 'el-link') {
+        if ($getEmptyShowTemplate instanceof TextCharacters && count($content) == 1 && method_exists($content[0], 'getLabel') && $content[0]->getLabel() == 'el-link') {
             $getEmptyShowTemplate = $content[0]->copy()->setChildren($getEmptyShowTemplate);
         }
 
