@@ -16,6 +16,7 @@ use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsService;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemUploadThemeInterface;
+use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
 class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploadThemeInterface
@@ -37,7 +38,51 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             $el->append($this->imageEnlarge($formItem));
         }
 
+        $this->createNoticeFunc();
         return $el;
+    }
+
+    private function createNoticeFunc(): void
+    {
+        Html::js()->vue->set("UploadNotices", '@{}');
+        Html::js()->vue->addMethod('createUploadNotices', JsFunc::anonymous(["id"])->code(
+            Js::assign("this.UploadNotices['N' + id]", JsFunc::call('this.$notify', [
+                'message'   => '文件上传中,请稍后...',
+                'duration'  => 0,
+                'type'      => 'warning',
+                'showClose' => false
+            ])),
+        ));
+        Html::js()->vue->addMethod('closeUploadNotices', JsFunc::anonymous(["id"])->code(
+            Js::code("this.UploadNotices['N' + id].close();"),
+            Js::code("delete this.UploadNotices['N' + id];"),
+        ));
+    }
+
+    private function commonEventHandle(DoubleLabel $upload): void
+    {
+        $beforeMethod  = "UIBefore";
+        $errorMethod   = "UIError";
+        $removeMethod  = "UIRemove";
+
+        $upload->setAttrs([
+            ":before-upload" => $beforeMethod,
+            ":on-error" => $errorMethod,
+            ':on-remove' => $removeMethod,
+        ]);
+
+        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], Js::code(
+            Js::call("this.createUploadNotices", "@UploadRawFile.uid"),
+        ));
+
+        Html::js()->vue->addMethod($errorMethod, ['err', 'uploadFile', 'uploadFiles'], Js::code(
+            Js::call("this.closeUploadNotices", "@uploadFile.uid"),
+            Js::code("this.\$notify({message: '上传失败' + res, type:'error'});"),
+        ));
+
+        Html::js()->vue->addMethod($removeMethod, ['file', 'uploadFiles'], Js::code(
+            Js::code("console.log(file, uploadFiles)")
+        ));
     }
 
     private function uploadMake(FormItemUpload|FormItemAttrGetter $formItemUpload): DoubleLabel
@@ -45,19 +90,19 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         $VModel = $this->getVModel($formItemUpload);
         $upload = El::double('el-upload')->setAttrs([
             'v-model:file-list' => $VModel,
-            ':on-remove'       => "{$formItemUpload->getName()}remove",
             'action'           => $formItemUpload->getUploadUrl(),
             ':show-file-list'  => str_starts_with($formItemUpload->getUploadType(), 'image') ? 'true' : 'false'
         ]);
 
-        $rand = Tool::random()->get();
+        $this->commonEventHandle($upload);
+
         if (str_starts_with($formItemUpload->getUploadType(), 'image')){
             $upload->addClass('sc-avatar-uploader');
             $this->imageCss();
 
             $uploadEl = $formItemUpload->getUploadType() === FormItemUpload::UPLOAD_TYPE_IMAGE
-                ? $this->image($upload, $VModel, $rand)
-                : $this->images($upload, $rand);
+                ? $this->image($upload, $VModel)
+                : $this->images($upload);
         } else {
             if (!$formItemUpload->getUploadEl()) {
                 $uploadEl = "";
@@ -68,9 +113,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             }
         }
 
-        $this->multipleFileHandle($formItemUpload, $rand, $upload, $VModel);
-
-        Html::js()->vue->addMethod(strtr($formItemUpload->getName(), ['.' => '_']) . "remove", ['file', 'uploadFiles'], "console.log(file, uploadFiles)");
+        $this->multipleFileHandle($formItemUpload, $upload, $VModel);
 
         $upload->setAttrs($formItemUpload->getVAttrs());
 
@@ -82,70 +125,47 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     /**
      * @param DoubleLabel $upload
      * @param string|null $VModel
-     * @param int         $rand
      *
      * @return AbstractHtmlElement
      */
-    private function image(DoubleLabel $upload, ?string $VModel, int $rand): AbstractHtmlElement
+    private function image(DoubleLabel $upload, ?string $VModel): AbstractHtmlElement
     {
-        $successMethod = "UISuccess" . $rand;
-        $beforeMethod  = "UIBefore" . $rand;
-        $errorMethod   = "UIError" . $rand;
-        $notify        = "UINotify" . $rand;
-        Html::js()->vue->set($notify, '');
+        $successMethod = "UISuccessSingle";
 
         $upload->setAttrs([
             ':show-file-list'   => 'false',
             'v-model:file-list' => null,
-            ":on-success"       => $successMethod,
-            ":before-upload"    => $beforeMethod,
-            ":on-error"         => $errorMethod,
+            ":on-success"       => "(res, uploadFile, uploadFiles) => $successMethod(res, uploadFile, uploadFiles, $VModel)",
         ]);
 
-        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], Js::code(
+        Html::js()->vue->addMethod($successMethod, ['res', 'uploadFile', 'uploadFiles', 'data'], Js::code(
             Js::if('response.code === 200 && response.data')
                 ->then(
-                    Js::code("this.$VModel = response.data"),
+                    Js::code("data = response.data"),
                     Js::code("this.\$notify({message: '上传成功', type:'success'});"),
                 )->else(
                     Js::code("this.\$notify({message: response.msg, type:'error'});"),
                 ),
-            Js::code("this.$notify.close();")
+            Js::call("this.closeUploadNotices", "@uploadFile.uid"),
         ));
 
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], Js::code(
-            Js::assign("this.$notify", JsFunc::call('this.$notify', [
-                'message'   => '文件上传中,请稍后...',
-                'duration'  => 0,
-                'type'      => 'warning',
-                'showClose' => false
-            ])),
-        ));
-
-        Html::js()->vue->addMethod($errorMethod, ['res', 'uploadFiles'], Js::code(
-            Js::code("this.$notify.close();"),
-            Js::code("this.\$notify({message: '上传失败' + res, type:'error'});"),
-        ));
-
-        $uploadEl = El::fictitious()->append(
-            El::double('el-image')->setAttrs([
+        return h([
+            h('el-image', [
                 'v-if'  => $VModel,
                 ':src'  => $VModel,
                 'class' => "sc-avatar",
-            ])
-        )->append(
-            El::double('el-icon')->setAttr('v-else', )->addClass('sc-avatar-uploader-icon')->append(
-                El::double('plus')
-            )
-        );
-
-        return $uploadEl;
+            ]),
+            h('el-icon', h('plus'), [
+                'v-else' => '',
+                'class' => 'sc-avatar-uploader-icon',
+            ]),
+        ]);
     }
 
-    private function images(AbstractHtmlElement $upload, int $rand): AbstractHtmlElement
+    private function images(AbstractHtmlElement $upload): AbstractHtmlElement
     {
-        $previewMethod = "UIPreview" . $rand;
-        $removeMethod  = "UIRemove" . $rand;
+        $previewMethod = "UIPreview";
+        $removeMethod  = "UIRemove";
         Html::loadThemeResource('Layui');
         $upload->setAttrs([
             'list-type'   => 'picture-card',
@@ -154,21 +174,17 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         ]);
 
         Html::js()->vue->addMethod($removeMethod, ['uploadFile', 'uploadFiles'], 'console.log(uploadFile, uploadFiles)');
-        Html::js()->vue->addMethod($previewMethod, ['uploadFile'], Js::code(
-            JsFunc::call('layer.photos', [
-                "photos" => [
-                    'start' => 0,
-                    'data' => Js::grammar('[{src:uploadFile.url}]')
-                ]
-            ])
-        ));
+        Html::js()->vue->addMethod($previewMethod, ['uploadFile'], Js\Layer::photos([
+            "photos" => [
+                'start' => 0,
+                'data' => Js::grammar('[{src:uploadFile.url}]')
+            ]
+        ]));
 
-        return El::double('el-icon')
-            ->addClass('sc-avatar-uploader-icon')
-            ->append(El::double('plus'));
+        return h('el-icon', h('plus'))->addClass('sc-avatar-uploader-icon');
     }
 
-    private function imageCss()
+    private function imageCss(): void
     {
         Html::css()->addCss(<<<CSS
             .sc-avatar-uploader .el-upload {
@@ -201,27 +217,20 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
     /**
      * @param FormItemAttrGetter|FormItemUpload $formItemUpload
-     * @param string                            $rand
      * @param DoubleLabel                       $upload
      * @param string|null                       $VModel
      *
      * @return void
      */
-    private function multipleFileHandle(FormItemAttrGetter|FormItemUpload $formItemUpload, string $rand, DoubleLabel $upload, ?string $VModel): void
+    private function multipleFileHandle(FormItemAttrGetter|FormItemUpload $formItemUpload, DoubleLabel $upload, ?string $VModel): void
     {
         if ($formItemUpload->getUploadType() === 'image') {
             return;
         }
-        $successMethod = "UISuccess" . $rand;
-        $beforeMethod  = "UIBefore" . $rand;
-        $notify        = "UINotify" . $rand;
-        $errorMethod   = "UIError" . $rand;
-        Html::js()->vue->set($notify, []);
+        $successMethod = "UISuccess";
 
         $upload->setAttrs([
-            ":on-success"    => $successMethod,
-            ":before-upload" => $beforeMethod,
-            ":on-error"      => $errorMethod,
+            ":on-success"    => "(res, uploadFile, uploadFiles) => $successMethod(res, uploadFile, uploadFiles, $VModel)",
         ]);
 
         if (empty($formItemUpload->getVAttrs()['limit']) && empty($formItemUpload->getVAttrs()[':limit']) && !isset($formItemUpload->getVAttrs()['multiple'])) {
@@ -230,49 +239,19 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             ]);
         }
 
-        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile'], Js::code(
+        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile', 'uploadFiles', 'data'], Js::code(
+            Js::call("this.closeUploadNotices", "@uploadFile.uid"),
             Js::if('response.code !== 200 || !response.data')->then(
-                Js::code("this.$VModel.pop()"),
+                Js::code("data.pop()"),
                 Js::code("this.\$notify({message: response.msg, type:'error'})"),
             )->else(
+                Js::code("data[data.length - 1] = { url: response.data, name: uploadFile.name }"),
                 Js::code("this.\$notify({message: '上传成功', type:'success'});")
             ),
-            Js::code("this.{$notify}['I' + uploadFile.uid].close()"),
-            Js::code("delete this.{$notify}['I' + uploadFile.uid]"),
         ));
-
-
-        Html::js()->vue->addMethod($beforeMethod, ['UploadRawFile'], Js::code(
-            Js::assign("this.{$notify}['I' + UploadRawFile.uid]", JsFunc::call('this.$notify', [
-                'message'   => '文件上传中,请稍后...',
-                'duration'  => 0,
-                'type'      => 'warning',
-                'showClose' => false
-            ])),
-        ));
-
-        Html::js()->vue->addMethod($errorMethod, ['res', 'uploadFile'], Js::code(
-            Js::code("this.$VModel.pop()"),
-            Js::code("this.{$notify}['I' + uploadFile.raw.uid].close()"),
-            Js::code("this.\$notify({message: uploadFile.raw.name + ' 上传失败，' + res, type:'error'})"),
-        ));
-
-        $submitVar = preg_replace('/^.+\./', '', $VModel);
-        $formItemUpload->getForm()?->setSubmitHandle(<<<JS
-                let newD$rand = [];
-                for(var i = 0; i < data.$submitVar.length; i++) {
-                    newD{$rand}[i] = {
-                        name: data.{$submitVar}[i].name,
-                        url: data.{$submitVar}[i].response !== undefined ? data.{$submitVar}[i].response.data : data.{$submitVar}[i].url
-                    }
-                }
-                data.$submitVar = newD$rand;
-            JS
-        );
-
     }
 
-    private function fileFormat(FormItemUpload|FormItemAttrGetter $formItemUpload)
+    private function fileFormat(FormItemUpload|FormItemAttrGetter $formItemUpload): DoubleLabel|string
     {
         if (str_starts_with($formItemUpload->getUploadType(), 'image')) {
             return '';
@@ -305,7 +284,9 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                 'icon' => 'delete',
                 '@click' => 'uprm' . strtr($formItemUpload->getName(), ['.' => '_']) . '(@scope)'
             ])),
-        )->setPagination(false)->render()->find('el-table')
+        )->setPagination(false)
+            ->setOpenSetting(false)
+            ->render()->find('el-table')
             ->setAttr(":data", $data)
             ->setAttr(":show-header", 'false')
             ->setAttr("empty-text", '暂无上传文件')
@@ -323,11 +304,13 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
     private function limitHandle(DoubleLabel $upload): void
     {
         if ((($limit = $upload->getAttr("limit")) || ($limit = $upload->getAttr(':limit'))) && !$upload->hasAttr(":on-exceed")) {
-            $method = "uploadOnExceed" . Tool::random('up')->get(11, 55);
-            $upload->setAttr(":on-exceed", $method);
+            $upload->setAttr(":limit", $limit);
+            $upload->setAttr("limit", null);
+            $method = 'UIExceedUp';
+            $upload->setAttr(":on-exceed", "(files, UploadUserFile) => $method(files, UploadUserFile, $limit)");
 
-            Html::js()->vue->addMethod($method, JsFunc::anonymous()->code(
-                JsService::message("文件限制数量为" . $limit, 'error')
+            Html::js()->vue->addMethod($method, JsFunc::anonymous(["files", "UploadUserFile", "limit"])->code(
+                JsService::message(Js\Grammar::mark('文件限制数量为${limit}', 'line'), 'error')
             ));
         }
     }
@@ -362,7 +345,7 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             Js::for('let i = 0; i < url.length; i++')->then(
                 Js::code('data.push({src:url[i]})')
             ),
-            JsFunc::call('layer.photos', [
+            Js\Layer::photos([
                 "photos" => [
                     'start' => 0,
                     'data' => Js::grammar('data')

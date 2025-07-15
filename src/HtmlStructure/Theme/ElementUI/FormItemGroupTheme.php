@@ -7,6 +7,8 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
+use Sc\Util\HtmlElement\ElementType\FictitiousLabel;
 use Sc\Util\HtmlStructure\Form\FormItem;
 use Sc\Util\HtmlStructure\Form\FormItemGroup;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
@@ -41,30 +43,7 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         }
 
         if ($formItem->getIsArrayValue()) {
-            $row->setAttr("v-for", "({$formItem->getName()}_item, index_g) in {$formItem->getFormModel()}.{$formItem->getName()}");
-            $row = El::fictitious()->append(
-                $row->addClass('g_r')->append(
-                    El::elButton()->addClass('g_del')
-                        ->setAttr('icon', 'delete')
-                        ->setAttr('type','danger')
-                        ->setStyle("{height: calc(100% - 19px);width:15px;position: absolute;right: 0;top: 0;padding: 8px 10px;}")
-                        ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
-                ),
-                El::elButton("新增一项")
-                    ->setAttr('type', 'success')
-                    ->setAttr('plain', )
-                    ->setAttr('bg', )
-                    ->setAttr('icon', 'plus')
-                    ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add")
-                    ->setStyle('{width: 100%;margin-bottom: 10px;position: relative;top: -10px;}')
-            );
-
-            Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous()->code(
-                JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.push", current($formItem->getInitDefault() ?: $formItem->getDefault()))
-            ));
-            Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_del", JsFunc::anonymous(['index'])->code(
-                JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.splice", '@index', 1)
-            ));
+            $row = $this->multipleHandle($row, $formItem);
         }
 
         if ($formItem->getPlain()) {
@@ -85,5 +64,40 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         }
 
         return $el;
+    }
+
+    /**
+     * @param DoubleLabel $row
+     * @param FormItemGroup|FormItemAttrGetter $formItem
+     * @return FictitiousLabel
+     */
+    public function multipleHandle(DoubleLabel $row, FormItemGroup|FormItemAttrGetter $formItem): FictitiousLabel
+    {
+        $row->setAttr("v-for", "({$formItem->getName()}_item, index_g) in {$formItem->getFormModel()}.{$formItem->getName()}");
+        $row = El::fictitious()->append(
+            $row->addClass('g_r')->append(
+                El::elButton()->addClass('g_del')
+                    ->setAttr('icon', 'delete')
+                    ->setAttr('type', 'danger')
+                    ->setStyle("{height: calc(100% - 19px);width:15px;position: absolute;right: 0;top: 0;padding: 8px 10px;}")
+                    ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
+            ),
+            El::elButton("新增一项")
+                ->setAttr('type', 'success')
+                ->setAttr('plain',)
+                ->setAttr('bg',)
+                ->setAttr('icon', 'plus')
+                ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add")
+                ->setStyle('{width: 100%;margin-bottom: 10px;position: relative;top: -10px;}')
+        );
+
+        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous()->code(
+            JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.push", current($formItem->getInitDefault() ?: $formItem->getDefault()))
+        ));
+        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_del", JsFunc::anonymous(['index'])->code(
+            JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.splice", '@index', 1)
+        ));
+
+        return $row;
     }
 }
