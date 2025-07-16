@@ -38,7 +38,13 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
 
     public function getDefault()
     {
-        return $this->default !== null ? $this->default : [];
+        return $this->default !== null
+            ? $this->default
+            : (
+                $this->uploadType === self::UPLOAD_TYPE_IMAGE
+                    ? ''
+                    : []
+            );
     }
 
     /**

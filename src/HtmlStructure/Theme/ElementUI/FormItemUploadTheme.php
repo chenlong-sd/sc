@@ -135,18 +135,20 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
         $upload->setAttrs([
             ':show-file-list'   => 'false',
             'v-model:file-list' => null,
-            ":on-success"       => "(res, uploadFile, uploadFiles) => $successMethod(res, uploadFile, uploadFiles, $VModel)",
+            ":on-success"       => "(res, uploadFile, uploadFiles) => $VModel = $successMethod(res, uploadFile, uploadFiles)",
         ]);
 
-        Html::js()->vue->addMethod($successMethod, ['res', 'uploadFile', 'uploadFiles', 'data'], Js::code(
+        Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile', 'uploadFiles', 'data'], Js::code(
+            Js::let("url", "@null"),
             Js::if('response.code === 200 && response.data')
                 ->then(
-                    Js::code("data = response.data"),
+                    Js::code("url = response.data"),
                     Js::code("this.\$notify({message: '上传成功', type:'success'});"),
                 )->else(
                     Js::code("this.\$notify({message: response.msg, type:'error'});"),
                 ),
             Js::call("this.closeUploadNotices", "@uploadFile.uid"),
+            Js::return('url;')
         ));
 
         return h([

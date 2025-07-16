@@ -36,6 +36,12 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
      */
     public function addItems(FormItemInterface ...$formItem): FormItemTable
     {
+        foreach ($formItem as $item) {
+            if ($item instanceof FormItemGroup){
+                throw new \Exception('table类型不能嵌套group类型');
+            }
+        }
+
         $this->children = array_merge($this->children, $formItem);
         return $this;
     }

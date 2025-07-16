@@ -61,9 +61,16 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
      * @param FormItemInterface ...$formItem
      *
      * @return $this
+     * @throws \Exception
      */
     public function addItems(FormItemInterface ...$formItem): static
     {
+        foreach ($formItem as $item) {
+            if ($item instanceof FormItemTable){
+                throw new \Exception('group类型不能嵌套table类型');
+            }
+        }
+
         $this->children = array_merge($this->children, $formItem);
 
         return $this;
@@ -75,6 +82,12 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             $this->children = array_map(function ($v) {
                 return ($this->callback)($v);
             }, $this->children);
+        }
+
+        if ($this->isArrayValue) {
+            $this->children = [
+                FormItem::group(...$this->children)
+            ];
         }
 
         return Theme::getRenderer(FormItemGroupThemeInterface::class, $theme)->render($this);
@@ -133,7 +146,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     }
 
     /**
-     * 设置为数组
+     * 设置为数组，group必须设置name
      *
      * @return $this
      * @throws \Exception
@@ -141,7 +154,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     public function arrayValue(): static
     {
         if (!$this->name) {
-            throw new \Exception('数组值必须设置name');
+            throw new \Exception('group类型值为数组时，必须设置name');
         }
         $this->isArrayValue = true;
 

@@ -21,6 +21,7 @@ use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Layout;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemTableThemeInterface;
+use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
 class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableThemeInterface
@@ -33,7 +34,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
      */
     public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $el = Table::create($this->getVModel($formItem), Tool::random('TR')->get(111, 999));
+        $el = Table::create($this->getVModel($formItem), ScTool::random('TR')->get(111, 999));
         $elements = $this->addHandle($formItem, $el);
 
         $el->setPagination(false);
