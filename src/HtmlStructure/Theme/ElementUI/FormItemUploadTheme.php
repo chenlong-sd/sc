@@ -243,13 +243,28 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
         Html::js()->vue->addMethod($successMethod, ['response', 'uploadFile', 'uploadFiles', 'data'], Js::code(
             Js::call("this.closeUploadNotices", "@uploadFile.uid"),
-            Js::if('response.code !== 200 || !response.data')->then(
-                Js::code("data.pop()"),
-                Js::code("this.\$notify({message: response.msg, type:'error'})"),
-            )->else(
-                Js::code("data[data.length - 1] = { url: response.data, name: uploadFile.name }"),
-                Js::code("this.\$notify({message: '上传成功', type:'success'});")
-            ),
+            Js::log("@response"),
+            Js::log("@data.length"),
+            Js::for('let i = 0; i < data.length; i++')->then(
+                Js::if('data[i].uid === uploadFile.uid')->then(
+                    Js::if('response.code !== 200 || !response.data')->then(
+                        Js::code("data.splice(i, 1)"),
+                        Js::code("this.\$notify({message: uploadFile.name + ' ' + response.msg, type:'error'})"),
+                    )->else(
+                        Js::code("data[i] = { url: response.data, name: uploadFile.name }"),
+                        Js::code("this.\$notify({message: uploadFile.name + ' 上传成功', type:'success'});")
+                    ),
+                    Js::code('break;')
+                )
+            )
+
+//            Js::if('response.code !== 200 || !response.data')->then(
+//                Js::code("data.pop()"),
+//                Js::code("this.\$notify({message: response.msg, type:'error'})"),
+//            )->else(
+//                Js::code("data[data.length - 1] = { url: response.data, name: uploadFile.name }"),
+//                Js::code("this.\$notify({message: '上传成功', type:'success'});")
+//            ),
         ));
     }
 
