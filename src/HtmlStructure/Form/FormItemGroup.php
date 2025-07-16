@@ -65,12 +65,6 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
      */
     public function addItems(FormItemInterface ...$formItem): static
     {
-        foreach ($formItem as $item) {
-            if ($item instanceof FormItemTable){
-                throw new \Exception('group类型不能嵌套table类型');
-            }
-        }
-
         $this->children = array_merge($this->children, $formItem);
 
         return $this;
@@ -85,6 +79,11 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         }
 
         if ($this->isArrayValue) {
+            $table = array_filter($this->children, fn($v) => $v instanceof FormItemTable);
+            if ($table) {
+                throw new \Exception('group类型值为数组时，不能嵌套table');
+            }
+
             $this->children = [
                 FormItem::group(...$this->children)
             ];
