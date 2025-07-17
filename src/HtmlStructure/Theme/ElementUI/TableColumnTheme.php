@@ -251,7 +251,7 @@ class TableColumnTheme implements TableColumnThemeInterface
 
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['scope'])->code(
             Js::let('row', '@scope.row'),
-            Window::open("查看【{{$column->getAttr('prop')}}】详情")
+            Window::open($config['config']['title'] ?? "查看【{{$column->getAttr('prop')}}】详情")
                 ->setConfig($config['config'])
                 ->setUrl($config['url'], [
                     'id' => '@id',

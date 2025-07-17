@@ -36,6 +36,7 @@ class TableTheme implements TableThemeInterface
     public function render(Table $table): AbstractHtmlElement
     {
         $el = El::double('el-table');
+        $table->setId($table->getId() ?: ScTool::random('table')->get());
 
         if ($table->getOpenSetting()){
             $this->tableSettingHandle($table);
@@ -245,10 +246,8 @@ class TableTheme implements TableThemeInterface
      */
     private function dataSet(Table $table): string
     {
-        $id   = $table->getId();
+        $dataVarName = $table->getId();
         $data = $table->getData();
-        $dataVarName = $id ?: ScTool::random('table')->get();
-        $table->setId($dataVarName);
 
         // 设置数据变量和数组总数变量
         Html::js()->vue->set($dataVarName, is_string($data) ? [] : $data);

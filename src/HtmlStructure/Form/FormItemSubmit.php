@@ -98,6 +98,11 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
+    /**
+     * @param string $code
+     * @param bool $strict 为true时，严格模式，成功是没有其他内置代码，只使用 code 的代码
+     * @return $this
+     */
     public function success(#[Language('JavaScript')] string $code, bool $strict = false): static
     {
         $this->success = $strict ? "@strict " . $code : $code;

@@ -26,6 +26,12 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
+        foreach ($this->children as $item) {
+            if ($item instanceof FormItemGroup){
+                throw new \Exception('table类型不能嵌套group类型');
+            }
+        }
+
         return Theme::getRenderer(FormItemTableThemeInterface::class, $theme)->render($this);
     }
 
@@ -36,12 +42,6 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
      */
     public function addItems(FormItemInterface ...$formItem): FormItemTable
     {
-        foreach ($formItem as $item) {
-            if ($item instanceof FormItemGroup){
-                throw new \Exception('table类型不能嵌套group类型');
-            }
-        }
-
         $this->children = array_merge($this->children, $formItem);
         return $this;
     }
