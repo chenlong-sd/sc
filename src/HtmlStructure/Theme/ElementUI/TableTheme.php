@@ -174,7 +174,7 @@ class TableTheme implements TableThemeInterface
             $content = $form->setData([
                 "dividing_line" => false,
                 "stripe" => false,
-                "table_columns" => $settingDefault
+                "table_columns" => $settingDefault,
             ])->render();
 
             Html::js()->vue->event('created', Js::code(

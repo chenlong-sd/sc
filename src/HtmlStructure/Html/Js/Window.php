@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\VueComponentInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\JsTheme;
@@ -23,13 +24,15 @@ class Window
     private array $query;
     private ?VueComponentInterface $component = null;
     protected array $rowData = [];
-    protected ?JsCode $beforeOpen = null;
-    protected ?JsCode $afterOpen = null;
+    protected JsCode $beforeOpen;
+    protected JsCode $afterOpen;
     private string $id = '';
     private ?Window $mountIframeInfo = null;
 
     public function __construct(private readonly string $title)
     {
+        $this->afterOpen = Js::code();
+        $this->beforeOpen = Js::code();
     }
 
     public static function open(string $title): Window
@@ -231,7 +234,7 @@ class Window
 
     public function beforeOpen(?JsCode $jsCode): Window
     {
-        $this->beforeOpen = $jsCode;
+        $this->beforeOpen->then($jsCode);
         return $this;
     }
 
@@ -253,7 +256,7 @@ class Window
 
     public function afterOpen(?JsCode $afterOpen): Window
     {
-        $this->afterOpen = $afterOpen;
+        $this->afterOpen->then($afterOpen);
         return $this;
     }
 

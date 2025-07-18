@@ -135,11 +135,16 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             ]))
         );
 
-        $formItem->getForm()->addAfterRender(Js::call("this.Draw{$table->getId()}"));
+        if (Html::js()->vue->getTmpComponent()){
+            $name = Html::js()->vue->getTmpComponent()['name'];
+            $formItem->getForm()->addAfterRender(Js::call("this.\$refs['$name'].Draw{$table->getId()}"));
+        }else{
+            $formItem->getForm()->addAfterRender(Js::call("this.Draw{$table->getId()}"));
+        }
 
         Html::js()->vue->addMethod("Draw{$table->getId()}", [], Js::code(
             Js::if("!this.\$refs['{$table->getId()}']")->then(
-                Js::return("")
+                Js::return()
             ),
             Js::let("ElDraw{$table->getId()}", "@this.\$refs['{$table->getId()}'].\$el.querySelectorAll('table > tbody')[0]"),
             JsFunc::call('new Sortable', "@ElDraw{$table->getId()}", [

@@ -394,6 +394,7 @@ class Vue
     public function startMakeTmpComponent(string $name): void
     {
         $this->makeComponent = [
+            'name' => $name,
             "template" => Grammar::mark("document.getElementById('vue--$name').innerHTML"),
         ];
     }

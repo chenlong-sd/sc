@@ -9,6 +9,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
@@ -215,24 +216,16 @@ class WindowTheme implements WindowThemeInterface
     {
         $vueComponent = $window->getComponent();
 
-        $showVar = $template->getAttr('v-model') . 'Children';
         $template->append(
             El::double($vueComponent->getName())
                 ->setAttrs([
                     'ref' => $vueComponent->getName(),
-                    //                    'v-if' => $showVar
                 ])
         );
 
-        $code->then(JsVar::def('f',
-            JsFunc::call('setInterval', JsFunc::arrow()->code(
-                JsCode::if("this.\$refs['{$vueComponent->getName()}'] !== undefined",
-                    JsCode::create("this.\$refs['{$vueComponent->getName()}'].onShow(row)")
-                        ->then("clearInterval(f)")
-                )
-            )
-            )));
-        //        Html::js()->vue->set($showVar, false);
+        $window->afterOpen(Js::code(
+            Js::code("this.\$refs['{$vueComponent->getName()}'].onShow(row)")
+        ));
         Html::js()->vue->addComponents($vueComponent);
     }
 }
