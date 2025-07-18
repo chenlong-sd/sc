@@ -703,10 +703,13 @@ class TableTheme implements TableThemeInterface
                     : El::elText("{$toggleButton['label']}")->setStyle('{margin-right: 10px;font-weight: bold;width:80px;display: inline-block;text-align: justify;text-align-last: justify}');
             }
 
-            $status = El::double('div')->setStyle('{margin-bottom:10px;box-shadow: 0 0 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;}')
+            $status = El::double('div')->setStyle('{margin-bottom:10px;}')
                 ->append($label)
                 ->append($label ? ":" : '')
                 ->append($status);
+            if (!empty($toggleButton['label'])) {
+                $status->appendStyle("{box-shadow: 0 0 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;}");
+            }
 
             if (!$table->getStatusToggleButtonsNewLine()){
                 $status->appendStyle('{display:inline-block;margin-right:10px;}');
