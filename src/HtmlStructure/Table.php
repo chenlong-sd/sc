@@ -8,6 +8,7 @@ namespace Sc\Util\HtmlStructure;
 use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Table\Column;
@@ -396,13 +397,13 @@ class Table
     }
 
     /**
-     * @param string      $searchField 切换时搜索的字段名
-     * @param array       $mapping     可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
-     * @param string|null $label
+     * @param string $searchField 切换时搜索的字段名
+     * @param array $mapping 可切换的数据 [['value' => 1, 'label' => '正常'], ['value' => 2, 'label' => '异常'],]， [1 => '正常', 2 => '异常']
+     * @param string|DoubleLabel|null $label
      *
      * @return Table
      */
-    public function addStatusToggleButtons(string $searchField, array $mapping, string $label = null): static
+    public function addStatusToggleButtons(string $searchField, array $mapping, string|DoubleLabel $label = null): static
     {
         $this->statusToggleButtons[] = compact('searchField', 'mapping', 'label');
 

@@ -672,9 +672,11 @@ class TableTheme implements TableThemeInterface
             ));
 
             $status->append(El::double('el-button')->setAttrs([
-                'type'   => 'primary',
-                ':plain' => "$statusVarName !== null",
-                'bg'     => '',
+                'type'   => empty($toggleButton['label']) ? 'primary' : null,
+                ':type'  => empty($toggleButton['label']) ? null : "$statusVarName !== null ? '' : 'primary'",
+                ':plain' => empty($toggleButton['label']) ? "$statusVarName !== null" : null,
+                'bg'     => empty($toggleButton['label']) ? "" : null,
+                'text'   => empty($toggleButton['label']) ? null : '',
                 '@click' => "$method(null)",
             ])->append("全部"));
 
@@ -685,10 +687,12 @@ class TableTheme implements TableThemeInterface
                 }
 
                 $status->append(El::double('el-button')->setAttrs([
-                    'type' => 'primary',
-                    ':plain' => "$statusVarName !== $key",
-                    'bg' => '',
                     '@click' => "$method($key)",
+                    'type'   => empty($toggleButton['label']) ? 'primary' : null,
+                    ':type'  => empty($toggleButton['label']) ? null : "$statusVarName !== $key ? '' : 'primary'",
+                    ':plain' => empty($toggleButton['label']) ? "$statusVarName !== $key" : null,
+                    'bg'     => empty($toggleButton['label']) ? "" : null,
+                    'text'   => empty($toggleButton['label']) ? null : '',
                 ])->append($value));
             }
 
@@ -696,12 +700,17 @@ class TableTheme implements TableThemeInterface
             if (!empty($toggleButton['label'])) {
                 $label = $toggleButton['label'] instanceof DoubleLabel
                     ? $toggleButton['label']
-                    : El::elText("{$toggleButton['label']}：")->setAttr('style', 'margin-right: 10px;font-weight: bold');
+                    : El::elText("{$toggleButton['label']}")->setStyle('{margin-right: 10px;font-weight: bold;width:80px;display: inline-block;text-align: justify;text-align-last: justify}');
             }
 
-            $status = El::double('div')->setAttr('style', 'margin-bottom:10px')
+            $status = El::double('div')->setStyle('{margin-bottom:10px;box-shadow: 0 0 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;}')
                 ->append($label)
+                ->append($label ? ":" : '')
                 ->append($status);
+
+            if (!$table->getStatusToggleButtonsNewLine()){
+                $status->appendStyle('{display:inline-block;margin-right:10px;}');
+            }
 
             $el->append($status);
         }
