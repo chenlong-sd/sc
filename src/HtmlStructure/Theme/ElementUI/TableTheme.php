@@ -700,7 +700,7 @@ class TableTheme implements TableThemeInterface
             if (!empty($toggleButton['label'])) {
                 $label = $toggleButton['label'] instanceof DoubleLabel
                     ? $toggleButton['label']
-                    : El::elText("{$toggleButton['label']}")->setStyle('{margin-right: 10px;font-weight: bold;width:80px;display: inline-block;text-align: justify;text-align-last: justify}');
+                    : El::elText("{$toggleButton['label']}")->setStyle('{margin-right: 10px;font-weight: bold;width:80px;display: inline-block;text-align: justify;text-align-last: justify;color: white}');
             }
 
             $status = El::double('div')->setStyle('{margin-bottom:10px;}')
@@ -708,7 +708,8 @@ class TableTheme implements TableThemeInterface
                 ->append($label ? ":" : '')
                 ->append($status);
             if (!empty($toggleButton['label'])) {
-                $status->appendStyle("{box-shadow: 0 0 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;}");
+                $status->appendStyle("{box-shadow: 0 2px 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;position: relative;color: white}");
+                $status->append(h('div')->setStyle("{position: absolute;left: 0;top: 0;bottom: 0;width: 110px;background: rgb(121, 187, 255);border-radius: 5px 0 0 5px;z-index:-1}"));
             }
 
             if (!$table->getStatusToggleButtonsNewLine()){
