@@ -2,13 +2,16 @@
 
 namespace Sc\Util\HtmlStructure\Html\Js;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\VueComponentInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
 use Sc\Util\HtmlStructure\Html\JsTheme\JsTheme;
+use Sc\Util\ScTool;
 
 /**
  * Class Window
@@ -146,6 +149,40 @@ class Window
 
         return $this->mountIframeHandle($theme->render($this));
     }
+
+
+    public function notFoundCheck(#[ExpectedValues(['header', 'row'])] string $type = 'header'): bool
+    {
+        if ($this->url && $this->url === ScTool::NOT_FOND) {
+            return true;
+        }elseif ($this->content){
+            if ($this->content instanceof DoubleLabel && $this->content->getLabel() === 'el-form') {
+                $header = Html::js()->vue->get($this->content->getAttr(':model') . 'CreateUrl');
+                $row = Html::js()->vue->get($this->content->getAttr(':model') . 'UpdateUrl');
+
+                if ($type === 'row') {
+                    return $row === ScTool::NOT_FOND;
+                }
+
+                return $header === ScTool::NOT_FOND;
+            }
+        }elseif ($this->component){
+            $content = $this->component->getContent();
+            if ($content instanceof DoubleLabel && $content->getLabel() == 'el-form') {
+                $header = $this->component->getConfig()['data'][$content->getAttr(':model') . 'CreateUrl'];
+                $row = $this->component->getConfig()['data'][$content->getAttr(':model') . 'UpdateUrl'];
+
+                if ($type === 'row') {
+                    return $row === ScTool::NOT_FOND;
+                }
+
+                return $header === ScTool::NOT_FOND;
+            }
+        }
+
+        return false;
+    }
+
 
     private function mountIframeHandle(string $code): string
     {

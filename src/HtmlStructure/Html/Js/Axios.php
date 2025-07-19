@@ -2,11 +2,13 @@
 
 namespace Sc\Util\HtmlStructure\Html\Js;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\StaticResource;
+use Sc\Util\ScTool;
 use Sc\Util\Tool\Url;
 
 /**
@@ -49,6 +51,11 @@ class Axios
             'method' => 'post',
             'data'   => self::dataHandle($data)
         ]);
+    }
+
+    public function notFoundCheck(): bool
+    {
+        return (string)$this->options['url'] === ScTool::NOT_FOND;
     }
 
     /**

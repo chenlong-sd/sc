@@ -68,8 +68,8 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
      */
     private function addHandle(FormItemTable|FormItemAttrGetter $formItemTable, Table $table): AbstractHtmlElement
     {
-        Html::css()->addCss('.sc-ft-add{font-size: 25px;color: #95d475;margin: 3px;}');
-        Html::css()->addCss('.sc-ft-add:hover{font-size: 26px;color: #67C23A;margin: 2px;cursor: pointer;transition: all .1s}');
+        Html::css()->addCss('.sc-ft-add.el-icon{font-size: 25px;color: #95d475;margin: 3px;}');
+        Html::css()->addCss('.sc-ft-add.el-icon:hover{font-size: 26px;color: #67C23A;margin: 2px;cursor: pointer;transition: all .1s}');
 
         $method     = "addRow{$formItemTable->getName()}";
         $allowAdd   = "allowAdd" . $formItemTable->getName();
@@ -123,9 +123,9 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             $table->setId("TR" . mt_rand(1, 999));
         }
 
-        Html::css()->addCss('.sc-ft-draw{font-weight: bold;font-size: 20px;margin-right: 10px}');
-        Html::css()->addCss('.sc-ft-delete{font-weight: bold;font-size: 20px;color:#F56C6C}');
-        Html::css()->addCss('.sc-ft-h:hover{cursor: pointer}');
+        Html::css()->addCss('.sc-ft-draw.el-icon{font-weight: bold;font-size: 20px;margin-right: 10px}');
+        Html::css()->addCss('.sc-ft-delete.el-icon{font-weight: bold;font-size: 20px;color:#F56C6C}');
+        Html::css()->addCss('.sc-ft-h.el-icon:hover{cursor: pointer}');
 
         $table->addColumns(
             Table\Column::event('操作')->setAttr('width', 80)->setFormat(h([

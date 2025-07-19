@@ -2,6 +2,8 @@
 
 namespace Sc\Util\Tool;
 
+use Sc\Util\ScTool;
+
 /**
  * Class Url
  * @method string|null getScheme(?string $default = null)
@@ -21,6 +23,7 @@ namespace Sc\Util\Tool;
  */
 class Url implements \Stringable
 {
+    private bool $isNotFound = false;
     private array $urlInfo = [];
     private array $query = [];
 
@@ -69,6 +72,10 @@ class Url implements \Stringable
      */
     public function url(): string
     {
+        if ($this->isNotFound){
+            return ScTool::NOT_FOND;
+        }
+
         return strtr("[domain][path][query][fragment]", [
             '[domain]'   => $this->getDomain(),
             '[path]'     => $this->getPath(),
@@ -140,5 +147,11 @@ class Url implements \Stringable
     public function __toString(): string
     {
         return $this->url();
+    }
+
+    public function setNotFound(bool $isNotFound): Url
+    {
+        $this->isNotFound = $isNotFound;
+        return $this;
     }
 }

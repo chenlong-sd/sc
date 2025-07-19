@@ -303,7 +303,7 @@ class Table
      */
     public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
     {
-        $eventName = Tool::random('RowEvent')->get();
+        $eventName = ScTool::random('RowEvent')->get();
 
         $this->rowEvents[$eventName] = [
             'el'      => $eventLabel,

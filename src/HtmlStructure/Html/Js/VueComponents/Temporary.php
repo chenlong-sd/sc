@@ -93,6 +93,11 @@ class Temporary implements VueComponentInterface
         return $this->name;
     }
 
+    public function getConfig(): array
+    {
+        return $this->config;
+    }
+
     public function register(string $registerVar): string
     {
         Html::html()->find('body')->after(
@@ -113,5 +118,10 @@ class Temporary implements VueComponentInterface
 
         unset($this->config['onShow']);
         return JsFunc::call("$registerVar.component", $this->getName(), $this->config)->toCode();
+    }
+
+    public function getContent(): AbstractHtmlElement|string
+    {
+        return $this->content;
     }
 }

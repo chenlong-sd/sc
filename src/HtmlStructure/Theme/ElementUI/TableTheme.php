@@ -332,6 +332,12 @@ class TableTheme implements TableThemeInterface
         $groupEventLabels = $this->rowGroupEventHandle($table->getRowGroupEvents(), $eventHandlers);
 
         foreach ($eventHandlers as $name => ['el' => $el, 'handler' => $handler]) {
+            if ($handler instanceof Js\Window && $handler->notFoundCheck('row')) {
+                continue;
+            }
+            if ($handler instanceof Axios && $handler->notFoundCheck()){
+                continue;
+            }
             $el = $this->getEl($el)->setAttr('link');
 
             $eventLabels[] = $el->setAttr('@click', sprintf("%s(@scope)", $name));
@@ -391,6 +397,13 @@ class TableTheme implements TableThemeInterface
         }
 
         foreach ($table->getHeaderEvents() as $name => ['el' => $el, 'handler' => $handler, 'position' => $position]) {
+            if ($handler instanceof Js\Window && $handler->notFoundCheck('header')) {
+                continue;
+            }
+            if ($handler instanceof Axios && $handler->notFoundCheck()){
+                continue;
+            }
+
             $el = $this->getEl($el)->setAttr('bg');
             if ($el->getAttr('plain') === null && $el->getAttr('default') === null) {
                 $el->setAttr('text');
@@ -500,6 +513,12 @@ class TableTheme implements TableThemeInterface
 
             foreach ($eventHandlers as $name => $handler) {
                 if ($handler['group'] === $group) {
+                    if ($handler instanceof Js\Window && $handler->notFoundCheck('row')) {
+                        continue;
+                    }
+                    if ($handler instanceof Axios && $handler->notFoundCheck()){
+                        continue;
+                    }
                     $command = substr(md5($handler['el']), 0, 6);
                     $handleListEl->append(
                         El::double('el-dropdown-item')

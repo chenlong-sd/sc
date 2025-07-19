@@ -11,11 +11,9 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
-use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
 use Sc\Util\HtmlStructure\Html\Js\Window;
 use Sc\Util\HtmlStructure\Html\JsTheme\Interfaces\WindowThemeInterface;
-use Sc\Util\HtmlStructure\Html\StaticResource;
 
 class WindowTheme implements WindowThemeInterface
 {

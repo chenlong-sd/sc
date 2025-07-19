@@ -56,6 +56,8 @@ use Sc\Util\Tool\Url;
 #[StaticCallAttribute('xls', Excel::class, 'getHandler')]
 class ScTool extends StaticCall
 {
+    public const NOT_FOND = 'Not Found';
+
     /**
      * @date 2022/2/20
      */
