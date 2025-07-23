@@ -723,12 +723,15 @@ class TableTheme implements TableThemeInterface
             }
 
             $status = El::double('div')->setStyle('{margin-bottom:10px;}')
-                ->append($label)
-                ->append($label ? ":" : '')
+                ->append(
+                    h('el-text')->setStyle('{position: relative;z-index: 1;color: white}')
+                        ->append($label)
+                        ->append($label ? "：" : '')
+                )
                 ->append($status);
             if (!empty($toggleButton['label'])) {
-                $status->appendStyle("{box-shadow: 0 2px 5px #ddd;line-height: 30px;padding: 0 10px;border-radius: 5px;position: relative;color: white}");
-                $status->append(h('div')->setStyle("{position: absolute;left: 0;top: 0;bottom: 0;width: 110px;background: rgb(121, 187, 255);border-radius: 5px 0 0 5px;z-index:-1}"));
+                $status->appendStyle("{box-shadow: 0 0 5px #bbb;line-height: 35px;padding: 0 10px;border-radius: 5px;position: relative;color: white}");
+                $status->append(h('div')->setStyle("{position: absolute;left: 0;top: 0;bottom: 0;width: 110px;background: rgb(121, 187, 255);border-radius: 5px 0 0 5px;}"));
             }
 
             if (!$table->getStatusToggleButtonsNewLine()){

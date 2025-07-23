@@ -48,7 +48,7 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
             $options
             , JsFunc::anonymous([],
                 Js::code($formItemEditor->getFullScreen() ? "$varName.fullscreen.toggle()" : '')
-                    ->then(Js::call("$varName.html.set", Js::call($defJsFnBase64Decode, base64_encode($formItemEditor->getDefault()))))
+                    ->then(Js::call("$varName.html.set", Js::call($defJsFnBase64Decode, base64_encode($formItemEditor->getDefault() ?: ''))))
             )));
 
         Html::js()->vue->event('created', $editor, true);

@@ -5,6 +5,7 @@
 
 namespace Sc\Util\HtmlStructure\Form;
 
+use App\Util\Helper;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
@@ -65,6 +66,7 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
         try {
             return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);
         } catch (\Throwable $throwable) {
+            Helper::log($throwable);
             return Theme::getRenderer(FormItemTextareaThemeInterface::class, $theme)->render($this);
         }
     }

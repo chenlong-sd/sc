@@ -9,14 +9,20 @@ trait Slots
      */
     protected array $slots = [];
 
-    public function prefix(string|\Stringable $slot): static
+    public function prefix(string|\Stringable $slot, bool $isIcon = false): static
     {
+        if ($isIcon) {
+            $slot = h('i', ['class' => 'el-icon'])->append(h($slot));
+        }
         $this->slot("prefix", $slot);
         return $this;
     }
 
-    public function suffix(string|\Stringable $slot): static
+    public function suffix(string|\Stringable $slot, bool $isIcon = false): static
     {
+        if ($isIcon) {
+            $slot = h('i', ['class' => 'el-icon'])->append(h($slot));
+        }
         $this->slot("suffix", $slot);
         return $this;
     }
