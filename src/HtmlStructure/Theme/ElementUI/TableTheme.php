@@ -95,6 +95,11 @@ class TableTheme implements TableThemeInterface
         );
 
         if ($eventColumn->getAttr('mark-event')){
+            // 说明事件无实际操作，不渲染
+            if (!$eventColumn->getFormat()){
+                return $template;
+            }
+
             return h([
                 $template,
                 $eventColumn->render('ElementUI')
