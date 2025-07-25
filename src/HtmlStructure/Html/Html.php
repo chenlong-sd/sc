@@ -77,6 +77,8 @@ class Html
         $this->css->addCss('html,body{height: 100%}body{margin: 0 8px;padding-top: 8px;box-sizing: border-box;}');
 //        $this->css->addCss('html{height: 100%}body{box-sizing: border-box;padding: 8px;margin:0 0 0 0;background: #F2F3F5;height: auto}');
         $this->css->addCss('#app{background: white;padding: 5px;border-radius: 5px}');
+        $this->css->addCss('.layui-layer-title{border-bottom: none;font-size: 18px}');
+        $this->css->addCss('.layui-layer-content,.layui-layer-iframe{border-radius: 4px;}');
 
         $this->theme = $theme;
     }
