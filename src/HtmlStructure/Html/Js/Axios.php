@@ -255,10 +255,21 @@ class Axios
             Html::html()->prepend(El::double('el-config-provider')->setAttr(':z-index', '99999999'));
         }
 
+        $config = $this->mountIframeInfo->getConfig();
+        if (empty($config['btn'])) {
+            $this->mountIframeInfo
+                ->setConfig('btn', [$this->mountIframeInfo->getTitle()]);
+        }
+        $window = empty($config['parent']) ? 'window' : 'parent';
+        unset($config['parent']);
+
         $this->mountIframeInfo
-            ->setConfig('btn', [$this->mountIframeInfo->getTitle()])
             ->setConfig('btnAlign', 'c')
-            ->setConfig('yes', JsFunc::arrow(['index'])->code($code));
+            ->setConfig('yes', JsFunc::arrow(['index', 'layero'])->code(
+                Js::code("layero.find('.layui-layer-content').css('background', 'white')"),
+                Js::code("let childrenWin = {$window}[layero.find('iframe')[0]['name']];"),
+                Js::code("childrenWin.LayerIndex = index;"),
+            )->appendCode($code));
 
         return $this->mountIframeInfo->toCode();
     }
