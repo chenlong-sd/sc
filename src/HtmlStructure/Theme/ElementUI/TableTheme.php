@@ -527,7 +527,7 @@ class TableTheme implements TableThemeInterface
                     $command = substr(md5($handler['el']), 0, 6);
                     $handleListEl->append(
                         El::double('el-dropdown-item')
-                            ->setAttr(':command', "{ @command: '$command', @scope: @scope }")
+                            ->setAttr(':command', "{ @command: '@$command', @scope: @scope }")
                             ->append(...$this->getEl($handler['el'])->getChildren())
                     );
 
