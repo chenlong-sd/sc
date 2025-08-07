@@ -98,10 +98,18 @@ abstract class AbstractFormItem
         return $this->setting[$name] ?? null;
     }
 
-    public function readonly(): static
+    /**
+     * 设置只读
+     *
+     * @param string $when js 条件
+     * @return $this
+     */
+    public function readonly(string $when = ''): static
     {
         if (method_exists($this, 'setVAttrs')) {
-            $this->setVAttrs("readonly");
+            $when
+                ? $this->setVAttrs(":readonly", $when)
+                : $this->setVAttrs("readonly");
         }
 
         return $this;
