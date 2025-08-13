@@ -117,14 +117,16 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function disableUpload(bool $disable = true): static
+    public function disableUpload(bool|string $disable = true): static
     {
         if (isset($this->getVAttrs()['disabled']) || isset($this->getVAttrs()[':disabled'])) {
             return $this;
         }
 
         if ($disable){
-            $this->setVAttrs('disabled');
+            $disable === true
+                ? $this->setVAttrs('disabled')
+                : $this->setVAttrs(':disabled', $disable);
         }
 
         return $this;
@@ -143,9 +145,9 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
-        return $this->disableUpload();
+        return $this->disableUpload($when);
     }
 
     public function accept(string $accept): FormItemUpload

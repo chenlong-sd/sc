@@ -74,6 +74,18 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     }
 
     /**
+     * 同 submitUrl
+     * @param string $createUrl
+     * @param string|null $updateUrl
+     *
+     * @return $this
+     */
+    public function setSubmitUrl(string $createUrl, string $updateUrl = null): static
+    {
+        return $this->submitUrl($createUrl, $updateUrl);
+    }
+
+    /**
      * 成功关闭
      *
      * @param string|null $page

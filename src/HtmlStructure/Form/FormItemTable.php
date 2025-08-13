@@ -108,10 +108,10 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
         return array_filter($this->children, fn($children) => !$children->getHide());
     }
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
         foreach ($this->getChildren() as $child) {
-            $child->readonly();
+            $child->readonly($when);
         }
 
         return $this;

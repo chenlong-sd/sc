@@ -40,9 +40,9 @@ class FormItemTag extends AbstractFormItem implements FormItemInterface
         return $this->setVAttrs(':max', $max);
     }
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
-        return $this->setVAttrs(':disabled', 'true');
+        return $this->setVAttrs(':disabled', $when ?: 'true');
     }
 
     public function draggable(): static

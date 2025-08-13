@@ -129,7 +129,18 @@ abstract class AbstractFormItemTheme
                 $formItem->on('visible-change', "refresh{$varName}()");
             }
 
-            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'])->success($dataCode));
+            foreach ($remote['params'] as &$value) {
+                if (str_starts_with($value, '@') && !str_starts_with($value, '@this.') && !str_starts_with($value, '@VueApp.')){
+                    $value = strtr($value, ['@' => '@this.']);
+                }
+            }
+            $query = [
+                'search' => [
+                    'search' => $remote['params']
+                ]
+            ];
+
+            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'], $query)->success($dataCode));
 
             Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}"));
         }

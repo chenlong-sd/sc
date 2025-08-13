@@ -74,7 +74,8 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     {
         if ($this->callback) {
             $this->children = array_map(function ($v) {
-                return ($this->callback)($v);
+                $res = ($this->callback)($v);
+                return $res ?: $v;
             }, $this->children);
         }
 
@@ -160,10 +161,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
         foreach ($this->getChildren() as $child) {
-            $child->readonly();
+            $child->readonly($when);
         }
 
         return $this;

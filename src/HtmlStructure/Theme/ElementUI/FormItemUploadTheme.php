@@ -38,6 +38,23 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
             $el->append($this->imageEnlarge($formItem));
         }
 
+        Html::loadThemeResource('Layui');
+        Html::js()->vue->addMethod("imageEnlarge", JsFunc::anonymous(['url'])->code(
+            Js::if("typeof url === 'string'")->then(
+                Js::assign('url', '@[url]')
+            ),
+            Js::let('data', []),
+            Js::for('let i = 0; i < url.length; i++')->then(
+                Js::code('data.push({src:url[i]})')
+            ),
+            Js\Layer::photos([
+                "photos" => [
+                    'start' => 0,
+                    'data' => Js::grammar('data')
+                ]
+            ])
+        ));
+
         $this->createNoticeFunc();
         return $el;
     }
@@ -289,18 +306,25 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                     $progress
                 )
             ),
-            Table\Column::event('下载', '')->setAttr('width', 80)->setFormat(El::double('el-link')->setAttrs([
+            Table\Column::event('下载', '')->setAttr('width', 70)->setFormat(El::double('el-link')->setAttrs([
                 'type' => 'primary',
                 ':href' => 'url',
                 ':download' => 'name',
                 'icon' => 'download',
             ])->append('下载'))->notShow($formItemUpload->getDisableDownload()),
-            Table\Column::event('删除', '')->setAttr('width', 80)->setFormat(El::double('el-button')->setAttrs([
+            Table\Column::event('预览', '')->setAttr('width', 70)->setFormat(El::double('el-link')->setAttrs([
+                'type' => 'primary',
+                'link' => '',
+                '@click' => 'imageEnlarge(url)',
+                ':disabled' => '!/.jpg|.jpeg|.png|.gif$/@i.test(url)',
+                'icon' => 'View',
+            ])->append('预览')),
+            Table\Column::event('删除', '')->setAttr('width', 70)->setFormat(El::double('el-button')->setAttrs([
                 'link' => '',
                 'type' => 'danger',
                 'icon' => 'delete',
                 '@click' => 'uprm' . strtr($formItemUpload->getName(), ['.' => '_']) . '(@scope)'
-            ])),
+            ])->append('删除')),
         )->setPagination(false)
             ->setOpenSetting(false)
             ->render()->find('el-table')
@@ -348,27 +372,9 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
 
     private function imageEnlarge(FormItemAttrGetter|FormItemUpload $formItem): DoubleLabel
     {
-        Html::loadThemeResource('Layui');
-
         $icon   = El::double('el-icon')->addClass('single-image-enlarge')->append("<Search/>");
         $vModel = $this->getVModel($formItem);
         $icon->setAttr('v-if', $vModel)->setAttr('@click', "imageEnlarge({$vModel})");
-
-        Html::js()->vue->addMethod("imageEnlarge", JsFunc::anonymous(['url'])->code(
-            Js::if("typeof url === 'string'")->then(
-                Js::assign('url', '@[url]')
-            ),
-            Js::let('data', []),
-            Js::for('let i = 0; i < url.length; i++')->then(
-                Js::code('data.push({src:url[i]})')
-            ),
-            Js\Layer::photos([
-                "photos" => [
-                    'start' => 0,
-                    'data' => Js::grammar('data')
-                ]
-            ])
-        ));
 
         Html::css()->addCss(<<<CSS
         .single-image-enlarge{

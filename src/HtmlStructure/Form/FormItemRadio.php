@@ -26,11 +26,11 @@ class FormItemRadio extends AbstractFormItem implements FormItemInterface
         return Theme::getRenderer(FormItemRadioThemeInterface::class, $theme)->render($this);
     }
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
         if (isset($this->getVAttrs()[':disabled']) || isset($this->getVAttrs()['disabled'])) {
             return $this;
         }
-        return $this->setVAttrs(':disabled', 'true');
+        return $this->setVAttrs(':disabled', $when ?: 'true');
     }
 }

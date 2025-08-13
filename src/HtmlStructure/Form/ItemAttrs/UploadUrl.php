@@ -14,9 +14,9 @@ trait UploadUrl
      *
      * @return $this
      */
-    public function setUploadUrl(string $uploadUrl): static
+    public function setUploadUrl(string|\Stringable $uploadUrl): static
     {
-        $this->uploadUrl = $uploadUrl;
+        $this->uploadUrl = (string)$uploadUrl;
 
         return $this;
     }

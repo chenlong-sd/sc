@@ -89,9 +89,9 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
     }
 
 
-    public function readonly(): static
+    public function readonly(string $when = ''): static
     {
-        return $this->setVAttrs(':disabled', 'true');
+        return $this->setVAttrs(':disabled', $when ?: 'true');
     }
 
     /**

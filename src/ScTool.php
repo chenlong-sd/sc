@@ -34,7 +34,7 @@ use Sc\Util\Tool\Url;
  * @method static RemoteResourceDownload download()
  * @method static HtmlDocument dom(string $tag = '', bool $isASingleLabel = false)
  * @method static HtmlDocument stringToDom(string $htmlCode)
- * @method static BaiduFanYi baiduFanYi(string $text)
+ * @method static BaiduFanYi baiduFanYi(array $text)
  * @method static JWT jwt(array $config = [])
  * @method static Dir dir(string $dir)
  * @method static Nickname nickname()
