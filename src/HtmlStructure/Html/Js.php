@@ -64,6 +64,8 @@ class Js
 
     private ?Vue $vue = null;
 
+    private ?Vue $currentVue = null;
+
     public function __construct()
     {
         $this->variables = new \stdClass();
@@ -82,6 +84,24 @@ class Js
     public function load(string|array $jsPath): void
     {
         in_array($jsPath, $this->loadJs) or $this->loadJs[] = $jsPath;
+    }
+
+
+    /**
+     * 定义vue环境,不是默认vue环境时使用
+     *
+     * @param Vue $vue
+     * @param \Closure $callback
+     *
+     * @return mixed
+     */
+    public function defVueEnv(Vue $vue, \Closure $callback): mixed
+    {
+        $this->currentVue = $vue;
+        $res = $callback();
+        $this->currentVue = null;
+
+        return $res;
     }
 
     /**
@@ -156,7 +176,7 @@ class Js
                 $this->vue = new Vue();
             }
 
-            $value = $this->vue;
+            $value = $this->currentVue ?: $this->vue;
         }
 
         return match ($name) {

@@ -37,7 +37,7 @@ class WindowTheme implements WindowThemeInterface
 
         $baseConfig = is_null($window->getContent())
             ? ['type' => 2, 'area' => ['90%', '90%'], 'content' => Grammar::mark('url')]
-            : ['type' => 1, 'content' => $window->getContent()];
+            : ['type' => 1, 'content' => Grammar::mark($window->getContent()->toHtml(), 'line')];
 
         $baseConfig = array_merge($baseConfig, $config);
 
