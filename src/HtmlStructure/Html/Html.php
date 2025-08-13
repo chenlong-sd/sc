@@ -27,6 +27,8 @@ use Swoole\Coroutine;
  */
 class Html
 {
+    private const SwooleEnvKey = 'SC__HTML__SC';
+
     /**
      * 页面基础代码
      */
@@ -121,22 +123,32 @@ class Html
      */
     public static function toHtml(): string
     {
+        $html = self::html();
         $css = self::css()->toCode();
         $js  = self::js()->toCode();
 
-        $css and self::html()->find('head')->append(El::double('style')->append(El::text($css)));
-        $js  and self::html()->find('html')->append(El::double('script')->append(El::text($js)));
+        if ($css) {
+            $html->find('head')->append(h('style')->text($css));
+        }
+        if ($js) {
+            $html->find('body')->append(h('script')->text($js));
+        }
 
-        self::html()->find('html')->eachChildren(function (AbstractHtmlElement $element) {
+        $html->find('html')->eachChildren(function (AbstractHtmlElement $element) {
             $element->setRetraction(0);
         });
 
-        return trim(El::fictitious()->append(El::text('<!DOCTYPE html>'), self::html())->toHtml());
+        return trim(h([t('<!DOCTYPE html>'), $html])->toHtml());
     }
 
     public static function addDeviceAdaptation(): void
     {
-        self::html()->find('head')->append(El::double('meta')->setAttr('name', 'viewport')->setAttr('content', 'width=device-width, initial-scale=1.0'));
+        self::html()->find('head')->append(
+            h('meta', [
+                'name' => 'viewport',
+                'content' => 'width=device-width, initial-scale=1.0'
+            ])
+        );
     }
 
     public static function __callStatic(string $name, array $arguments)
@@ -174,7 +186,7 @@ class Html
 
         if (self::isRunSwoole()){
             $context = Coroutine::getContext();
-            $context['SC__HTML__SC'] = $html;
+            $context[self::SwooleEnvKey] = $html;
             return;
         }
 
@@ -193,7 +205,7 @@ class Html
     {
         if (self::isRunSwoole()){
             $context = Coroutine::getContext();
-            return $context['SC__HTML__SC'] ?? null;
+            return $context[self::SwooleEnvKey] ?? null;
         }
 
         global $globalHtml;

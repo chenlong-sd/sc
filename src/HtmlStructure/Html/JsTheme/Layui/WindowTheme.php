@@ -24,12 +24,16 @@ class WindowTheme implements WindowThemeInterface
             $config['area'] = [$config['width'], '90%'];
         }
 
-        $code = JsCode::create('// 打开弹窗')->then(
-            JsVar::def('url', $window->getUrl()),
-            JsVar::def('query', array_map(fn($v) => str_starts_with($v, '@') ? strtr($v, ['@' => '@row.']) : $v, $window->getQuery()) ?: '@{}'),
-        );
+        $code = JsCode::create('// 打开弹窗');
 
-        $this->urlHandle($code);
+        if ($window->getUrl()) {
+            $code->then(
+                JsVar::def('url', $window->getUrl()),
+                JsVar::def('query', array_map(fn($v) => str_starts_with($v, '@') ? strtr($v, ['@' => '@row.']) : $v, $window->getQuery()) ?: '@{}'),
+            );
+
+            $this->urlHandle($code);
+        }
 
         $baseConfig = is_null($window->getContent())
             ? ['type' => 2, 'area' => ['90%', '90%'], 'content' => Grammar::mark('url')]
@@ -47,12 +51,19 @@ class WindowTheme implements WindowThemeInterface
         }
         $code->then(JsVar::def("childrenWin"));
         $window = empty($baseConfig['parent']) ? 'window' : "parent";
-        $baseConfig['success'] = JsFunc::anonymous(['layero', 'index', 'that'], <<<JS
-            layero.find('.layui-layer-content').css('background', 'white')
-            let childrenWin = {$window}[layero.find('iframe')[0]['name']];
-            childrenWin.LayerIndex = index;
-            $originCode;
-        JS);
+
+        if ($baseConfig['type'] == 2){
+            $baseConfig['success'] = JsFunc::anonymous(['layero', 'index', 'that'], <<<JS
+                layero.find('.layui-layer-content').css('background', 'white')
+                let childrenWin = {$window}[layero.find('iframe')[0]['name']];
+                childrenWin.LayerIndex = index;
+                $originCode;
+            JS);
+        }else{
+            $baseConfig['success'] = JsFunc::anonymous(['layero', 'index', 'that'], <<<JS
+                $originCode;
+            JS);
+        }
 
         Html::loadThemeResource('Layui');
 

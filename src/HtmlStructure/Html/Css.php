@@ -39,6 +39,9 @@ class Css
 
     public function addCss(#[Language('CSS')] $css): void
     {
+        if (in_array($css, $this->css)) {
+            return;
+        }
         $this->css[] = $css;
     }
 
@@ -53,7 +56,12 @@ class Css
     {
         $head = Html::html()->find('head');
         foreach ($this->loadCss as $cssPath) {
-            $head->append(El::single('link')->setAttr('rel', 'stylesheet')->setAttr('href', $cssPath));
+            $head->append(
+                El::single('link')->setAttrs([
+                    'rel' => 'stylesheet',
+                    'href' => $cssPath,
+                ])
+            );
         }
     }
 }

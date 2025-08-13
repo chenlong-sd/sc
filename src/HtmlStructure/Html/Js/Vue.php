@@ -8,6 +8,7 @@ namespace Sc\Util\HtmlStructure\Html\Js;
 use JetBrains\PhpStorm\ExpectedValues;
 use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\VueComponentInterface;
 use Sc\Util\HtmlStructure\Html\StaticResource;
 
@@ -44,11 +45,13 @@ class Vue
      *
      * @var array
      */
-    private array $config;
+    private array $config = [
+        'methods' => []
+    ];
 
-    private array $data;
+    private array $data = [];
 
-    private string $el;
+    private string $el = '#app';
 
     private array $use = [];
     /**
@@ -60,18 +63,19 @@ class Vue
      */
     private ?array $makeComponent = null;
 
-    public function __construct()
-    {
-        $this->config = [];
-        $this->data   = [];
-        $this->el     = '#app';
+    private ?string $varName = self::VAR_NAME;
 
+    public function __construct(string $el = null, string $varName = null)
+    {
         Html::js()->load(StaticResource::VUE);
 
-        $this->config['methods'] = [];
-
-        Html::html()->find($this->el)->setAttr('v-cloak');
-        Html::css()->addCss('[v-cloak]{display: none}');
+        if ($el) {
+            $this->el = $el;
+            $this->varName = $varName;
+        }else {
+            Html::html()->find($this->el)->setAttr('v-cloak');
+            Html::css()->addCss('[v-cloak]{display: none}');
+        }
     }
 
     /**
@@ -89,6 +93,20 @@ class Vue
         $this->makeComponent
             ? $this->makeComponent['data'][$name] = $value
             : $this->data[$name] = $value;
+    }
+
+
+    /**
+     * 绑定值，返回绑定变量
+     *
+     * @param string $name
+     * @param mixed  $value
+     *
+     * @date 2023/5/16
+     */
+    public function data(string $name, mixed $value): void
+    {
+       $this->set($name, $value);
     }
 
     /**
@@ -339,40 +357,34 @@ class Vue
      */
     public function toCode(): string
     {
-        Html::js()->defVar('VueInitData', $this->data);
-        Html::js()->defVar("VueBaseData", new \stdClass());
+        $makeConfig = [
+            'data' => JsFunc::anonymous([], Js::code(
+                Js::let('data', $this->data ?: '@{}'),
+                Js::return('data')
+            ))->toCode(),
+            'methods' => $this->config['methods'] ?: "@{}"
+        ];
 
-        // 设置data
-        $block = JsCode::create(Obj::use('VueBaseData')->set('data', JsFunc::anonymous([], "return VueInitData;")));
         // 生命周期事件处理
         foreach (self::EVENTS as $EVENT) {
             if (!empty($this->config[$EVENT])) {
-                $block->then(Obj::use("VueBaseData")->set($EVENT, JsFunc::anonymous([], implode("\r\n", $this->config[$EVENT]))->toCode()));
+                $makeConfig[$EVENT] = JsFunc::anonymous([], implode("\r\n", $this->config[$EVENT]));
             }
         }
-        $block->then(Obj::use("VueBaseData")->set('methods', new \stdClass()));
-        foreach ($this->config['methods'] as $method => $call) {
-            $block->then(Obj::use("VueBaseData.methods")->set($method, $call));
-        }
 
-        $block->then(JsVar::assign('VueAppInit', JsFunc::call('Vue.createApp', '@VueBaseData')));
+        $block = Js::code(Js::let($this->varName, JsFunc::call('Vue.createApp', $makeConfig)));
+
         foreach ($this->use as $use) {
-            $block->then(JsFunc::call("VueAppInit.use", ...$use));
+            $block->then(JsFunc::call("$this->varName.use", ...$use));
         }
 
         foreach ($this->components as $component) {
-            $block->then($component->register('VueAppInit'));
+            $block->then($component->register($this->varName));
         }
 
-        // 加载饿了么图标
-        $block->then(Html::js()->getUnitCodeBlock('elementPlusIconLoad'));
+        $block->then(JsVar::assign($this->varName, JsFunc::call("$this->varName.mount", $this->el)));
 
-        // 重新赋值，保证在最后
-        $block->then(JsVar::assign(self::VAR_NAME, JsFunc::call('VueAppInit.mount', $this->el)));
-
-        Html::js()->defCodeBlock($block);
-
-        return '';
+        return $this->el === '#app' ? $block : Grammar::extract($block);
     }
 
     public function __toString(): string

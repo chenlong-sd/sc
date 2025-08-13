@@ -62,6 +62,8 @@ class Js
     private array $loadJs = [];
     private array $unitCodeBlock = [];
 
+    private ?Vue $vue = null;
+
     public function __construct()
     {
         $this->variables = new \stdClass();
@@ -150,10 +152,11 @@ class Js
         $value = $this->variables->{$name} ?? null;
 
         if ($name === 'vue') {
-            if (empty($this->variables->{Vue::VAR_NAME})) {
-                $this->defVar(Vue::VAR_NAME, new Vue());
+            if ($this->vue === null) {
+                $this->vue = new Vue();
             }
-            $value = $this->variables->{Vue::VAR_NAME}->value;
+
+            $value = $this->vue;
         }
 
         return match ($name) {
@@ -189,6 +192,7 @@ class Js
         }
 
         $code[] = implode(";\r\n", $this->codeBlock);
+        $code[] = $this->vue->toCode();
 
         $this->loadJs();
 

@@ -9,7 +9,8 @@ class StaticResource
 {
     const LAYUI_JS = '/layui/layui.js';
     const LAYUI_CSS = '/layui/css/layui.css';
-    const VUE = '/js/vue@3.3.4.global.js';
+    const VUE = '/js/vue.global.prod.js';
+    const VUE_MODULE = '/js/vue.esm-browser.prod.js';
     const ELEMENT_PLUS_JS = '/elementUI/index.full.min.js';
     const ELEMENT_PLUS_CSS = '/elementUI/index.css';
     const ELEMENT_PLUS_ICON = '/elementUI/index.iife.min.js';
