@@ -22,7 +22,7 @@ class IconSelector implements VueComponentInterface
 
     public function register(string $registerVar): string
     {
-        Html::html()->find('body')->after(El::fromCode($this->template()));
+        Html::html()->find('body')->prepend(El::fromCode($this->template()));
 
         $config = [
             'template' => Grammar::mark("document.getElementById('vue--icon-selector').innerHTML"),

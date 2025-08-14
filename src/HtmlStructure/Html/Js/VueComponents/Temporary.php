@@ -100,7 +100,7 @@ class Temporary implements VueComponentInterface
 
     public function register(string $registerVar): string
     {
-        Html::html()->find('body')->after(
+        Html::html()->find('body')->prepend(
             El::double('script')->setAttrs([
                 'id'   => "vue--{$this->getName()}",
                 'type' => 'text/x-template'
