@@ -25,6 +25,7 @@ class WindowTheme implements WindowThemeInterface
         }
 
         $code = JsCode::create('// 打开弹窗');
+        $code->then($window->getBeforeOpen());
 
         if ($window->getUrl()) {
             $code->then(
@@ -45,10 +46,11 @@ class WindowTheme implements WindowThemeInterface
         $baseConfig['maxmin'] = true;
         $baseConfig['moveOut'] = true;
 
-        $originCode = '';
+        $originCode = $window->getAfterOpen();
         if (!empty($baseConfig['success']) && $baseConfig['success'] instanceof JsFunc) {
             $originCode = $baseConfig['success']->code;
         }
+
         $code->then(JsVar::def("childrenWin"));
         $window = empty($baseConfig['parent']) ? 'window' : "parent";
 

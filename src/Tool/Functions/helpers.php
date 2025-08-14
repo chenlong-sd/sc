@@ -1,6 +1,12 @@
 <?php
 
 
+use Sc\Util\HtmlElement\El;
+use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
+use Sc\Util\HtmlElement\ElementType\SingleLabel;
+use Sc\Util\HtmlElement\ElementType\TextCharacters;
+
 if (! function_exists('kv_to_form_options')) {
 
     /**
@@ -32,23 +38,29 @@ if (! function_exists('h')){
      * @param string|array $tag
      * @param string|Stringable|array|null $content
      * @param array $attrs
-     * @return mixed|\Sc\Util\HtmlElement\ElementType\DoubleLabel|\Sc\Util\HtmlElement\ElementType\SingleLabel
+     * @return mixed|DoubleLabel|SingleLabel
      */
-    function h(string|array $tag = '', string|\Stringable|array $content = null, array $attrs = [])
+    function h(string|array|AbstractHtmlElement $tag = '', string|\Stringable|array $content = null, array $attrs = [])
     {
-        if (is_array($tag)) return \Sc\Util\HtmlElement\El::fictitious()->append(...$tag);
+        if (is_array($tag)) return El::fictitious()->append(...$tag);
 
         if ($tag == ''){
-            $el = \Sc\Util\HtmlElement\El::fictitious();
-        }else if (in_array($tag, \Sc\Util\HtmlElement\ElementType\SingleLabel::PREDEFINE_LABEL)){
-            $el = \Sc\Util\HtmlElement\El::single($tag);
+            $el = El::fictitious();
+        }else if (in_array($tag, SingleLabel::PREDEFINE_LABEL)){
+            $el = El::single($tag);
+        }else if ($tag instanceof AbstractHtmlElement){
+            $el = $tag;
+        }else if(preg_match('/^[\w-]+$/', $tag)){
+            $el = El::double($tag);
         }else{
-            $el = \Sc\Util\HtmlElement\El::double($tag);
+            $el = El::fromCode($tag);
         }
+
         if ($attrs){
             $el->setAttrs($attrs);
         }
-        if ($content && ($el instanceof \Sc\Util\HtmlElement\ElementType\DoubleLabel || $el instanceof \Sc\Util\HtmlElement\ElementType\SingleLabel)){
+
+        if ($content && ($el instanceof DoubleLabel || $el instanceof SingleLabel)){
             is_array($content) ? $el->setAttrs($content) : $el->append($content);
         }
 
@@ -61,10 +73,10 @@ if (! function_exists('t')){
      * 纯文本
      *
      * @param string $text
-     * @return \Sc\Util\HtmlElement\ElementType\TextCharacters
+     * @return TextCharacters
      */
-    function t(string $text): \Sc\Util\HtmlElement\ElementType\TextCharacters
+    function t(string $text): TextCharacters
     {
-        return \Sc\Util\HtmlElement\El::text($text);
+        return El::text($text);
     }
 }

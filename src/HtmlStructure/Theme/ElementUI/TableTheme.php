@@ -21,6 +21,7 @@ use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
+use Sc\Util\HtmlStructure\Theme\Theme;
 use Sc\Util\ScTool;
 use Sc\Util\Tool;
 
@@ -115,86 +116,134 @@ class TableTheme implements TableThemeInterface
     private function tableSettingHandle(Table $table): void
     {
         $settingVarName = "{$table->getId()}Setting";
-        $settingFormVarName = "{$table->getId()}FormSetting";
         $table->setAttr(':border', "{$settingVarName}.dividing_line");
         $table->setAttr(':stripe', "{$settingVarName}.stripe");
 
-        $table->setHeaderRightEvent("@info.Setting.列设置", function () use ($table, $settingVarName, $settingFormVarName){
-            $form = Form::create($settingFormVarName)->addFormItems(
-                Form\FormItem::checkbox("dividing_line", '表格分割线')->col(6)->options(["开启"])->default(false),
-                Form\FormItem::checkbox("stripe", '表格斑马纹')->col(6)->options(["开启"])->default(false),
-                Form\FormItem::table("table_columns", '表格列')->addItems(
-                    Form\FormItem::customize("{{ scope.row.name }}")->setLabel('列名称'),
-                    Form\FormItem::checkbox("show", '是否展示')->options(['展示']),
-                    Form\FormItem::text("width", '宽度')->placeholder('自动'),
-                    Form\FormItem::select("fixed", '固定位置')->options([
-                        "left" => "左侧",
-                        "right" => "右侧",
-                    ]),
-                    Form\FormItem::select("align", '对齐')->options([
-                        "left" => "左对齐",
-                        "center" => "居中对齐",
-                        "right" => "右对齐",
-                    ])
-                )->beforeRender(function (DoubleLabel $element){
-                    $element->find(".sc-ft-delete")?->remove();
-                    $element->find(".sc-ft-add")?->getParent()?->remove();
-                    $element->find("el-form-item el-col")->remove();
-                    $element->find("[mark-event]")->setAttr('label', '排序');
-                })
-                    ->setColumnAttrs(0, ['width' => '120px'])
-                    ->setColumnAttrs(1, ['width' => '120px']),
-                Form\FormItem::submit("保存设置", '')->setSubmit(Js::code(
-                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))"),
-                    Js::code("localStorage.setItem(window.location.pathname + '@{$table->getId()}', JSON.stringify(this.$settingFormVarName))")
-                ))->successClose('current')
-            );
+        $table->setHeaderRightEvent("@info.Setting.列设置", function () use ($table, $settingVarName){
+            $vue = new Js\Vue("#$settingVarName", $settingVarName);
+            $settingDefault = Html::js()->defVueEnv($vue, function () use (&$content, $settingVarName, $table){
+                $form = Form::create($settingVarName)->addFormItems(
+                    Form\FormItem::checkbox("dividing_line", '表格分割线')->col(6)->options(["开启"])->default(false),
+                    Form\FormItem::checkbox("stripe", '表格斑马纹')->col(6)->options(["开启"])->default(false),
+                    Form\FormItem::table("table_columns", '表格列')->addItems(
+                        Form\FormItem::customize("{{ scope.row.name }}")->setLabel('列名称'),
+                        Form\FormItem::checkbox("show", '是否展示')->options(['展示']),
+                        Form\FormItem::text("width", '宽度')->placeholder('自动'),
+                        Form\FormItem::select("fixed", '固定位置')->options([
+                            "left" => "左侧",
+                            "right" => "右侧",
+                        ]),
+                        Form\FormItem::select("align", '对齐')->options([
+                            "left" => "左对齐",
+                            "center" => "居中对齐",
+                            "right" => "右对齐",
+                        ])
+                    )->lazyLoad("tableColumnLazy")->beforeRender(function (DoubleLabel $element){
+                        $element->find(".sc-ft-delete")?->remove();
+                        $element->find(".sc-ft-add")?->getParent()?->remove();
+                        $element->find("el-form-item el-col")->remove();
+                        $element->find("[mark-event]")->setAttr('label', '排序');
+                    })
+                        ->setColumnAttrs(0, ['width' => '120px'])
+                        ->setColumnAttrs(1, ['width' => '120px'])
+                );
 
-            $settingDefault = [];
-            foreach ($table->getColumns() as $column) {
-                if ($column->getAttr('mark-event')) continue;
-                if (!$label = $column->getAttr('label')){
-                    $label = $column->getAttr('type') == 'selection' ? '选择列' : "";
-                    $column->setAttr(':show-overflow-tooltip', 'false');
+                $settingDefault = [];
+                foreach ($table->getColumns() as $column) {
+                    if ($column->getAttr('mark-event')) continue;
+                    if (!$label = $column->getAttr('label')){
+                        $label = $column->getAttr('type') == 'selection' ? '选择列' : "";
+                        $column->setAttr(':show-overflow-tooltip', 'false');
+                    }
+
+                    $column->setAttr(':align', "sett.align");
+                    $column->setAttr('v-if', "sett.show && sett.name == '$label'");
+                    $column->setAttr(':fixed', "sett.fixed");
+                    $column->setAttr(':width', "sett.width");
+
+                    $settingDefault[] = [
+                        "name" => $label,
+                        "show" => true,
+                        "fixed" => $column->getFixedPosition(),
+                        "align" => $column->getAttr('align', 'center'),
+                        "width" => $column->getAttr('width') ?? null,
+                    ];
+
+                    $column->setAttr("width", null);
+                    $column->setAttr("fixed", null);
+                    $column->setAttr("align", null);
                 }
 
-                $column->setAttr(':align', "sett.align");
-                $column->setAttr('v-if', "sett.show && sett.name == '$label'");
-                $column->setAttr(':fixed', "sett.fixed");
-                $column->setAttr(':width', "sett.width");
-
-                $settingDefault[] = [
-                    "name" => $label,
-                    "show" => true,
-                    "fixed" => $column->getFixedPosition(),
-                    "align" => $column->getAttr('align', 'center'),
-                    "width" => $column->getAttr('width') ?? null,
+                $settingDefault = [
+                    "dividing_line" => false,
+                    "stripe" => false,
+                    "table_columns" => $settingDefault,
                 ];
 
-                $column->setAttr("width", null);
-                $column->setAttr("fixed", null);
-                $column->setAttr("align", null);
-            }
+                $content = h('div')->setId($settingVarName)
+                    ->setStyle('{margin: 10px 20px;}')
+                    ->append(
+                        h('el-config-provider', [
+                            ':z-index' => '99999999999'
+                        ])->append(
+                            $form->setData($settingDefault)->render()
+                        )
+                    );
 
-            $content = $form->setData([
-                "dividing_line" => false,
-                "stripe" => false,
-                "table_columns" => $settingDefault,
-            ])->render();
+                Html::js()->vue->addMethod("formSubmitHandle", ['data'], Js::code(
+                    $form->getSubmitHandle(),
+                    Js::return('data')
+                ));
 
+                Html::js()->vue->event('created', Js::code(
+                    Js::if("localStorage.getItem(window.location.pathname + '@{$table->getId()}')")->then(
+                        Js::assign("this.$settingVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
+                    )
+                ));
+
+                if ($form->getAfterRender()) {
+                    Html::js()->vue->event('mounted', Js::code(
+                        $form->getAfterRender(),
+                        Js::code("this.tableColumnLazy()")
+                    ), true);
+                }
+
+                return $settingDefault;
+            });
+
+            Html::js()->vue->set($settingVarName, $settingDefault);
             Html::js()->vue->event('created', Js::code(
                 Js::if("localStorage.getItem(window.location.pathname + '@{$table->getId()}')")->then(
                     Js::assign("this.$settingVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
-                    Js::assign("this.$settingFormVarName", "@JSON.parse(localStorage.getItem(window.location.pathname + '@{$table->getId()}'))"),
-                )->else(
-                    Js::assign("this.$settingVarName", "@JSON.parse(JSON.stringify(this.$settingFormVarName))")
                 )
             ));
 
-            return Table\EventHandler::window("设置")->setConfig(['width' => "800px"])
-                ->beforeOpen(Js::code(Js::assign("row" ,"@this.$settingFormVarName")))
+
+            return Table\EventHandler::window("设置")->setConfig(['area' => ["800px", 'auto']])
                 ->setContent($content)
-                ->afterOpen(Js::code($form->getAfterRender()));
+                ->setConfig([
+                    'btn' => ["保存设置"],
+                    'btnAlign' => 'c',
+                    'offset' => '10%',
+                    'maxHeight' => '80%',
+                    'yes' => JsFunc::arrow(['index', 'layero', 'that'])->code(
+                        Js::code('layer.close(index)'),
+                        Js::let("data","@SetVue.formSubmitHandle(SetVue.$settingVarName)"),
+                        Js::for("let i = 0; i < data.table_columns.length; i++")->then(
+                            Js::code('data.table_columns[i]._id_ = "t-" + i')
+                        ),
+                        Js::assign("VueApp.$settingVarName", "@JSON.parse(JSON.stringify(data))"),
+                        Js::code("localStorage.setItem(window.location.pathname + '@{$table->getId()}', JSON.stringify(data))")
+                    )
+                ])
+                ->beforeOpen(Js::code(
+                    Js::let("SetVue")
+                ))
+                ->afterOpen(Js::code(
+                    $vue->toCode(),
+                    Js::code("SetVue = $settingVarName"),
+                    Js::code('layero.find(".layui-layer-btn0").css("borderRadius", "5px")')
+                ))->render('Layui');
         });
     }
 

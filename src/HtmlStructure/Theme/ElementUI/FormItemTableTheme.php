@@ -35,7 +35,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
     public function renderFormItem($formItem): AbstractHtmlElement
     {
         $el = Table::create($this->getVModel($formItem), ScTool::random('TR')->get(111, 999));
-        $elements = $this->addHandle($formItem, $el);
+        $addHandleEl = $this->addHandle($formItem, $el);
 
         $el->setPagination(false);
         $el->setOpenSetting(false);
@@ -55,8 +55,13 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         $this->handleMake($el, $formItem);
 
+        if ($formItem->getLazyLoadFuncName()) {
+            $this->lazy($formItem);
+        }
+
         $el = El::double('el-form-item')->setAttr('label-width', 0)
-            ->append($el->render("ElementUI"))->append($elements);
+            ->append($el->render("ElementUI"))
+            ->append($addHandleEl);
 
         return $el;
     }
@@ -98,6 +103,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         Html::js()->vue->addMethod($method, [], Js::code(
             Js::let('defaultRows', $rowDefault),
             Js::code('defaultRows._id_ = "it-" + Math.random();'),
+            Js::code($formItemTable->getLazyLoadFuncName() ? 'defaultRows._edit_ = 1;' : ''),
             Js::call("this.{$this->getVModel($formItemTable)}.push", '@defaultRows'),
             Js::code("this.\$nextTick(() => this.\$refs['{$table->getId()}I0' + (this.{$this->getVModel($formItemTable)}.length - 1)].focus())")
         ));
@@ -211,6 +217,42 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         return Table\Column::normal($child->getLabel(), $child->getName())
             ->setAttr($formItem->getColumnAttrs($index))
-            ->setFormat($format);
+            ->setFormat(
+                $formItem->getLazyLoadFuncName()
+                    ? h([
+                        h('div', $format)->setAttr('v-if', '@scope.row._edit_'),
+                        h('div', "{{ {$child->getName()} }}")
+                            ->setAttr('v-else')
+                            ->setAttr('@click', '@scope.row._edit_ = 1'),
+                    ])
+                    : $format
+            );
+    }
+
+
+    private function lazy(FormItemTable|FormItemAttrGetter $formItem): void
+    {
+        $v = "this.{$formItem->getFormModel()}.{$formItem->getName()}";
+
+        Html::js()->vue->addMethod($formItem->getLazyLoadFuncName(), ['name', 'value'], Js::code(
+            Js::if("!this.{$formItem->getFormModel()}")->then(
+                Js::return()
+            ),
+            Js::let('i', 0),
+            Js\JsTimer::setInterval("layz", 1)->call(
+                Js::code("{$v}[i]._edit_ = 1"),
+                Js::if("i === {$v}.length - 1")->then(
+                    Js::code("clearInterval(layz)")
+                )->else(
+                    Js::assign('i', '@i + 1')
+                )
+            ),
+        ));
+
+        $formItem->getForm()->setSubmitHandle(
+            Js::for("let i = 0; i < $v.length; i++")->then(
+                Js::code("delete data.{$formItem->getName()}[i]._edit_")
+            )
+        );
     }
 }

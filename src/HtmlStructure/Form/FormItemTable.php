@@ -24,6 +24,8 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
 
     protected array $columnAttrs = [];
 
+    protected string $lazyLoadFuncName = '';
+
     public function render(string $theme = null): AbstractHtmlElement
     {
         foreach ($this->children as $item) {
@@ -60,6 +62,11 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
         }
 
         return $this->columnAttrs[$index] ?? [];
+    }
+
+    public function getLazyLoadFuncName(): string
+    {
+        return $this->lazyLoadFuncName;
     }
 
     protected function getDefault()
@@ -113,6 +120,21 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
         foreach ($this->getChildren() as $child) {
             $child->readonly($when);
         }
+
+        return $this;
+    }
+
+
+    /**
+     * 懒加载
+     *
+     * @param string $lazyLoadFuncName 加载表单函数名
+     *
+     * @return static
+     */
+    public function lazyLoad(string $lazyLoadFuncName): static
+    {
+        $this->lazyLoadFuncName = $lazyLoadFuncName;
 
         return $this;
     }

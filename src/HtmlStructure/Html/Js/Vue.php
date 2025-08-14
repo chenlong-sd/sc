@@ -65,6 +65,10 @@ class Vue
 
     private ?string $varName = self::VAR_NAME;
 
+    /**
+     * @param string|null $el 挂载元素 例: #app
+     * @param string|null $varName JS变量名
+     */
     public function __construct(string $el = null, string $varName = null)
     {
         Html::js()->load(StaticResource::VUE);
