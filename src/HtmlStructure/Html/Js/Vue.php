@@ -376,7 +376,7 @@ class Vue
             }
         }
 
-        $block = Js::code(Js::let($this->varName, JsFunc::call('Vue.createApp', $makeConfig)));
+        $block = Js::code(Js::var($this->varName, JsFunc::call('Vue.createApp', $makeConfig)));
 
         foreach ($this->use as $use) {
             $block->then(JsFunc::call("$this->varName.use", ...$use));

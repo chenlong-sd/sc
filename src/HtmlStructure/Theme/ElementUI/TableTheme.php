@@ -224,8 +224,7 @@ class TableTheme implements TableThemeInterface
                 ->setConfig([
                     'btn' => ["保存设置"],
                     'btnAlign' => 'c',
-                    'offset' => '10%',
-                    'maxHeight' => '80%',
+                    'offset' => '@windowHeight / 10',
                     'yes' => JsFunc::arrow(['index', 'layero', 'that'])->code(
                         Js::code('layer.close(index)'),
                         Js::let("data","@SetVue.formSubmitHandle(SetVue.$settingVarName)"),
@@ -237,12 +236,13 @@ class TableTheme implements TableThemeInterface
                     )
                 ])
                 ->beforeOpen(Js::code(
-                    Js::let("SetVue")
+                    Js::let("SetVue"),
                 ))
                 ->afterOpen(Js::code(
                     $vue->toCode(),
                     Js::code("SetVue = $settingVarName"),
-                    Js::code('layero.find(".layui-layer-btn0").css("borderRadius", "5px")')
+                    Js::code('layero.find(".layui-layer-btn0").css("borderRadius", "5px")'),
+                    Js::code('layero.find(".layui-layer-content").css("maxHeight", windowHeight * 0.9 + "px")'),
                 ))->render('Layui');
         });
     }
