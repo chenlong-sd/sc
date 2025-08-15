@@ -47,7 +47,7 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         $this->submitEvent($formItem, $formId);
 
         $el->append($submitButton)->append($formItem->getResetText() ? $reset : '');
-
+        $this->submitButtonPosition($formItem, $el);
         return $el;
     }
 
@@ -134,5 +134,22 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             Js::if('!valid')->then("return false;"),
             $submitCode,
         ));
+    }
+
+    /**
+     * @param FormItemSubmit|FormItemAttrGetter $formItem
+     * @param AbstractHtmlElement $el
+     * @return void
+     */
+    public function submitButtonPosition(FormItemSubmit|FormItemAttrGetter $formItem, AbstractHtmlElement $el): void
+    {
+        if ($formItem->getClosePage()['page'] == FormItemSubmit::CLOSE_PAGE_CURRENT) {
+            return;
+        }
+
+        $el->setStyle("{position: fixed; bottom: -5px; right: 15px;z-index: 11}");
+        Html::html()->find('body')->append(
+            h('div')->setStyle('{position: fixed;bottom: 0; background-color: white;height: 60px;width: 100%;z-index: 10}')
+        )->find('#app')->setStyle('{padding-bottom: 100px}');
     }
 }

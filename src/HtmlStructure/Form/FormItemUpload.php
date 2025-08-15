@@ -90,6 +90,10 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
             $this->setVAttrs('multiple');
         }
 
+        if (empty($this->getVAttrs()['accept'])) {
+            $this->accept('image/*');
+        }
+
         return $this;
     }
 

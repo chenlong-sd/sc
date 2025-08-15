@@ -212,7 +212,7 @@ class Js
         }
 
         $code[] = implode(";\r\n", $this->codeBlock);
-        $code[] = $this->vue->toCode();
+        $code[] = $this->vue?->toCode();
 
         $this->loadJs();
 
