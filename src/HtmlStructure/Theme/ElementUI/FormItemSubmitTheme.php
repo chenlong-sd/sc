@@ -147,9 +147,9 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             return;
         }
 
-        $el->setStyle("{position: fixed; bottom: -5px; right: 15px;z-index: 11}");
-        Html::html()->find('body')->append(
-            h('div')->setStyle('{position: fixed;bottom: 0; background-color: white;height: 60px;width: 100%;z-index: 10}')
-        )->find('#app')->setStyle('{padding-bottom: 100px}');
+//        $el->setStyle("{position: fixed; bottom: -5px; right: 15px;z-index: 11}");
+//        Html::html()->find('body')->append(
+//            h('div')->setStyle('{position: fixed;bottom: 0; background-color: white;height: 60px;width: 100%;z-index: 10}')
+//        )->find('#app')->setStyle('{padding-bottom: 100px}');
     }
 }
