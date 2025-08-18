@@ -21,15 +21,12 @@ use Sc\Util\Tool\JWT;
 use Sc\Util\Tool\Lock;
 use Sc\Util\Tool\Nickname;
 use Sc\Util\Tool\Random;
-use Sc\Util\Tool\RemoteResourceDownload;
-use Sc\Util\Tool\SensitiveWord;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
 
 /**
  *  Class Tool.
  * @method static Tree tree(array $data, bool $currentIsTreeData = false)
- * @method static RemoteResourceDownload download()
  * @method static HtmlDocument dom(string $tag = '', bool $isASingleLabel = false)
  * @method static HtmlDocument stringToDom(string $htmlCode)
  * @method static BaiduFanYi baiduFanYi(array $text)
@@ -38,7 +35,6 @@ use Sc\Util\Tool\Url;
  * @method static Nickname nickname()
  * @method static ClassProxy classProxy(object $class)
  * @method static Url url(?string $url = null)
- * @method static SensitiveWord SensitiveWord(string ...$text)
  * @method static Ciphertext ciphertext(string $secret)
  * @method static Random random(?string $prefix = null)
  * @method static XlsWriter xls(array|string $config)
