@@ -19,13 +19,14 @@ use Sc\Util\HtmlStructure\Html\Js\Vue;
  */
 class Temporary implements VueComponentInterface
 {
-    protected function __construct(
-        private readonly string $name,
-        private AbstractHtmlElement|string $content = '',
-        private array $config = [],
-    )
+    private Vue $vue;
+    private array $onShow = [];
+    private string|AbstractHtmlElement $template = '';
+
+    protected function __construct(private readonly string $name)
     {
-        Html::js()->vue->startMakeTmpComponent($this->name);
+        $this->vue = new Vue(componentName: $this->name);
+        Html::js()->setVue($this->vue);
     }
 
     /**
@@ -39,24 +40,34 @@ class Temporary implements VueComponentInterface
     }
 
     /**
-     * @param AbstractHtmlElement|string $content
+     * @param AbstractHtmlElement|string $template
      *
      * @return $this
      */
-    public function setContent(AbstractHtmlElement|string $content): static
+    public function setContent(AbstractHtmlElement|string $template): static
     {
-        $this->content = El::get($content);
+        return $this->setTemplate($template);
+    }
+
+    /**
+     * @param AbstractHtmlElement|string $template
+     *
+     * @return $this
+     */
+    public function setTemplate(AbstractHtmlElement|string $template): static
+    {
+        $this->template = El::get($template);
 
         $code = JsCode::create('// nothing');
-        if ($this->content->getLabel() === 'el-form'){
+        if ($this->template->getLabel() === 'el-form'){
             // 判断组件是否是一个表单，如果是表单看是否有传输默认数据，如果有则设置对应的提交地址
 
-            $vModel = $this->content->getAttr(':model');
+            $vModel = $this->template->getAttr(':model');
 
             $code->then(Js::let('row', '@data'));
             $code->then(Js::assign("this.{$vModel}Url", "@typeof row != 'undefined' && row.hasOwnProperty('id') && row.id ? this.{$vModel}UpdateUrl : this.{$vModel}CreateUrl"));
 
-            if ($this->content->hasAttr("v-loading")) {
+            if ($this->template->hasAttr("v-loading")) {
                 $code->then(
                     Js::if("this['{$vModel}GetDefaultData'] !== undefined")
                         ->then("this['{$vModel}GetDefaultData'](row.id)")
@@ -67,23 +78,27 @@ class Temporary implements VueComponentInterface
             }
         }
 
-        $this->config = Html::js()->vue->getTmpComponent();
-
-        if (!empty($this->config['onShow'])) {
-            $code->then(...$this->config['onShow']);
-        }
-
-        if (!empty(Html::js()->vue->getConfig('methods')['init'])) {
+        if ($this->vue->hasMethod('init')) {
             $code->then("this.init(row)");
         }
 
-        if (empty(Html::js()->vue->getConfig('methods')['onShow'])) {
-            Html::js()->vue->addMethod('onShow', ['data'], $code);
-        }
+        $this->addOnShow($code);
 
-        $this->config = Html::js()->vue->getTmpComponent();
+        Html::js()->resetVue();
 
-        Html::js()->vue->endMakeTmpComponent();
+        return $this;
+    }
+
+    /**
+     * 添加 onShow 时的代码
+     *
+     * @param string $onShow
+     *
+     * @return $this
+     */
+    public function addOnShow(string $onShow): static
+    {
+        $this->onShow[] = $onShow;
 
         return $this;
     }
@@ -93,35 +108,28 @@ class Temporary implements VueComponentInterface
         return $this->name;
     }
 
-    public function getConfig(): array
-    {
-        return $this->config;
-    }
-
     public function register(string $registerVar): string
     {
         Html::html()->find('body')->prepend(
-            El::double('script')->setAttrs([
+            h('script', [
                 'id'   => "vue--{$this->getName()}",
                 'type' => 'text/x-template'
-            ])->append($this->content)
+            ])->append($this->template),
         );
 
-        $this->config['data'] = JsFunc::anonymous()->code("return " . json_encode($this->config['data'] ?? new \stdClass(), JSON_PRETTY_PRINT));
+        $this->vue->addMethod('onShow', ['data'], implode("\r\n", $this->onShow));
 
-        // 生命周期事件处理
-        foreach (Vue::EVENTS as $EVENT) {
-            if (!empty($this->config[$EVENT])) {
-                $this->config[$EVENT] = JsFunc::anonymous([], implode("\r\n", $this->config[$EVENT]))->toCode();
-            }
-        }
-
-        unset($this->config['onShow']);
-        return JsFunc::call("$registerVar.component", $this->getName(), $this->config)->toCode();
+        $this->vue->config('template', "@document.getElementById('vue--{$this->getName()}').innerHTML");
+        return JsFunc::call("$registerVar.component", $this->getName(), $this->vue->getMakeConfig())->toCode();
     }
 
-    public function getContent(): AbstractHtmlElement|string
+    public function getTemplate(): AbstractHtmlElement|string
     {
-        return $this->content;
+        return $this->template;
+    }
+
+    public function getVue(): Vue
+    {
+        return $this->vue;
     }
 }

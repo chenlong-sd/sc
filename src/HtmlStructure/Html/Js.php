@@ -97,11 +97,39 @@ class Js
      */
     public function defVueEnv(Vue $vue, \Closure $callback): mixed
     {
-        $this->currentVue = $vue;
+        $this->setVue($vue);
         $res = $callback();
-        $this->currentVue = null;
+        $this->resetVue();
 
         return $res;
+    }
+
+    /**
+     * 设置当前vue环境
+     *
+     * @param Vue $vue
+     *
+     * @return $this
+     * @date 2023/5/25
+     */
+    public function setVue(Vue $vue): static
+    {
+        $this->currentVue = $vue;
+
+        return $this;
+    }
+
+    /**
+     * 重置当前vue环境
+     *
+     * @return $this
+     * @date 2023/5/25
+     */
+    public function resetVue(): static
+    {
+        $this->currentVue = null;
+
+        return $this;
     }
 
     /**

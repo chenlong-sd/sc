@@ -3,12 +3,14 @@
 namespace Sc\Util\HtmlStructure\Html\Js\VueComponents;
 
 use Sc\Util\HtmlElement\El;
+use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\Grammar;
 use Sc\Util\HtmlStructure\Html\Js\JsVar;
+use Sc\Util\HtmlStructure\Html\Js\Vue;
 
 /**
  * Class IconSelector
@@ -52,7 +54,7 @@ class IconSelector implements VueComponentInterface
         return JsFunc::call("$registerVar.component", $this->getName(), $config)->toCode();
     }
 
-    private function template()
+    private function template(): string
     {
         return <<<HTML
         <script type="text/html" id="vue--icon-selector">
@@ -88,5 +90,15 @@ class IconSelector implements VueComponentInterface
         </style>
         HTML;
 
+    }
+
+    public function getTemplate(): string|AbstractHtmlElement
+    {
+        return $this->template();
+    }
+
+    public function getVue(): Vue
+    {
+        return new Vue();
     }
 }

@@ -141,8 +141,8 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
             ]))
         );
 
-        if (Html::js()->vue->getTmpComponent()){
-            $name = Html::js()->vue->getTmpComponent()['name'];
+        if (Html::js()->vue->isComponent()){
+            $name = Html::js()->vue->getComponentName();
             $formItem->getForm()->addAfterRender(Js::call("this.\$refs['$name'].Draw{$table->getId()}"));
         }else{
             $formItem->getForm()->addAfterRender(Js::call("this.Draw{$table->getId()}"));

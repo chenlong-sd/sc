@@ -58,20 +58,24 @@ class Vue
      * @var array|VueComponentInterface[]
      */
     private array $components = [];
-    /**
-     * @var array|null
-     */
-    private ?array $makeComponent = null;
 
     private ?string $varName = self::VAR_NAME;
 
     /**
+     * 组件名称
+     */
+    private ?string $componentName;
+
+    /**
      * @param string|null $el 挂载元素 例: #app
      * @param string|null $varName JS变量名
+     * @param string|null $componentName 组件名称,如果是组件时候,请传入组件名称
      */
-    public function __construct(string $el = null, string $varName = null)
+    public function __construct(string $el = null, string $varName = null, string $componentName = null)
     {
         Html::js()->load(StaticResource::VUE);
+
+        $this->componentName = $componentName;
 
         if ($el) {
             $this->el = $el;
@@ -94,9 +98,7 @@ class Vue
     {
         $value = (is_string($value) && str_starts_with($value, '@')) ? Grammar::mark(substr($value, 1)) : $value;
 
-        $this->makeComponent
-            ? $this->makeComponent['data'][$name] = $value
-            : $this->data[$name] = $value;
+        $this->data[$name] = $value;
     }
 
 
@@ -151,10 +153,6 @@ class Vue
      */
     public function get(string $name, mixed $default = null): mixed
     {
-        if ($this->makeComponent) {
-            return $this->makeComponent['data'][$name] ?? $default;
-        }
-
         return $this->data[$name] ?? $default;
     }
 
@@ -167,10 +165,6 @@ class Vue
      */
     public function hasVar(string $name): bool
     {
-        if ($this->makeComponent) {
-            return isset($this->makeComponent['data'][$name]);
-        }
-
         return isset($this->data[$name]);
     }
 
@@ -187,10 +181,6 @@ class Vue
     {
         $method = $params instanceof JsFunc ? $params->toCode() : JsFunc::anonymous($params, $code)->toCode();
 
-        if ($this->makeComponent) {
-            $this->makeComponent['methods'][$name] = $method;
-            return;
-        }
         $this->config['methods'][$name] = $method;
     }
 
@@ -207,7 +197,7 @@ class Vue
             return $this->getAvailableMethod("cusMethod");
         }
 
-        if ($this->existsMethod($method)) {
+        if ($this->hasMethod($method)) {
             return $this->getAvailableMethod($method . "_m_");
         }
 
@@ -239,12 +229,21 @@ class Vue
      *
      * @return bool
      */
-    public function existsMethod(string $method): bool
+    public function hasMethod(string $method): bool
     {
-        if ($this->makeComponent) {
-            return isset($this->makeComponent['methods'][$method]);
-        }
         return isset($this->config['methods'][$method]);
+    }
+
+    /**
+     * 获取method
+     *
+     * @param string $method
+     *
+     * @return mixed
+     */
+    public function getMethod(string $method)
+    {
+        return $this->config['methods'][$method] ?? null;
     }
 
     /**
@@ -254,9 +253,6 @@ class Vue
      */
     public function existsData(string $name): bool
     {
-        if ($this->makeComponent) {
-            return isset($this->makeComponent['data'][$name]);
-        }
         return isset($this->data[$name]);
     }
 
@@ -271,11 +267,6 @@ class Vue
     public function event(#[ExpectedValues(self::EVENTS)] string $event, #[Language('JavaScript')] mixed $code = '', bool $isNextTick = false): void
     {
         $code = $isNextTick ? "this.\$nextTick(() => {\n{$code}\n})" : $code;
-
-        if ($this->makeComponent) {
-            $this->makeComponent[$event][] = $code;
-            return;
-        }
 
         if (empty($this->config[$event])) {
             $this->config[$event] = [];
@@ -295,13 +286,6 @@ class Vue
      */
     public function watch(string $name, JsFunc $handle, array $options = []): void
     {
-        if ($this->makeComponent) {
-            $this->makeComponent['watch'][$name] = array_merge([
-                'handle' => $handle->toCode()
-            ], $options);
-            return;
-        }
-
         if (empty($this->config->watch)) {
             $this->config['watch'] = [];
         }
@@ -321,10 +305,6 @@ class Vue
      */
     public function config(string $option, mixed $value): void
     {
-        if ($this->makeComponent) {
-            $this->makeComponent[$option] = $value;
-            return;
-        }
         $this->config[$option] = $value;
     }
 
@@ -339,9 +319,6 @@ class Vue
      */
     public function getConfig(string $option, mixed $default = null): mixed
     {
-        if ($this->makeComponent) {
-            return $this->makeComponent[$option] ?? $default;
-        }
         return $this->config[$option] ?? $default;
     }
 
@@ -361,20 +338,7 @@ class Vue
      */
     public function toCode(): string
     {
-        $makeConfig = [
-            'data' => JsFunc::anonymous([], Js::code(
-                Js::let('data', $this->data ?: '@{}'),
-                Js::return('data')
-            ))->toCode(),
-            'methods' => $this->config['methods'] ?: "@{}"
-        ];
-
-        // 生命周期事件处理
-        foreach (self::EVENTS as $EVENT) {
-            if (!empty($this->config[$EVENT])) {
-                $makeConfig[$EVENT] = JsFunc::anonymous([], implode("\r\n", $this->config[$EVENT]));
-            }
-        }
+        $makeConfig = $this->getMakeConfig();
 
         $block = Js::code(Js::var($this->varName, JsFunc::call('Vue.createApp', $makeConfig)));
 
@@ -407,31 +371,37 @@ class Vue
         return $this;
     }
 
-    public function startMakeTmpComponent(string $name): void
+    /**
+     * @return array|array[]
+     */
+    public function getMakeConfig(): array
     {
-        $this->makeComponent = [
-            'name' => $name,
-            "template" => Grammar::mark("document.getElementById('vue--$name').innerHTML"),
+        $makeConfig = [
+            'data' => JsFunc::anonymous([], Js::code(
+                Js::let('data', $this->data ?: '@{}'),
+                Js::return('data')
+            ))->toCode(),
+            'methods' => $this->config['methods'] ?: "@{}"
         ];
-    }
 
-    public function getTmpComponent(): ?array
-    {
-        return $this->makeComponent;
-    }
-
-    public function endMakeTmpComponent(): void
-    {
-        $this->makeComponent = null;
-    }
-
-    public function setTmpComponentOnShowHandle(#[Language('JavaScript')] string $handle): static
-    {
-        if (!$this->makeComponent) {
-            return $this;
+        // 生命周期事件处理
+        foreach (self::EVENTS as $EVENT) {
+            if (!empty($this->config[$EVENT])) {
+                $makeConfig[$EVENT] = JsFunc::anonymous([], implode("\r\n", $this->config[$EVENT]));
+            }
         }
 
-        $this->makeComponent['onShow'][] = $handle;
-        return $this;
+        $config = array_diff_key($this->config, ['methods' => true, ...array_combine(self::EVENTS, array_fill(0, count(self::EVENTS), true))]);
+        return array_merge($makeConfig, $config);
+    }
+
+    public function isComponent(): bool
+    {
+        return (bool)$this->componentName;
+    }
+
+    public function getComponentName(): string
+    {
+        return $this->componentName;
     }
 }

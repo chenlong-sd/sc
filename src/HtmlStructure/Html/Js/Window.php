@@ -167,11 +167,10 @@ class Window
                 return $header === ScTool::NOT_FOND;
             }
         }elseif ($this->component){
-            $content = $this->component->getContent();
+            $content = $this->component->getTemplate();
             if ($content instanceof DoubleLabel && $content->getLabel() == 'el-form') {
-                $header = $this->component->getConfig()['data'][$content->getAttr(':model') . 'CreateUrl'];
-                $row = $this->component->getConfig()['data'][$content->getAttr(':model') . 'UpdateUrl'];
-
+                $header = $this->component->getVue()->get($content->getAttr(':model') . 'CreateUrl');
+                $row = $this->component->getVue()->get($content->getAttr(':model') . 'UpdateUrl');
                 if ($type === 'row') {
                     return $row === ScTool::NOT_FOND;
                 }
