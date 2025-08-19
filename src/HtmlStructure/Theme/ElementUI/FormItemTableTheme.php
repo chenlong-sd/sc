@@ -52,8 +52,9 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
                 $this->getColumn($child, $formItem, $index)
             );
         }
-
-        $this->handleMake($el, $formItem);
+        if (!$formItem->isReadonly()) {
+            $this->handleMake($el, $formItem);
+        }
 
         if ($formItem->getLazyLoadFuncName()) {
             $this->lazy($formItem);
@@ -61,7 +62,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         $el = El::double('el-form-item')->setAttr('label-width', 0)
             ->append($el->render("ElementUI"))
-            ->append($addHandleEl);
+            ->append($formItem->isReadonly() ? "" : $addHandleEl);
 
         return $el;
     }
@@ -180,7 +181,6 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         $el->setAttr('row-key', '_id_');
 
         $formItemTable->getForm()->setSubmitHandle(Js::code(
-            Js::assign("data", '@JSON.parse(JSON.stringify(data))'),
             Js::for("var i = 0; i < data.{$formItemTable->getName()}.length; i++")->then(
                 "delete data.{$formItemTable->getName()}[i]._id_;"
             )
@@ -197,9 +197,11 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
     {
         $format = $child->render("ElementUI")->each(function (AbstractHtmlElement $element) {
             if ($element instanceof TextCharacters) {
-                preg_replace_callback("/\{\{(.*)}}/", function ($match) use ($element) {
-                    $element->setText(sprintf("{{ %s }}", preg_replace("/(?<!\w|\.)\w/", '@$0', $match[1])));
+                $text = preg_replace_callback("/\{\{(.*)}}/", function ($match) use ($element) {
+                    return sprintf("{{ %s }}", preg_replace("/(?<!\w|\.)\w/", '@$0', $match[1]));
                 }, $element->getText());
+
+                $element->setText($text);
                 return;
             }
 

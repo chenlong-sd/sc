@@ -25,6 +25,10 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
     protected array $columnAttrs = [];
 
     protected string $lazyLoadFuncName = '';
+    /**
+     * @var true
+     */
+    private bool $readonly = false;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -67,6 +71,11 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
     public function getLazyLoadFuncName(): string
     {
         return $this->lazyLoadFuncName;
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
     }
 
     protected function getDefault()
@@ -121,6 +130,7 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
             $child->readonly($when);
         }
 
+        $this->readonly = true;
         return $this;
     }
 

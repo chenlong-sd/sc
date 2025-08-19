@@ -197,6 +197,8 @@ class Form
     }
 
     /**
+     * 设置提交前置数据处理，提交表单数据变量为 data
+     *
      * @param string $submitHandle
      *
      * @return Form

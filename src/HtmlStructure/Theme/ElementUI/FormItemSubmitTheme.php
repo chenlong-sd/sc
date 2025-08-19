@@ -107,7 +107,7 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
         }
 
         Html::js()->vue->addMethod($formId . "Submit", [], Js::code(
-            Js::let('data', "@this.{$formItemSubmit->getFormModel()}"),
+            Js::let('data', "@JSON.parse(JSON.stringify(this.{$formItemSubmit->getFormModel()}))"),
             $formItemSubmit->getForm()->getSubmitHandle(),
             $this->verifyData($formItemSubmit->getForm(), $submitHandle)
         ),);

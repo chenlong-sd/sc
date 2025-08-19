@@ -487,14 +487,14 @@ class Column
                     return $options;
                 }, $this->show['config']['options'])
             );
-        } else if (str_contains($name, 'time')) {
+        } else if (str_contains($this->attrs['prop'], 'time')) {
             $formItem = FormItem::datetime($name)
                 ->setVAttrs([
                     'start-placeholder' => "起始" . $this->attrs['label'],
                     'end-placeholder'   => "结束" . $this->attrs['label'],
                 ])
                 ->setTimeType('datetimerange')->valueFormat();
-        } else if (str_contains($name, 'date')) {
+        } else if (str_contains($this->attrs['prop'], 'date')) {
             $formItem = FormItem::datetime($name)
                 ->setTimeType('daterange')
                 ->setVAttrs([

@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemSwitchThemeInterface;
+use Sc\Util\ScTool;
 
 /**
  * Class FormItemSelectThem
@@ -35,13 +36,12 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
         ]);
         $select->setAttrs($formItem->getVAttrs());
 
-        if (!$optionsVar = $formItem->getOptionsVarName()) {
-            mt_srand();
-            $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
+        if (!$formItem->getOptionsVarName()) {
+            $formItem->setOptionsVarName(ScTool::random( $formItem->getName() . "Rand")->get());
         }
 
         $options = El::double('el-option')->setAttrs([
-            'v-for'  => "(item, index) in $optionsVar",
+            'v-for'  => "(item, index) in {$formItem->getOptionsVarName()}",
             ':key'   => "item.value",
             ':value' => "item.value",
             ':label' => "item.label",
@@ -65,9 +65,9 @@ class FormItemSelectTheme extends AbstractFormItemTheme implements FormItemSwitc
             $select->setAttrIfNotExist('style', 'width:192px');
         }
 
-        $this->setOptions($formItem, $optionsVar);
+        $this->setOptions($formItem, $formItem->getOptionsVarName());
 
-        $this->remoteSearch($formItem, $select, $optionsVar);
+        $this->remoteSearch($formItem, $select, $formItem->getOptionsVarName());
 
         $this->addEvent($select, $formItem->getEvents(), $formItem->getName());
 

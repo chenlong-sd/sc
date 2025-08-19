@@ -67,7 +67,7 @@ trait Options
      * @param array $params
      * @return $this
      */
-    public function remoteGetOptions(string $url, string $valueCode = "data.data.data", string $valueName = null, string $labelName = null, array $params = []): static
+    public function remoteGetOptions(string $url, string $valueCode = "data.data.data", string $valueName = "id", string $labelName = 'name', array $params = []): static
     {
         $this->optionsRemote = compact('url', 'valueCode', 'valueName', 'labelName', 'params');
 

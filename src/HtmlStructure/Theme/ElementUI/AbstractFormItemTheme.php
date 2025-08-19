@@ -126,7 +126,7 @@ abstract class AbstractFormItemTheme
             }
 
             if (empty($formItem->getEvents()['visible-change'])) {
-                $formItem->on('visible-change', "refresh{$varName}()");
+                $formItem->on('visible-change', "refresh{$varName}");
             }
 
             foreach ($remote['params'] as &$value) {
@@ -140,9 +140,14 @@ abstract class AbstractFormItemTheme
                 ]
             ];
 
-            Html::js()->vue->addMethod("refresh" . $varName, [], Axios::get($remote['url'], $query)->success($dataCode));
+            Html::js()->vue->addMethod("refresh" . $varName, ['visible'], Js::code(
+                Js::if("!visible")->then(
+                    Js::return()
+                ),
+                Axios::get($remote['url'], $query)->success($dataCode)
+            ));
 
-            Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}"));
+            Html::js()->vue->event('mounted', JsFunc::call("this.refresh{$varName}", 1));
         }
     }
 
