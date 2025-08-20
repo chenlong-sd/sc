@@ -10,6 +10,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCascader;
+use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCustomizeThemeInterface;
 
@@ -60,7 +61,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
             if ($event instanceof JsFunc) {
                 $jsFunc->appendCode($event->code);
             }else{
-                $jsFunc->appendCode(JsFunc::call("this.$event"));
+                $jsFunc->appendCode(JsFunc::call("this.$event", '@value'));
             }
         }
         $jsFunc->appendCode("this.\$refs['$ref'].togglePopperVisible(false)");

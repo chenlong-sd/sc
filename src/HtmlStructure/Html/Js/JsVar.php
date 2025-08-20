@@ -6,7 +6,6 @@
 namespace Sc\Util\HtmlStructure\Html\Js;
 
 use JetBrains\PhpStorm\ExpectedValues;
-use Sc\Util\HtmlStructure\Html\Common;
 
 /**
  * js变量
@@ -96,9 +95,8 @@ class JsVar
                                 $value = Grammar::mark(substr($value, 1));
                             }
                             if (str_contains($value, '"')) {
-                                $defJsFnBase64Decode = Common::defJsFnBase64Decode();
                                 $value = base64_encode(Grammar::extract($value));
-                                $value = Grammar::mark("$defJsFnBase64Decode(`$value`)");
+                                $value = Grammar::mark("AdminUtil.base64Decode(`$value`)");
                             }
                         }
                         if ($value instanceof JsFunc) {

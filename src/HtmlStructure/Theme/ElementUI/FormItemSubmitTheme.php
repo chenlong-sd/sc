@@ -54,19 +54,26 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     private function submitEvent(FormItemSubmit|FormItemAttrGetter $formItemSubmit, string $formId): void
     {
         $closePage = $formItemSubmit->getClosePage();
-        if ($closePage['theme'] == Theme::THEME_ELEMENT_UI) {
-            $closeCode = "VueApp.closeWindow()";
-        }else{
-            $closeCode = "layer.close(index);";
-        }
+        $closeCode = '';
+        if ($closePage['page']) {
+            if ($closePage['theme'] == Theme::THEME_ELEMENT_UI) {
+                $closeCode = "VueApp.closeWindow()";
+            }else{
+                $closeCode = "layer.close(index);";
+            }
 
-        if ($closePage['page'] == FormItemSubmit::CLOSE_PAGE_PARENT) {
-            $closeCode = Js::code("parent.$closeCode");
-            if ($closePage['theme'] != Theme::THEME_ELEMENT_UI) {
-                $closeCode = Js::code(
-                    Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
-                    $closeCode
-                );
+            if ($closePage['page'] == FormItemSubmit::CLOSE_PAGE_PARENT) {
+                $closeCode = Js::code("parent.$closeCode");
+                if ($closePage['theme'] != Theme::THEME_ELEMENT_UI) {
+                    $closeCode = Js::code(
+                        Js::let('index', '@parent.layer.getFrameIndex(window.name)'),
+                        $closeCode
+                    );
+                }
+            }
+
+            if ($closePage['when']) {
+                $closeCode = Js::if($closePage['when'], $closeCode);
             }
         }
 
@@ -86,8 +93,8 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
             }else{
                 $successHandle = Js::code($formItemSubmit->getSuccessTipCode())
                     ->then($success)
-                    ->then("this.{$formId}Reset()")
-                    ->then($closeCode);
+                    ->then($closeCode)
+                    ->then("this.{$formId}Reset()");
             }
 
             $submitHandle = Js::code(
@@ -116,10 +123,10 @@ class FormItemSubmitTheme extends AbstractFormItemTheme implements FormItemSubmi
     private function resetEvent(FormItemSubmit|FormItemAttrGetter $formItemSubmit, string $formId): void
     {
         if (!$resetHandle = $formItemSubmit->getResetHandle()) {
-            $resetHandle = JsFunc::call(sprintf("this.%sDefault", $formItemSubmit->getForm()->getId()));
+            $resetHandle = JsFunc::call("this.{$formItemSubmit->getForm()->getId()}Default");
         }
 
-        Html::js()->vue->addMethod($formId . "Reset", [], $resetHandle);
+        Html::js()->vue->addMethod("{$formId}Reset", [], $resetHandle);
     }
 
     /**

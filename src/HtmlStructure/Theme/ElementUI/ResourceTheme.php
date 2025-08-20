@@ -33,46 +33,5 @@ class ResourceTheme implements ResourceThemeInterface
         Html::js()->load(StaticResource::ELEMENT_PLUS_JS);
         Html::js()->load(StaticResource::ELEMENT_PLUS_LANG);
         Html::js()->vue->addComponents(new ElementIcon());
-
-        $this->utilMethodDef();
-    }
-
-    /**
-     * @return void
-     */
-    private function utilMethodDef(): void
-    {
-        // 地址注入搜索参数
-        Html::js()->defFunc("urlInjectSearch", ['url', 'tableId'], Js::code(
-            Js::code(<<<JS
-            function buildQuery(obj, parentPrefix = null) {
-              var parts = [];
-              for (let key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                  let propName = parentPrefix ? `\${parentPrefix}[\${encodeURIComponent(key)}]` : encodeURIComponent(key);
-                  let value = obj[key];
-                  
-                  if (!value) continue;
-                  
-                  if (typeof value === 'object' && !(value instanceof Date) && !(value instanceof File)) {
-                    parts.push(buildQuery(value, propName));
-                  } else {
-                    parts.push(propName + '=' + encodeURIComponent(value));
-                  }
-                }
-              }
-              return parts.join('&');
-            }
-            JS),
-            Js::let('urlObj', '@new URL(url)'),
-            Js::let("search", JsFunc::call('buildQuery', [
-                'search' => [
-                    "search"      => Js::grammar('VueApp[`${tableId}Search`]'),
-                    "searchType"  => Js::grammar('VueApp[`${tableId}SearchType`]'),
-                    "searchField" => Js::grammar('VueApp[`${tableId}SearchField`]'),
-                ]
-            ])),
-            Js::code("return urlObj.origin + urlObj.pathname + '?' +search + urlObj.hash;")
-        ));
     }
 }

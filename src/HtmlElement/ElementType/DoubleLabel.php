@@ -178,6 +178,21 @@ class DoubleLabel extends AbstractHtmlElement
     }
 
     /**
+     * @param string $id
+     *
+     * @return mixed|AbstractHtmlElement|null
+     */
+    public function getChildrenById(string $id): mixed
+    {
+        foreach ($this->childrenNodes as $childrenNode) {
+            if ($childrenNode->getId() === $id) {
+                return $childrenNode;
+            }
+        }
+        return null;
+    }
+
+    /**
      * 搜索子项返回索引位置
      *
      * @param AbstractHtmlElement $element

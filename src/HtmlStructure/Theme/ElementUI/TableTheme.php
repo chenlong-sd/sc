@@ -36,6 +36,8 @@ class TableTheme implements TableThemeInterface
 
     public function render(Table $table): AbstractHtmlElement
     {
+        Html::loadAdminUtilJs();
+
         $el = El::double('el-table');
         $table->setId($table->getId() ?: ScTool::random('table')->get());
 
@@ -305,15 +307,16 @@ class TableTheme implements TableThemeInterface
 
         // 设置数据变量和数组总数变量
         Html::js()->vue->set($dataVarName, is_string($data) ? [] : $data);
-        Html::js()->vue->set($dataVarName . 'Total', is_string($data) ? 0 : count($data));
+        Html::js()->vue->set("{$dataVarName}Total", is_string($data) ? 0 : count($data));
 
         if (is_array($data)) {
-            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query'],
+            Html::js()->vue->addMethod("{$dataVarName}GetData", ['query'],
                 $this->dataGet($dataVarName, [])
             );
         }else{
+            $url = $data;
             // 字符不是http开头
-            if(!str_starts_with($data, 'http')) return $data;
+            if(!str_starts_with($url, 'http')) return $url;
 
             /**
              * 如果是字符串，且是http开头则识别为请求地址
@@ -323,29 +326,17 @@ class TableTheme implements TableThemeInterface
              *
              * *** 根据以上规则可在渲染完成后，重新设置对应代码，可替换 ***
              */
-            Html::js()->vue->set($dataVarName . 'Search', new \stdClass());
-            Html::js()->vue->addMethod($dataVarName . 'Url', [], "return '$data';");
-            Html::js()->vue->set('urlSearch', '@location.search');
-            Html::js()->vue->addMethod('getUrlSearch', [], Js::code(
-                Js::let('urlSearch'),
-                Js::if('this.urlSearch')
-                    ->then(
-                        Js::assign('urlSearch', '@this.urlSearch.substring(1)'),
-                        Js::assign('this.urlSearch', "@this.urlSearch.replace(/global_search=.*&?/, '')"),
-                    )->else(
-                        Js::assign('urlSearch', '')
-                    ),
-                Js::return('urlSearch')
-            ));
+            Html::js()->vue->set("{$dataVarName}Search", new \stdClass());
+            Html::js()->vue->addMethod("{$dataVarName}Url", [], "return '$url';");
 
             $query = [
                 'search' => [
-                    "search"      => Js::grammar("this.{$dataVarName}Search"),
-                    "searchType"  => Js::grammar("this.{$dataVarName}SearchType"),
-                    "searchField" => Js::grammar("this.{$dataVarName}SearchField"),
+                    "search"      => "@this.{$dataVarName}Search",
+                    "searchType"  => "@this.{$dataVarName}SearchType",
+                    "searchField" => "@this.{$dataVarName}SearchField",
                 ],
-                'order' => Js::grammar("this.{$dataVarName}Sort"),
-                'query' => ScTool::url($data)->getQueryParam('query', '') ?: Js::grammar("this.getUrlSearch()")
+                'order' => "@this.{$dataVarName}Sort",
+                'query' => ScTool::url($url)->getQueryParam('query', "@AdminUtil.getCurrentUrlSearchString()")
             ];
 
             $query["temp"] = "@query";
@@ -354,11 +345,11 @@ class TableTheme implements TableThemeInterface
             }
 
             if ($table->isOpenPagination()) {
-                $query['page']     = Js::grammar("this.{$dataVarName}Page");
-                $query['pageSize'] = Js::grammar("this.{$dataVarName}PageSize");
+                $query['page']     = "@this.{$dataVarName}Page";
+                $query['pageSize'] = "@this.{$dataVarName}PageSize";
             }
 
-            Html::js()->vue->addMethod($dataVarName . 'GetData', ['query', 'notLoading'], $this->remoteDataGet($table, $dataVarName, $query));
+            Html::js()->vue->addMethod("{$dataVarName}GetData", ['query', 'notLoading'], $this->remoteDataGet($table, $dataVarName, $query));
         }
 
         Html::js()->vue->event('created', "this.{$dataVarName}GetData();");
@@ -372,7 +363,6 @@ class TableTheme implements TableThemeInterface
      * @param Table $table
      *
      * @return void
-     * @throws \Exception
      */
     private function rowEventHandle(Table $table): void
     {
@@ -694,7 +684,7 @@ class TableTheme implements TableThemeInterface
         $searchType = array_combine(
             array_map(function (Form\FormItemInterface|Form\FormItemAttrGetter $item) use (&$searchFields){
                 if (str_contains($name = $item->getName(), '.')){
-                    $newName = Tool::random("searchF")->get();
+                    $newName = ScTool::random("searchF")->get();
                     $searchFields[$newName] = $name;
                     $item->setName($name = $newName);
                 }
@@ -901,7 +891,7 @@ class TableTheme implements TableThemeInterface
             ),
             Js::assign('query', '@query ? query : {}'),
             Axios::get(
-                url: Js::grammar("this.{$dataVarName}Url()"),
+                url: "@this.{$dataVarName}Url()",
                 query: $query
             )->then(JsFunc::arrow(["{ data }"], Js::code(
                 Js::assign("this.{$table->getId()}Loading", false),
@@ -921,7 +911,7 @@ class TableTheme implements TableThemeInterface
     {
         return Js::code(
             Js::if("this.{$dataVarName}Page")->then(
-                Js::return(strtr("this.#v.slice((this.#vPage - 1) * this.#vPageSize, this.#vPageSize)", ['#v' => $dataVarName])),
+                Js::return("this.$dataVarName.slice((this.{$dataVarName}Page - 1) * this.{$dataVarName}PageSize, this.{$dataVarName}PageSize)"),
             ),
             Js::return("this.{$dataVarName};")
         );
@@ -929,7 +919,6 @@ class TableTheme implements TableThemeInterface
 
     private function exportDataGet(Table $table, string $dataVarName, array $query): JsFunc
     {
-//        Html::js()->load('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
         Html::js()->load('/js/xlsx.full.min.js');
 
         $titles  = $showMap = $useKeys = [];
@@ -964,7 +953,7 @@ class TableTheme implements TableThemeInterface
 
         $query['is_export'] = 1;
 
-        Html::js()->vue->addMethod('excelWrite', JsFunc::anonymous(['data'])->code(
+        Html::js()->vue->addMethod("{$dataVarName}excelWrite", JsFunc::anonymous(['data'])->code(
             Js::let("titlesMap", $titles),
             Js::let("showMap", $showMap),
             Js::let("keys", "@Object.keys(titlesMap)"),
@@ -992,21 +981,21 @@ class TableTheme implements TableThemeInterface
             Js::let("loading", JsService::loading()),
             Js::let('query', '@{}'),
             Js::if("this.{$dataVarName}Selection.length > 0")->then(
-                Js::call("this.excelWrite", "@this.{$dataVarName}Selection"),
+                Js::code("this.{$dataVarName}excelWrite(this.{$dataVarName}Selection)"),
                 Js::code("loading.close();"),
                 Js::return()
             ),
             Axios::get(
-                url: Js::grammar("this.{$dataVarName}Url()"),
+                url: "@this.{$dataVarName}Url()",
                 query: $query
             )->then(JsFunc::arrow(["{ data }"], Js::code(
                 Js::if('data.code === 200')->then(
                     Js::if("data.data.data.length <= 0")->then(
                         Js::return()
                     ),
-                    Js::call("this.excelWrite", '@data.data.data')
+                    Js::code("this.{$dataVarName}excelWrite(data.data.data)")
                 )->else(
-                    Js::call("this.\$message.warning", '@data.msg')
+                    Js::code("this.\$message.warning(data.msg)")
                 ),
                 Js::code("loading.close();"),
             )))
@@ -1016,6 +1005,7 @@ class TableTheme implements TableThemeInterface
     /**
      * @param AbstractHtmlElement|string $format
      * @param $useKeys
+     * @param string $saveVar
      * @return JsCode
      */
     private function exportFormatHandle($format, &$useKeys, string $saveVar = 'row'): JsCode

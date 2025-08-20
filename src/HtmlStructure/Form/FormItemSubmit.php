@@ -32,7 +32,8 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
     protected string $successTipCode = 'this.$message.success("成功")';
     protected array $closePage = [
         'page' => self::CLOSE_PAGE_CURRENT,
-        'theme' => Theme::THEME_ELEMENT_UI
+        'theme' => Theme::THEME_ELEMENT_UI,
+        'when' => null,
     ];
 
     /**
@@ -90,19 +91,20 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
      *
      * @param string|null $page
      * @param string|null $theme
-     *
+     * @param string|null $when
      * @return $this
      */
-    public function successClose(#[ExpectedValues([
-        'current', // 当前页面
-        'parent' , // 父级页面
-    ])] ?string $page, #[ExpectedValues([...Theme::AVAILABLE_THEME, null])] ?string $theme = null): static
+    public function successClose(
+        #[ExpectedValues(['current', 'parent'])] ?string $page,
+        string $theme = null,
+        string $when = null
+    ): static
     {
         if ($theme === null) {
             $theme = $page == 'parent' ? Theme::THEME_LAYUI : Theme::THEME_ELEMENT_UI;
         }
 
-        $this->closePage = compact('page', 'theme');
+        $this->closePage = compact('page', 'theme', 'when');
         if ($page == 'parent') {
             $this->successTipCode = JsService::message("成功")->toParent();
         }

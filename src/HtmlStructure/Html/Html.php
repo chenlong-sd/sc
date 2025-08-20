@@ -28,6 +28,7 @@ use Swoole\Coroutine;
 class Html
 {
     private const SwooleEnvKey = 'SC__HTML__SC';
+    private static $AdminUtilJsContent = '';
 
     /**
      * 页面基础代码
@@ -211,5 +212,18 @@ class Html
         global $globalHtml;
 
         return $globalHtml;
+    }
+
+    public static function loadAdminUtilJs(): void
+    {
+        if (!self::$AdminUtilJsContent) {
+            self::$AdminUtilJsContent = file_get_contents(__DIR__ . '/resource/admin.util.js');
+        }
+
+        if (!Html::html()->getChildrenById("admin-util-js")) {
+            Html::html()->find('body')->before(
+                h('script')->setId('admin-util-js')->text(self::$AdminUtilJsContent)
+            );
+        }
     }
 }

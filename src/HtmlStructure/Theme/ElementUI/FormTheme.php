@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructure\Form;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormThemeInterface;
 
 class FormTheme implements FormThemeInterface
@@ -19,6 +20,8 @@ class FormTheme implements FormThemeInterface
 
     public function render(Form $form): AbstractHtmlElement
     {
+        Html::loadAdminUtilJs();
+
         $config = $form->getConfig();
         unset($config['data']);
 
