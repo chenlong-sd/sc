@@ -16,7 +16,6 @@ use Sc\Util\HtmlStructure\Table\EventHandler;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 use Sc\Util\ScTool;
-use Sc\Util\Tool;
 
 class Table
 {
@@ -222,7 +221,7 @@ class Table
      */
     public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
     {
-        $eventName = Tool::random('HeaderEvent')->get();
+        $eventName = ScTool::random('HeaderEvent')->get();
 
         $this->headerEvents[$eventName] = [
             'el'       => $eventLabel,
