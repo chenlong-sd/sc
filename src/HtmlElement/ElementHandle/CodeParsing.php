@@ -77,7 +77,17 @@ class CodeParsing
             // 双标签
             $elements = El::double($match['tag'])->setAttrs($attrs);
 
-            $elements->append(self::parsing($code));
+            if ($elements->getLabel() === 'script') {
+                $scriptEndIndex = strpos($code, '</script>');
+                $elements->text(substr($code, 0, $scriptEndIndex));
+                $code = substr($code, $scriptEndIndex + 9);
+            }else if ($elements->getLabel() === 'style') {
+                $styleEndIndex = strpos($code, '</style>');
+                $elements->text(substr($code, 0, $styleEndIndex));
+                $code = substr($code, $styleEndIndex + 8);
+            }else{
+                $elements->append(self::parsing($code));
+            }
 
             $base->append($elements);
         }
