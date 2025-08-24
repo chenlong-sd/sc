@@ -120,6 +120,81 @@ const AdminUtil = (function (){
         return window.location.search.substring(1).replace(/global_search=.*&?/, '');
     }
 
+    /**
+     * 打印
+     * @param content 元素ID或HTML字符串
+     * @param isHtml 是否是HTML字符串
+     */
+    function print(content, isHtml) {
+        try {
+            // 1. 处理内容源，检查元素是否存在
+            let printContentHtml;
+            if (isHtml) {
+                printContentHtml = content;
+            } else {
+                const targetElement = document.getElementById(content);
+                if (!targetElement) {
+                    throw new Error(`未找到ID为"${content}"的元素`);
+                }
+                printContentHtml = targetElement.innerHTML;
+            }
+
+            // 2. 创建iframe并隐藏
+            const iframe = document.createElement("iframe");
+            iframe.style.cssText = "position:absolute;width:0;height:0;left:-999px;top:-999px;";
+            document.body.appendChild(iframe);
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+            // 3. 写入内容（包含必要的样式）
+            iframeDoc.open();
+            // 引入父页面的样式（解决样式丢失问题）
+            const styles = Array.from(document.styleSheets).map(sheet => {
+                try {
+                    // 处理同源样式表
+                    if (sheet.href && new URL(sheet.href).origin === window.location.origin) {
+                        return `<link rel="stylesheet" href="${sheet.href}">`;
+                    }
+                    // 内联样式
+                    if (sheet.cssRules) {
+                        return `<style>${Array.from(sheet.cssRules).map(rule => rule.cssText).join('')}</style>`;
+                    }
+                } catch (e) {
+                    // 跨域样式表可能无法访问，忽略
+                    return '';
+                }
+            }).join('');
+
+            // 写入完整HTML结构（包含样式）
+            iframeDoc.write(`
+            <!DOCTYPE html>
+            <html>
+                <head>
+                    <meta charset="UTF-8">
+                    ${styles}
+                </head>
+                <body>${printContentHtml}</body>
+            </html>
+        `);
+            iframeDoc.close();
+
+            // 4. 等待iframe内容加载完成后再打印
+            const iframeWindow = iframe.contentWindow;
+            iframeWindow.addEventListener('load', () => {
+                // 5. 打印完成（或取消）后再移除iframe
+                const handlePrintComplete = () => {
+                    document.body.removeChild(iframe);
+                    iframeWindow.removeEventListener('afterprint', handlePrintComplete);
+                };
+                iframeWindow.addEventListener('afterprint', handlePrintComplete);
+                // 触发打印
+                iframeWindow.print();
+            });
+
+        } catch (error) {
+            console.error('打印失败：', error);
+        }
+    }
+
     return {
         base64Decode,
         base64Encode,
@@ -128,5 +203,6 @@ const AdminUtil = (function (){
         parsedUrl,
         treeDataFind,
         getCurrentUrlSearchString,
+        print
     }
 })();
