@@ -42,10 +42,6 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             $row->append($child->render(Theme::THEME_ELEMENT_UI));
         }
 
-        if ($formItem->getIsArrayValue()) {
-            $row = $this->multipleHandle($row, $formItem);
-        }
-
         if ($formItem->getPlain()) {
             $el = $row;
             if ($formItem->getLabel()) {
@@ -58,9 +54,17 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             $el->append($row);
             if ($formItem->getLabel()) {
                 $el->append(
-                    El::template(El::elText($formItem->getLabel())->setAttr('size', 'large'))->setAttr('#header')
+                    El::template(
+                        is_string($formItem->getLabel())
+                            ? El::elText($formItem->getLabel())->setAttr('size', 'large')
+                            : $formItem->getLabel()
+                    )->setAttr('#header')->setAttr("group-item-header")
                 );
             }
+        }
+
+        if ($formItem->getIsArrayValue()) {
+            $el = $this->multipleHandle($el, $formItem);
         }
 
         return $el;
@@ -69,19 +73,35 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
     /**
      * @param DoubleLabel $row
      * @param FormItemGroup|FormItemAttrGetter $formItem
-     * @return FictitiousLabel
+     * @return AbstractHtmlElement
      */
-    public function multipleHandle(DoubleLabel $row, FormItemGroup|FormItemAttrGetter $formItem): FictitiousLabel
+    public function multipleHandle(DoubleLabel $row, FormItemGroup|FormItemAttrGetter $formItem): AbstractHtmlElement
     {
-        $row->setAttr("v-for", "({$formItem->getName()}_item, index_g) in {$formItem->getFormModel()}.{$formItem->getName()}");
-        $row = El::fictitious()->append(
-            $row->addClass('g_r')->append(
+        if ($formItem->getPlain()) {
+            $row->find('el-card')->after(
                 El::elButton()->addClass('g_del')
                     ->setAttr('icon', 'delete')
                     ->setAttr('type', 'danger')
                     ->setStyle("{height: calc(100% - 19px);width:15px;position: absolute;right: 0;top: 0;padding: 8px 10px;}")
                     ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
-            ),
+            );
+        }else{
+            if (!$row->find("[group-item-header]")){
+                $row->append(h('template', ['#header' => '']));
+            }
+
+            $row->find("[group-item-header]")->append(
+                h('el-button', '删除')->setAttrs([
+                    'type' => 'danger',
+                    'icon' => 'delete',
+                    'text' => '',
+                    'style' => 'float: right;'
+                ])->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
+            );
+        }
+
+        $row = h() ->append(
+            h('template', $row)->setAttr("v-for", "({$formItem->getName()}_item, index_g) in {$formItem->getFormModel()}.{$formItem->getName()}"),
             El::elButton("新增一项")
                 ->setAttr('type', 'success')
                 ->setAttr('plain',)

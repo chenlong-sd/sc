@@ -157,6 +157,9 @@ class TableTheme implements TableThemeInterface
                         $label = $column->getAttr('type') == 'selection' ? '选择列' : "";
                         $column->setAttr(':show-overflow-tooltip', 'false');
                     }
+                    if (!$column->getAttr('width') && !$column->getAttr(':show-overflow-tooltip')) {
+                        $column->setAttr(':show-overflow-tooltip', 'false');
+                    }
 
                     $column->setAttr(':align', "sett.align");
                     $column->setAttr('v-if', "sett.show && sett.name == '$label'");
