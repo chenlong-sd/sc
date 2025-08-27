@@ -21,6 +21,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     protected array $children = [];
     protected ?string $label = null;
     protected ?string $name = null;
+    protected mixed $initDefault = null;
     /**
      * @var true
      */
@@ -43,6 +44,29 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             $this->name  = $children[1] ?? null;
         }else{
             $this->children = $children;
+        }
+    }
+
+
+    public function default(mixed $default): static
+    {
+        $this->getDefault();
+
+        $this->default = $default;
+
+        $this->childrenDefault();
+
+        return $this;
+    }
+
+    /**
+     * @param mixed $default
+     * @return void
+     */
+    protected function setInitDefault(mixed $default): void
+    {
+        if ($this->initDefault === null) {
+            $this->initDefault = $default;
         }
     }
 
@@ -84,10 +108,6 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             if ($table) {
                 throw new \Exception('group类型值为数组时，不能嵌套table');
             }
-
-            $this->children = [
-                FormItem::group(...$this->children)
-            ];
         }
 
         return Theme::getRenderer(FormItemGroupThemeInterface::class, $theme)->render($this);
@@ -110,7 +130,9 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
             return $v->getDefault();
         }, array_filter($this->getChildren(), fn($v) => !$v instanceof FormItemSubmit && !$v instanceof FormItemCustomize)));
 
-        return $this->isArrayValue ? [$childrenDefault] : $childrenDefault;
+        $this->setInitDefault($childrenDefault);
+
+        return $this->isArrayValue ? [] : $childrenDefault;
     }
 
     public function getRules(): array

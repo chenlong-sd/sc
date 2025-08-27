@@ -30,7 +30,7 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
         $el = El::double('el-card')->addClass('vue--form-card');
 
         Html::css()->addCss(".vue--form-card{margin-bottom:var(--el-card-padding);}");
-        Html::css()->addCss(".vue--form-card .el-card__body{padding-bottom:0;}");
+        Html::css()->addCss(".vue--form-card .el-card__body{padding-bottom:0;position: relative}");
         Html::css()->addCss(".el-form-item .vue--form-card{margin-bottom:0;}");
         Html::css()->addCss(".el-form-item .vue--form-card .el-form-item{margin-bottom:18px;}");
 
@@ -46,7 +46,13 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             $el = $row;
             if ($formItem->getLabel()) {
                 $el = El::fictitious()->append(
-                    FormItem::customize($formItem->getLabel())->render(Theme::THEME_ELEMENT_UI),
+                    FormItem::customize(
+                        El::div(
+                            is_string($formItem->getLabel())
+                                ? El::elText($formItem->getLabel())->setAttr('size', 'large')
+                                : $formItem->getLabel()
+                        )->setAttr("group-item-header")
+                    )->render(Theme::THEME_ELEMENT_UI),
                     $el
                 );
             }
@@ -77,45 +83,46 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
      */
     public function multipleHandle(DoubleLabel $row, FormItemGroup|FormItemAttrGetter $formItem): AbstractHtmlElement
     {
-        if ($formItem->getPlain()) {
-            $row->find('el-card')->after(
-                El::elButton()->addClass('g_del')
-                    ->setAttr('icon', 'delete')
-                    ->setAttr('type', 'danger')
-                    ->setStyle("{height: calc(100% - 19px);width:15px;position: absolute;right: 0;top: 0;padding: 8px 10px;}")
-                    ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
-            );
-        }else{
+        if ($formItem->getLabel()) {
             if (!$row->find("[group-item-header]")){
                 $row->append(h('template', ['#header' => '']));
             }
-
             $row->find("[group-item-header]")->append(
                 h('el-button', '删除')->setAttrs([
                     'type' => 'danger',
                     'icon' => 'delete',
                     'text' => '',
                     'style' => 'float: right;'
-                ])->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del(index_g)")
+                ])->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del({$formItem->getFormModel()}.{$formItem->getName()}, {$formItem->getName()}_index)")
+            );
+        }else{
+            $row->find('el-card')?->append(
+                El::elButton()->addClass('g_del')
+                    ->setAttr('icon', 'delete')
+                    ->setAttr('type', 'danger')
+                    ->setStyle("{height: calc(100%);width:15px;position: absolute;right: 0;top: 0;padding: 8px 10px;}")
+                    ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_del({$formItem->getFormModel()}.{$formItem->getName()}, {$formItem->getName()}_index)")
             );
         }
 
         $row = h() ->append(
-            h('template', $row)->setAttr("v-for", "({$formItem->getName()}_item, index_g) in {$formItem->getFormModel()}.{$formItem->getName()}"),
+            h('template', $row)->setAttr("v-for", "({$formItem->getName()}_item, {$formItem->getName()}_index) in {$formItem->getFormModel()}.{$formItem->getName()}"),
+            h(' <el-divider style="margin: 50px auto;width: 60%"><el-text>暂无数据</el-text></el-divider>')
+                ->setAttr("v-if", "{$formItem->getFormModel()}.{$formItem->getName()}.length === 0"),
             El::elButton("新增一项")
                 ->setAttr('type', 'success')
                 ->setAttr('plain',)
                 ->setAttr('bg',)
                 ->setAttr('icon', 'plus')
-                ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add")
+                ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add({$formItem->getFormModel()}.{$formItem->getName()})")
                 ->setStyle('{width: 100%;margin-bottom: 10px;position: relative;top: -10px;}')
         );
 
-        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous()->code(
-            JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.push", current($formItem->getInitDefault() ?: $formItem->getDefault()))
+        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous(['item'])->code(
+            JsFunc::call("item.push", $formItem->getInitDefault())
         ));
-        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_del", JsFunc::anonymous(['index'])->code(
-            JsFunc::call("this.{$formItem->getFormModel()}.{$formItem->getName()}.splice", '@index', 1)
+        Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_del", JsFunc::anonymous(['item', 'index'])->code(
+            JsFunc::call("item.splice", '@index', 1)
         ));
 
         return $row;

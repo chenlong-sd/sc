@@ -11,7 +11,6 @@ use Sc\Util\HtmlStructure\Form\FormItemTable;
 
 trait DefaultValue
 {
-    protected mixed $initDefault = null;
 
     protected mixed $default = null;
 
@@ -22,7 +21,6 @@ trait DefaultValue
      */
     public function default(mixed $default): static
     {
-        $this->setInitDefault($default);
         $this->default = $default;
 
         $this->childrenDefault();
@@ -49,16 +47,5 @@ trait DefaultValue
                 $formItem->default($defaultData);
             }
         }, $this->children);
-    }
-
-    /**
-     * @param mixed $default
-     * @return void
-     */
-    protected function setInitDefault(mixed $default): void
-    {
-        if ($this->initDefault === null) {
-            $this->initDefault = property_exists($this, 'children') ? $this->getDefault() : $default;
-        }
     }
 }
