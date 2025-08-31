@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructure\Form;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
@@ -10,6 +11,8 @@ use Sc\Util\HtmlStructure\Theme\Theme;
 
 /**
  * Class FormItemLine
+ * @property bool $isArrayValue
+ * @property callable $callback
  */
 class FormItemGroup extends AbstractFormItem implements FormItemInterface
 {
@@ -22,18 +25,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     protected ?string $label = null;
     protected ?string $name = null;
     protected mixed $initDefault = null;
-    /**
-     * @var true
-     */
-    protected bool $plain;
-    /**
-     * @var true
-     */
+
     protected bool $isArrayValue = false;
-    /**
-     * @var callable
-     */
-    private $callback = null;
+
+    protected  $callback = null;
 
     public function __construct(FormItemInterface|string ...$children)
     {
@@ -59,6 +54,21 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
+
+    /**
+     * 设置group的阴影
+     *
+     * @param string $shadow
+     * @return $this
+     */
+    public function shadow(#[ExpectedValues(['always', 'hover', 'never'])]string $shadow = ""): static
+    {
+        $this->shadow = $shadow;
+
+        return $this;
+    }
+    
+    
     /**
      * @param mixed $default
      * @return void
@@ -157,8 +167,8 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         $this->formModel = $formModel;
         if ($this->name) {
             $formModel = $this->isArrayValue
-                ? $this->name . '_item'
-                : $formModel . '.' . $this->name;
+                ? "{$this->name}_item"
+                : "$formModel.$this->name";
         }
 
         // 由于一般调用此函数时元素已经定好，所以可以直接调用这个
@@ -170,15 +180,17 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
     /**
      * 设置为数组，group必须设置name
      *
+     * @param string|\Stringable $addText 新增按钮文字或 AbstractHtmlElement, 不是存文字时，将直接作为新增的元素
      * @return $this
      * @throws \Exception
      */
-    public function arrayValue(): static
+    public function arrayValue(string|\Stringable $addText = "新增一项"): static
     {
         if (!$this->name) {
             throw new \Exception('group类型值为数组时，必须设置name');
         }
         $this->isArrayValue = true;
+        $this->arrayAddText = $addText;
 
         return $this;
     }

@@ -27,7 +27,7 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
      */
     public function renderFormItem($formItem): AbstractHtmlElement
     {
-        $el = El::double('el-card')->addClass('vue--form-card');
+        $el = El::double('el-card')->addClass('vue--form-card')->setAttr("shadow", $formItem->getShadow());
 
         Html::css()->addCss(".vue--form-card{margin-bottom:var(--el-card-padding);}");
         Html::css()->addCss(".vue--form-card .el-card__body{padding-bottom:0;position: relative}");
@@ -105,17 +105,22 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             );
         }
 
-        $row = h() ->append(
-            h('template', $row)->setAttr("v-for", "({$formItem->getName()}_item, {$formItem->getName()}_index) in {$formItem->getFormModel()}.{$formItem->getName()}"),
-            h(' <el-divider style="margin: 50px auto;width: 60%"><el-text>暂无数据</el-text></el-divider>')
-                ->setAttr("v-if", "{$formItem->getFormModel()}.{$formItem->getName()}.length === 0"),
-            El::elButton("新增一项")
+        $addHandleButton = is_string($formItem->getArrayAddText())
+            ? El::elButton($formItem->getArrayAddText())
                 ->setAttr('type', 'success')
                 ->setAttr('plain',)
                 ->setAttr('bg',)
                 ->setAttr('icon', 'plus')
-                ->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add({$formItem->getFormModel()}.{$formItem->getName()})")
                 ->setStyle('{width: 100%;margin-bottom: 10px;position: relative;top: -10px;}')
+            : h($formItem->getArrayAddText());
+
+        $addHandleButton->setAttr('@click', "{$formItem->getFormModel()}_{$formItem->getName()}_add({$formItem->getFormModel()}.{$formItem->getName()})");
+
+        $row = h() ->append(
+            h('template', $row)->setAttr("v-for", "({$formItem->getName()}_item, {$formItem->getName()}_index) in {$formItem->getFormModel()}.{$formItem->getName()}"),
+            h(' <el-divider style="margin: 50px auto;width: 60%"><el-text>暂无数据</el-text></el-divider>')
+                ->setAttr("v-if", "{$formItem->getFormModel()}.{$formItem->getName()}.length === 0"),
+            $addHandleButton
         );
 
         Html::js()->vue->addMethod("{$formItem->getFormModel()}_{$formItem->getName()}_add", JsFunc::anonymous(['item'])->code(

@@ -21,13 +21,12 @@ class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCu
      */
     public function renderFormItem($formItem): AbstractHtmlElement
     {
-        if ($formItem->getLabel()) {
-            $element = $this->getBaseEl($formItem)->append($formItem->getElement());
-        }else{
-            $element = El::get($formItem->getElement());
-            if ($element instanceof TextCharacters) {
-                $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px;margin-left: 10px"></el-text>')->append($element);
-            }
+        $element = El::get($formItem->getElement());
+        if ($element instanceof TextCharacters) {
+            $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px;"></el-text>')->append($element);
+        }
+        if ($formItem->getLabel() !== null) {
+            $element = $this->getBaseEl($formItem)->append($element);
         }
 
         if ($formItem->getWhen()){

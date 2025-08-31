@@ -22,15 +22,6 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Placeholder, Options, LabelWidth, FormOrigin, Events, Attrs,Validate;
 
-    /**
-     * @var true
-     */
-    protected bool $closeAfterSelection = false;
-    /**
-     * @var true
-     */
-    private bool $isPanel = false;
-
     public function render(string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemCascaderThemeInterface::class, $theme)->render($this);
@@ -43,7 +34,7 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
      */
     public function toPanel(): static
     {
-        $this->isPanel = true;
+        $this->setConfig('isPanel', true);
 
         return $this;
     }
@@ -55,14 +46,14 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
      */
     public function closeAfterSelection(): static
     {
-        $this->closeAfterSelection = true;
+        $this->setConfig('closeAfterSelection', true);
 
         return $this;
     }
 
     public function isPanel(): bool
     {
-        return $this->isPanel;
+        return $this->getConfig('isPanel', false);
     }
 
     /**

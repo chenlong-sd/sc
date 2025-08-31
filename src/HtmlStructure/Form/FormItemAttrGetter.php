@@ -69,4 +69,7 @@ interface FormItemAttrGetter
     public function getRules();
     public function getOptionsRemote();
     public function getIsArrayValue();
+    public function getArrayAddText();
+    public function getShadow();
+    public function getLabelPosition();
 }

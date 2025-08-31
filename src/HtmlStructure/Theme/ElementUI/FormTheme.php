@@ -35,7 +35,7 @@ class FormTheme implements FormThemeInterface
             ->setAttrs($config);
 
         $items  = array_map(fn($v) => $v->render('ElementUI'), $form->getFormItems());
-        $el->append(El::double('el-row')->append(...$items));
+        $el->append(El::double('el-row')->setAttr(':gutter', 10)->append(...$items));
 
         Html::js()->vue->event("mounted", $form->getAfterRender(), true);
 

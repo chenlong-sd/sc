@@ -41,6 +41,9 @@ abstract class AbstractFormItemTheme
         if ($formItem->getRules()) {
             $el->setAttr("prop", $formItem->getName());
         }
+        if ($formItem->getLabelPosition()){
+            $el->setAttr('label-position', $formItem->getLabelPosition());
+        }
 
         return $el;
     }

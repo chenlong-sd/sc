@@ -274,14 +274,6 @@ class FormItemUploadTheme extends AbstractFormItemTheme implements FormItemUploa
                     Js::code('break;')
                 )
             )
-
-//            Js::if('response.code !== 200 || !response.data')->then(
-//                Js::code("data.pop()"),
-//                Js::code("this.\$notify({message: response.msg, type:'error'})"),
-//            )->else(
-//                Js::code("data[data.length - 1] = { url: response.data, name: uploadFile.name }"),
-//                Js::code("this.\$notify({message: '上传成功', type:'success'});")
-//            ),
         ));
     }
 

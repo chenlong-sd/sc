@@ -5,6 +5,7 @@
 
 namespace Sc\Util\HtmlStructure;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
@@ -73,6 +74,18 @@ class Form
             ? $this->config = [...$this->config, ...$option]
             : $this->config[$option] = $value;
 
+        return $this;
+    }
+
+    /**
+     * 设置表单label位置
+     *
+     * @param string $position
+     * @return $this
+     */
+    public function setLabelPosition(#[ExpectedValues(['left', 'top', 'right', ''])] string $position): static
+    {
+        $this->config('label-position', $position);
         return $this;
     }
 

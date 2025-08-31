@@ -30,12 +30,7 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate, Slots;
 
-    protected string|JsFunc $autoCompleteHandle = '';
-    protected \Stringable|string $autoCompleteFormat = '';
-    /**
-     * @var int|null
-     */
-    public ?int $numberPrecision = null;
+    protected ?int $numberPrecision = null;
 
     public function render(string $theme = null): AbstractHtmlElement
     {
@@ -54,9 +49,9 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
     {
         is_array($complete)
             ? $this->options($complete)
-            : $this->autoCompleteHandle = $complete;
+            : $this->setConfig('autoCompleteHandle', $complete);
 
-        $this->autoCompleteFormat = $format;
+        $this->setConfig('autoCompleteFormat', $format);
 
         return $this;
     }

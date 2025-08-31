@@ -5,6 +5,7 @@
 
 namespace Sc\Util\HtmlStructure\Form;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Col;
@@ -25,18 +26,18 @@ abstract class AbstractFormItem
 
     protected ?\Closure $beforeRender = null;
 
-    protected array $setting = [];
+    protected array $config = [];
 
     public function __call(string $name, mixed $value)
     {
         if (method_exists($this, $name)) {
-            return $this->$name();
+            return $this->$name(...$value);
         }
 
         $type     = lcfirst(substr($name, 0, 3));
         $property = lcfirst(substr($name, 3));
         if ($type === 'set') {
-            $this->setter($property, current($value));
+            $this->setConfig($property, ...$value);
             return $this;
         }
 
@@ -44,7 +45,17 @@ abstract class AbstractFormItem
             return $this->{$property};
         }
 
-        return $this->getter($property);
+        return $this->getConfig($property);
+    }
+
+    public function __get(string $name)
+    {
+        return $this->getConfig($name);
+    }
+
+    public function __set(string $name, $value): void
+    {
+        $this->setConfig($name, $value);
     }
 
     /**
@@ -72,7 +83,7 @@ abstract class AbstractFormItem
             $where =  $wheres[0] . ' === ' . $wheres[1];
         }
 
-        $this->setter('when', $where);
+        $this->setConfig('when', $where);
 
         return $this;
     }
@@ -83,19 +94,19 @@ abstract class AbstractFormItem
      *
      * @return void
      */
-    private function setter(string $name, mixed $value): void
+    protected function setConfig(string $name, mixed $value): void
     {
-        $this->setting[$name] = $value;
+        $this->config[$name] = $value;
     }
 
     /**
      * @param string $name
-     *
+     * @param mixed|null $default
      * @return mixed
      */
-    private function getter(string $name): mixed
+    protected function getConfig(string $name, mixed $default = null): mixed
     {
-        return $this->setting[$name] ?? null;
+        return $this->config[$name] ?? $default;
     }
 
     /**
@@ -112,6 +123,18 @@ abstract class AbstractFormItem
                 : $this->setVAttrs("readonly");
         }
 
+        return $this;
+    }
+
+    /**
+     * 设置Label位置
+     *
+     * @param string $position
+     * @return $this
+     */
+    public function labelPosition(#[ExpectedValues(['left', 'top', 'right', ''])] string $position): static
+    {
+        $this->setConfig('labelPosition', $position);
         return $this;
     }
 }
