@@ -669,8 +669,11 @@ class TableTheme implements TableThemeInterface
         if ($table->getMaxHeight() < 0) {
             Html::js()->vue->event('mounted', Js::code(
                 JsFunc::call('setTimeout', JsFunc::arrow()->code(
-                    Js::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight())),
-                )
+                    Js::assign("this." . $heightName, "@this.vueWindowHeight - this.\$refs.{$table->getId()}.\$el.getBoundingClientRect().top " . $table->getMaxHeight()),
+                    Js::if("this.$heightName < this.vueWindowHeight / 2")->then(
+                        Js::assign("this.$heightName", "@this.vueWindowHeight")
+                    )
+                ))
             ));
         }
     }
