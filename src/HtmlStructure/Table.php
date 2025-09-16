@@ -10,6 +10,7 @@ use JetBrains\PhpStorm\Language;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
+use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\JsCode;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Table\EventHandler;
@@ -139,9 +140,11 @@ class Table
      * @var bool
      */
     private bool $openSetting = true;
+    private ?JsCode $remoteDataHandle;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
+        $this->remoteDataHandle = Js::code();
     }
 
     /**
@@ -219,7 +222,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
+    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler = null): static
     {
         $eventName = ScTool::random('HeaderEvent')->get();
 
@@ -227,6 +230,27 @@ class Table
             'el'       => $eventLabel,
             'handler'  => $handler instanceof \Closure ? $handler() : $handler,
             'position' => 'left'
+        ];
+
+        return $this;
+    }
+
+    /**
+     * 添加头部元素
+     *
+     * @param string|AbstractHtmlElement $element
+     * @param string                     $position
+     *
+     * @return Table
+     */
+    public function addHeaderElement(string|AbstractHtmlElement $element, string $position = 'left'): static
+    {
+        $eventName = ScTool::random('OriginalElement')->get();
+
+        $this->headerEvents[$eventName] = [
+            'el'       => $element,
+            'handler'  => null,
+            'position' => $position
         ];
 
         return $this;
@@ -580,5 +604,21 @@ class Table
     public function getOpenSetting(): bool
     {
         return $this->openSetting;
+    }
+
+    public function getRemoteDataHandle(): ?JsCode
+    {
+        return $this->remoteDataHandle;
+    }
+
+    /**
+     * 设置远程数据处理
+     * 结果参数为 data
+     * @param JsCode|null $remoteDataHandle
+     * @return void
+     */
+    public function setRemoteDataHandle(?JsCode $remoteDataHandle): void
+    {
+        $this->remoteDataHandle = $remoteDataHandle;
     }
 }

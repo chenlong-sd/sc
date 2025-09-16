@@ -450,6 +450,10 @@ class TableTheme implements TableThemeInterface
             if ($handler instanceof Axios && $handler->notFoundCheck()){
                 continue;
             }
+            if ($handler === null) {
+                $position === 'left' ? $left->append($el) : $right->append($el);
+                continue;
+            }
 
             $el = $this->getEl($el)->setAttr('bg');
             if ($el->getAttr('plain') === null && $el->getAttr('default') === null) {
@@ -900,6 +904,7 @@ class TableTheme implements TableThemeInterface
                 url: "@this.{$dataVarName}Url()",
                 query: $query
             )->then(JsFunc::arrow(["{ data }"], Js::code(
+                $table->getRemoteDataHandle(),
                 Js::assign("this.{$table->getId()}Loading", false),
                 Js::if('data.code === 200')->then(
                     Js::assign("this.{$dataVarName}", '@data.data.data'),
