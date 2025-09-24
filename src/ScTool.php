@@ -24,6 +24,7 @@ use Sc\Util\Tool\Nickname;
 use Sc\Util\Tool\Random;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
+use Sc\Util\Tool\ZipArchive;
 
 /**
  * Class Tool.
@@ -40,10 +41,12 @@ use Sc\Util\Tool\Url;
  * @method static Random random(?string $prefix = null)
  * @method static Excel\ExcelInterface xls(string $filepath)
  * @method static Lock lock(string $key, int $ttl = 5, int $waitTime = 0)
+ * @method static ZipArchive zip(string $originalFile)
  *
  * @date 2022/2/20
  */
 #[StaticCallAttribute('dom', HtmlDocument::class)]
+#[StaticCallAttribute('zip', ZipArchive::class)]
 #[StaticCallAttribute('stringToDom', HtmlDocument::class, 'fromCode')]
 #[StaticCallAttribute('baiduFanYi', BaiduFanYi::class)]
 #[StaticCallAttribute('jwt', JWT::class)]
