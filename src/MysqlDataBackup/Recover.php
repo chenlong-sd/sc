@@ -68,18 +68,14 @@ class Recover
         $backUpData = [];
         if (is_dir($saveDir)) {
             ScTool::dir($saveDir)->each(function (Tool\Dir\EachFile $file) use (&$backUpData){
-                $handle = fopen($file->filepath, 'r');
-                $des = [];
-                while ($con = fgets($handle)) {
-                    $des[] = $con;
-                    if (str_contains($con, '*/')) {
-                        break;
-                    }
+                if (!str_ends_with($file->filename, '.zip') && !str_ends_with($file->filename, '.sql')) {
+                    return;
                 }
-                fseek($handle, 0, SEEK_END);
-                $filesize = ftell($handle);
-                fclose($handle);
-                $filesize = bcmul($filesize, '1', 0);
+                $des = $this->getFileDes($file->filepath);
+
+                // 获取文件大小
+                $filesize = filesize($file->filepath);
+
                 $backUpData[] = [
                     'filemtime' => filemtime($file->filepath),
                     'filename' => $file->filename,
@@ -93,5 +89,34 @@ class Recover
         }
 
         return ['code' => 200, 'data' => $backUpData];
+    }
+
+    /**
+     * 获取备份文件描述
+     *
+     * @param string $filepath
+     * @return array
+     */
+    private function getFileDes(string $filepath): array
+    {
+        $des = [];
+        if (str_ends_with($filepath, '.zip')) {
+            $filepath = strtr($filepath, ['.zip' => '.txt']);
+        }
+        if (!file_exists($filepath)) {
+            return $des;
+        }
+
+        $file = new \SplFileObject($filepath);
+        while ($file->valid()) {
+            $line = $file->fgets();
+            if (str_contains($line, '*/')) {
+                break;
+            }
+
+            $des[] = $line;
+        }
+
+        return $des;
     }
 }

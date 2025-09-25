@@ -171,7 +171,7 @@ class Dir
                 $eachFile = new EachFile($current, $path, $relativelyDir);
                 call_user_func($callable, $eachFile);
             }
-        }catch (\Exception){} finally {
+        } finally {
             empty($fd) or closedir($fd);
         }
     }
@@ -189,11 +189,16 @@ class Dir
     /**
      * 获取子文件
      *
+     * @param callable|null $filter 过滤器，参数 文件名
      * @return array
      */
-    public function getFiles(): array
+    public function getFiles(callable $filter = null): array
     {
-        return $this->getChildren();
+        $res = $this->getChildren();
+        if ($filter) {
+            $res = array_filter($res, $filter);
+        }
+        return $res;
     }
 
     /**

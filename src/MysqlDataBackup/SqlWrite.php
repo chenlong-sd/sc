@@ -5,6 +5,8 @@
 
 namespace Sc\Util\MysqlDataBackup;
 
+use Sc\Util\ScTool;
+
 class SqlWrite
 {
     /**
@@ -29,13 +31,43 @@ class SqlWrite
 
     public function cancel(): void
     {
-        $this->fd and fclose($this->fd);
-        $this->fd = null;
+        $this->closeFile();
         @unlink($this->filepath);
     }
 
     public function __destruct()
     {
+        $this->closeFile();
+    }
+
+    public function availableZip(): bool
+    {
+        return class_exists('ZipArchive');
+    }
+
+    private function closeFile(): void
+    {
         $this->fd and fclose($this->fd);
+        $this->fd = null;
+    }
+
+    public function toZip(string $des = ""): string
+    {
+        if (!$this->availableZip()) {
+            return "不可压缩";
+        }
+        $this->closeFile();
+
+        try {
+            $zipFilePath = $this->filepath . '.zip';
+            ScTool::zip($this->filepath)->create($zipFilePath, false);
+            if ($des) {
+                file_put_contents($this->filepath . '.txt', $des);
+            }
+        } catch (\Exception $e) {
+            return "压缩失败：" . $e->getMessage();
+        }
+
+        return "压缩成功：" . $this->filepath . '.zip';
     }
 }

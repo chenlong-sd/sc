@@ -112,13 +112,13 @@ class Backup
     private function backUp(array $tables): void
     {
         $startTime = microtime(true);
+        $sqlWrite  = new SqlWrite($this->saveDir);
         try {
             $this->progress->start();
             $this->progress->write('back_up');
 
             $allTables = Query::getTables($this->connect);
             $allTable  = array_column($allTables, 'comment', 'table');
-            $sqlWrite  = new SqlWrite($this->saveDir);
 
             $this->progress->write('开始备份...');
 
@@ -126,7 +126,7 @@ class Backup
                 ? [" * 全部备份"]
                 : array_map(fn($v) => " * {$v['table']} {$v['comment']}", array_filter($allTables, fn($v) => in_array($v['table'], $tables)));
 
-            $sqlWrite->write(implode(PHP_EOL, [
+            $des = implode(PHP_EOL, [
                 '/**',
                 ' * 备份时间：' . date('Y-m-d H:i:s'),
                 ' * 操作用户：' . 'admin',
@@ -136,7 +136,8 @@ class Backup
                 ' * 备份表：',
                 ...$backUpTableTip,
                 ' */'
-            ]));
+            ]);
+            $sqlWrite->write($des);
 
             $sqlWrite->write(sprintf("SET NAMES %s;", Query::getCharset($this->connect)));
             $sqlWrite->write("-- 备份表结构");
@@ -217,19 +218,29 @@ class Backup
             }
             empty($sqlWrite) or $sqlWrite->cancel();
             throw $exception;
-        } finally {
-            // 结束执行， 写入结束标志日志 END
-            $this->progress->write('备份结束');
-            $this->progress->write('总耗时：' . (microtime(true) - $startTime));
-            $this->progress->write('END');
         }
 
+        // 压缩
+        if ($sqlWrite->availableZip()) {
+            $this->progress->write("开始压缩");
+            $toZipRes = $sqlWrite->toZip($des);
+            $this->progress->write($toZipRes);
+        }
+
+        // 文件保留数量处理
         $this->filesRetain();
+
+        // 结束执行， 写入结束标志日志 END
+        $this->progress->write('备份结束');
+        $this->progress->write('总耗时：' . (microtime(true) - $startTime));
+        $this->progress->write('END');
     }
 
     private function filesRetain(): void
     {
-        $files = ScTool::dir($this->saveDir)->getFiles();
+        $files = ScTool::dir($this->saveDir)->getFiles(function ($filename){
+            return str_ends_with($filename, '.sql') || str_ends_with($filename, '.zip');
+        });
 
         if (count($files) <= $this->numberOfFilesToKeep) {
             return;

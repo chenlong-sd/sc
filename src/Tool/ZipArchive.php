@@ -48,24 +48,24 @@ class ZipArchive
     /**
      * Create zip file
      *
-     * @param string $destinationFile
+     * @param string $destinationFilePath
      * @param bool $isUnlinkOriginalFile
      * @return void
      * @throws \Exception
      */
-    public function create(string $destinationFile, bool $isUnlinkOriginalFile = false): void
+    public function create(string $destinationFilePath, bool $isUnlinkOriginalFile = false): void
     {
         // 验证文件名后缀
-        if (!preg_match('/\.zip$/', $destinationFile)) {
-            $destinationFile .= '.zip';
+        if (!preg_match('/\.zip$/', $destinationFilePath)) {
+            $destinationFilePath .= '.zip';
         }
-        if (file_exists($destinationFile)) {
+        if (file_exists($destinationFilePath)) {
             throw new \Exception('Destination File already exists');
         }
-        if (!dirname($destinationFile)) {
-            mkdir(dirname($destinationFile), 0755, true);
+        if (!dirname($destinationFilePath)) {
+            mkdir(dirname($destinationFilePath), 0755, true);
         }
-        $this->zip->open($destinationFile, \ZipArchive::CREATE);
+        $this->zip->open($destinationFilePath, \ZipArchive::CREATE);
         $this->zip->addFile($this->originalFile, basename($this->originalFile));
         $this->zip->close();
         if ($isUnlinkOriginalFile) {
