@@ -60,7 +60,7 @@ class SqlWrite
 
         try {
             $zipFilePath = $this->filepath . '.zip';
-            ScTool::zip($this->filepath)->create($zipFilePath, false);
+            ScTool::zip($this->filepath)->create($zipFilePath, true);
             if ($des) {
                 file_put_contents($this->filepath . '.txt', $des);
             }

@@ -25,7 +25,8 @@ class Recover
             $this->progress->start();
             $this->progress->write('recover', );
 
-            $splFileObject = new \SplFileObject($this->filePath);
+            $sqlFilePath = $this->getSqlFilePath($this->filePath);
+            $splFileObject = new \SplFileObject($sqlFilePath);
 
             $size = $splFileObject->getSize();
             $recoverSize = 0;
@@ -44,6 +45,9 @@ class Recover
                     $currentSql = '';
                 }
             }
+
+            unset($splFileObject);
+            $this->clearUnzipFile();
         } catch (\Throwable $exception) {
             $this->progress->write("ERROR:" . $exception->getMessage(), );
             $result = ['code' => 202, 'msg' => $exception->getMessage()];
@@ -118,5 +122,43 @@ class Recover
         }
 
         return $des;
+    }
+
+    /**
+     * 获取可恢复文件路径
+     *
+     * @param string $filePath
+     * @return string
+     * @throws \Exception
+     */
+    private function getSqlFilePath(string $filePath): string
+    {
+        if (str_ends_with($filePath, '.sql')) {
+            return $filePath;
+        }
+
+        $this->progress->write('开始解压文件', );
+        $dirname = dirname($filePath) . '/waiting/';
+        $filename = preg_replace('/\.zip$/', '', basename($filePath));
+
+        ScTool::zip($filePath)->extract($dirname);
+        $this->progress->write('解压完成', );
+        return $dirname . $filename;
+    }
+
+    /**
+     * 清理解压文件
+     *
+     * @return void
+     */
+    private function clearUnzipFile(): void
+    {
+        if (!str_ends_with($this->filePath, '.zip')) {
+            return;
+        }
+
+        $dirname = dirname($this->filePath) . '/waiting/';
+
+        ScTool::dir($dirname)->remove();
     }
 }
