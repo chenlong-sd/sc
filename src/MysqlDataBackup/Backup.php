@@ -211,6 +211,16 @@ class Backup
                     }
                 }
             }
+
+            // 压缩
+            if ($sqlWrite->availableZip()) {
+                $this->progress->write("开始压缩");
+                $toZipRes = $sqlWrite->toZip($des);
+                $this->progress->write($toZipRes);
+            }
+
+            // 文件保留数量处理
+            $this->filesRetain();
         }catch (\Throwable $exception){
             // 系统异常，把异常信息写入日志
             if ($exception->getCode() === 0) {
@@ -218,22 +228,12 @@ class Backup
             }
             empty($sqlWrite) or $sqlWrite->cancel();
             throw $exception;
+        } finally {
+            // 结束执行， 写入结束标志日志 END
+            $this->progress->write('备份结束');
+            $this->progress->write('总耗时：' . (microtime(true) - $startTime));
+            $this->progress->write('END');
         }
-
-        // 压缩
-        if ($sqlWrite->availableZip()) {
-            $this->progress->write("开始压缩");
-            $toZipRes = $sqlWrite->toZip($des);
-            $this->progress->write($toZipRes);
-        }
-
-        // 文件保留数量处理
-        $this->filesRetain();
-
-        // 结束执行， 写入结束标志日志 END
-        $this->progress->write('备份结束');
-        $this->progress->write('总耗时：' . (microtime(true) - $startTime));
-        $this->progress->write('END');
     }
 
     private function filesRetain(): void
