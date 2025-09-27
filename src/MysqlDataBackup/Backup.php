@@ -264,6 +264,10 @@ class Backup
      */
     private function remove(array $postParam): array
     {
+        if ($this->verifyCode === md5("")) {
+            return ['code' => 202, 'msg' => '请先设置验证码'];
+        }
+
         if (empty($postParam['code']) || !preg_match('/^\w{10}$/', $postParam['code']) || md5($postParam['code']) !== $this->verifyCode) {
             return ['code' => 202, 'msg' => '验证码错误'];
         }
@@ -282,6 +286,10 @@ class Backup
      */
     private function recover(array $postParam): array
     {
+        if ($this->verifyCode === md5("")) {
+            return ['code' => 202, 'msg' => '请先设置验证码'];
+        }
+
         if (empty($postParam['code']) || !preg_match('/^\w{10}$/', $postParam['code']) || md5($postParam['code']) !== $this->verifyCode) {
             return ['code' => 202, 'msg' => '验证码错误'];
         }
