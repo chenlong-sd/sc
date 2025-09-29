@@ -264,12 +264,9 @@ class Backup
      */
     private function remove(array $postParam): array
     {
-        if ($this->verifyCode === md5("")) {
-            return ['code' => 202, 'msg' => '请先设置验证码'];
-        }
-
-        if (empty($postParam['code']) || !preg_match('/^\w{10}$/', $postParam['code']) || md5($postParam['code']) !== $this->verifyCode) {
-            return ['code' => 202, 'msg' => '验证码错误'];
+        $verifyRes = $this->verify($postParam);
+        if ($verifyRes !== true) {
+            return $verifyRes;
         }
 
         @unlink($this->saveDir . DIRECTORY_SEPARATOR . $postParam['filename']);
@@ -286,7 +283,19 @@ class Backup
      */
     private function recover(array $postParam): array
     {
-        if ($this->verifyCode === md5("")) {
+        $verifyRes = $this->verify($postParam);
+        if ($verifyRes !== true) {
+            return $verifyRes;
+        }
+
+        return (new Recover($this->connect, $this->saveDir . DIRECTORY_SEPARATOR . $postParam['filename'], $this->progress))->recover();
+    }
+
+
+    private function verify($postParam): array|bool
+    {
+        // AAAAAAAAAA 是为了兼容旧版本
+        if ($this->verifyCode === md5("") || $this->verifyCode === md5("AAAAAAAAAA")) {
             return ['code' => 202, 'msg' => '请先设置验证码'];
         }
 
@@ -294,6 +303,6 @@ class Backup
             return ['code' => 202, 'msg' => '验证码错误'];
         }
 
-        return (new Recover($this->connect, $this->saveDir . DIRECTORY_SEPARATOR . $postParam['filename'], $this->progress))->recover();
+        return true;
     }
 }
