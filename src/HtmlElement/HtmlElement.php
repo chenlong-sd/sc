@@ -74,7 +74,11 @@ class HtmlElement
         $el = self::double($name);
 
         if ($arguments) {
-            $el->append(...$arguments);
+            $content = array_shift($arguments);
+            $el->append($content);
+            if ($arguments) {
+                $el->setAttrs(current($arguments));
+            }
         }
 
         return $el;
