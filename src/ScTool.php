@@ -21,6 +21,7 @@ use Sc\Util\Tool\HtmlDocument;
 use Sc\Util\Tool\JWT;
 use Sc\Util\Tool\Lock;
 use Sc\Util\Tool\Nickname;
+use Sc\Util\Tool\Password;
 use Sc\Util\Tool\Random;
 use Sc\Util\Tool\Tree;
 use Sc\Util\Tool\Url;
@@ -35,6 +36,7 @@ use Sc\Util\Tool\ZipArchive;
  * @method static JWT jwt(array $config = [])
  * @method static Dir dir(string $dir)
  * @method static Nickname nickname()
+ * @method static Password password($options = [])
  * @method static ClassProxy classProxy(object $class)
  * @method static Url url(?string $url = null)
  * @method static Ciphertext ciphertext(string $secret)
