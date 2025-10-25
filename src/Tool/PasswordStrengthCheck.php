@@ -3,9 +3,10 @@
 namespace Sc\Util\Tool;
 
 /**
- * 密码类
+ * 密码强度检测工具
+ *
  */
-class Password {
+class PasswordStrengthCheck {
     // 等级常量定义
     const LEVEL_VERY_WEAK = 1;  // 极弱
     const LEVEL_WEAK = 2;       // 弱
@@ -223,19 +224,19 @@ class Password {
         return $suggestions;
     }
 
-    public function setMaxRepeat(int $maxRepeat): Password
+    public function setMaxRepeat(int $maxRepeat): PasswordStrengthCheck
     {
         $this->maxRepeat = $maxRepeat;
         return $this;
     }
 
-    public function setRequiredTypes(int $requiredTypes): Password
+    public function setRequiredTypes(int $requiredTypes): PasswordStrengthCheck
     {
         $this->requiredTypes = $requiredTypes;
         return $this;
     }
 
-    public function setMinLength(int $minLength): Password
+    public function setMinLength(int $minLength): PasswordStrengthCheck
     {
         $this->minLength = $minLength;
         return $this;

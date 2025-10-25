@@ -153,7 +153,7 @@ class Window
 
     public function notFoundCheck(#[ExpectedValues(['header', 'row'])] string $type = 'header'): bool
     {
-        if ($this->url && $this->url === ScTool::NOT_FOND) {
+        if ($this->url && $this->url === ScTool::NOT_FOUND) {
             return true;
         }elseif ($this->content){
             if ($this->content instanceof DoubleLabel && $this->content->getLabel() === 'el-form') {
@@ -161,10 +161,10 @@ class Window
                 $row = Html::js()->vue->get($this->content->getAttr(':model') . 'UpdateUrl');
 
                 if ($type === 'row') {
-                    return $row === ScTool::NOT_FOND;
+                    return $row === ScTool::NOT_FOUND;
                 }
 
-                return $header === ScTool::NOT_FOND;
+                return $header === ScTool::NOT_FOUND;
             }
         }elseif ($this->component){
             $content = $this->component->getTemplate();
@@ -172,10 +172,10 @@ class Window
                 $header = $this->component->getVue()->get($content->getAttr(':model') . 'CreateUrl');
                 $row = $this->component->getVue()->get($content->getAttr(':model') . 'UpdateUrl');
                 if ($type === 'row') {
-                    return $row === ScTool::NOT_FOND;
+                    return $row === ScTool::NOT_FOUND;
                 }
 
-                return $header === ScTool::NOT_FOND;
+                return $header === ScTool::NOT_FOUND;
             }
         }
 

@@ -40,21 +40,28 @@ $body->append(
     El::elButton("检测", ['@click' => 'detect()', 'type' => 'primary', 'style' => 'position:fixed;bottom:50%; right:50%;']),
 );
 
-$layout = Layout::create([':gutter' => 10]);
+$layout = h('el-collapse');
 
-$layout->addCol(24, h('el-card', ['header' => '更新SQL'])->append(
+$layout->append(h('el-collapse-item', ['title' => '更新SQL'])->append(
     h('pre', ['class' => 'line-numbers'])->append(
         h('code', '{{ detail.filter(v => v.sql).map(item => item.sql).join(\'\n\') }}', ['class' => 'language-sql'])
     )
 ));
-$layout->addCol(24, h('el-card', ['header' => '更新明细'])->append(
+$layout->append(h('el-collapse-item', ['header' => '更新明细'])->append(
     h('div', ['v-for' => 'item in detail'])->append(
         h('div', ['v-if' => 'item.sql'])->append(
-            h('div', '表名：{{ item.table_name }}'),
-            h('div', '对比结果：')->append(
-                h('div', '{{ item.des.replace(\'表结构差异对比结果：\n\n\', \'\') }}')->setStyle('{white-space: pre-wrap; }')
+            h('el-divider')->append(
+                h('div')->append(
+                    h('<el-icon><star-filled /></el-icon>'),
+                    h(' 【 {{ item.table_name }} 】 表结构差异对比结果 '),
+                    h('<el-icon><star-filled /></el-icon>'),
+                )->setStyle('{font-size: 20px}'),
             ),
-            h('div', '更新sql：')->append(
+            h('div',  h('b', '对比结果：'))->append(
+                h('div', '{{ item.des.replace(\'表结构差异对比结果：\n\n\', \'\') }}')
+                    ->setStyle('{white-space: pre-wrap;padding-left: 30px;}')
+            ),
+            h('div',  h('b', '更新sql：'))->append(
                 h('pre', ['class' => 'line-numbers'])->append(h('code', '{{ item.sql.replace(\'\n\', \'\') }}', ['class' => 'language-sql'])),
             ),
         )
@@ -71,6 +78,6 @@ Html::js()->vue->addMethod('detect', JsFunc::anonymous()->code(
     ))
 ));
 
-Html::html()->find('#app')->append($body, $layout->render());
+Html::html()->find('#app')->append($body, $layout);
 
 return Html::toHtml();

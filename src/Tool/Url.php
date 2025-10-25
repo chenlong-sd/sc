@@ -73,7 +73,7 @@ class Url implements \Stringable
     public function url(): string
     {
         if ($this->isNotFound){
-            return ScTool::NOT_FOND;
+            return ScTool::NOT_FOUND;
         }
 
         return strtr("[domain][path][query][fragment]", [

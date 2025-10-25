@@ -55,7 +55,7 @@ class Axios
 
     public function notFoundCheck(): bool
     {
-        return (string)$this->options['url'] === ScTool::NOT_FOND;
+        return (string)$this->options['url'] === ScTool::NOT_FOUND;
     }
 
     /**

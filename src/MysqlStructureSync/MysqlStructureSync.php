@@ -44,7 +44,7 @@ class MysqlStructureSync
                 $res[] = [
                     'des' => $sqlTableComparator->formatDifferences($diff),
                     'table_name' => $tableName,
-                    'sql' => $sqlTableComparator->generateAlterSql($diff, $tableName),
+                    'sql' => $sqlTableComparator->generateAlterSql($diff, $tableName, ),
                     'code' => $structure,
                     'db' => $dbStructure,
                 ];
