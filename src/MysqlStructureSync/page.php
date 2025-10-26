@@ -37,17 +37,22 @@ CSS);
 
 
 $body->append(
-    El::elButton("检测", ['@click' => 'detect()', 'type' => 'primary', 'style' => 'position:fixed;bottom:50%; right:50%;']),
+    El::elButton("检测", [
+        '@click' => 'detect()',
+        'type' => 'primary',
+        'style' => 'position:fixed;bottom:50%; right:50%;',
+        'v-if' => 'detail.length == 0'
+    ]),
 );
 
-$layout = h('el-collapse');
+$layout = h('el-collapse', ['v-if' => 'detail.length > 0']);
 
 $layout->append(h('el-collapse-item', ['title' => '更新SQL'])->append(
     h('pre', ['class' => 'line-numbers'])->append(
         h('code', '{{ detail.filter(v => v.sql).map(item => item.sql).join(\'\n\') }}', ['class' => 'language-sql'])
     )
 ));
-$layout->append(h('el-collapse-item', ['header' => '更新明细'])->append(
+$layout->append(h('el-collapse-item', ['title' => '更新明细'])->append(
     h('div', ['v-for' => 'item in detail'])->append(
         h('div', ['v-if' => 'item.sql'])->append(
             h('el-divider')->append(
