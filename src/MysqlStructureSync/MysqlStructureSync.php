@@ -7,7 +7,7 @@ class MysqlStructureSync
     private array $args;
 
     /**
-     * @param string $function page or sync
+     * @param string $function page or sync or detect
      * @param array $args
      * function => detect: [code_paths = [...], current_structures = [table_name => sql, ....], table_prefix => '']
      * @return mixed
