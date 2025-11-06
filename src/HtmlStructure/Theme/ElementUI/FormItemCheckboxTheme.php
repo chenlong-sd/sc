@@ -66,6 +66,7 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
      * @param AbstractHtmlElement $base
      * @param DoubleLabel $box
      * @param DoubleLabel $checkbox
+     * @param $optionsVar
      * @return AbstractHtmlElement
      */
     public function elGen(FormItemCheckbox|FormItemAttrGetter $formItem, AbstractHtmlElement $base, DoubleLabel $box, DoubleLabel $checkbox, $optionsVar): AbstractHtmlElement
@@ -78,21 +79,19 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             ])->append("全选");
 
             Html::js()->vue->addMethod("{$formItem->getName()}handleCheckAllChange", ['type'], Js::code(
-                Js::code("$optionsVar = this.$optionsVar"),
-                Js::code("this.{$this->getVModel($formItem)} = type ? $optionsVar.map(v => v.value) : []"),
-                Js::code("this.{$formItem->getName()}isIndeterminate = false"),
+                Js::assign("this.{$this->getVModel($formItem)}", "@type ? this.$optionsVar.map(v => v.value) : []"),
+                Js::assign("this.{$formItem->getName()}isIndeterminate", "@false"),
             ));
 
+            Html::js()->vue->set("{$formItem->getName()}isIndeterminate", "@false");
             $change = $box->getAttr("@change");
             $newChange = ScTool::random("CheckBoxCM")->get();
             $box->setAttr("@change", $newChange);
             Html::js()->vue->addMethod($newChange, ['value'], Js::code(
                 Js::code($change ? "{$newChange}(value)" : ""),
                 Js::code("const checkedCount = value.length"),
-                Js::code("this.{$formItem->getName()}checkAll = checkedCount === this.$optionsVar.length"),
-                Js::log("@checkedCount > 0 && checkedCount < this.$optionsVar.length"),
-                Js::log("@checkedCount,this.$optionsVar.length"),
-                Js::code("this.{$formItem->getName()}isIndeterminat = checkedCount > 0 && checkedCount < this.$optionsVar.length"),
+                Js::assign("this.{$formItem->getName()}checkAll", "@checkedCount === this.$optionsVar.length"),
+                Js::assign("this.{$formItem->getName()}isIndeterminate", "@checkedCount > 0 && checkedCount < this.$optionsVar.length"),
             ));
 
             return $base->append($allSelect)->append($box->append($checkbox));
