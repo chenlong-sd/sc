@@ -74,6 +74,7 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
         if ($formItem->allSelect) {
             $allSelect = h("el-checkbox", [
                 "v-model" => "{$formItem->getName()}checkAll",
+                "v-if" => "$optionsVar.length > 0",
                 ":indeterminate" => "{$formItem->getName()}isIndeterminate",
                 "@change" => "{$formItem->getName()}handleCheckAllChange",
             ])->append("全选");
