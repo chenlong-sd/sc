@@ -27,6 +27,17 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
     }
 
     /**
+     * 添加全选
+     *
+     * @return $this
+     */
+    public function addAllSelect(): static
+    {
+        $this->setConfig('allSelect', true);
+        return $this;
+    }
+
+    /**
      * @return mixed
      */
     public function getDefault(): mixed

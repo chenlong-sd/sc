@@ -4,9 +4,14 @@ namespace Sc\Util\HtmlStructure\Theme\ElementUI;
 
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemCheckbox;
+use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemCheckboxThemeInterface;
+use Sc\Util\ScTool;
 
 /**
  * Class FormItemSelectThem
@@ -49,7 +54,50 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
 
         $this->addEvent($box, $formItem->getEvents(), $formItem->getName());
 
+        if ($isBoolValue) {
+            return $base->append($box);
+        }
 
-        return $base->append($isBoolValue ? $box : $box->append($checkbox));
+        return $this->elGen($formItem, $base, $box, $checkbox, $optionsVar);
+    }
+
+    /**
+     * @param FormItemCheckbox|FormItemAttrGetter $formItem
+     * @param AbstractHtmlElement $base
+     * @param DoubleLabel $box
+     * @param DoubleLabel $checkbox
+     * @return AbstractHtmlElement
+     */
+    public function elGen(FormItemCheckbox|FormItemAttrGetter $formItem, AbstractHtmlElement $base, DoubleLabel $box, DoubleLabel $checkbox, $optionsVar): AbstractHtmlElement
+    {
+        if ($formItem->allSelect) {
+            $allSelect = h("el-checkbox", [
+                "v-model" => "{$formItem->getName()}checkAll",
+                ":indeterminate" => "{$formItem->getName()}isIndeterminate",
+                "@change" => "{$formItem->getName()}handleCheckAllChange",
+            ])->append("全选");
+
+            Html::js()->vue->addMethod("{$formItem->getName()}handleCheckAllChange", ['type'], Js::code(
+                Js::code("$optionsVar = this.$optionsVar"),
+                Js::code("this.{$this->getVModel($formItem)} = type ? $optionsVar.map(v => v.value) : []"),
+                Js::code("this.{$formItem->getName()}isIndeterminate = false"),
+            ));
+
+            $change = $box->getAttr("@change");
+            $newChange = ScTool::random("CheckBoxCM")->get();
+            $box->setAttr("@change", $newChange);
+            Html::js()->vue->addMethod($newChange, ['value'], Js::code(
+                Js::code($change ? "{$newChange}(value)" : ""),
+                Js::code("const checkedCount = value.length"),
+                Js::code("this.{$formItem->getName()}checkAll = checkedCount === this.$optionsVar.length"),
+                Js::log("@checkedCount > 0 && checkedCount < this.$optionsVar.length"),
+                Js::log("@checkedCount,this.$optionsVar.length"),
+                Js::code("this.{$formItem->getName()}isIndeterminat = checkedCount > 0 && checkedCount < this.$optionsVar.length"),
+            ));
+
+            return $base->append($allSelect)->append($box->append($checkbox));
+        }
+
+        return $base->append($box->append($checkbox));
     }
 }
