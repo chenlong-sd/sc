@@ -12,6 +12,8 @@ use Sc\Util\Tool\Dir\EachFile;
  */
 class Dir
 {
+    const STOP_CODE = 117;
+
     /**
      * @var array|string[]
      */
@@ -170,6 +172,10 @@ class Dir
                 }
                 $eachFile = new EachFile($current, $path, $relativelyDir);
                 call_user_func($callable, $eachFile);
+            }
+        } catch (\Exception $e) {
+            if ($e->getCode() !== self::STOP_CODE) {
+                throw $e;
             }
         } finally {
             empty($fd) or closedir($fd);

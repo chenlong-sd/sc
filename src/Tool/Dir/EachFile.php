@@ -21,6 +21,6 @@ class EachFile
      */
     public function stopEach(): mixed
     {
-        throw new \Exception();
+        throw new \Exception(code: Dir::STOP_CODE);
     }
 }
