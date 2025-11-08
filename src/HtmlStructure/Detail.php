@@ -43,13 +43,13 @@ class Detail
      * 设置属性
      *
      * @param array $attr
-     * <br/>border    是否带有边框
-     * <br/>column    一行 Descriptions Item 的数量
-     * <br/>direction    排列的方向 'vertical' | 'horizontal'
-     * <br/>size    列表的尺寸 '' | 'large' | 'default' | 'small'
-     * <br/>title    标题文本，显示在左上方
-     * <br/>extra    操作区文本，显示在右上方
-     * <br/>label-width 2.8.8    每一列的标签宽度
+     * border    是否带有边框
+     * column    一行 Descriptions Item 的数量
+     * direction    排列的方向 'vertical' | 'horizontal'
+     * size    列表的尺寸 '' | 'large' | 'default' | 'small'
+     * title    标题文本，显示在左上方
+     * extra    操作区文本，显示在右上方
+     * label-width 2.8.8    每一列的标签宽度
      * @return $this
      */
     public function setAttr(array $attr): static
@@ -61,17 +61,17 @@ class Detail
     /**
      * @param string|\Stringable $label
      * @param string|\Stringable $value
-     * @param array $attr
-     * <br/>label    标签文本 string ''
-     * <br/>span    列的数量 number 1
-     * <br/>rowspan 单元格应该跨越的行数 number 1
-     * <br/>width    列的宽度，不同行相同列的宽度按最大值设定（如无 border ，宽度包含标签与内容） string / number ''
-     * <br/>min-width    列的最小宽度，与 width 的区别是 width 是固定的，min-width 会把剩余宽度按比例分配给设置了 min-width 的列（如无 border，宽度包含标签与内容）
-     * <br/>label-width 列标签宽，如果未设置，它将与列宽度相同。 比 Descriptions 的 label-width 优先级高
-     * <br/>align    列的内容对齐方式（如无 border，对标签和内容均生效） 'left' | 'center' | 'right'
-     * <br/>label-align    列的标签对齐方式，若不设置该项，则使用内容的对齐方式（如无 border，请使用 align 参数） 'left' | 'center' | 'right'
-     * <br/>class-name    列的内容自定义类名
-     * <br/>label-class-name    column label custom class name
+     * @param array $attr 属性，位数字时表示span值
+     * label    标签文本 string ''
+     * span    列的数量 number 1
+     * rowspan 单元格应该跨越的行数 number 1
+     * width    列的宽度，不同行相同列的宽度按最大值设定（如无 border ，宽度包含标签与内容） string / number ''
+     * min-width    列的最小宽度，与 width 的区别是 width 是固定的，min-width 会把剩余宽度按比例分配给设置了 min-width 的列（如无 border，宽度包含标签与内容）
+     * label-width 列标签宽，如果未设置，它将与列宽度相同。 比 Descriptions 的 label-width 优先级高
+     * align    列的内容对齐方式（如无 border，对标签和内容均生效） 'left' | 'center' | 'right'
+     * label-align    列的标签对齐方式，若不设置该项，则使用内容的对齐方式（如无 border，请使用 align 参数） 'left' | 'center' | 'right'
+     * class-name    列的内容自定义类名
+     * label-class-name    column label custom class name
      * @return void
      */
     public function addItem(string|\Stringable $label, string|\Stringable $value, array|int $attr = []): void

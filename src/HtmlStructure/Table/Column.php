@@ -340,6 +340,27 @@ class Column
     }
 
     /**
+     * 显示多张图片
+     *
+     * @param int $previewNumber 预览数量,即列表中显示的图片数量，点击预览大图时显示的所有图片
+     * @param string $urlPath 图片地址字段，如果地址是数组，则填空，
+     *          例：[a.png,b.png]  => '', [{url:a.png}, {b.png}] => 'url'
+     * @return $this
+     */
+    public function showImages(int $previewNumber = 1, string $urlPath = 'url'): static
+    {
+        $this->show = [
+            'type' => 'images',
+            'config' => [
+                'previewNumber' => $previewNumber,
+                'urlPath' => $urlPath
+            ]
+        ];
+
+        return $this;
+    }
+
+    /**
      * 不显示此列
      *
      * @param bool       $confirm   是否不显示此列

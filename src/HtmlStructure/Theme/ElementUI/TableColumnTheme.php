@@ -48,6 +48,7 @@ class TableColumnTheme implements TableColumnThemeInterface
                 'switch'   => $this->switchHandle($column, $show['config']),
                 'tag'      => $this->tagHandle($column, $show['config']),
                 'image'    => $this->imageHandle($column),
+                'images'   => $this->imagesHandle($column, $show['config']),
                 'mapping'  => $this->mappingHandle($column, $show['config']),
                 'openPage' => $this->openPageHandle($column, $show['config']),
             };
@@ -209,6 +210,27 @@ class TableColumnTheme implements TableColumnThemeInterface
                 ':preview-teleported' => '@true',
                 'v-if'               => "{$column->getAttr('prop')}?.length > 0"
             ])
+        );
+    }
+
+    private function imagesHandle(Column $column, array $config): void
+    {
+        $viewPath = $config['urlPath'] ? ".{$config['urlPath']}" : '';
+        $column->setFormat(
+            El::double('template')->setAttr('v-if', "{$column->getAttr('prop')}.length > 0")->append(
+                El::double('template')
+                    ->setAttr("v-for", "(@item, image_index) in {$column->getAttr('prop')}")->append(
+                    El::double('el-image')
+                        ->setAttr(':preview-src-list', "{$column->getAttr('prop')}.map(@v => @v$viewPath)")
+                        ->setAttr('fit', 'cover')
+                        ->setAttr(':initial-index', '@image_index')
+                        ->setAttr(':preview-teleported', '@true')
+                        ->setAttr('show-progress')
+                        ->setAttr('style', 'width:100px')
+                        ->setAttr('v-if', "@image_index < {$config['previewNumber']}")
+                        ->setAttr(':src', "@item$viewPath")
+                )
+            )
         );
     }
 
