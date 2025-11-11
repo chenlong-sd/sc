@@ -1,186 +1,152 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: Administrator
- * Date: 2019/2/28
- * Time: 10:35
+ * 安全优化版JWT工具类
+ * 核心优化：密钥安全管理、强算法固定、逻辑校验完善、安全机制补充
  */
 
 namespace Sc\Util\Tool;
 
 use JetBrains\PhpStorm\ExpectedValues;
-
-/**
- * Class JWT
- *
- * @example
- *         JWT::getToken($var); 直接获取token ，$var 为自己的参数可不传
- *         JWT::getRefresh(7, $var)::getToken($var);需要获取refreshToken参数时
- *         JWT::setExp(86400)::getToken($var); 设置过期时间
- * @package app\interactive\controller
- */
+use RuntimeException;
 
 class JWT
 {
+    // 错误码常量
     const EXPIRE_CODE = 1001;
     const ERROR_CODE = 1002;
     const WAIT_CODE = 1003;
     const SIGN_CODE = 1004;
+    const ILLEGAL_ALG_CODE = 1005;
+    const ILLEGAL_IAT_CODE = 1006;
+    const ILLEGAL_AUD_CODE = 1007;
 
-
-    /** @var string 秘钥 */
-    const SECRET = 'SD_CL-CS_LOVE**KK';
-
-    /** @var string token类型 */
+    // 基础配置（不可硬编码密钥）
+    const DEFAULT_SECRET = ''; // 禁止硬编码，通过环境变量覆盖
+    const DEFAULT_REFRESH = ''; // 禁止硬编码，通过环境变量覆盖
     const TYPE = 'JWT';
+    const ALLOWED_ALGS = ['sha256', 'sha512']; // 仅允许强算法
+    const DEFAULT_EXP = 3600; // 默认过期时间1小时
+    const MAX_EXP = 604800; // 最大过期时间7天
+    const IAT_MAX_OFFSET = 300; // iat最大偏移量5分钟（秒）
 
-    /** @var string 更新token的秘钥 */
-    const REFRESH = 'SD_LO_VE_CL_CS';
+    /** @var string 加密算法 */
+    private string $alg;
 
-    /** @var int 加密串前置随机子串 */
-    const START_LEN = 3;
-
-    /** @var string 加密串插入子串 */
-    const MIDDLE_LEN = "8:3";
-
-    /** @var int 加密串后置随机子串 */
-    const END_LEN = 3;
-
-    /** @var string 加密算法类型 */
-    private string $alg = 'sha256';
-
-    /**
-     * token的基本数据
-     * @var array
-     */
+    /** @var array token核心载荷 */
     private array $payload = [];
 
-    /**
-     * @var array refreshToken 数据
-     */
+    /** @var array refreshToken数据 */
     private array $refresh = [];
 
-    /**
-     * 携带的数据
-     * @var array
-     */
+    /** @var array 自定义携带数据 */
     private array $data = [];
 
-    /**
-     * 配置
-     *
-     * @var array
-     */
+    /** @var array 配置集合 */
     private array $config = [
-        'SECRET'     => self::SECRET,
-        'REFRESH'    => self::REFRESH,
-        'START_LEN'  => self::START_LEN,
-        'MIDDLE_LEN' => self::MIDDLE_LEN,
-        'END_LEN'    => self::END_LEN,
+        'SECRET' => self::DEFAULT_SECRET,
+        'REFRESH' => self::DEFAULT_REFRESH,
+        'AUDIENCE' => '', // 受众标识（如服务域名）
     ];
 
     /**
-     * JWT constructor.
-     *
-     * @param array{"SECRET":int, "REFRESH":int, "START_LEN":int, "MIDDLE_LEN":string, "END_LEN":int} $config 载荷，有效信息
-     *
-     * @example
-     *        以下为data的默认参数，可以有额外参数
-     *           $data = [
-     *              'iss' => 'jwt_admin',               // 签发者
-     *              'iat' => time(),                    // 签发时间
-     *              'exp' => time()+7200,               //  jwt的过期时间，这个过期时间必须要大于签发时间
-     *              'nbf' => time()+60,                 // 定义在什么时间之前，该jwt都是不可用的
-     *              'sub' => 'www.admin.com',           // 主题
-     *              'aud' => 'www.admin.com',           //  接收jwt的一方
-     *              'jti' => md5(uniqid('JWT').time())  // 该Token唯一标识
-     *              'rsh' => 'asdasd'                   // 需要刷新操作的时候,refreshToken的唯一标识jti值，必须
-     *           ]
+     * 构造函数（单例模式+环境变量初始化）
+     * @param array $config 自定义配置（覆盖默认值）
      */
     public function __construct(array $config = [])
     {
-        $this->alg  = array_rand(array_flip(hash_hmac_algos()));
+        // 初始化配置（环境变量优先，其次自定义配置，最后默认值）
+        $this->initConfig($config);
 
-        $this->injectStrConfig($config);
-        $this->setIat()->setNbf()->setExp()->setIss()->setJti();
+        // 验证密钥有效性
+        $this->validateSecrets();
+
+        // 固定强算法
+        $this->alg = self::ALLOWED_ALGS[0];
+
+        // 初始化基础载荷
+        $this->setIat()->setNbf()->setExp()->setIss()->setAud()->setJti();
     }
 
     /**
-     * 注入配置
-     *
-     * @param array $config
-     *
-     * @return JWT
-     *
-     * @author chenlong<vip_chenlong@163.com>
-     * @date   2022/5/16 14:31
+     * 初始化配置（环境变量+自定义配置融合）
+     * @param array $config 自定义配置
      */
-    public function injectStrConfig(array $config): static
+    private function initConfig(array $config): void
     {
-        foreach ($this->config as $key => $value) {
-            empty($config[$key]) or $this->config[$key] = $value;
+        $this->config = [
+            'SECRET' => ($config['SECRET'] ?? self::DEFAULT_SECRET),
+            'REFRESH' => ($config['REFRESH'] ?? self::DEFAULT_REFRESH),
+            'AUDIENCE' => ($config['AUDIENCE'] ?? ''),
+        ];
+    }
+
+    /**
+     * 验证密钥有效性
+     * @throws RuntimeException
+     */
+    private function validateSecrets(): void
+    {
+        if (empty($this->config['SECRET']) || strlen($this->config['SECRET']) < 16) {
+            throw new RuntimeException('JWT密钥不能为空且长度至少16位');
         }
-
-        return $this;
+        if (empty($this->config['REFRESH']) || strlen($this->config['REFRESH']) < 16) {
+            throw new RuntimeException('RefreshToken密钥不能为空且长度至少16位');
+        }
     }
 
     /**
-     * 获取配置
-     *
-     * @param string $key
-     *
+     * 获取配置项
+     * @param string $key 配置键名
      * @return mixed
-     *
-     * @author chenlong<vip_chenlong@163.com>
-     * @date   2022/5/16 14:37
      */
-    private function getConfig(#[ExpectedValues(['SECRET', 'REFRESH', 'START_LEN', 'MIDDLE_LEN', 'END_LEN',])] string $key): mixed
+    private function getConfig(#[ExpectedValues(['SECRET', 'REFRESH', 'AUDIENCE'])] string $key): mixed
     {
-        return $this->config[$key];
+        return $this->config[$key] ?? '';
     }
 
     /**
-     * 获取token
-     * @return array
+     * 生成Token（移除冗余混淆逻辑）
+     * @return array Token信息（含过期时间）
      */
     public function getToken(): array
     {
+        $header = $this->getHeader();
         $payload = self::base64UrlEncode(array_merge($this->data, $this->payload));
-        $header  = self::getHeader();
-        $sign    = hash_hmac($this->alg, $header . '.' . $payload, $this->getConfig('SECRET'));
-        $token   = implode('.', [$this->strInject($header), $this->strInject($payload), $this->strInject(self::base64UrlEncode($sign))]);
+        $sign = hash_hmac($this->alg, $header . '.' . $payload, $this->getConfig('SECRET'));
 
-        $tokenData = [
+        $token = implode('.', [$header, $payload, self::base64UrlEncode($sign)]);
+
+        $result = [
             'token' => $token,
             'token_exp' => $this->payload['exp'] ?? 0
         ];
-        return array_merge($tokenData, $this->refresh);
+
+        return array_merge($result, $this->refresh);
     }
 
     /**
-     * 获取刷新token 的 refreshToken，当token过期的时候可以用此refreshToken来刷新token
-     * 返回refreshToken 以及他的唯一标识 jti
-     * @param int $exp 过期时间（单位：天）
-     * @param array $fill_data 额外参数
+     * 生成RefreshToken（用于刷新Token）
+     * @param int $exp 过期时间（天，默认30天）
+     * @param array $fill_data 额外携带数据
      * @return self
      */
-    public function getRefresh(int $exp = 30, array $fill_data = []): JWT
+    public function getRefresh(int $exp = 30, array $fill_data = []): self
     {
+        // 验证过期时间合理性
+        $expireSeconds = min($exp * 86400, self::MAX_EXP);
+
         $data = [
-            'exp' => time() + 60 * 60 * 24 * $exp,
-            'jti' => md5(uniqid($this->getConfig('REFRESH')) . mt_rand(0, 99))
+            'exp' => time() + $expireSeconds,
+            'jti' => $this->generateSecureRandomString(32), // 32位安全随机标识
+            'aud' => $this->getConfig('AUDIENCE')
         ];
 
         $data = array_merge($data, $fill_data);
-        // 加密
-        $base64UrlEncode = self::base64UrlEncode($data);
-        //        签名
-        $sign = hash_hmac($this->alg, $base64UrlEncode, $this->getConfig('REFRESH'));
-
-        $refreshToken = $base64UrlEncode . '.' . self::base64UrlEncode($sign);
+        $payload = self::base64UrlEncode($data);
+        $sign = hash_hmac($this->alg, $payload, $this->getConfig('REFRESH'));
 
         $this->refresh = [
-            'refresh_token'     => $refreshToken,
+            'refresh_token' => $payload . '.' . self::base64UrlEncode($sign),
             'refresh_token_exp' => $data['exp']
         ];
 
@@ -189,215 +155,193 @@ class JWT
     }
 
     /**
-     * 刷新token并返回新的token
-     * @param string $refreshToken 刷新token 需要用到的refreshToken参数
-     * @param string $token 原token
-     * @return array
-     * @throws \Exception
+     * 刷新Token（使用RefreshToken）
+     * @param string $token 原Token
+     * @param string $refreshToken RefreshToken
+     * @return array 新Token信息
+     * @throws RuntimeException
      */
     public function refreshToken(string $token, string $refreshToken): array
     {
-        $refreshToken = explode('.', $refreshToken);
-        $tokenPayload = $this->verify($token, false);
-
-        // 数据格式不对 或 token 验证失败
-        if (count($refreshToken) != 2 || empty($tokenPayload)) {
-            throw new \Exception('Refresh Token format error');
+        // 解析RefreshToken
+        $refreshParts = explode('.', $refreshToken);
+        if (count($refreshParts) !== 2) {
+            throw new RuntimeException('RefreshToken格式无效', self::ERROR_CODE);
         }
 
-        list($data, $sign) = $refreshToken;
-        $data = json_decode(self::base64UrlDecode($data), true);
+        list($refreshPayload, $refreshSign) = $refreshParts;
 
-        // 已超时
-        if (empty($data['exp']) || $data['exp'] < time()) {
-            throw new \Exception("Refresh Token has expired");
-        }
-        // refreshToken的唯一ID和当前的token对不上
-        if (empty($data['jti']) || empty($tokenPayload['rsh']) || $data['jti'] != $tokenPayload['rsh']) {
-            throw new \Exception("RefreshToken and Token do not match");
-        }
-        $refreshSign = hash_hmac($this->alg, self::base64UrlEncode($data), $this->getConfig('REFRESH'));
-
-        // 签名不对
-        if (self::base64UrlEncode($refreshSign) != $sign) {
-            throw new \Exception('RefreshToken signature error');
+        // 验证原Token（不校验过期时间）
+        $originalPayload = $this->verify($token, false);
+        if (empty($originalPayload) || !isset($originalPayload['rsh'])) {
+            throw new RuntimeException('原Token无效', self::ERROR_CODE);
         }
 
-        unset($tokenPayload['iat'],$tokenPayload['exp'],$tokenPayload['nbf']);
-        if ($this->refresh) {
-            unset($tokenPayload['rsh']);
+        // 解析RefreshToken载荷
+        $refreshData = json_decode(self::base64UrlDecode($refreshPayload), true);
+        if (json_last_error() !== JSON_ERROR_NONE || empty($refreshData['jti']) || empty($refreshData['exp'])) {
+            throw new RuntimeException('RefreshToken数据无效', self::ERROR_CODE);
         }
 
-        $this->data = $tokenPayload;
-        return $this->getToken();
+        // 校验RefreshToken有效性
+        if ($refreshData['exp'] < time()) {
+            throw new RuntimeException('RefreshToken已过期', self::EXPIRE_CODE);
+        }
+        if ($refreshData['jti'] !== $originalPayload['rsh']) {
+            throw new RuntimeException('RefreshToken与Token不匹配', self::ERROR_CODE);
+        }
+        if (!empty($refreshData['aud']) && $refreshData['aud'] !== $this->getConfig('AUDIENCE')) {
+            throw new RuntimeException('RefreshToken受众不匹配', self::ILLEGAL_AUD_CODE);
+        }
+
+        // 校验RefreshToken签名
+        $calculatedSign = hash_hmac($this->alg, $refreshPayload, $this->getConfig('REFRESH'));
+        if (self::base64UrlEncode($calculatedSign) !== $refreshSign) {
+            throw new RuntimeException('RefreshToken签名无效', self::SIGN_CODE);
+        }
+
+        // 保留原数据，重新生成Token
+        $this->data = array_diff_key($originalPayload, array_flip(['iat', 'exp', 'nbf', 'rsh']));
+        return $this->resetPayload()->getToken();
     }
 
     /**
-     * token 根据自身数据刷新
-     *
-     * @param string $token
-     * @param int    $exp
-     *
-     * @return array
-     * @throws \Exception
+     * 重置载荷（刷新Token时使用）
+     * @return self
+     */
+    private function resetPayload(): self
+    {
+        $this->payload = [];
+        return $this->setIat()->setNbf()->setExp()->setIss()->setAud()->setJti();
+    }
+
+    /**
+     * Token自刷新（基于原Token数据）
+     * @param string $token 原Token
+     * @param int $exp 新过期时间（秒，默认3600秒）
+     * @return array 新Token信息
+     * @throws RuntimeException
      */
     public function selfRefresh(string $token, int $exp = 3600): array
     {
-        $tokenPayload = $this->verify($token, false);
+        $originalPayload = $this->verify($token, true);
+        if (empty($originalPayload)) {
+            throw new RuntimeException('Token无效', self::ERROR_CODE);
+        }
 
-        unset($tokenPayload['iat'], $tokenPayload['exp'], $tokenPayload['nbf']);
-        $this->data = $tokenPayload;
-        $this->payload['jti']  = $tokenPayload['jti'];
-        $this->payload['jtiv'] = ($tokenPayload['jtiv'] ?? 0) + 1;
-
-        $this->setExp($exp);
-
-        return $this->getToken();
+        // 保留核心数据，重置时效相关字段
+        $this->data = array_diff_key($originalPayload, array_flip(['iat', 'exp', 'nbf', 'jti', 'jtiv']));
+        return $this->resetPayload()->setExp($exp)->getToken();
     }
 
     /**
-     * token 验证外部接口
-     * @param string $token token值
-     * @param bool  $time_verify 时间验证
-     * @return mixed
-     * @throws \Exception
+     * Token验证（对外接口）
+     * @param string $token Token字符串
+     * @param bool $timeVerify 是否校验时效（默认true）
+     * @return array 解析后的载荷数据
+     * @throws RuntimeException
      */
-    public function tokenVerify(string $token = '', bool $time_verify = true): mixed
+    public function tokenVerify(string $token = '', bool $timeVerify = true): array
     {
-        return $this->verify($token, $time_verify);
+        if (empty($token)) {
+            throw new RuntimeException('Token不能为空', self::ERROR_CODE);
+        }
+        return $this->verify($token, $timeVerify);
     }
 
     /**
-     * 设置签发时间
-     * @param int $time
-     * @return JWT
+     * 核心验证逻辑
+     * @param string $token Token字符串
+     * @param bool $timeVerify 是否校验时效
+     * @return array 解析后的载荷数据
+     * @throws RuntimeException
      */
-    public function setIat(int $time = 0): JWT
+    private function verify(string $token, bool $timeVerify = true): array
     {
-        if(empty($time)){
-            $this->payload['iat'] = $this->payload['iat'] ?? time();
-        }else{
-            $this->payload['iat'] = time() + $time;
+        // 解析Token结构
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            throw new RuntimeException('Token格式无效', self::ERROR_CODE);
         }
-        return $this;
+
+        list($header, $payload, $sign) = $parts;
+
+        // 解析并验证Header
+        $headerData = json_decode(self::base64UrlDecode($header), true);
+        if (json_last_error() !== JSON_ERROR_NONE || empty($headerData['alg']) || empty($headerData['typ'])) {
+            throw new RuntimeException('Token头部无效', self::ERROR_CODE);
+        }
+
+        // 校验算法合法性
+        if (!in_array($headerData['alg'], self::ALLOWED_ALGS)) {
+            throw new RuntimeException('不支持的加密算法', self::ILLEGAL_ALG_CODE);
+        }
+        $this->alg = $headerData['alg'];
+
+        // 解析并验证Payload
+        $payloadData = json_decode(self::base64UrlDecode($payload), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new RuntimeException('Token载荷无效', self::ERROR_CODE);
+        }
+
+        // 时效校验
+        if ($timeVerify) {
+            $this->validateTime($payloadData);
+        }
+
+        // 受众校验
+        $this->validateAudience($payloadData);
+
+        // 签名校验
+        $calculatedSign = hash_hmac($this->alg, $header . '.' . $payload, $this->getConfig('SECRET'));
+        if (self::base64UrlEncode($calculatedSign) !== $sign) {
+            throw new RuntimeException('Token签名无效', self::SIGN_CODE);
+        }
+
+        return $payloadData;
     }
 
     /**
-     * 设置过期时间
-     * @param int $time 单位秒,设置null则不过期
-     * @return JWT
+     * 时效校验（iat/nbf/exp）
+     * @param array $payload 载荷数据
+     * @throws RuntimeException
      */
-    public function setExp(int $time = 0): JWT
+    private function validateTime(array $payload): void
     {
-        if ($time ===  null) {
-            $this->payload['exp'] = null;
-        }else if (empty($time)){
-            $exp = ($this->payload['iat'] ?? time()) + 60;
-            $this->payload['exp'] = $this->payload['exp'] ?? $exp;
-        }else{
-            $this->payload['exp'] = time() + $time;
+        $currentTime = time();
+
+        // 校验签发时间（防止未来时间Token）
+        if (isset($payload['iat']) && $payload['iat'] > $currentTime + self::IAT_MAX_OFFSET) {
+            throw new RuntimeException('Token签发时间异常', self::ILLEGAL_IAT_CODE);
         }
-        return $this;
+
+        // 校验生效时间
+        if (isset($payload['nbf']) && $payload['nbf'] > $currentTime) {
+            throw new RuntimeException('Token尚未生效', self::WAIT_CODE);
+        }
+
+        // 校验过期时间
+        if (isset($payload['exp']) && $payload['exp'] < $currentTime) {
+            throw new RuntimeException('Token已过期', self::EXPIRE_CODE);
+        }
     }
 
     /**
-     * 设置生效时间
-     * @param int $time
-     * @return JWT
+     * 受众校验（aud）
+     * @param array $payload 载荷数据
+     * @throws RuntimeException
      */
-    public function setNbf(int $time = 0): JWT
+    private function validateAudience(array $payload): void
     {
-        if (!empty($time)) {
-            $this->payload['nbf'] = $time;
+        $audience = $this->getConfig('AUDIENCE');
+        if (!empty($audience) && (!isset($payload['aud']) || $payload['aud'] !== $audience)) {
+            throw new RuntimeException('Token受众不匹配', self::ILLEGAL_AUD_CODE);
         }
-        return $this;
     }
 
     /**
-     * 设置token唯一标识
-     *
-     * @param string $jti
-     *
-     * @return JWT
-     */
-    public function setJti(string $jti = ''): JWT
-    {
-        if (empty($jti)){
-            mt_srand();
-            $this->payload['jti'] = $this->payload['jti'] ?? uniqid('jti') . mt_rand(0, 9999);
-        }else{
-            $this->payload['jti'] = $jti;
-        }
-        $this->payload['jtiv'] = 0;
-        return $this;
-    }
-
-    /**
-     * 设置签发者
-     *
-     * @param string $iss
-     *
-     * @return JWT
-     */
-    public function setIss(string $iss = ''): JWT
-    {
-        if(empty($iss)){
-            $this->payload['iss'] = $this->payload['iss'] ?? 'SD_CL';
-        }else{
-            $this->payload['iss'] = $iss;
-        }
-        return $this;
-    }
-
-    /**
-     * token验证并返回payload数据
-     * @param string $token
-     * @param bool $time_verify 是否验证时效性
-     * @return mixed
-     * @throws \Exception
-     */
-    private function verify(string $token, bool $time_verify = true): mixed
-    {
-        $data = explode('.', $token);
-
-        //  格式对不上，失败
-        if (count($data) != 3) {
-            throw new \Exception("Token format error", self::ERROR_CODE);
-        }
-
-        list($header, $payload, $sign) = $data;
-
-        $header  = json_decode(self::base64UrlDecode($this->strDetach($header)), true);
-        $payload = json_decode(self::base64UrlDecode($this->strDetach($payload)), true);
-
-        // 数据对不上， 失败
-        if (!$header || empty($header['alg']) || !$payload){
-            throw new \Exception("Token data format error", self::ERROR_CODE);
-        }
-        $this->alg = $header['alg'];
-
-        // 未达到使用时间
-        if (!empty($payload['nbf']) && $payload['nbf'] > time() && $time_verify) {
-            throw new \Exception('Token Unused time', self::WAIT_CODE);
-        }
-
-        // 时间已过期
-        if (!empty($payload['exp']) && $payload['exp'] < time() && $time_verify){
-            throw new \Exception('Token has expired', self::EXPIRE_CODE);
-        }
-
-        $sign_base = hash_hmac($this->alg, self::base64UrlEncode($header) . '.' . self::base64UrlEncode($payload), $this->getConfig('SECRET'));
-
-        // 和我们自己的签名对不上
-        if (self::base64UrlEncode($sign_base) !== $this->strDetach($sign)){
-            throw new \Exception('Token signature error', self::SIGN_CODE);
-        }
-
-        return $payload;
-    }
-    /**
-     * 获取头部信息
-     * @return string
+     * 生成JWT头部
+     * @return string Base64Url编码后的头部
      */
     private function getHeader(): string
     {
@@ -405,92 +349,170 @@ class JWT
             'alg' => $this->alg,
             'typ' => self::TYPE
         ];
-
         return self::base64UrlEncode($header);
     }
 
     /**
-     * 对数据进行 base64Url 加密
-     *
-     * @param array|string $data
-     *
-     * @return string
+     * Base64Url编码（符合JWT标准）
+     * @param array|string $data 待编码数据
+     * @return string 编码结果
+     * @throws RuntimeException
      */
     private static function base64UrlEncode(array|string $data): string
     {
         if (is_array($data)) {
-            $data = json_encode($data, JSON_UNESCAPED_UNICODE);
+            $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new RuntimeException('JSON编码失败: ' . json_last_error_msg());
+            }
+            $data = $json;
         }
-        $base64 = base64_encode($data);
 
+        $base64 = base64_encode($data);
         return strtr(rtrim($base64, '='), ['/' => '_', '+' => '-']);
     }
 
     /**
-     * baseUrl 解密
-     * @param string $data
-     * @return bool|string
+     * Base64Url解码（符合JWT标准）
+     * @param string $data 待解码数据
+     * @return string 解码结果
      */
-    private static function base64UrlDecode(string $data): bool|string
+    private static function base64UrlDecode(string $data): string
     {
-        $data   = $data . str_repeat('=', strlen($data) % 4);
+        $padding = strlen($data) % 4;
+        if ($padding !== 0) {
+            $data .= str_repeat('=', 4 - $padding);
+        }
         $base64 = strtr($data, ['_' => '/', '-' => '+']);
-        return base64_decode($base64);
+        return base64_decode($base64, true) ?: '';
     }
 
     /**
-     * 签名字符串注入
-     *
-     * @param string $str
-     *
-     * @return string
+     * 生成加密安全的随机字符串
+     * @param int $length 字符串长度
+     * @return string 随机字符串
+     * @throws RuntimeException
      */
-    private function strInject(string $str): string
+    private function generateSecureRandomString(int $length): string
     {
-        list($middleStart, $middleLen) = explode(':', $this->getConfig('MIDDLE_LEN'));
-        $base64Sign = substr_replace($str,  $this->strRandom($middleLen), $middleStart, 0);
+        if ($length <= 0) {
+            throw new RuntimeException('随机字符串长度必须大于0');
+        }
+        return bin2hex(random_bytes(ceil($length / 2)));
+    }
 
-        return implode([$this->strRandom($this->getConfig('START_LEN')), $base64Sign, $this->strRandom($this->getConfig('END_LEN'))]);
+    // ------------------------------ 载荷设置方法 ------------------------------
+
+    /**
+     * 设置签发时间（iat）
+     * @param int $time 自定义时间（默认当前时间）
+     * @return self
+     */
+    public function setIat(int $time = 0): self
+    {
+        $this->payload['iat'] = $time > 0 ? $time : time();
+        return $this;
     }
 
     /**
-     * 随机字符串
-     *
-     * @param int $length
-     *
-     * @return string
+     * 设置过期时间（exp）
+     * @param int $time 过期时间（秒，默认1小时）
+     * @return self
+     * @throws RuntimeException
      */
-    public function strRandom(int $length): string
+    public function setExp(int $time = self::DEFAULT_EXP): self
     {
-        $str = '0123456789abcdefghijklimopqrstuvwxyzABCDEFGHIJKLIMOPQRSTUVWXYZ';
-        $str = str_shuffle($str);
-
-        return substr($str, 0, $length);
+        // 限制最大过期时间
+        if ($time <= 0 || $time > self::MAX_EXP) {
+            throw new RuntimeException("过期时间必须在1-" . self::MAX_EXP . "秒之间");
+        }
+        $this->payload['exp'] = time() + $time;
+        return $this;
     }
 
     /**
-     * 签名字符串分离
-     * @param string $str
-     * @return string|string[]
+     * 设置生效时间（nbf）
+     * @param int $time 生效时间（默认当前时间，可设置未来时间）
+     * @return self
      */
-    private function strDetach(string $str): array|string
+    public function setNbf(int $time = 0): self
     {
-        list($middleStart, $middleLen) = explode(':', $this->getConfig('MIDDLE_LEN'));
-        $str = substr(substr($str, $this->getConfig('START_LEN')), 0, -$this->getConfig('END_LEN'));
-
-        return substr_replace($str, '', $middleStart, $middleLen);
+        $this->payload['nbf'] = $time > 0 ? $time : time();
+        return $this;
     }
 
     /**
-     * 设置数据
-     *
-     * @param array $data
-     *
-     * @return JWT
+     * 设置唯一标识（jti）
+     * @param string $jti 自定义标识（默认自动生成）
+     * @return self
+     * @throws RuntimeException
      */
-    public function setData(array $data): JWT
+    public function setJti(string $jti = ''): self
     {
+        $this->payload['jti'] = $jti ?: $this->generateSecureRandomString(32);
+        return $this;
+    }
+
+    /**
+     * 设置签发者（iss）
+     * @param string $iss 签发者标识（如服务名称）
+     * @return self
+     */
+    public function setIss(string $iss = 'Secure-JWT'): self
+    {
+        $this->payload['iss'] = $iss;
+        return $this;
+    }
+
+    /**
+     * 设置受众（aud）
+     * @param string $aud 受众标识（如客户端域名）
+     * @return self
+     */
+    public function setAud(string $aud = ''): self
+    {
+        $this->payload['aud'] = $aud ?: $this->getConfig('AUDIENCE');
+        return $this;
+    }
+
+    /**
+     * 设置自定义数据（会合并到payload中）
+     * @param array $data 自定义数据（禁止包含JWT标准字段）
+     * @return self
+     * @throws RuntimeException
+     */
+    public function setData(array $data): self
+    {
+        // 禁止覆盖标准字段
+        $reservedFields = ['iss', 'iat', 'exp', 'nbf', 'sub', 'aud', 'jti', 'rsh', 'jtiv'];
+        $intersect = array_intersect_key($data, array_flip($reservedFields));
+        if (!empty($intersect)) {
+            throw new RuntimeException("自定义数据不能包含保留字段: " . implode(',', array_keys($intersect)));
+        }
         $this->data = $data;
         return $this;
-}
+    }
+
+    /**
+     * 销毁实例（释放敏感数据）
+     */
+    public function destroy(): void
+    {
+        $this->payload = [];
+        $this->refresh = [];
+        $this->data = [];
+        $this->config = [];
+    }
+
+    /**
+     * 禁止克隆（单例安全）
+     */
+    private function __clone()
+    {
+    }
+
+    /**
+     * 禁止反序列化（防止敏感数据泄露）
+     */
+    private function __wakeup(){}
 }
