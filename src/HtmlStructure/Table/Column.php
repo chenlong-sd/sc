@@ -432,7 +432,14 @@ class Column
         $initAttr = [];
         if ($name === 'normal') {
             $initAttr['label'] = $arguments[0] ?? '';
-            empty($arguments[1]) || $initAttr['prop'] = $arguments[1];
+            if (!empty($arguments[1])) {
+                $initAttr['prop'] = $arguments[1];
+                if (str_contains($initAttr['prop'], 'time')){
+                    $initAttr['width'] = 170;
+                } elseif (str_contains($initAttr['prop'], 'date')) {
+                    $initAttr['width'] = 100;
+                }
+            }
         } else if ($name === 'event') {
             $initAttr['label']      = $arguments[0] ?? '操作';
             $initAttr['mark-event'] = true;
@@ -445,6 +452,8 @@ class Column
             $initAttr['label'] = $arguments[0] ?? '序号';
             $initAttr['type']  = $name;
             $initAttr['width'] = 80;
+            $initAttr['fixed'] = 'left';
+            $initAttr['align'] = 'center';
         } else {
             $initAttr['type'] = $name;
         }
@@ -551,14 +560,14 @@ class Column
     /**
      * 打开页面
      *
-     * @param string                          $url
-     * @param array                           $config
-     * @param string                          $type
+     * @param string $url
+     * @param array $config 弹窗配置及标题
+     * @param string $type
      * @param string|AbstractHtmlElement|null $element
-     *
+     * @param array $params 跳转参数, 例：["id" => "@id"] @id 表示当前行id， 默认自带id和当前字段
      * @return $this
      */
-    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement $element = null): static
+    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement $element = null, array $params = []): static
     {
         $this->show = [
             'type'   => 'openPage',
@@ -567,6 +576,7 @@ class Column
                 'config'  => $config,
                 'type'    => $type,
                 'element' => $element,
+                'params'  => $params
             ]
         ];
 

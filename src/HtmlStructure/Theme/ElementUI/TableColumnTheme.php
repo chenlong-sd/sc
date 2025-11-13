@@ -217,7 +217,7 @@ class TableColumnTheme implements TableColumnThemeInterface
     {
         $viewPath = $config['urlPath'] ? ".{$config['urlPath']}" : '';
         $column->setFormat(
-            El::double('template')->setAttr('v-if', "{$column->getAttr('prop')}.length > 0")->append(
+            El::double('template')->setAttr('v-if', "{$column->getAttr('prop')}?.length > 0")->append(
                 El::double('template')
                     ->setAttr("v-for", "(@item, image_index) in {$column->getAttr('prop')}")->append(
                     El::double('el-image')
@@ -260,25 +260,31 @@ class TableColumnTheme implements TableColumnThemeInterface
 
     private function openPageHandle(Column $column, array $config): void
     {
+        $prop = $column->getAttr('prop');
         if (!$element = $config['element']) {
-            $element = El::double('el-link')->setAttrs([
-                'type' => 'primary',
-            ])->append("{{ {$column->getAttr('prop')} }}");
+            $element = h('el-link')->setAttrs(['type' => 'primary',])->append("{{ {$prop} }}");
+        }else{
+            $element = h($element);
+            if ($element instanceof TextCharacters){
+                $element = h('el-link')->setAttrs(['type' => 'primary',])->append($element);
+            }
         }
 
-        $method = "openPage" . $column->getAttr('prop');
+        $method = "openPage$prop";
         $element->setAttrIfNotExist('@click', "@$method(@scope)");
 
         $column->setFormat($element);
 
+        $params = array_merge([
+            'id' => '@id',
+            $prop => "@{$prop}",
+        ], $config['params']);
+
         Html::js()->vue->addMethod($method, JsFunc::anonymous(['scope'])->code(
             Js::let('row', '@scope.row'),
-            Window::open($config['config']['title'] ?? "查看【{{$column->getAttr('prop')}}】详情")
+            Window::open($config['config']['title'] ?? "查看【{{$prop}}】详情")
                 ->setConfig($config['config'])
-                ->setUrl($config['url'], [
-                    'id' => '@id',
-                    $column->getAttr('prop') => "@{$column->getAttr('prop')}",
-                ])
+                ->setUrl($config['url'], $params)
         ));
     }
 
