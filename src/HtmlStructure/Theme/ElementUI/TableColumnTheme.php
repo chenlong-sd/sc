@@ -241,20 +241,25 @@ class TableColumnTheme implements TableColumnThemeInterface
         }
 
         $mappingName = $column->getAttr('prop') . "Mapping";
+        $prop = $column->getAttr('prop');
+        if (str_contains($prop, '.')) {
+            $mappingName = strtr($mappingName, ['.' => '_']);
+            $prop = strtr($prop, ['.' => '?.']);
+        }
         Html::js()->vue->set($mappingName, $config['options']);
         $column->setFormat(El::fictitious()->append(
             El::double('span')
-                ->setAttr('v-if', sprintf("@typeof %s != '@object'", $column->getAttr('prop')))
+                ->setAttr('v-if', "@typeof $prop != '@object'")
                 ->setAttr('v-for', "(item, index) in @$mappingName")
                 ->append(
                     El::double('el-text')->append(
                         El::double('span')
-                            ->setAttr('v-if', '@item.value == ' . $column->getAttr('prop'))
+                            ->setAttr('v-if', "@item.value == $prop")
                             ->append("{{ @item.label }}")
                     ),
                 ),
             El::double('span')->setAttr('v-else')
-                ->append("{{ {$column->getAttr('prop')} ? {$column->getAttr('prop')}.map(@v => @$mappingName.filter(@vf => @vf.value == @v)[0].label).join(',') : '' }}")
+                ->append("{{ $prop ? $prop.map(@v => @$mappingName.filter(@vf => @vf.value == @v)[0].label).join(',') : '' }}")
         ));
     }
 
