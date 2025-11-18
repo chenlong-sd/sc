@@ -33,7 +33,7 @@ class PasswordEnhancer {
         // 添加时间因素
         $finalKey = hash_hmac('sha256', (string)$timeWindow, $baseKey, true);
 
-        return SecurityHelper::arrayToBase64($finalKey);
+        return SecurityHelper::base64Encode($finalKey);
     }
 
     /**

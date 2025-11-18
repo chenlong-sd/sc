@@ -1,42 +1,44 @@
 <?php
 namespace Sc\Util\SecurityComponent\Challenge;
 
+use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
 use Sc\Util\SecurityComponent\SecurityConfig;
 use Sc\Util\SecurityComponent\SecurityHelper;
 
-interface ChallengeInterface {
-    public function store($challengeId, $data, $expiry);
-    public function get($challengeId);
-    public function delete($challengeId);
-    public function markUsed($challengeId);
-}
-
+/**
+ * 挑战管理器
+ */
 class ChallengeManager {
-    private $storage;
-    private $config;
+    private CacheInterface $storage;
+    private array $config;
 
-    public function __construct(ChallengeInterface $storage) {
+    public function __construct(CacheInterface $storage) {
         $this->storage = $storage;
         $this->config = SecurityConfig::$CHALLENGE;
     }
 
     /**
-     * 创建登录挑战
+     * 创建挑战
+     *
+     * @param string $clientId 客户端ID
+     * @return array
+     * @throws InvalidArgumentException
      */
-    public function createLoginChallenge($username, $clientId) {
+    public function createChallenge(string $clientId): array
+    {
         $challengeId = SecurityHelper::generateRandomString(32);
         $challenge = SecurityHelper::generateRandomString($this->config['length']);
 
         $challengeData = [
             'challenge' => $challenge,
-            'username' => $username,
             'client_id' => $clientId,
             'created_at' => time(),
             'used' => false
         ];
 
         // 存储挑战值
-        $this->storage->store($challengeId, $challengeData, $this->config['expiry']);
+        $this->storage->set($challengeId, $challengeData, $this->config['expiry']);
 
         return [
             'challenge_id' => $challengeId,
@@ -47,8 +49,15 @@ class ChallengeManager {
 
     /**
      * 验证挑战值
+     *
+     * @param string $challengeId 挑战值ID
+     * @param string $providedChallenge 提供的挑战值
+     * @param string $clientId 客户端ID
+     * @return array{valid: bool, reason: string, challenge_data: array}
+     * @throws InvalidArgumentException
      */
-    public function validateChallenge($challengeId, $providedChallenge, $clientId) {
+    public function validateChallenge(string $challengeId, string $providedChallenge, string $clientId): array
+    {
         $challengeData = $this->storage->get($challengeId);
 
         if (!$challengeData) {
@@ -78,7 +87,7 @@ class ChallengeManager {
         }
 
         // 标记为已使用
-        $this->storage->markUsed($challengeId);
+        $this->storage->delete($challengeId);
 
         return [
             'valid' => true,

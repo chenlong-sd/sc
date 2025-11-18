@@ -22,8 +22,10 @@ class AESEncryption {
 
     /**
      * AES加密
+     * @throws \Exception
      */
-    public function encrypt($data, $key, $iv = null) {
+    public function encrypt($data, $key, $iv = null): array
+    {
         if (!$iv) {
             $iv = $this->generateIV();
         }
@@ -41,21 +43,23 @@ class AESEncryption {
         }
 
         return [
-            'ciphertext' => SecurityHelper::arrayToBase64($encrypted),
-            'iv' => SecurityHelper::arrayToBase64($iv)
+            'ciphertext' => SecurityHelper::base64Encode($encrypted),
+            'iv' => SecurityHelper::base64Encode($iv)
         ];
     }
 
     /**
      * AES解密
+     * @throws \Exception
      */
-    public function decrypt($encryptedData, $key, $iv) {
+    public function decrypt($encryptedData, $key, $iv): string
+    {
         $decrypted = openssl_decrypt(
-            SecurityHelper::base64ToArray($encryptedData),
+            SecurityHelper::base64Decode($encryptedData),
             SecurityConfig::$AES['cipher'],
-            $key,
+            SecurityHelper::base64Decode($key),
             OPENSSL_RAW_DATA,
-            SecurityHelper::base64ToArray($iv)
+            SecurityHelper::base64Decode($iv)
         );
 
         if ($decrypted === false) {
