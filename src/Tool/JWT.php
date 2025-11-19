@@ -514,5 +514,7 @@ class JWT
     /**
      * 禁止反序列化（防止敏感数据泄露）
      */
-    private function __wakeup(){}
+    public function __wakeup(){
+        throw new RuntimeException('禁止反序列化');
+    }
 }
