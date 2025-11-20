@@ -91,6 +91,10 @@ class Column
         'sort' => null,
         'allow' => true,
     ];
+    /**
+     * @var true
+     */
+    private bool $notShow = false;
 
     public function __construct(private array $attrs = []){}
 
@@ -372,9 +376,7 @@ class Column
     public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): static
     {
         if ($confirm) {
-            $this->show = [
-                'type' => null
-            ];
+            $this->notShow = true;
         }
         $this->importExcel($excelExport, $excelSort);
 
@@ -624,5 +626,10 @@ class Column
     {
         $this->appendContent[] = $content;
         return $this;
+    }
+
+    public function isNotShow(): bool
+    {
+        return $this->notShow;
     }
 }
