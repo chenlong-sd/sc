@@ -460,7 +460,7 @@ class Table
         if ($isAll) {
             return $this->columns;
         }
-        return array_values(array_filter($this->columns, fn(Column $column) => !empty($column->getShow()['type']) || !$column->getShow()));
+        return array_values(array_filter($this->columns, fn(Column $column) => !$column->isNotShow()));
     }
 
     public function getSearchForms(): array
