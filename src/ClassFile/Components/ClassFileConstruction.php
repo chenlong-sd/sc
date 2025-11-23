@@ -246,8 +246,13 @@ class ClassFileConstruction
 
     public function addTraits(string ...$classTraits): ClassFileConstruction
     {
-        $this->traits = [...$this->traits, ...$classTraits];
+        $this->traits = array_unique([...$this->traits, ...$classTraits]);
         return $this;
+    }
+
+    public function hasTraits(string $classTraits): bool
+    {
+        return in_array($classTraits, $this->traits);
     }
 
     public function addTraitsAlise(array|string $classTraitsAlise, string $classTraitsAliseName = null): ClassFileConstruction
@@ -434,7 +439,11 @@ class ClassFileConstruction
         return $this->properties;
     }
 
-    public function getProperty(string $name)
+    /**
+     * @param string $name
+     * @return false|mixed|null|Property
+     */
+    public function getProperty(string $name): mixed
     {
         return current(array_filter($this->properties, fn($property) => $property->getName() === $name)) ?: null;
     }
