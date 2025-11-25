@@ -7,6 +7,8 @@ namespace Sc\Util\HtmlStructure\Form\ItemAttrs;
 
 trait DefaultConstruct
 {
+    protected array $tipsInfo = [];
+
     public function __construct(protected ?string $name = null, protected ?string $label = null) { }
 
     public function setName(?string $name): static
@@ -18,6 +20,23 @@ trait DefaultConstruct
     public function setLabel(?string $label): static
     {
         $this->label = $label;
+        return $this;
+    }
+
+    /**
+     * 设置提示信息
+     *
+     * @param string $tips
+     * @param array $attrs
+     * @return static
+     */
+    public function tips(string $tips, array $attrs = []): static
+    {
+        $this->tipsInfo = [
+            'tips' => $tips,
+            'attrs' => $attrs,
+        ];
+
         return $this;
     }
 }

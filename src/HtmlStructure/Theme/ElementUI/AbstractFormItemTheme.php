@@ -33,7 +33,27 @@ abstract class AbstractFormItemTheme
 
     public function getBaseEl(FormItemInterface|FormItemAttrGetter $formItem): AbstractHtmlElement
     {
-        $el = El::double('el-form-item')->setAttr('label', $formItem->getLabel());
+        $el = El::double('el-form-item')
+            ->setAttr('label', $formItem->getLabel());
+
+        if ($formItem->getTipsInfo()) {
+            $el->append(
+                h('template', ['#label' => ''])->append(
+                   h('div')->append(
+                       $formItem->getLabel()
+                   )->append(
+                       h('el-tooltip')->append(
+                           h('el-icon', h('info-filled'))
+                               ->appendStyle("{position: relative; top: 2px;cursor: pointer}")
+                       )->setAttrs([
+                           'content' => $formItem->getTipsInfo()['tips'],
+                           'placement' => 'top',
+                           ... $formItem->getTipsInfo()['attrs'] ?? []
+                       ])
+                   )
+                )
+            );
+        }
 
         if ($formItem->getLabelWidth() !== null) {
             $el->setAttr('label-width', $formItem->getLabelWidth());
