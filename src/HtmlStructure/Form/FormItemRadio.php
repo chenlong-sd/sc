@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\LinkageUpdate;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Validate;
 use Sc\Util\HtmlStructure\Theme\Interfaces\FormItemRadioThemeInterface;
@@ -19,7 +20,7 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 class FormItemRadio extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Options, LabelWidth, FormOrigin, Events, Attrs, Validate;
+    use DefaultConstruct, DefaultValue, Options, LabelWidth, FormOrigin, Events, Attrs, Validate, LinkageUpdate;
 
     public function render(string $theme = null): AbstractHtmlElement
     {

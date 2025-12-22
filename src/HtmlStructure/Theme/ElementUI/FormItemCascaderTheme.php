@@ -29,6 +29,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
         if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
             $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
+            $formItem->setOptionsVarName($optionsVar);
         }
 
         $cascader = El::double($formItem->isPanel() ? 'el-cascader-panel' : 'el-cascader')->setAttrs([
@@ -43,7 +44,7 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
 
         $formItem->getCloseAfterSelection() and $this->closeAfterSelection($formItem, $cascader);
 
-        $this->addEvent($cascader, $formItem->getEvents(), $formItem->getName());
+        $this->addEvent($cascader, $formItem->getEvents(), $formItem->getName(), $formItem);
 
         return $formItem->isPanel() ? $cascader : $base->append($cascader);
     }
@@ -55,14 +56,17 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
             $el->setAttr('ref', $ref);
         }
 
-        $jsFunc = JsFunc::anonymous(["value"]);
+
         if (isset($formItemCascader->getEvents()['change'])) {
             $event = $formItemCascader->getEvents()['change'];
+            $jsFunc = JsFunc::anonymous($event->params);
             if ($event instanceof JsFunc) {
                 $jsFunc->appendCode($event->code);
             }else{
                 $jsFunc->appendCode(JsFunc::call("this.$event", '@value'));
             }
+        }else{
+            $jsFunc = JsFunc::anonymous();
         }
         $jsFunc->appendCode("this.\$refs['$ref'].togglePopperVisible(false)");
 

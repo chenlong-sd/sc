@@ -25,6 +25,7 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
         if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
             $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
+            $formItem->setOptionsVarName($optionsVar);
         }
 
         $checkbox = h('el-radio-group', ['v-model' => $this->getVModel($formItem)])->append(
@@ -39,7 +40,7 @@ class FormItemRadioTheme extends AbstractFormItemTheme implements FormItemRadioT
 
         $this->setOptions($formItem, $optionsVar);
 
-        $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName());
+        $this->addEvent($checkbox, $formItem->getEvents(), $formItem->getName(), $formItem);
 
         return $base->append($checkbox);
     }

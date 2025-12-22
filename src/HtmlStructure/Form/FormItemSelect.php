@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Events;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\FormOrigin;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\LabelWidth;
+use Sc\Util\HtmlStructure\Form\ItemAttrs\LinkageUpdate;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Options;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Placeholder;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\Slots;
@@ -24,7 +25,7 @@ use Sc\Util\Tool\Url;
  */
 class FormItemSelect extends AbstractFormItem implements FormItemInterface
 {
-    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate, Slots;
+    use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate, Slots, LinkageUpdate;
 
     /**
      * @var true

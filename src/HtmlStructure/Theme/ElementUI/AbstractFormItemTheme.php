@@ -75,15 +75,38 @@ abstract class AbstractFormItemTheme
     }
 
 
-    public function addEvent(AbstractHtmlElement $element, array $events, string $prefix = ''): void
+    public function addEvent(AbstractHtmlElement $element, array $events, string $prefix = '', FormItemInterface|FormItemAttrGetter $formItem = null): void
     {
+        $linkedUpdate = $formItem?->getLinkageUpdate();
+
+        if ($linkedUpdate && !isset($events['change'])){
+            $events['change'] = JsFunc::anonymous(['value']);
+        }
+
         foreach ($events as $event => $handle){
-            if (is_string($handle)) {
-                $element->setAttr('@' . $event, $handle);
-                continue;
-            }
             $name = $prefix . "__" . $event;
-            $element->setAttr('@' . $event, $name);
+            $element->setAttr("@$event" , $name);
+            if (is_string($handle)) {
+                $handle = JsFunc::anonymous(['value'], JsFunc::call("this.$handle", '@value'));
+            }
+
+            if ($linkedUpdate && $event === 'change'){
+                $params = [
+                    $handle->params[0] ?? 'value',
+                ];
+                if (count($handle->params) > 1){
+                    $params = array_merge($params, array_slice($handle->params, 1));
+                }
+
+                $handle = JsFunc::anonymous($params, $handle->code)
+                    ->appendCode("let obj = this.{$formItem->getOptionsVarName()}.find(v => v.value === {$params[0]})");
+                foreach ($linkedUpdate as $currentFormName => $valueForField) {
+                    $handle->appendCode(
+                        Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@obj.$valueForField"),
+                    );
+                }
+            }
+
             Html::js()->vue->addMethod($name, $handle);
         }
     }

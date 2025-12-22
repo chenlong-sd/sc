@@ -30,6 +30,7 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
         if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
             $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
+            $formItem->setOptionsVarName($optionsVar);
         }
 
         $checkbox = El::double('el-checkbox')->setAttrs([
@@ -52,7 +53,7 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
 
         $this->setOptions($formItem, $optionsVar);
 
-        $this->addEvent($box, $formItem->getEvents(), $formItem->getName());
+        $this->addEvent($box, $formItem->getEvents(), $formItem->getName(), $formItem);
 
         if ($isBoolValue) {
             return $base->append($box);

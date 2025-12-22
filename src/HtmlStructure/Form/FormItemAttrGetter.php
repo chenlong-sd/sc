@@ -35,6 +35,8 @@ interface FormItemAttrGetter
      */
     public function getForm();
     public function getFormModel();
+
+    public function getLinkageUpdate();
     public function getUploadUrl();
 
     public function getFullScreen();
