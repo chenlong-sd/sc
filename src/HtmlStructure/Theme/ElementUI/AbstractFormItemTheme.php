@@ -7,6 +7,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructure\Form\AbstractFormItem;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
+use Sc\Util\HtmlStructure\Form\FormItemCascader;
 use Sc\Util\HtmlStructure\Form\FormItemInterface;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
@@ -98,8 +99,19 @@ abstract class AbstractFormItemTheme
                     $params = array_merge($params, array_slice($handle->params, 1));
                 }
 
-                $handle = JsFunc::anonymous($params, $handle->code)
-                    ->appendCode("let obj = this.{$formItem->getOptionsVarName()}.find(v => v.value === {$params[0]})");
+                $handle = JsFunc::anonymous($params, $handle->code);
+                if ($formItem instanceof FormItemCascader){
+                    $props = $element->find('el-cascader')?->getAttr(':props', '[]');
+                    $props = $props ? str_replace('\'', '"', $props) : '[]';
+                    $props = str_contains($props, '"')
+                        ? json_decode($props, true)
+                        : Html::js()->vue->get($props, []);
+                    $valueField = $props['value'] ?? 'value';
+                    $handle->appendCode("{$params[0]} = typeof {$params[0]} === 'object' ? {$params[0]}[{$params[0]}.length - 1] : {$params[0]};");
+                    $handle->appendCode("let obj = AdminUtil.treeDataFind(this.{$formItem->getOptionsVarName()}, (v) => v.$valueField === {$params[0]})");
+                }else{
+                    $handle->appendCode("let obj = this.{$formItem->getOptionsVarName()}.find(v => v.value === {$params[0]})");
+                }
                 foreach ($linkedUpdate as $currentFormName => $valueForField) {
                     $handle->appendCode(
                         Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@obj.$valueForField"),
