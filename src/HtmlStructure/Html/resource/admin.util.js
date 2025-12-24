@@ -106,10 +106,10 @@ const AdminUtil = (function (){
             }
             if (item.children && item.children.length > 0) {
                 let result = treeDataFind(item.children, callback);
-                if (findParent) {
-                    result.__parent = item;
-                }
                 if (result) {
+                    if (findParent) {
+                        result.__parent = item;
+                    }
                     return result;
                 }
             }

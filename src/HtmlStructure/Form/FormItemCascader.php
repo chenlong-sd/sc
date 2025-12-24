@@ -79,4 +79,9 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
         $this->setVAttrs(":props", strtr(json_encode($props), ['"' => '\'']));
         return $this;
     }
+
+    public function readonly(string $when = ''): static
+    {
+        return $this->setVAttrs(':disabled', $when ?: 'true');
+    }
 }

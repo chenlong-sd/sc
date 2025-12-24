@@ -109,7 +109,9 @@ class Window
     /**
      * 设置rowData
      *
-     * @param array $data
+     * @param array $data [
+     *   'ids' => '@selection.map(v => v.id)', // 设置批量数据
+     * ]
      *
      * @return $this
      */
