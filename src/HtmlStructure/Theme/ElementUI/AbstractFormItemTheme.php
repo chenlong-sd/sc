@@ -13,6 +13,7 @@ use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
 use Sc\Util\HtmlStructure\Html\Js\Axios;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+use Sc\Util\ScTool;
 
 /**
  * Class AbstractFormItemTheme
@@ -108,14 +109,31 @@ abstract class AbstractFormItemTheme
                         : Html::js()->vue->get($props, []);
                     $valueField = $props['value'] ?? 'value';
                     $handle->appendCode("{$params[0]} = typeof {$params[0]} === 'object' ? {$params[0]}[{$params[0]}.length - 1] : {$params[0]};");
-                    $handle->appendCode("let obj = AdminUtil.treeDataFind(this.{$formItem->getOptionsVarName()}, (v) => v.$valueField === {$params[0]})");
+                    $handle->appendCode("let obj = AdminUtil.treeDataFind(this.{$formItem->getOptionsVarName()}, (v) => v.$valueField === {$params[0]}, true)");
                 }else{
                     $handle->appendCode("let obj = this.{$formItem->getOptionsVarName()}.find(v => v.value === {$params[0]})");
                 }
                 foreach ($linkedUpdate as $currentFormName => $valueForField) {
-                    $handle->appendCode(
-                        Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@obj.$valueForField"),
-                    );
+                    $isStr = preg_replace('/@\w+(#P\(.*\))?/', '', $valueForField) || substr_count($valueForField, '@') > 1;
+                    if (str_contains($valueForField, '#P(')){
+                        preg_match('/@(\w+)#P\((.*)\)/', $valueForField, $matches);
+                        $str = ScTool::random("PQ")->get();
+                        $valueForField = preg_replace('/@\w+#P\(.*\)/', $isStr ? "\${{$str}P}" : "{$str}P", $valueForField);
+                        $handle->appendCode("let {$str}C = (v, init) => {init.push(v.$matches[1]);if(v.__parent) return {$str}C(v.__parent, init); return init}");
+                        $handle->appendCode("let {$str}P = {$str}C(obj, []).reverse().join('$matches[2]')");
+                    }
+
+                    if ($isStr){
+                        $valueForField = preg_replace('/@(\w+)/', '${obj.$1}', $valueForField);
+                        $handle->appendCode(
+                            Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@`$valueForField`"),
+                        );
+                    }else{
+                        $valueForField = preg_replace('/@(\w+)/', 'obj.$1', $valueForField);
+                        $handle->appendCode(
+                            Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@$valueForField"),
+                        );
+                    }
                 }
             }
 

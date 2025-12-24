@@ -94,9 +94,11 @@ const AdminUtil = (function (){
      * 树形数据查找
      * @param data
      * @param callback
+     * @param findParent
      * @returns {*}
      */
-    function treeDataFind(data, callback) {
+    function treeDataFind(data, callback, findParent) {
+        findParent = findParent || false;
         for (let i = 0; i < data.length; i++) {
             let item = data[i];
             if (callback(item)) {
@@ -104,6 +106,9 @@ const AdminUtil = (function (){
             }
             if (item.children && item.children.length > 0) {
                 let result = treeDataFind(item.children, callback);
+                if (findParent) {
+                    result.__parent = item;
+                }
                 if (result) {
                     return result;
                 }
