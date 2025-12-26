@@ -100,7 +100,14 @@ abstract class AbstractFormItemTheme
                     $params = array_merge($params, array_slice($handle->params, 1));
                 }
 
-                $handle = JsFunc::anonymous($params, $handle->code);
+                $handle = JsFunc::anonymous($params, Js::code(
+                    $handle->code,
+                    Js::let("dv", [
+                        'object' => [],
+                        "string" => '',
+                        "number" => 0,
+                    ]),
+                ));
                 if ($formItem instanceof FormItemCascader){
                     $props = $element->find('el-cascader')?->getAttr(':props', '[]');
                     $props = $props ? str_replace('\'', '"', $props) : '[]';
@@ -119,24 +126,25 @@ abstract class AbstractFormItemTheme
                         preg_match('/@([\w.]+)#P\((.*)\)/', $valueForField, $matches);
                         $str = ScTool::random("PQ")->get();
                         $valueForField = preg_replace('/@[\w.]+#P\(.*\)/', $isStr ? "\${{$str}P}" : "{$str}P", $valueForField);
-                        $handle->appendCode("let {$str}C = (v, init) => {init.push(v.$matches[1]);if(v.__parent) return {$str}C(v.__parent, init); return init}");
+                        $handle->appendCode("let {$str}C = (v, init) => {if(!v) return init; init.push(v.$matches[1]);if(v.__parent) return {$str}C(v.__parent, init); return init}");
                         $handle->appendCode("let {$str}P = {$str}C(obj, []).reverse().join('$matches[2]')");
                     }
 
                     if ($isStr){
-                        $valueForField = preg_replace('/@([\w.]+)/', '${obj.$1}', $valueForField);
+                        $valueForField = preg_replace('/@([\w.]+)/', '${obj?.$1}', $valueForField);
                         $handle->appendCode(
                             Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@`$valueForField`"),
                         );
                     }else{
-                        $valueForField = preg_replace('/@([\w.]+)/', 'obj.$1', $valueForField);
+                        $valueForField = preg_replace('/@([\w.]+)/', 'obj?.$1', $valueForField);
                         $handle->appendCode(
-                            Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@$valueForField"),
+                            Js::code(
+                                Js::assign("this.{$formItem->getFormModel()}.$currentFormName", "@$valueForField ? $valueForField : dv[typeof this.{$formItem->getFormModel()}.$currentFormName]"),
+                            )
                         );
                     }
                 }
             }
-
             Html::js()->vue->addMethod($name, $handle);
         }
     }
