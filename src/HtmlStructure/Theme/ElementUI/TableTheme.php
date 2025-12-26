@@ -333,11 +333,7 @@ class TableTheme implements TableThemeInterface
             Html::js()->vue->addMethod("{$dataVarName}Url", [], "return '$url';");
 
             $query = [
-                'search' => [
-                    "search"      => "@this.{$dataVarName}Search",
-                    "searchType"  => "@this.{$dataVarName}SearchType",
-                    "searchField" => "@this.{$dataVarName}SearchField",
-                ],
+                'search' => "@search",
                 'order' => "@this.{$dataVarName}Sort",
                 'query' => ScTool::url($url)->getQueryParam('query', "@AdminUtil.getCurrentUrlSearchString()")
             ];
@@ -352,12 +348,48 @@ class TableTheme implements TableThemeInterface
                 $query['pageSize'] = "@this.{$dataVarName}PageSize";
             }
 
-            Html::js()->vue->addMethod("{$dataVarName}GetData", ['query', 'notLoading'], $this->remoteDataGet($table, $dataVarName, $query));
+            Html::js()->vue->addMethod("{$dataVarName}GetData", ['query', 'notLoading'], Js::code(
+                Js::assign('query', '@query ? query : {}'),
+                Js::let("search", ['s' => "@{}", 't' => '@{}']),
+                Js::assign('query', $query),
+                Js::if("query.query === ''")->then("delete query.query"),
+                $this->searchFieldJsHandle($dataVarName),
+                $this->remoteDataGet($table, $dataVarName),
+            ));
         }
 
         Html::js()->vue->event('created', "this.{$dataVarName}GetData();");
 
         return $dataVarName;
+    }
+
+
+    private function searchFieldJsHandle(string $dataVarName)
+    {
+        return Js::code(
+            Js::for("let f in this.{$dataVarName}Search")->then(
+                Js::if("this.{$dataVarName}Search[f] === '' || this.{$dataVarName}Search[f] === null")->then(
+                    Js::code('continue;')
+                ),
+                Js::assign("tf", "@f"),
+                Js::if("this.{$dataVarName}SearchField.hasOwnProperty(f)")->then(
+                    Js::code("tf = this.{$dataVarName}SearchField[f]"),
+                ),
+                Js::code("search.s[tf] = this.{$dataVarName}Search[f]"),
+                Js::if("this.{$dataVarName}SearchType[f]")->then(
+                    Js::code("search.t[tf] = this.{$dataVarName}SearchType[f]")
+                ),
+            ),
+            Js::if("Object.keys(search.s).length === 0")->then(
+                Js::code("delete search.s")
+            ),
+            Js::if("Object.keys(search.t).length === 0")->then(
+                Js::code("delete search.t")
+            ),
+            Js::if("Object.keys(search).length === 0")->then(
+                Js::code("delete query.search")
+            ),
+        );
     }
 
     /**
@@ -893,16 +925,15 @@ class TableTheme implements TableThemeInterface
      *
      * @return JsCode
      */
-    private function remoteDataGet(Table $table, string $dataVarName, array $query): JsCode
+    private function remoteDataGet(Table $table, string $dataVarName): JsCode
     {
         return Js::code(
             Js::if('!notLoading')->then(
                 Js::assign("this.{$table->getId()}Loading", true)
             ),
-            Js::assign('query', '@query ? query : {}'),
             Axios::get(
                 url: "@this.{$dataVarName}Url()",
-                query: $query
+                query: "@query"
             )->then(JsFunc::arrow(["{ data }"], Js::code(
                 $table->getRemoteDataHandle(),
                 Js::assign("this.{$table->getId()}Loading", false),
