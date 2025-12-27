@@ -372,11 +372,11 @@ class TableTheme implements TableThemeInterface
                     Js::code('continue;')
                 ),
                 Js::assign("tf", "@f"),
-                Js::if("this.{$dataVarName}SearchField.hasOwnProperty(f)")->then(
+                Js::if("this.{$dataVarName}SearchField?.hasOwnProperty(f)")->then(
                     Js::code("tf = this.{$dataVarName}SearchField[f]"),
                 ),
                 Js::code("search.s[tf] = this.{$dataVarName}Search[f]"),
-                Js::if("this.{$dataVarName}SearchType[f]")->then(
+                Js::if("this.{$dataVarName}SearchType?.hasOwnProperty(f)")->then(
                     Js::code("search.t[tf] = this.{$dataVarName}SearchType[f]")
                 ),
             ),

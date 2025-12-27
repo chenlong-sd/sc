@@ -86,10 +86,15 @@ abstract class AbstractFormItemTheme
         }
 
         foreach ($events as $event => $handle){
-            $name = $prefix . "__" . $event;
+            $name = $prefix . "__" . strtr($event, ['-' => '_']);
             $element->setAttr("@$event" , $name);
             if (is_string($handle)) {
-                $handle = JsFunc::anonymous(['value'], JsFunc::call("this.$handle", '@value'));
+                if (preg_match('/^\w+$/', $handle)){
+                    $handle = JsFunc::anonymous(['value'], JsFunc::call("this.$handle", '@value'));
+                }else{
+                    $element->setAttr("@$event" , $handle);
+                    continue;
+                }
             }
 
             if ($linkedUpdate && $event === 'change'){

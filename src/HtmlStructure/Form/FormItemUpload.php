@@ -149,7 +149,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function readonly(string $when = ''): static
+    public function readonly(string|bool $when = true): static
     {
         return $this->disableUpload($when);
     }

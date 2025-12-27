@@ -59,16 +59,24 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
 
         if (isset($formItemCascader->getEvents()['change'])) {
             $event = $formItemCascader->getEvents()['change'];
-            $jsFunc = JsFunc::anonymous($event->params);
             if ($event instanceof JsFunc) {
+                $jsFunc = JsFunc::anonymous($event->params);
                 $jsFunc->appendCode($event->code);
             }else{
-                $jsFunc->appendCode(JsFunc::call("this.$event", '@value'));
+                $jsFunc = "(_v) => {($event)(_v); Switch$ref();}";
+
+                Html::js()->vue->addMethod("Switch$ref", JsFunc::anonymous()->code(
+                    "this.\$refs['$ref'].togglePopperVisible(false)"
+                ));
+//                $jsFunc = JsFunc::anonymous();
+//                $jsFunc->appendCode(JsFunc::call("this.$event", '@value'));
             }
         }else{
             $jsFunc = JsFunc::anonymous();
         }
-        $jsFunc->appendCode("this.\$refs['$ref'].togglePopperVisible(false)");
+        if ($jsFunc instanceof JsFunc){
+            $jsFunc->appendCode("this.\$refs['$ref'].togglePopperVisible(false)");
+        }
 
         $formItemCascader->event('change', $jsFunc);
     }
