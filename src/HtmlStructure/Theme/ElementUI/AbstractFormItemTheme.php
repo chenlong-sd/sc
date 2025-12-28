@@ -149,6 +149,8 @@ abstract class AbstractFormItemTheme
                         );
                     }
                 }
+
+                Html::js()->vue->event('mounted', "this.{$this->getVModel($formItem)} && this.$name(this.{$this->getVModel($formItem)})", true);
             }
             Html::js()->vue->addMethod($name, $handle);
         }
@@ -230,6 +232,11 @@ abstract class AbstractFormItemTheme
                     'search' => $remote['params']
                 ]
             ];
+
+            if ($formItem->getLinkageUpdate() && $formItem->getDefault()){
+                $funcName = $formItem->getName() . "__change";
+                $dataCode->then("this.$funcName(this.{$this->getVModel($formItem)})");
+            }
 
             Html::js()->vue->addMethod("refresh" . $varName, ['visible'], Js::code(
                 Js::if("!visible")->then(

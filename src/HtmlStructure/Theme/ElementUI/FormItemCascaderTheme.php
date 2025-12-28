@@ -68,8 +68,6 @@ class FormItemCascaderTheme extends AbstractFormItemTheme implements FormItemCus
                 Html::js()->vue->addMethod("Switch$ref", JsFunc::anonymous()->code(
                     "this.\$refs['$ref'].togglePopperVisible(false)"
                 ));
-//                $jsFunc = JsFunc::anonymous();
-//                $jsFunc->appendCode(JsFunc::call("this.$event", '@value'));
             }
         }else{
             $jsFunc = JsFunc::anonymous();
