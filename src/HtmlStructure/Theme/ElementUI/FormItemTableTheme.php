@@ -61,9 +61,9 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
         }
 
         $el = El::double('el-form-item')->setAttr('label-width', 0)
-            ->append($el->render("ElementUI"))
+            ->append($el->render("ElementUI")->find('el-table')?->addClass("sc-form-table"))
             ->append($formItem->isReadonly() ? "" : $addHandleEl);
-
+        Html::css()->addCss(".sc-form-table.el-table .cell{padding: 0 3px}");
         return $el;
     }
 
