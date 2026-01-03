@@ -23,7 +23,17 @@ class FormItemCustomizeTheme extends AbstractFormItemTheme implements FormItemCu
     {
         $element = El::get($formItem->getElement());
         if ($element instanceof TextCharacters) {
-            $element = El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px;"></el-text>')->append($element);
+            $element = $formItem->getIsGroupTitle()
+                ? h('div', $element)->setStyle("{
+                    padding-bottom: 3px;
+                    font-weight: bold;
+                    font-size: 18px;
+                    border-bottom: 2px solid #808080a3;
+                    margin-bottom: 20px;
+                    color: #303133;
+                    margin-top: 10px;
+                }")
+                : El::fromCode('<el-text style="line-height: 30px;display: inline-block;margin-bottom: 10px;"></el-text>')->append($element);
         }
         if ($formItem->getLabel() !== null) {
             $element = $this->getBaseEl($formItem)->append($element);

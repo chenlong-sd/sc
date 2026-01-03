@@ -210,4 +210,10 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         $this->callback = $callback;
         return $this;
     }
+
+    public function setLabel(?string $label): FormItemGroup
+    {
+        $this->label = $label;
+        return $this;
+    }
 }

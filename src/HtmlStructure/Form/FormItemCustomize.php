@@ -29,6 +29,14 @@ class FormItemCustomize extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
+
+    public function isGroupTitle(): static
+    {
+        $this->setConfig('isGroupTitle', true);
+
+        return $this;
+    }
+
     public function getElement(): AbstractHtmlElement|string
     {
         return $this->element;

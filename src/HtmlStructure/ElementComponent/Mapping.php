@@ -2,6 +2,8 @@
 
 namespace Sc\Util\HtmlStructure\ElementComponent;
 
+use Sc\Util\HtmlStructure\Table\ColumnTags;
+
 class Mapping
 {
     private string|\Stringable $el = '';
@@ -20,8 +22,9 @@ class Mapping
         return $this;
     }
 
-    public function mapping(array|string $mapping): static
+    public function mapping(array|string|ColumnTags $mapping): static
     {
+        $mapping = $mapping instanceof ColumnTags ? $mapping->getTags() : $mapping;
         if (is_array($mapping) && count($mapping) == count($mapping, COUNT_RECURSIVE)){
             $mappings = [];
             foreach ($mapping as $valueKey => $labelKey) {
