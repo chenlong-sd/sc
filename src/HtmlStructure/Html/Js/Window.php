@@ -111,6 +111,7 @@ class Window
      *
      * @param array $data [
      *   'ids' => '@selection.map(v => v.id)', // 设置批量数据
+     *   'id' => '@row.id', // 获取行数据
      * ]
      *
      * @return $this

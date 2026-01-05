@@ -35,6 +35,8 @@ class Form
 
     private bool $readonly = false;
 
+    private string $uploadUrl = "";
+
     public function __construct(private readonly string $id) { }
 
     /**
@@ -192,6 +194,9 @@ class Form
                 }
                 $formItem->readonly();
             }
+            if ($this->uploadUrl && method_exists($formItem, 'setUploadUrl')){
+                $formItem->setUploadUrl($this->uploadUrl);
+            }
 
             return $formItem->setForm($this);
         }, $this->getFormItems());
@@ -236,5 +241,16 @@ class Form
     public function getAfterRender(): string
     {
         return implode(";\n", $this->afterRender);
+    }
+
+    public function setUploadUrl(string $uploadUrl): static
+    {
+        $this->uploadUrl = $uploadUrl;
+        return $this;
+    }
+
+    public function getUploadUrl(): string
+    {
+        return $this->uploadUrl;
     }
 }

@@ -49,6 +49,9 @@ trait FormOrigin
 
         foreach ($this->children as $child) {
             method_exists($child, $method) and $child->$method($param);
+            if ($this->form->getUploadUrl() && method_exists($child, 'setUploadUrl')){
+                $child->setUploadUrl($this->form->getUploadUrl());
+            }
         }
     }
 }

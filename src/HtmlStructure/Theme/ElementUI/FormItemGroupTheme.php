@@ -46,13 +46,11 @@ class FormItemGroupTheme extends AbstractFormItemTheme implements FormItemGroupT
             $el = $row;
             if ($formItem->getLabel()) {
                 $el = El::fictitious()->append(
-                    FormItem::customize(
-                        El::div(
-                            is_string($formItem->getLabel())
-                                ? El::elText($formItem->getLabel())->setAttr('size', 'large')
-                                : $formItem->getLabel()
-                        )->setAttr("group-item-header")
-                    )->render(Theme::THEME_ELEMENT_UI),
+                    FormItem::customize($formItem->getLabel())
+                        ->isGroupTitle()
+                        ->render(Theme::THEME_ELEMENT_UI)
+                        ->setAttr('group-item-header')
+                    ,
                     $el
                 );
             }
