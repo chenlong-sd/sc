@@ -60,8 +60,8 @@ trait ElementQuery
             return $this;
         }
 
-        foreach ($this->getChildren() as $element) {
-            $callable($element);
+        foreach ($this->getChildren() as $index => $element) {
+            $callable($element, $index);
         }
 
         return $this;
