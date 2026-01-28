@@ -31,7 +31,11 @@ class FormItemDatetimeTheme extends AbstractFormItemTheme implements FormItemDat
 
         $datetime->setAttrIfNotExist('type', 'datetime');
 
-        $this->formatHandle($datetime);
+        if ($datetime->getAttr('type') === 'time') {
+            $datetime->setLabel('el-time-picker')->setAttr('format', null);
+        }else{
+            $this->formatHandle($datetime);
+        }
 
         if ($formItem->getCol()) {
             $datetime->setAttrIfNotExist('style', 'width:100%');

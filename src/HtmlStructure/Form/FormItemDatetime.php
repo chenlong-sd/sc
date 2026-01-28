@@ -40,12 +40,14 @@ class FormItemDatetime extends AbstractFormItem implements FormItemInterface
      *
      * @return FormItemDatetime
      */
-    public function setTimeType(#[ExpectedValues(['date', 'dates', 'datetime', 'month', 'year', 'week', 'datetimerange', 'daterange', 'monthrange'])] string $type): FormItemDatetime
+    public function setTimeType(#[ExpectedValues(['date', 'time', 'dates', 'datetime', 'month', 'year', 'week', 'datetimerange', 'daterange', 'monthrange'])] string $type): FormItemDatetime
     {
         $this->setVAttrs('type', $type);
         if (in_array($type, ['date', 'dates', 'daterange'])) {
             $this->valueFormat('YYYY-MM-DD');
             $this->format('YYYY-MM-DD');
+        }elseif ($type == 'time'){
+            $this->valueFormat('HH:mm:ss');
         }
 
         return $this;
