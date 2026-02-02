@@ -45,7 +45,7 @@ class Image
         $image->setAttrs($this->attrs);
 
         if (!$image->getAttr('preview-src-list') && !$image->getAttr(':preview-src-list')) {
-            $image->setAttr(':preview-src-list', [$this->src]);
+            $image->setAttr(':preview-src-list', "[$this->src]");
         }
 
         foreach ($this->slot as $slotName => $content) {
