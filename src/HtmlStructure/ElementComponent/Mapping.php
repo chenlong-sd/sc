@@ -8,6 +8,7 @@ class Mapping
 {
     private string|\Stringable $el = '';
     private array|string $mapping = [];
+    private array $attrs = [];
 
     public function __construct(private readonly string|int    $value,
                                 private readonly string $valueKey = 'value',
@@ -19,6 +20,12 @@ class Mapping
     public function setEl(string|\Stringable $el): static
     {
         $this->el = $el;
+        return $this;
+    }
+
+    public function setAttrs(array $attrs): static
+    {
+        $this->attrs = $attrs;
         return $this;
     }
 
@@ -53,7 +60,7 @@ class Mapping
             foreach ($this->mapping as $mapping) {
                 $format = $this->el ?: h('el-text', $mapping[$this->labelKey], [
                     'v-if' => "$value == {$mapping[$this->valueKey]}",
-                ]);
+                ])->setAttrs($this->attrs);
                 $el->append($format);
             }
         }else{
@@ -61,7 +68,7 @@ class Mapping
                 'v-for' => "(item, index) in $this->mapping",
                 'v-if' => "$value == item.{$this->valueKey}",
                 'key' => "index",
-            ]);
+            ])->setAttrs($this->attrs);
         }
 
         return $el;

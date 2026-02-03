@@ -222,9 +222,9 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler = null): static
+    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler = null, string $eventName = null): static
     {
-        $eventName = ScTool::random('HeaderEvent')->get();
+        $eventName = $eventName ?: ScTool::random('HeaderEvent')->get();
 
         $this->headerEvents[$eventName] = [
             'el'       => $eventLabel,
@@ -324,9 +324,9 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler): static
+    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler, string $eventName = null): static
     {
-        $eventName = ScTool::random('RowEvent')->get();
+        $eventName = $eventName ?: ScTool::random('RowEvent')->get();
 
         $this->rowEvents[$eventName] = [
             'el'      => $eventLabel,

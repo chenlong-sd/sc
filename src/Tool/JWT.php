@@ -202,6 +202,8 @@ class JWT
 
         // 保留原数据，重新生成Token
         $this->data = array_diff_key($originalPayload, array_flip(['iat', 'exp', 'nbf', 'rsh']));
+        $this->data['jti']  = $originalPayload['jti'];
+        $this->data['jtiv'] = ($originalPayload['jtiv'] ?? 0) + 1;
         return $this->resetPayload()->getToken();
     }
 
@@ -212,7 +214,12 @@ class JWT
     private function resetPayload(): self
     {
         $this->payload = [];
-        return $this->setIat()->setNbf()->setExp()->setIss()->setAud()->setJti();
+        $this->setIat()->setNbf()->setExp()->setIss()->setAud()->setJti();
+        if (isset($this->data['jti']) && isset($this->data['jtiv'])) {
+            $this->payload['jti'] = $this->data['jti'];
+            $this->payload['jtiv'] = $this->data['jtiv'] + 1;
+        }
+        return $this;
     }
 
     /**
@@ -224,13 +231,13 @@ class JWT
      */
     public function selfRefresh(string $token, int $exp = 3600): array
     {
-        $originalPayload = $this->verify($token, true);
+        $originalPayload = $this->verify($token, false);
         if (empty($originalPayload)) {
             throw new RuntimeException('Token无效', self::ERROR_CODE);
         }
 
         // 保留核心数据，重置时效相关字段
-        $this->data = array_diff_key($originalPayload, array_flip(['iat', 'exp', 'nbf', 'jti', 'jtiv']));
+        $this->data = array_diff_key($originalPayload, array_flip(['iat', 'exp', 'nbf']));
         return $this->resetPayload()->setExp($exp)->getToken();
     }
 
@@ -450,6 +457,7 @@ class JWT
     public function setJti(string $jti = ''): self
     {
         $this->payload['jti'] = $jti ?: $this->generateSecureRandomString(32);
+        $this->payload['jtiv'] = 0;
         return $this;
     }
 

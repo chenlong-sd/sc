@@ -433,7 +433,9 @@ class TableTheme implements TableThemeInterface
 
             $eventLabels[] = $el->setAttr('@click', sprintf("%s(@scope)", $name));
 
-            Html::js()->vue->addMethod($name, ['scope'], Js::code(Js::let('row', '@scope.row'))->then($handler));
+            Html::js()->vue->addMethod($name, ['scope'], Js::code(
+                Js::let('row', '@scope.row'),
+            )->then($handler));
         }
         $eventLabels = array_merge($eventLabels, $groupEventLabels);
         if (!$eventLabels) {
