@@ -46,4 +46,11 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
         return $this->default === null ? [] : $this->default;
     }
 
+    public function readonly(string $when = ''): static
+    {
+        if (isset($this->getVAttrs()[':disabled']) || isset($this->getVAttrs()['disabled'])) {
+            return $this;
+        }
+        return $this->setVAttrs(':disabled', $when ?: 'true');
+    }
 }

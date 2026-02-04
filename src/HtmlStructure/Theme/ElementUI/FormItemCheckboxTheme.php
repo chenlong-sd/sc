@@ -26,11 +26,14 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
     public function renderFormItem($formItem): AbstractHtmlElement
     {
         $base = $this->getBaseEl($formItem);
-
+        $isBoolValue = false;
         if (!$optionsVar = $formItem->getOptionsVarName()) {
             mt_srand();
             $optionsVar = $formItem->getName() . 'Rand' .  mt_rand(1, 999);
             $formItem->setOptionsVarName($optionsVar);
+            if (count($formItem->getOptions()) == 1){
+                $isBoolValue = true;
+            }
         }
 
         $checkbox = El::double('el-checkbox')->setAttrs([
@@ -39,9 +42,8 @@ class FormItemCheckboxTheme extends AbstractFormItemTheme implements FormItemChe
             ':disabled' => "item.disabled"
         ])->append('{{ item.label }}');
 
-        $isBoolValue = false;
-        if (count($formItem->getOptions()) == 1 && !$formItem->getOptionsVarName()){
-            $isBoolValue = true;
+
+        if ($isBoolValue){
             $box = $checkbox->setAttrs($formItem->getVAttrs())
                 ->setAttr('v-model', $this->getVModel($formItem));
         }else{
