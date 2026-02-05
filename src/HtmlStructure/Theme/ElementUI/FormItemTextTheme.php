@@ -110,7 +110,12 @@ class FormItemTextTheme extends AbstractFormItemTheme implements FormItemTextThe
      */
     private function optionsSearch(string $search, FormItemText|FormItemAttrGetter $formItemText): void
     {
-        Html::js()->vue->set($search . 'Data', $formItemText->getOptions());
+        if (count($formItemText->getOptions()) === count($formItemText->getOptions(), true)) {
+            Html::js()->vue->set($search . 'Data', array_map(fn($v) => ['value' => $v, 'label' => $v], $formItemText->getOptions()));
+        }else{
+            Html::js()->vue->set($search . 'Data', $formItemText->getOptions());
+        }
+
         Html::js()->vue->addMethod($search, ['searchStr', 'cb'], Js::code(
             Js::let('res', []),
             Js::for("let i = 0; i < this.{$search}Data.length; i++")->then(
