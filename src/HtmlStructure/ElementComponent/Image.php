@@ -7,7 +7,7 @@ class Image
     private array $attrs = [];
     private array $slot = [];
 
-    public function __construct(private readonly string $src, private readonly bool $isRealPath){}
+    public function __construct(private readonly string $src, private readonly bool $isRealPath = false){}
 
     /**
      *
@@ -36,9 +36,8 @@ class Image
     
     public function render(): string
     {
-        $image = h('el-image');
+        $image = h('el-image', ['fit' => 'cover', 'hide-on-click-modal' => ''])->appendStyle("{height: 90px; width: 90px;border-radius: 3px}");
         $image->setAttr($this->isRealPath ? "src" : ':src', $this->src);
-        $image->appendStyle("{height: 100px;}");
         $style = $this->attrs['style'] ?? '';
         unset($this->attrs['style']);
         $image->setAttrs($this->attrs)->appendStyle($style);
@@ -54,7 +53,7 @@ class Image
             );
         }
 
-        return $image;
+        return h('div', $image)->setStyle('{display: inline-block; height: 90px; width: 90px; margin: 0 5px;}');
     }
 
     public function __toString(): string

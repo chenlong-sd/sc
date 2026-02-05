@@ -60,7 +60,7 @@ class Detail
 
     /**
      * @param string|\Stringable $label
-     * @param string|\Stringable $value
+     * @param string|\Stringable $value 图片，map映射,视频，可用 ELC::image,....
      * @param array $attr 属性，位数字时表示span值
      * label    标签文本 string ''
      * span    列的数量 number 1

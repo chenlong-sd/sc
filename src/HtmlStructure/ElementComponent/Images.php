@@ -9,7 +9,7 @@ class Images
     private array $attrs = [];
     private array $slot = [];
 
-    public function __construct(private readonly array|string $images, private readonly string $srcPath = ''){}
+    public function __construct(private readonly array|string $images, private readonly string $srcPath = 'url'){}
 
     /**
      *
@@ -41,9 +41,8 @@ class Images
         if (is_array($this->images)) {
             $el = El::fictitious();
             foreach ($this->images as $src) {
-                $image = h('el-image');
+                $image = h('el-image', ['fit' => 'cover', 'hide-on-click-modal' => ''])->appendStyle("{height: 90px; width: 90px;border-radius: 3px}");
                 $image->setAttr('src', $src);
-                $image->appendStyle("{height: 100px; margin: 0 5px;}");
                 $style = $this->attrs['style'] ?? '';
                 unset($this->attrs['style']);
                 $image->setAttrs($this->attrs)->appendStyle($style);
@@ -57,12 +56,13 @@ class Images
                         h('template', $content, ['#' . $slotName => ''])
                     );
                 }
-                $el->append($image);
+                $el->append(
+                    h('div', $image)->setStyle('{display: inline-block; height: 90px; width: 90px; margin: 0 5px;}')
+                );
             }
         }else{
-            $image = h('el-image')->setAttr('v-for', "(item, index) in $this->images");
+            $image = h('el-image', ['fit' => 'cover', 'hide-on-click-modal' => ''])->appendStyle("{height: 90px; width: 90px;border-radius: 3px}");
             $image->setAttr(':src', $this->srcPath ? "item.$this->srcPath" : 'item');
-            $image->appendStyle("{height: 100px; margin: 0 5px;}");
             $style = $this->attrs['style'] ?? '';
             unset($this->attrs['style']);
             $image->setAttrs($this->attrs)->appendStyle($style);
@@ -80,7 +80,7 @@ class Images
                 );
             }
 
-            $el = $image;
+            $el = h('div', $image, ['v-for' => "(item, index) in $this->images"])->setStyle('{display: inline-block; height: 90px; width: 90px; margin: 0 5px;}');
         }
 
         return $el;
