@@ -35,6 +35,10 @@ class Recover
                 $currentSql .= $content;
 
                 if (str_ends_with($content, ';' . PHP_EOL) || str_ends_with($content, ";\r\n") ) {
+                    if (str_starts_with($currentSql, "CREATE TABLE ")) {
+                        $currentSql = strtr($currentSql, ['CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci' => '']);
+                    }
+
                     // 执行sql
                     $this->connect->getPDO()->prepare($currentSql)->execute();
 
