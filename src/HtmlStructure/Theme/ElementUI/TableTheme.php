@@ -21,10 +21,9 @@ use Sc\Util\HtmlStructure\Html\StaticResource;
 use Sc\Util\HtmlStructure\Table;
 use Sc\Util\HtmlStructure\Table\Column;
 use Sc\Util\HtmlStructure\Theme\ElementUI\TableTheme\ExportData;
+use Sc\Util\HtmlStructure\Theme\ElementUI\TableTheme\ImportData;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
-use Sc\Util\HtmlStructure\Theme\Theme;
 use Sc\Util\ScTool;
-use Sc\Util\Tool;
 
 /**
  * Class Table
@@ -69,7 +68,7 @@ class TableTheme implements TableThemeInterface
             $attrs['@sort-change'] = $sortMethod;
         }
 
-        $this->heightRestrictions($table, $attrs);
+        $this->heightLimit($table, $attrs);
 
         $attrs = array_merge($attrs, ['highlight-current-row' => '']);
         $el->setAttr(':data', $dataVarName);
@@ -483,6 +482,13 @@ class TableTheme implements TableThemeInterface
                 return Js::code("this.{$table->getId()}ExportData()");
             });
         }
+        if ($table->isOpenImport()) {
+            $table->setHeaderEvent(["@primary.Collection.导入"], function () use ($table){
+                return Table\EventHandler::window("导入")->setConfig(['width' => 900, 'align-center' => ''])->setComponent(
+                    (new ImportData($table->getImportUrl(), $table->getImportColumns()))->render()
+                );
+            });
+        }
 
         $statusToggleButtons = $this->statusToggleButtonsHandle($table);
         if (!$statusToggleButtons->isEmpty()) {
@@ -705,7 +711,7 @@ class TableTheme implements TableThemeInterface
      *
      * @return void
      */
-    private function heightRestrictions(Table $table, array &$attrs): void
+    private function heightLimit(Table $table, array &$attrs): void
     {
         if (!$table->getMaxHeight()) {
             return;

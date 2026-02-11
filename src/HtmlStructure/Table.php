@@ -17,6 +17,7 @@ use Sc\Util\HtmlStructure\Table\EventHandler;
 use Sc\Util\HtmlStructure\Theme\Interfaces\TableThemeInterface;
 use Sc\Util\HtmlStructure\Theme\Theme;
 use Sc\Util\ScTool;
+use Sc\Util\Tool\Url;
 
 class Table
 {
@@ -141,6 +142,9 @@ class Table
      */
     private bool $openSetting = true;
     private ?JsCode $remoteDataHandle;
+    private array $importColumns = [];
+    private bool $openImport = false;
+    private ?string $importUrl = null;
 
     public function __construct(private readonly string|array $data, private ?string $id = null)
     {
@@ -563,6 +567,30 @@ class Table
     }
 
     /**
+     * 启用导入
+     *
+     * @param array $importColumns 导入字段
+     * [
+     *   '名称' => 'name',
+     *   '性别' => ['prop' => 'sex', 'options' => [['value' => '1', 'label' => '男'], ['value' => '2', 'label' => '女']]],
+     *   '性别' => ['prop' => 'sex', 'options' => [1 => '男', 2 => '女']],
+     * ]
+     * @return $this
+     */
+    public function openImportExcel(Url $url, array $importColumns): static
+    {
+        if (!$url->getQuery('import')){
+            $url->setQuery([...$url->getQueryArr(), ...['import' => 1]]);
+        }
+        $this->importColumns = $importColumns;
+        $this->importUrl = $url;
+        $this->openImport = true;
+
+        return $this;
+    }
+
+
+    /**
      * @return array
      */
     public function getTrash(): array
@@ -620,5 +648,20 @@ class Table
     public function setRemoteDataHandle(?JsCode $remoteDataHandle): void
     {
         $this->remoteDataHandle = $remoteDataHandle;
+    }
+
+    public function getImportColumns(): array
+    {
+        return $this->importColumns;
+    }
+
+    public function isOpenImport(): bool
+    {
+        return $this->openImport;
+    }
+
+    public function getImportUrl(): ?string
+    {
+        return $this->importUrl;
     }
 }
