@@ -485,7 +485,7 @@ class TableTheme implements TableThemeInterface
         if ($table->isOpenImport()) {
             $table->setHeaderEvent(["@primary.Collection.导入"], function () use ($table){
                 return Table\EventHandler::window("导入")->setConfig(['width' => 900, 'align-center' => ''])->setComponent(
-                    (new ImportData($table->getImportUrl(), $table->getImportColumns()))->render()
+                    (new ImportData($table))->render()
                 );
             });
         }

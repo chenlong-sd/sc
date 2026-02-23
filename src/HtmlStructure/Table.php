@@ -571,9 +571,9 @@ class Table
      *
      * @param array $importColumns 导入字段
      * [
-     *   '名称' => 'name',
-     *   '性别' => ['prop' => 'sex', 'options' => [['value' => '1', 'label' => '男'], ['value' => '2', 'label' => '女']]],
-     *   '性别' => ['prop' => 'sex', 'options' => [1 => '男', 2 => '女']],
+     *   'name' => '名称',
+     *   'sex' => ['title' => '性别', 'options' => [['value' => '1', 'label' => '男'], ['value' => '2', 'label' => '女']]],
+     *   'sex' => ['title' => '性别', 'options' => [1 => '男', 2 => '女']],
      * ]
      * @return $this
      */

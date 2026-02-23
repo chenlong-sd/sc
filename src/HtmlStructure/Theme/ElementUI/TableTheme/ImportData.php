@@ -3,16 +3,20 @@
 namespace Sc\Util\HtmlStructure\Theme\ElementUI\TableTheme;
 
 use Sc\Util\HtmlStructure\Html\Html;
+use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Html\Js\VueComponents\Temporary;
 use Sc\Util\HtmlStructure\Html\StaticResource;
+use Sc\Util\HtmlStructure\Table;
 
 class ImportData
 {
 
-    private Temporary $template;
+    private Temporary      $template;
+    private readonly array $importColumns;
 
-    public function __construct( private readonly string $importUrl, private readonly array $importColumns)
+    public function __construct(private readonly Table $table)
     {
+        $this->importColumns = $this->importColumnsHandle($table->getImportColumns());
         $this->template = Temporary::create("excel-import");
         Html::js()->vue->addComponents($this->template);
     }
@@ -21,12 +25,13 @@ class ImportData
     {
         Html::js()->load('/js/xlsx.full.min.js');
         Html::js()->load(StaticResource::AXIOS);
+        Html::js()->vue->set('import_column_info', $this->importColumns);
         Html::js()->vue->set('import_column_map', $this->importExcelTitleMap());
         Html::js()->vue->set('import_loading', false);
-        Html::js()->vue->set('import_file_list', '@[]');
-        Html::js()->vue->set('import_preview_data', '@[]');
-        Html::js()->vue->set('import_result', '@null');
-        Html::js()->vue->set('import_url', $this->importUrl);
+        Html::js()->vue->set('import_file_list', []);
+        Html::js()->vue->set('import_preview_data', []);
+        Html::js()->vue->set('import_result', null);
+        Html::js()->vue->set('import_url', $this->table->getImportUrl());
 
         $this->downloadImportTemplateMethod();
         $this->importFileChangeMethod();
@@ -41,22 +46,21 @@ class ImportData
     private function importExcelTitleMap(bool $isPure = false): array
     {
         $map = [];
-        foreach ($this->importColumns as $title => $fieldInfo) {
+        foreach ($this->importColumns as $prop => $fieldInfo) {
             if (is_string($fieldInfo)) {
-                $map[$title] = $fieldInfo;
+                $map[$prop] = $fieldInfo;
             }elseif (is_array($fieldInfo)){
+                $title = $fieldInfo['title'] ?? $prop;
                 if (isset($fieldInfo['options']) && !$isPure){
                     $title .= "；可选项：";
-                    $title .= is_string(current($fieldInfo['options']))
-                        ? implode(",", array_values($fieldInfo['options']))
-                        : implode(",", array_column($fieldInfo['options'], 'label'));
+                    $title .= implode(",", array_column($fieldInfo['options'], 'label'));
                 }
 
-                $map[$title] = $fieldInfo['prop'];
+                $map[$prop] = $title;
             }
         }
 
-        return $map;
+        return array_flip($map);
     }
 
     private function downloadImportTemplateMethod(): void
@@ -84,7 +88,7 @@ class ImportData
             let reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    let wb = XLSX.read(e.target.result, { type: 'array' });
+                    let wb = XLSX.read(e.target.result, { type: 'array',cellDates: true });
                     let ws = wb.Sheets[wb.SheetNames[0]];
                     let jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
                     let headerMap = {};
@@ -92,6 +96,40 @@ class ImportData
                        headerMap[title.split('；')[0]] = this.import_column_map[title];
                     }
                     let mapped = jsonData.map((row, idx) => {
+                        for (let key in row) {
+                            let val = row[key];
+                    
+                            // 1. 情况 A：已经是 Date 对象（Excel 格式正确的情况）
+                            // 2. 情况 B：是字符串但长得像日期（手动输入的文本情况）
+                            let dateObj = null;
+                    
+                            if (val instanceof Date) {
+                                dateObj = val;
+                            } else if (typeof val === 'string' && val.trim() !== '') {
+                                // 尝试解析字符串，看是否能转成合法日期
+                                const timestamp = Date.parse(val.replace(/-/g, '/')); 
+                                if (!isNaN(timestamp)) {
+                                    dateObj = new Date(timestamp);
+                                }
+                            }
+                    
+                            // 如果识别到了日期，进行智能格式化
+                            if (dateObj) {
+                                const Y = dateObj.getFullYear();
+                                const M = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                const D = String(dateObj.getDate()).padStart(2, '0');
+                                const hh = String(dateObj.getHours()).padStart(2, '0');
+                                const mm = String(dateObj.getMinutes()).padStart(2, '0');
+                                const ss = String(dateObj.getSeconds()).padStart(2, '0');
+                    
+                                // 核心判断：如果时分秒全为 0，则视为纯日期
+                                const isPureDate = hh === '00' && mm === '00' && ss === '00';
+                    
+                                row[key] = isPureDate 
+                                    ? `${Y}-${M}-${D}` 
+                                    : `${Y}-${M}-${D} ${hh}:${mm}:${ss}`;
+                            }
+                        }
                         let obj = { _row: idx + 2 };
                         Object.keys(row).forEach(rawH => {
                             let baseH = rawH.split('；')[0];
@@ -124,6 +162,10 @@ class ImportData
 
     private function submitMethod(): void
     {
+        Html::js()->vue->addMethod("refreshTableData", JsFunc::anonymous()->code(
+            "VueApp.{$this->table->getId()}GetData()"
+        ));
+
         Html::js()->vue->addMethod('submitImport', [], <<<'JS'
             if (this.import_preview_data.length === 0) {
                 this.$message.warning('没有可导入的数据');
@@ -134,21 +176,21 @@ class ImportData
             axios({
                 url: this.import_url,
                 method: 'post',
-                data: { rows: this.import_preview_data}
+                data: { rows: this.import_preview_data, import_column_info: this.import_column_info}
             }).then(({ data }) => {
                 if (data.code === 200) {
-                    this.$message.success(data.message || '导入成功');
+                    this.$message.success(data.msg || '导入成功');
                     this.import_result = data.data || { success_count: 0, fail_count: 0, errors: [] };
                     this.import_file_list = [];
                     this.import_preview_data = [];
-                    this.qa_caseGetData();
+                    this.refreshTableData();
                 } else {
-                    console.log(data)
                     this.$message.error(data.msg || '导入失败');
                     this.import_result = data.data || null;
                 }
             }).catch(error => {
                 this.$message.error('导入请求失败');
+                console.log(error)
             }).finally(() => {
                 this.import_loading = false;
             });
@@ -161,8 +203,8 @@ class ImportData
         $previewColumns = h([
             h('el-table-column', ['prop' => '_row', 'label' => '行号', 'width' => '60']),
         ]);
-        foreach ($this->importColumns as $label => $field) {
-            $field = is_array($field) ? $field['prop'] : $field;
+        foreach ($this->importColumns as $field => $label) {
+            $label = is_array($label) ? ($label['title'] ?? $field) : $label;
             $previewColumns->append(
                 h('el-table-column', ['prop' => $field, 'label' => $label, 'min-width' => '100'])
             );
@@ -188,8 +230,9 @@ class ImportData
                     h('div', ['style' => 'padding: 8px 0;'])->append(
                         h('div', '将文件拖到此处，或点击选择', ['style' => 'color: #606266; font-size: 13px;']),
                         h('div', '支持 .xlsx / .xls', ['style' => 'color: #909399; font-size: 12px; margin-top: 2px;']),
+                        h('hr', ['style' => 'width:50%;margin:auto;']),
                         h('div', '下载的模版标题不要随意更改，否则将无法导入', ['style' => 'color: rgb(225 74 38); font-size: 12px; margin-top: 2px;']),
-                        h('div', '有选项的标题，可删除分号以后的选项文字', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
+                        h('div', '有选项的标题，可删除分号以后的选项文字，如：“性别；可选项：男，女” => “性别”', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
                     )
                 ),
                 h('div', ['style' => 'display: flex; flex-direction: column; gap: 8px; padding-top: 4px; min-width: 90px;'])->append(
@@ -239,5 +282,18 @@ class ImportData
                 )
             ),
         ]);
+    }
+
+    private function importColumnsHandle(array $importColumns): array
+    {
+        foreach ($importColumns as &$fieldInfo) {
+            if (is_array($fieldInfo) && isset($fieldInfo['options']) && !is_array(current($fieldInfo['options']))){
+                $fieldInfo['options'] = array_map(function ($value, $label) {
+                    return ['label' => $label, 'value' => $value];
+                }, array_keys($fieldInfo['options']), $fieldInfo['options']);
+            }
+        }
+
+        return $importColumns;
     }
 }
