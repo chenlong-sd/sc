@@ -31,12 +31,17 @@ class ImportData
         Html::js()->vue->set('import_file_list', []);
         Html::js()->vue->set('import_preview_data', []);
         Html::js()->vue->set('import_result', null);
+        Html::js()->vue->set('import_mode', 'excel');
+        Html::js()->vue->set('import_json_text', '');
         Html::js()->vue->set('import_url', $this->table->getImportUrl());
 
         $this->downloadImportTemplateMethod();
         $this->importFileChangeMethod();
         $this->removeFileMethod();
         $this->submitMethod();
+        $this->parseJsonImportMethod();
+        $this->importModeChangeMethod();
+        $this->copyAiPromptMethod();
 
         $this->template->setContent($this->el());
 
@@ -197,6 +202,87 @@ class ImportData
         JS);
     }
 
+    private function parseJsonImportMethod(): void
+    {
+        Html::js()->vue->addMethod('parseJsonImport', [], <<<'JS'
+            if (!this.import_json_text.trim()) {
+                this.$message.warning('请输入JSON数据');
+                return;
+            }
+            try {
+                let jsonData = JSON.parse(this.import_json_text);
+                if (!Array.isArray(jsonData)) {
+                    this.$message.error('JSON数据必须是数组格式');
+                    return;
+                }
+                if (jsonData.length === 0) {
+                    this.$message.warning('JSON数据为空');
+                    return;
+                }
+                let columnInfo = this.import_column_info;
+                let mapped = jsonData.map((row, idx) => {
+                    let obj = { _row: idx + 1 };
+                    for (let prop in columnInfo) {
+                        obj[prop] = row[prop] !== undefined ? row[prop] : '';
+                    }
+                    return obj;
+                });
+                this.import_preview_data = mapped;
+                this.import_result = null;
+            } catch (err) {
+                this.$message.error('JSON解析失败: ' + err.message);
+                this.import_preview_data = [];
+            }
+        JS);
+    }
+
+    private function importModeChangeMethod(): void
+    {
+        Html::js()->vue->addMethod('importModeChange', [], <<<'JS'
+            this.import_preview_data = [];
+            this.import_result = null;
+            this.import_file_list = [];
+            this.import_json_text = '';
+        JS);
+    }
+
+    private function copyAiPromptMethod(): void
+    {
+        Html::js()->vue->addMethod('copyAiPrompt', [], <<<'JS'
+            let lines = ['请生成10条测试数据，返回JSON数组，每个元素是一个对象。字段说明如下：', ''];
+            let example = {};
+            for (let prop in this.import_column_info) {
+                let info = this.import_column_info[prop];
+                let title = typeof info === 'string' ? info : (info.title || prop);
+                if (typeof info === 'object' && info.options && info.options.length > 0) {
+                    let labels = info.options.map(o => o.label);
+                    lines.push('- ' + prop + '（' + title + '）：可选值为 ' + labels.join('、'));
+                    example[prop] = labels[0];
+                } else {
+                    lines.push('- ' + prop + '（' + title + '）');
+                    example[prop] = title + '示例';
+                }
+            }
+            lines.push('');
+            lines.push('返回格式示例：');
+            lines.push(JSON.stringify([example], null, 2));
+            lines.push('');
+            lines.push('请直接返回JSON数组，不要有多余文字。');
+            let text = lines.join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                this.$message.success('AI提示词已复制到剪贴板');
+            }).catch(() => {
+                let ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                this.$message.success('AI提示词已复制到剪贴板');
+            });
+        JS);
+    }
+
 
     private function previewColumnsMake()
     {
@@ -215,40 +301,69 @@ class ImportData
     private function el()
     {
         return h([
-            h('div', ['style' => 'display: flex; gap: 12px; align-items: flex-start;'])->append(
-                h('el-upload', [
-                    'drag' => true,
-                    'accept' => '.xlsx,.xls',
-                    'action' => '#',
-                    ':auto-upload' => 'false',
-                    ':limit' => '1',
-                    ':file-list' => 'import_file_list',
-                    ':on-change' => 'importFileChange',
-                    ':on-remove' => 'importFileRemove',
-                    'style' => 'flex: 1;',
-                ])->append(
-                    h('div', ['style' => 'padding: 8px 0;'])->append(
-                        h('div', '将文件拖到此处，或点击选择', ['style' => 'color: #606266; font-size: 13px;']),
-                        h('div', '支持 .xlsx / .xls', ['style' => 'color: #909399; font-size: 12px; margin-top: 2px;']),
-                        h('hr', ['style' => 'width:50%;margin:auto;']),
-                        h('div', '下载的模版标题不要随意更改，否则将无法导入', ['style' => 'color: rgb(225 74 38); font-size: 12px; margin-top: 2px;']),
-                        h('div', '有选项的标题，可删除分号以后的选项文字，如：“性别；可选项：男，女” => “性别”', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
+            h('el-tabs', ['v-model' => 'import_mode', '@tab-click' => 'importModeChange'])->append(
+                h('el-tab-pane', ['label' => 'Excel导入', 'name' => 'excel'])->append(
+                    h('div', ['style' => 'display: flex; gap: 12px; align-items: flex-start;'])->append(
+                        h('el-upload', [
+                            'drag' => true,
+                            'accept' => '.xlsx,.xls',
+                            'action' => '#',
+                            ':auto-upload' => 'false',
+                            ':limit' => '1',
+                            ':file-list' => 'import_file_list',
+                            ':on-change' => 'importFileChange',
+                            ':on-remove' => 'importFileRemove',
+                            'style' => 'flex: 1;',
+                        ])->append(
+                            h('div', ['style' => 'padding: 8px 0;'])->append(
+                                h('div', '将文件拖到此处，或点击选择', ['style' => 'color: #606266; font-size: 13px;']),
+                                h('div', '支持 .xlsx / .xls', ['style' => 'color: #909399; font-size: 12px; margin-top: 2px;']),
+                                h('hr', ['style' => 'width:50%;margin:auto;']),
+                                h('div', '下载的模版标题不要随意更改，否则将无法导入', ['style' => 'color: rgb(225 74 38); font-size: 12px; margin-top: 2px;']),
+                                h('div', '有选项的标题，可删除分号以后的选项文字，如："性别；可选项：男，女" => "性别"', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
+                            )
+                        ),
+                        h('div', ['style' => 'display: flex; flex-direction: column; gap: 8px; padding-top: 4px; min-width: 90px;'])->append(
+                            h('el-button', '下载模板', [
+                                'size' => 'small',
+                                'style' => 'width: 100%;',
+                                '@click' => 'downloadImportTemplate',
+                            ]),
+                            h('el-button', '开始导入', [
+                                'type' => 'primary',
+                                'size' => 'small',
+                                'style' => 'width: 100%; margin-left: 0;',
+                                '@click' => 'submitImport',
+                                ':loading' => 'import_loading',
+                                ':disabled' => 'import_preview_data.length === 0',
+                            ])
+                        )
                     )
                 ),
-                h('div', ['style' => 'display: flex; flex-direction: column; gap: 8px; padding-top: 4px; min-width: 90px;'])->append(
-                    h('el-button', '下载模板', [
-                        'size' => 'small',
-                        'style' => 'width: 100%;',
-                        '@click' => 'downloadImportTemplate',
+                h('el-tab-pane', ['label' => 'JSON导入', 'name' => 'json'])->append(
+                    h('el-input', [
+                        'type' => 'textarea',
+                        'v-model' => 'import_json_text',
+                        ':rows' => '6',
+                        'placeholder' => "请输入JSON数组，如：[{'field1':'value1','field2':'value2'}]",
                     ]),
-                    h('el-button', '开始导入', [
-                        'type' => 'primary',
-                        'size' => 'small',
-                        'style' => 'width: 100%; margin-left: 0;',
-                        '@click' => 'submitImport',
-                        ':loading' => 'import_loading',
-                        ':disabled' => 'import_preview_data.length === 0',
-                    ])
+                    h('div', ['style' => 'margin-top: 8px; display: flex; gap: 8px;'])->append(
+                        h('el-button', '复制AI提示词', [
+                            'size' => 'small',
+                            '@click' => 'copyAiPrompt',
+                        ]),
+                        h('el-button', '解析JSON', [
+                            'size' => 'small',
+                            '@click' => 'parseJsonImport',
+                        ]),
+                        h('el-button', '开始导入', [
+                            'type' => 'primary',
+                            'size' => 'small',
+                            '@click' => 'submitImport',
+                            ':loading' => 'import_loading',
+                            ':disabled' => 'import_preview_data.length === 0',
+                        ])
+                    )
                 )
             ),
             h('div', ['v-if' => 'import_preview_data.length > 0', 'style' => 'margin-top: 12px;'])->append(
