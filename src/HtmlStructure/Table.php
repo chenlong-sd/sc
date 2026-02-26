@@ -574,7 +574,10 @@ class Table
      *   'name' => '名称',
      *   'sex' => ['title' => '性别', 'options' => [['value' => '1', 'label' => '男'], ['value' => '2', 'label' => '女']]],
      *   'sex' => ['title' => '性别', 'options' => [1 => '男', 2 => '女']],
+     *   'sex' => ['title' => '性别', 'ai_data' => [1 => '男', 2 => '女']],
      * ]
+     * ai_data 测试时给AI,
+     * options 导入时参考数据，不在对应的数据源中则会导入失败
      * @return $this
      */
     public function openImportExcel(Url $url, array $importColumns): static

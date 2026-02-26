@@ -56,11 +56,6 @@ class ImportData
                 $map[$prop] = $fieldInfo;
             }elseif (is_array($fieldInfo)){
                 $title = $fieldInfo['title'] ?? $prop;
-                if (isset($fieldInfo['options']) && !$isPure){
-                    $title .= "；可选项：";
-                    $title .= implode(",", array_column($fieldInfo['options'], 'label'));
-                }
-
                 $map[$prop] = $title;
             }
         }
@@ -70,14 +65,16 @@ class ImportData
 
     private function downloadImportTemplateMethod(): void
     {
-        Html::js()->vue->addMethod('downloadImportTemplate', [], <<<'JS'
+        $pageTitle = Html::html()->find('title')->getContent();
+        $pageTitle = strtr(trim($pageTitle), ['列表' => '', '添加' => '', '编辑' => '']);
+        Html::js()->vue->addMethod('downloadImportTemplate', [], <<<JS
             let headers = Object.keys(this.import_column_map);
             let ws = XLSX.utils.aoa_to_sheet([headers]);
             let colWidths = headers.map(h => ({ wch: Math.max(h.length * 2.5, 12) }));
             ws['!cols'] = colWidths;
             let wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'sheet1');
-            XLSX.writeFile(wb, '导入模板.xlsx');
+            XLSX.writeFile(wb, '{$pageTitle}导入模板.xlsx');
         JS);
     }
 
@@ -248,13 +245,20 @@ class ImportData
 
     private function copyAiPromptMethod(): void
     {
+        if (!Html::isDevelop()){
+            return;
+        }
+
         Html::js()->vue->addMethod('copyAiPrompt', [], <<<'JS'
             let lines = ['请生成10条测试数据，返回JSON数组，每个元素是一个对象。字段说明如下：', ''];
             let example = {};
             for (let prop in this.import_column_info) {
                 let info = this.import_column_info[prop];
                 let title = typeof info === 'string' ? info : (info.title || prop);
-                if (typeof info === 'object' && info.options && info.options.length > 0) {
+                if (typeof info === 'object' && info.ai_data && info.ai_data.length > 0) {
+                    lines.push('- ' + prop + '（' + title + '）：参考数据为 ' + JSON.stringify(info.ai_data));
+                    example[prop] =  title + '示例';
+                } else if (typeof info === 'object' && info.options && info.options.length > 0) {
                     let labels = info.options.map(o => o.label);
                     lines.push('- ' + prop + '（' + title + '）：可选值为 ' + labels.join('、'));
                     example[prop] = labels[0];
@@ -320,7 +324,7 @@ class ImportData
                                 h('div', '支持 .xlsx / .xls', ['style' => 'color: #909399; font-size: 12px; margin-top: 2px;']),
                                 h('hr', ['style' => 'width:50%;margin:auto;']),
                                 h('div', '下载的模版标题不要随意更改，否则将无法导入', ['style' => 'color: rgb(225 74 38); font-size: 12px; margin-top: 2px;']),
-                                h('div', '有选项的标题，可删除分号以后的选项文字，如："性别；可选项：男，女" => "性别"', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
+                                // h('div', '有选项的标题，可删除分号以后的选项文字，如："性别；可选项：男，女" => "性别"', ['style' => 'color: rgb(67 175 81); font-size: 12px; margin-top: 2px;']),
                             )
                         ),
                         h('div', ['style' => 'display: flex; flex-direction: column; gap: 8px; padding-top: 4px; min-width: 90px;'])->append(
@@ -348,10 +352,12 @@ class ImportData
                         'placeholder' => "请输入JSON数组，如：[{'field1':'value1','field2':'value2'}]",
                     ]),
                     h('div', ['style' => 'margin-top: 8px; display: flex; gap: 8px;'])->append(
-                        h('el-button', '复制AI提示词', [
-                            'size' => 'small',
-                            '@click' => 'copyAiPrompt',
-                        ]),
+                        (Html::isDevelop()
+                            ? h('el-button', '复制AI提示词', [
+                                'size' => 'small',
+                                '@click' => 'copyAiPrompt',
+                            ])
+                            : h("el-text")),
                         h('el-button', '解析JSON', [
                             'size' => 'small',
                             '@click' => 'parseJsonImport',

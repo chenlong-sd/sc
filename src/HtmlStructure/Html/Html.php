@@ -21,6 +21,7 @@ use Swoole\Coroutine;
  * @method static Css css()
  * @method static DoubleLabel html()
  * @method static string theme()
+ * @method static bool isDevelop()
  *
  * @package Sc\Util\HtmlStructure\Html
  * @date    2023/5/15
@@ -70,7 +71,9 @@ class Html
      */
     public readonly string $theme;
 
-    private function __construct(string $title, #[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = Theme::DEFAULT_THEME)
+    public readonly bool $isDevelop;
+
+    private function __construct(string $title, #[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = Theme::DEFAULT_THEME, bool $isDevelop = false)
     {
         $this->html = El::fromCode(self::BASE_CODE);
         $this->html->find('title')->append($title);
@@ -84,6 +87,7 @@ class Html
         $this->css->addCss('.layui-layer-content,.layui-layer-iframe{border-radius: 4px;}');
 
         $this->theme = $theme;
+        $this->isDevelop = $isDevelop;
     }
 
     /**
@@ -91,13 +95,13 @@ class Html
      *
      * @param string $title
      * @param string $theme
-     *
+     * @param bool $isDevelop
      * @return Html
      * @date 2023/5/15
      */
-    public static function create(string $title, #[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = Theme::DEFAULT_THEME): Html
+    public static function create(string $title, #[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = Theme::DEFAULT_THEME, bool $isDevelop = false): Html
     {
-        $html = new self($title, $theme);
+        $html = new self($title, $theme, $isDevelop);
 
         self::cacheHtmlGlobal($html);
 
