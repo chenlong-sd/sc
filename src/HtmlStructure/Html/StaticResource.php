@@ -20,4 +20,8 @@ class StaticResource
     const FROALA_JS = '/froala/froala_editor.pkgd.min.js';
     const FROALA_LANGUAGE = '/froala/zh_cn.js';
     const SORT_ABLE_JS = '/js/Sortable.min.js';
+
+    const SCEDITOR_JS = '/sceditor/editor.min.js';
+    const SCEDITOR_CSS = '/sceditor/editor.css';
+    const SCEDITOR_ARTICLE_CSS = '/sceditor/sre-article.css';
 }

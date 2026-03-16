@@ -6,7 +6,6 @@
 namespace Sc\Util\HtmlStructure\Form;
 
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
-use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultConstruct;
 use Sc\Util\HtmlStructure\Form\ItemAttrs\DefaultValue;
@@ -28,8 +27,6 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
      * 初始化选项
      *
      * @param array $options
-     * @link https://froala.com/wysiwyg-editor/docs/options
-     *
      * @return $this
      */
     public function initOptions(array $options): static
@@ -40,17 +37,32 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
     }
 
     /**
-     * 事件
+     * 事件（兼容旧 Froala 的 event 写法）
      *
      * @param string $event
      * @param JsFunc $handler
      *
      * @return $this
-     *@link https://froala.com/wysiwyg-editor/docs/event
      *
      */
     public function event(string $event, JsFunc $handler): static
     {
+        $map = [
+            // Froala -> SimpleRichEditor
+            'contentChanged' => 'onChange',
+            'focus'          => 'onFocus',
+            'blur'           => 'onBlur',
+        ];
+
+        $eventKey = $map[$event] ?? $event;
+
+        // SimpleRichEditor style
+        if (in_array($eventKey, ['onChange', 'onFocus', 'onBlur', 'onInit', 'onDestroy'], true)) {
+            $this->initOptions[$eventKey] = $handler;
+            return $this;
+        }
+
+        // Legacy passthrough (kept for compatibility; new editor may ignore it)
         $this->initOptions['events'][$event] = $handler;
 
         return $this;
@@ -59,9 +71,6 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
 
     public function render(string $theme = null): AbstractHtmlElement
     {
-        // 隐藏logo
-        Html::css()->addCss('#fr-logo{ display: none; }.fr-popup.fr-active{ z-index: 5 !important; }');
-
         try {
             return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);
         } catch (\Throwable $throwable) {
@@ -74,12 +83,24 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
      */
     public function getInitOptions(): array
     {
+        $options = $this->initOptions;
+
+        // Legacy mapping: `height` -> `layout.height`
+        if (isset($options['height']) && !isset($options['layout']['height'])) {
+            $options['layout']['height'] = $options['height'];
+            unset($options['height']);
+        }
+
+        $options['layout'] = array_merge([
+            'width'  => '100%',
+            'height' => 400,
+        ], $options['layout'] ?? []);
+
         return array_merge([
-            'language'       => 'zh_cn',
-            'height'         => 400,
-            'imageUploadURL' => $this->uploadUrl,
-            'fileUploadURL'  => $this->uploadUrl,
-            'videoUploadURL' => $this->uploadUrl,
-        ], $this->initOptions);
+            'placeholder'          => $this->placeholder ?: '请输入内容...',
+            'enablePasteDebug'     => false,
+            'enableDraftAutosave'  => false,
+            'draftRestorePrompt'   => false,
+        ], $options);
     }
 }

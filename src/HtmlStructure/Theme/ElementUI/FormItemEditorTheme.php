@@ -9,7 +9,6 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Html\Html;
 use Sc\Util\HtmlStructure\Html\Js;
-use Sc\Util\HtmlStructure\Html\Js\JsFunc;
 use Sc\Util\HtmlStructure\Form\FormItemAttrGetter;
 use Sc\Util\HtmlStructure\Form\FormItemEditor;
 use Sc\Util\HtmlStructure\Html\StaticResource;
@@ -35,30 +34,127 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
 
     private function initialize(FormItemEditor|FormItemAttrGetter $formItemEditor): AbstractHtmlElement
     {
-        $editorId = 'froala-editor' . $formItemEditor->getName();
-        $varName  = 'editor' . $formItemEditor->getName();
-        $options  = $formItemEditor->getInitOptions();
+        $formModel = (string)($formItemEditor->getFormModel() ?? '');
+        $fieldName = (string)($formItemEditor->getName() ?? '');
+        $uniqueKey = preg_replace('/[^a-zA-Z0-9_]/', '_', trim($formModel . '_' . $fieldName, '_')) ?: 'default';
 
-        $options['events']['contentChanged'] = JsFunc::anonymous([], "VueApp." . "{$this->getVModel($formItemEditor)} = $varName.html.get()");
+        $editorId    = 'sre-editor-' . $uniqueKey;
+        $optionsName = 'sreEditorOptions_' . $uniqueKey;
+        $instanceKey = $formModel && $fieldName ? ($formModel . '.' . $fieldName) : $uniqueKey;
 
-        // 创建编辑器
-        $editor = Js::let($varName, JsFunc::call('new FroalaEditor', "div#{$editorId}",
-            $options
-            , JsFunc::anonymous([],
-                Js::code($formItemEditor->getFullScreen() ? "$varName.fullscreen.toggle()" : '')
-                    ->then(Js::call("$varName.html.set", Js::call("AdminUtil.base64Decode", base64_encode($formItemEditor->getDefault() ?: ''))))
-            )));
+        $vModel = $this->getVModel($formItemEditor);
+        $options = $formItemEditor->getInitOptions();
 
-        Html::js()->vue->event('created', $editor, true);
+        $options['instanceKey'] ??= $instanceKey;
+        $options['initialHTML'] ??= $vModel ? Js::grammar("this.$vModel || ''") : '';
 
-        return El::div()->setId($editorId);
+        $uploadUrl = (string)($formItemEditor->getUploadUrl() ?? '');
+        $onChangeSyncCode = $vModel ? "VueApp.{$vModel} = payload.html ?? '';" : '';
+
+        $initCode = Js::code(
+            Js::let($optionsName, $options),
+            <<<JS
+                const __userOnChange = {$optionsName}.onChange;
+                {$optionsName}.onChange = (payload) => {
+                    try {
+                        if (typeof __userOnChange === 'function') __userOnChange(payload);
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                    if (!payload) return;
+                    {$onChangeSyncCode}
+                };
+            JS,
+            <<<JS
+                const __userOnFocus = {$optionsName}.onFocus;
+                {$optionsName}.onFocus = (payload) => {
+                    try {
+                        if (typeof __userOnFocus === 'function') __userOnFocus(payload);
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                };
+            JS,
+            <<<JS
+                const __userOnBlur = {$optionsName}.onBlur;
+                {$optionsName}.onBlur = (payload) => {
+                    try {
+                        if (typeof __userOnBlur === 'function') __userOnBlur(payload);
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                };
+            JS,
+            $uploadUrl ? <<<JS
+                if (!{$optionsName}.onImageUpload) {
+                    {$optionsName}.onImageUpload = async (file, { onProgress } = {}) => {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const resp = await axios.post("{$uploadUrl}", formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                            onUploadProgress: (e) => {
+                                if (typeof onProgress !== 'function' || !e || !e.total) return;
+                                onProgress(Math.round((e.loaded / e.total) * 100));
+                            },
+                        });
+                        const data = resp && resp.data ? resp.data : null;
+                        const url = (data && (data.link || data.data || data.url || data.fileFullPath)) || '';
+                        if (!url) throw new Error('上传失败');
+                        return url;
+                    };
+                }
+                if (!{$optionsName}.onFileUpload) {
+                    {$optionsName}.onFileUpload = async (file, { onProgress } = {}) => {
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const resp = await axios.post("{$uploadUrl}", formData, {
+                            headers: { 'Content-Type': 'multipart/form-data' },
+                            onUploadProgress: (e) => {
+                                if (typeof onProgress !== 'function' || !e || !e.total) return;
+                                onProgress(Math.round((e.loaded / e.total) * 100));
+                            },
+                        });
+                        const data = resp && resp.data ? resp.data : null;
+                        const url = (data && (data.link || data.data || data.url || data.fileFullPath)) || '';
+                        if (!url) throw new Error('上传失败');
+                        return url;
+                    };
+                }
+            JS : '',
+            <<<JS
+                this.__sreEditors = this.__sreEditors || {};
+                const __sreEditor = new SimpleRichEditor("#{$editorId}", {$optionsName}).init();
+                this.__sreEditors["{$editorId}"] = __sreEditor;
+            JS,
+            $vModel ? <<<JS
+                if (typeof this.\$watch === 'function') {
+                    this.\$watch(
+                        () => this.{$vModel},
+                        (val) => {
+                            const next = val == null ? '' : String(val);
+                            try {
+                                if (__sreEditor && typeof __sreEditor.getHTML === 'function' && typeof __sreEditor.setHTML === 'function') {
+                                    if (__sreEditor.getHTML() !== next) __sreEditor.setHTML(next);
+                                }
+                            } catch (e) {
+                                console.warn(e);
+                            }
+                        }
+                    );
+                }
+            JS : ''
+        );
+
+        Html::js()->vue->event('mounted', $initCode, true);
+
+        return El::div()->setId($editorId)->addClass('sre-editor');
     }
 
     private function resourceLoad(): void
     {
-        Html::js()->load(StaticResource::FROALA_JS);
-        Html::css()->load(StaticResource::FROALA_CSS);
-        Html::js()->load(StaticResource::FROALA_LANGUAGE);
+        Html::js()->load(StaticResource::SCEDITOR_JS);
+        Html::css()->load(StaticResource::SCEDITOR_CSS);
+        Html::js()->load(StaticResource::AXIOS);
     }
 
 }
