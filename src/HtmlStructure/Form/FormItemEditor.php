@@ -93,7 +93,7 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
 
         $options['layout'] = array_merge([
             'width'  => '100%',
-            'height' => 400,
+            'height' => 600,
         ], $options['layout'] ?? []);
 
         return array_merge([
