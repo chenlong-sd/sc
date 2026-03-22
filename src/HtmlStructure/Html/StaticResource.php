@@ -22,6 +22,6 @@ class StaticResource
     const SORT_ABLE_JS = '/js/Sortable.min.js';
 
     const SCEDITOR_JS = '/sceditor/editor.min.js';
-    const SCEDITOR_CSS = '/sceditor/editor.css';
+    const SCEDITOR_CSS = '/sceditor/editor.min.css';
     const SCEDITOR_ARTICLE_CSS = '/sceditor/sre-article.css';
 }
