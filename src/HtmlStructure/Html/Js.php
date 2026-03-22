@@ -66,6 +66,8 @@ class Js
 
     private ?Vue $currentVue = null;
 
+    private array $raws = [];
+
     public function __construct()
     {
         $this->variables = new \stdClass();
@@ -244,7 +246,7 @@ class Js
 
         $this->loadJs();
 
-        return Grammar::extract(implode("\r\n", $code));
+        return strtr(Grammar::extract(implode("\r\n", $code)), $this->raws);
     }
 
     private function loadJs(): void
@@ -328,6 +330,21 @@ class Js
         }
 
         return Js::code("return $data;");
+    }
+
+    /**
+     * 添加原始代码
+     *
+     * @param string $raw
+     *
+     * @return string
+     */
+    public function raw(#[Language("JavaScript")] string $raw): string
+    {
+        $key = "js--raw--code--key-n-" . count($this->raws);
+        $this->raws[$key] = $raw;
+
+        return $key;
     }
 }
 
