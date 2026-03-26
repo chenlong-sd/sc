@@ -34,4 +34,15 @@ class FormItemRadio extends AbstractFormItem implements FormItemInterface
         }
         return $this->setVAttrs(':disabled', $when ?: 'true');
     }
+
+
+    /**
+     * 一行一个options
+     * @return void
+     */
+    public function oneLineOneOption(): void
+    {
+        $this->setOptionsAttrs(['style' => "display: flex; align-items: center;"])
+            ->setVAttrs(['style' => 'display: flex; flex-direction: column;align-items: flex-start;']);
+    }
 }
