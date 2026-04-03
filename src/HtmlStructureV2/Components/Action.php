@@ -7,12 +7,13 @@ use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Action implements Renderable
+class Action implements Renderable
 {
     use RendersWithTheme;
 
     private string $type = 'default';
     private ?string $icon = null;
+    private ?string $key = null;
     private ?string $target = null;
     private string|JsExpression|null $handler = null;
     private ?string $confirmText = null;
@@ -24,25 +25,47 @@ final class Action implements Renderable
     ) {
     }
 
-    public static function make(string $label): self
+    public static function make(string $label): static
     {
-        return new self($label);
+        return new static($label);
     }
 
-    public static function create(string $label = '新建', string $dialog = 'editor'): self
+    public static function create(string|Dialog $labelOrDialog = '新建', string|Dialog|null $dialog = null): DialogAction
     {
-        return (new self($label, ActionIntent::CREATE))
-            ->target($dialog)
+        [$label, $target, $dialogDefinition] = self::resolveDialogActionArguments(
+            $labelOrDialog,
+            $dialog,
+            ActionIntent::CREATE
+        );
+
+        $action = (new DialogAction($label, ActionIntent::CREATE))
             ->type('primary')
             ->icon('Plus');
+
+        if ($dialogDefinition !== null) {
+            return $action->bindDialog($dialogDefinition);
+        }
+
+        return $action->target($target);
     }
 
-    public static function edit(string $label = '编辑', string $dialog = 'editor'): self
+    public static function edit(string|Dialog $labelOrDialog = '编辑', string|Dialog|null $dialog = null): DialogAction
     {
-        return (new self($label, ActionIntent::EDIT))
-            ->target($dialog)
+        [$label, $target, $dialogDefinition] = self::resolveDialogActionArguments(
+            $labelOrDialog,
+            $dialog,
+            ActionIntent::EDIT
+        );
+
+        $action = (new DialogAction($label, ActionIntent::EDIT))
             ->type('primary')
             ->icon('Edit');
+
+        if ($dialogDefinition !== null) {
+            return $action->bindDialog($dialogDefinition);
+        }
+
+        return $action->target($target);
     }
 
     public static function delete(string $label = '删除'): self
@@ -77,42 +100,54 @@ final class Action implements Renderable
         return (new self($label, ActionIntent::CUSTOM))->onClick($handler);
     }
 
-    public function type(string $type): self
+    public function type(string $type): static
     {
         $this->type = $type;
 
         return $this;
     }
 
-    public function icon(string $icon): self
+    public function icon(string $icon): static
     {
         $this->icon = $icon;
 
         return $this;
     }
 
-    public function target(?string $target): self
+    public function key(string $key): static
+    {
+        $this->key = $key;
+
+        return $this;
+    }
+
+    public function target(?string $target): static
     {
         $this->target = $target;
 
         return $this;
     }
 
-    public function onClick(string|JsExpression $handler): self
+    public function dialog(string $dialog): static
+    {
+        return $this->target($dialog);
+    }
+
+    public function onClick(string|JsExpression $handler): static
     {
         $this->handler = $handler;
 
         return $this;
     }
 
-    public function confirm(?string $text): self
+    public function confirm(?string $text): static
     {
         $this->confirmText = $text;
 
         return $this;
     }
 
-    public function props(array $props): self
+    public function props(array $props): static
     {
         $this->props = array_merge($this->props, $props);
 
@@ -139,6 +174,11 @@ final class Action implements Renderable
         return $this->icon;
     }
 
+    public function getKey(): ?string
+    {
+        return $this->key;
+    }
+
     public function targetName(): ?string
     {
         return $this->target;
@@ -157,5 +197,45 @@ final class Action implements Renderable
     public function attrs(): array
     {
         return $this->props;
+    }
+
+    private static function resolveDialogActionArguments(
+        string|Dialog $labelOrDialog,
+        string|Dialog|null $dialogOrLabel,
+        ActionIntent $intent
+    ): array {
+        $defaultLabel = $intent === ActionIntent::CREATE ? '新建' : '编辑';
+        $label = $defaultLabel;
+        $target = 'editor';
+        $dialog = null;
+
+        if ($labelOrDialog instanceof Dialog) {
+            $dialog = $labelOrDialog;
+            $target = $dialog->key();
+            if (is_string($dialogOrLabel) && $dialogOrLabel !== '') {
+                $label = $dialogOrLabel;
+            } elseif ($intent === ActionIntent::CREATE) {
+                $label = $dialog->title();
+            }
+
+            return [$label, $target, $dialog];
+        }
+
+        if ($labelOrDialog !== '') {
+            $label = $labelOrDialog;
+        }
+
+        if ($dialogOrLabel instanceof Dialog) {
+            $dialog = $dialogOrLabel;
+            $target = $dialog->key();
+
+            return [$label, $target, $dialog];
+        }
+
+        if (is_string($dialogOrLabel) && $dialogOrLabel !== '') {
+            $target = $dialogOrLabel;
+        }
+
+        return [$label, $target, $dialog];
     }
 }

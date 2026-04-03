@@ -1,54 +1,313 @@
 # HtmlStructureV2
 
-`HtmlStructureV2` 是一套不改动原 `HtmlStructure` 的新骨架，目标是把后台页面开发抽到“页面 DSL + 显式渲染上下文 + 主题适配层”。
+`HtmlStructureV2` 是一套独立于旧 `HtmlStructure` 的后台页面 DSL。它把后台开发拆成两层：
 
-## 设计目标
+- 页面场景：`custom / form / list / crud`
+- 组件定义：`Forms / Fields / Tables / Dialogs / Actions`
 
-- 不依赖原有全局 `Html::create()` 状态。
-- 页面级 DSL 优先，先描述后台页面，再渲染底层组件。
-- 去掉大量 `@xxx` 魔法字符串，改成显式对象和枚举。
-- 允许旧版与 V2 并存，逐步迁移。
-- 字段能力按类型收口，避免所有字段都暴露同一批不适用的方法。
-- `Field` 作为抽象基类，只承接公共元数据和通用 UI 状态。
-- 校验、搜索、占位提示拆成独立能力，只让需要的字段接入。
-- DSL 入口按职责分组，避免所有创建方法都堆在一个 `V2` 门面里。
+目标不是继续堆一个大门面，而是让“页面是什么场景”和“页面里有哪些组件”都清楚可读。
 
-## 字段能力收口
+## 页面入口
 
-- `V2::toggle()/hidden()` 返回基础字段，只保留最小通用能力。
-- `V2::text()/textarea()/password()` 才暴露 `email()/phone()/pattern()/minLength()/maxLength()/lengthBetween()` 这类文本校验快捷方法。
-- `V2::select()/radio()/checkbox()` 返回选项字段，才会暴露 `options()/remoteOptions()/linkageUpdate()`。
-- `V2::cascader()` 返回级联字段，额外暴露 `cascaderProps()/emitPath()/checkStrictly()`。
-- `V2::upload()/image()` 返回上传字段，才会暴露 `uploadUrl()/uploadLimit()/uploadResponsePath()`。
-- `V2::number()` 返回数字字段，才会暴露 `minValue()/maxValue()/step()/precision()`。
-- `V2::date()/datetime()/daterange()` 返回日期字段，才会暴露 `format()/valueFormat()`。
-- `V2::password()` 返回密码字段，才会暴露 `showPassword()`。
-- 只有具备搜索能力的字段才暴露 `searchType()/searchField()`。
-- 只有具备校验能力的字段才暴露 `required()/rule()/rules()`。
-- 只有具备占位提示的字段才暴露 `placeholder()`。
-- `V2` 负责创建字段实例，`Field` 不再承担工厂职责。
+- `Pages::custom()` 自由拼装页
+- `Pages::form()` 纯表单页
+- `Pages::list()` 列表主导页，支持 `filters + table + inline dialogs`
+- `Pages::crud()` 标准 CRUD 页，是 `list` 场景的快捷入口
 
-## DSL 入口分组
+## 页面选型建议
 
-- `Dsl\\Pages`: 页面入口，如 `page()/crud()`
-- `Dsl\\Forms`: 表单容器入口，如 `make()`
-- `Dsl\\Fields`: 表单字段入口，如 `text()/select()/upload()`
-- `Dsl\\Tables`: 表格与列入口，如 `make()/column()`
-- `Dsl\\Dialogs`: 弹窗入口，如 `make()`
-- `Dsl\\Actions`: 动作按钮入口，如 `create()/edit()/delete()`
-- `V2` 现在作为兼容层保留，内部转发到这些分组 DSL。
+- “列表 + 搜索 + 工具栏 + 多个新增/编辑弹窗” 用 `Pages::list()`
+- “标准列表 + 一个 editor 弹窗” 用 `Pages::crud()`
+- “纯配置表单 / 设置页 / 详情编辑页” 用 `Pages::form()`
+- “看板、混合布局、非标准后台页” 用 `Pages::custom()`
+
+## 组件入口
+
+- `Forms::make()` 表单容器
+- `Fields::*()` 字段工厂
+- `Tables::make()` / `Tables::column()` 表格和列
+- `Dialogs::make()` 弹窗
+- `Actions::*()` 动作按钮，当前支持 `create/edit/submit/close/refresh/request/custom`
+
+## 设计约束
+
+- 不依赖旧版 `Html::create()` 全局状态
+- `Form` 只负责输入 UI、校验、远程选项、联动、上传
+- 筛选协议归 `Table/Column` 定义，`filters()` 只负责筛选 UI
+- `Dialog` 自己持有保存地址，推荐直接内联到 `Actions::create/edit()`，`dialogs()` 只保留给高级场景
+- 常见动作优先走结构化 DSL，`JsExpression` 只保留为兜底 escape hatch
+- 字段能力按类型收口，不再所有字段都暴露同一批方法
+- 主题层按 `Theme -> Renderer -> RuntimeBuilder -> runtime scripts` 分层
+- 不再提供 `V2::xxx()` 门面
+
+## 弹窗能力
+
+V2 的 `Dialog` 不再只是“一个表单弹窗”，现在支持三类弹窗体：
+
+- `->form(...)` 表单弹窗
+- `->content(...)` 说明/确认/自定义内容弹窗
+- `->iframe($url, $query)` 内嵌页面弹窗
+
+并且补齐了列表页常见的编辑场景：
+
+- `->createUrl()` / `->updateUrl()` 区分新建和编辑提交地址
+- `->saveUrl()` 作为统一提交地址兜底
+- `->load($url)` 在打开时拉取详情数据
+- `->loadPayload(...)` 定义详情请求参数，支持 `@row.id` / `@filters.xxx` / `@selection.0.id`
+- `->loadDataPath('data')` 指定从响应中取哪一段作为表单数据
+- `->loadWhen('edit'|'create'|'always')` 控制仅编辑时加载、仅新建时加载或总是加载
+- `->titleTemplate('编辑 {name}')` 根据当前行动态标题
+- `->beforeOpen()` / `->afterOpen()` / `->beforeClose()` / `->afterClose()` 生命周期钩子
+
+列表页工具栏和请求动作可以通过 `Table::selection()` 开启勾选列，之后请求动作和弹窗上下文里都能拿到 `selection`。
+
+`dialogs()` 现在不只属于 `ListPage`，`Pages::form()` 和 `Pages::custom()` 也可以直接挂 managed dialogs。头部 `Actions::create/edit($dialog)` 会自动收集对应弹窗；如果弹窗是从自定义按钮、独立表格行按钮或自定义 JS 打开的，推荐显式写 `->dialogs($dialog)`。
 
 ## 目录结构
 
-- `Contracts/`: 渲染契约与主题契约
-- `Support/`: `Document`、资源、表达式编码等基础设施
 - `Components/`: 表单、字段、表格、动作、弹窗
-- `Components/Fields/`: 具体字段类型实现，如 `BasicField`、`OptionField`、`UploadField`
-- `Dsl/`: 推荐使用的分组 DSL 入口
-- `Page/`: 页面级 DSL，目前提供 `AdminPage`、`CrudPage`
+- `Components/Fields/`: 各字段类型实现
+- `Dsl/`: 推荐使用的 DSL 入口
+- `Page/`: 页面模型，当前提供 `CustomPage`、`FormPage`、`ListPage`、`CrudPage`
 - `Theme/`: 主题适配层，目前提供 `ElementPlusAdminTheme`
+- `Theme/ElementPlusAdmin/`: 具体 renderer
+- `Theme/ElementPlusAdmin/Runtime/`: runtime builder 与脚本加载器
+- `Theme/ElementPlusAdmin/Runtime/scripts/list/`: 列表页运行时分片
+- `Theme/ElementPlusAdmin/Runtime/scripts/simple/`: 简单表单运行时分片
+- `Theme/ElementPlusAdmin/Runtime/scripts/request-action-factory.js`: 结构化请求动作的共享 runtime
 
-## 快速示例
+## 完整列表页示例
+
+下面这个示例覆盖了：
+
+- 页面头部动作
+- 筛选表单
+- 表格工具栏动作
+- 行级请求动作
+- 多弹窗
+- `Actions::custom()` 兜底 JS
+
+```injectablephp
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+use Sc\Util\HtmlStructureV2\Dsl\Dialogs;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+use Sc\Util\HtmlStructureV2\Dsl\Pages;
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+$normalDialog = Dialogs::make('product-editor', '编辑商品')
+    ->createUrl('/admin/product/create')
+    ->updateUrl('/admin/product/update')
+    ->load('/admin/product/detail')
+    ->loadPayload([
+        'id' => '@row.id',
+    ])
+    ->loadDataPath('data')
+    ->loadWhen('edit')
+    ->titleTemplate('编辑 {name}')
+    ->form(
+        Forms::make('product-editor')->addFields(
+            Fields::hidden('id'),
+            Fields::text('name', '商品名')->required(),
+            Fields::number('price', '价格')->minValue(0),
+            Fields::select('status', '状态')->options([
+                1 => '上架',
+                0 => '下架',
+            ]),
+            Fields::image('cover', '封面')
+                ->uploadUrl('/admin/upload/image')
+                ->uploadResponsePath('data.url')
+        )
+    );
+
+$batchDialog = Dialogs::make('create-batch', '批量新增')
+    ->saveUrl('/admin/product/batchSave')
+    ->form(
+        Forms::make('product-batch')->addFields(
+            Fields::textarea('codes', '商品编码')->required(),
+            Fields::select('category_id', '分类')
+                ->remoteOptions('/admin/category/options', 'id', 'name')
+        )
+    );
+
+$previewDialog = Dialogs::make('preview-product', '预览商品')
+    ->iframe('/admin/product/preview', [
+        'id' => '@row.id',
+    ])
+    ->titleTemplate('预览 {name}');
+
+$tipsDialog = Dialogs::make('sync-tips', '同步说明')
+    ->width('560px')
+    ->content(<<<'HTML'
+<div style="line-height:1.8;color:#606266">
+  当前操作会按筛选条件批量同步价格缓存。
+  如果列表开启了勾选，也可以只同步已勾选的数据。
+</div>
+HTML);
+
+$page = Pages::list('商品列表')
+    ->description('完整示例：筛选、表格、多弹窗、结构化请求动作、自定义 JS 兜底')
+    ->actions(
+        Actions::create('新建商品', $normalDialog),
+        Actions::create($batchDialog),
+        Actions::custom(
+            '同步说明',
+            JsExpression::make("openDialog('sync-tips')")
+        ),
+        Actions::request('同步价格缓存')
+            ->key('sync-price-cache')
+            ->post('/admin/product/sync-price-cache')
+            ->payload([
+                'keyword' => '@filters.keyword',
+                'status' => '@filters.status',
+                'ids' => '@selection',
+            ])
+            ->confirm('确认同步当前筛选条件下的价格缓存？')
+            ->loadingText('正在同步缓存...')
+            ->successMessage('缓存同步任务已提交')
+            ->afterSuccess(
+                JsExpression::make('(ctx) => console.log("sync ok", ctx.payload)')
+            )
+    )
+    ->filters(
+        Forms::make('product-filters')->inline()->addFields(
+            Fields::text('keyword', '关键词')->placeholder('商品名 / 编码'),
+            Fields::select('status', '状态')->options([
+                '' => '全部',
+                1 => '上架',
+                0 => '下架',
+            ]),
+            Fields::daterange('created_at', '创建时间')
+        )
+    )
+    ->table(
+        Tables::make('product-table')
+            ->selection()
+            ->dataUrl('/admin/product/list')
+            ->search('keyword', 'LIKE', 'name&code')
+            ->addColumns(
+                Tables::column('ID', 'id')->width(80),
+                Tables::column('商品名', 'name')->minWidth(200)->searchable('LIKE'),
+                Tables::column('状态', 'status')->tag([
+                    1 => ['label' => '上架', 'type' => 'success'],
+                    0 => ['label' => '下架', 'type' => 'danger'],
+                ])->searchable(),
+                Tables::column('创建时间', 'created_at')->datetime()->searchable('BETWEEN')
+            )
+            ->toolbar(
+                Actions::refresh(),
+                Actions::request('重建索引')
+                    ->post('/admin/product/rebuild-index')
+                    ->payload([
+                        'status' => '@filters.status',
+                    ])
+                    ->confirm('确认重建当前筛选结果的索引？')
+                    ->successMessage('索引重建任务已提交'),
+                Actions::create('普通新增', $normalDialog)
+            )
+            ->rowActions(
+                Actions::request('上架')
+                    ->post('/admin/product/publish')
+                    ->payload([
+                        'id' => '@row.id',
+                        'status' => 1,
+                    ])
+                    ->confirm('确认上架当前商品？')
+                    ->successMessage('上架成功')
+                    ->reloadTable()
+                    ->afterSuccess(
+                        JsExpression::make('(ctx) => console.log("publish ok", ctx.row, ctx.payload)')
+                    ),
+                Actions::edit('编辑', $normalDialog),
+                Actions::custom(
+                    '预览',
+                    JsExpression::make("openDialog('preview-product', scope.row)")
+                ),
+                Actions::custom(
+                    '复制链接',
+                    JsExpression::make(<<<'JS'
+(async () => {
+  if (!scope.row.share_url) {
+    ElementPlus.ElMessage.error('当前记录没有分享链接');
+    return;
+  }
+
+  await navigator.clipboard.writeText(String(scope.row.share_url));
+  ElementPlus.ElMessage.success('链接已复制');
+})()
+JS)
+                ),
+                Actions::delete()->confirm('确认删除当前商品？')
+            )
+    )
+    ->dialogs($previewDialog, $tipsDialog)
+    ->deleteUrl('/admin/product/delete');
+
+echo $page->toHtml();
+```
+
+## 编辑弹窗示例
+
+下面这个弹窗展示了“新建/编辑不同提交地址 + 编辑前加载详情”的典型配置：
+
+```php
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Dialogs;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+
+$editorDialog = Dialogs::make('editor', '编辑用户')
+    ->createUrl('/admin/user/create')
+    ->updateUrl('/admin/user/update')
+    ->load('/admin/user/detail')
+    ->loadPayload([
+        'id' => '@row.id',
+    ])
+    ->loadDataPath('data')
+    ->loadWhen('edit')
+    ->titleTemplate('编辑 {username}')
+    ->form(
+        Forms::make('user-editor')->addFields(
+            Fields::hidden('id'),
+            Fields::text('username', '用户名')->required(),
+            Fields::password('password', '密码')->minLength(6)
+        )
+    );
+```
+
+如果接口无论新建还是编辑都走同一个保存地址，也可以只写 `->saveUrl('/admin/user/save')`。
+
+## 非表单弹窗示例
+
+```php
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+use Sc\Util\HtmlStructureV2\Dsl\Dialogs;
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+$contentDialog = Dialogs::make('help', '操作说明')
+    ->content('<div style="line-height:1.8">这里放说明内容、富文本或自定义组件。</div>')
+    ->footer(
+        Actions::close('我知道了', 'help')->type('primary')
+    );
+
+$iframeDialog = Dialogs::make('preview', '页面预览')
+    ->width('88vw')
+    ->height('78vh')
+    ->iframe('/admin/user/preview', [
+        'id' => '@row.id',
+    ])
+    ->titleTemplate('预览 {username}')
+    ->beforeOpen(JsExpression::make('(ctx) => console.log("opening", ctx.row)'))
+    ->afterClose(JsExpression::make('(ctx) => console.log("closed", ctx.dialogKey)'));
+```
+
+## 表单页 / 自定义页弹窗
 
 ```php
 <?php
@@ -60,365 +319,355 @@ use Sc\Util\HtmlStructureV2\Dsl\Forms;
 use Sc\Util\HtmlStructureV2\Dsl\Pages;
 use Sc\Util\HtmlStructureV2\Dsl\Tables;
 
-$page = Pages::crud('用户管理')
-    ->description('V2 示例：搜索、表格、编辑弹窗都由页面 DSL 统一组织')
+$helpDialog = Dialogs::make('help', '帮助说明')
+    ->content('<div>这里是说明内容</div>');
+
+$editorDialog = Dialogs::make('editor', '编辑记录')
+    ->saveUrl('/admin/demo/save')
+    ->form(
+        Forms::make('demo-editor')->addFields(
+            Fields::hidden('id'),
+            Fields::text('name', '名称')->required()
+        )
+    );
+
+$formPage = Pages::form('系统设置')
     ->actions(
-        Actions::create('新建用户')
+        Actions::create($helpDialog)
     )
-    ->search(
-        Forms::make('user-search')->inline()->addFields(
-            Fields::text('keyword', '关键词')
-                ->placeholder('用户名 / 手机号')
-                ->searchField('username&mobile')
-                ->searchType('LIKE'),
-            Fields::daterange('created_at', '创建时间'),
-            Fields::select('status', '状态')->options([
-                '' => '全部',
-                1 => '启用',
-                0 => '禁用',
+    ->form(
+        Forms::make('settings')->addFields(
+            Fields::text('site_name', '站点名称')
+        )
+    );
+
+$customPage = Pages::custom('自定义页')
+    ->addSection(
+        Tables::make('demo-table')
+            ->selection()
+            ->rows([
+                ['id' => 1, 'name' => 'A'],
             ])
+            ->addColumns(
+                Tables::column('名称', 'name')
+            )
+            ->rowActions(
+                Actions::edit('编辑', 'editor')
+            )
+    )
+    ->dialogs($editorDialog);
+```
+
+## 标准 CRUD 页示例
+
+适合“一个列表 + 一个编辑弹窗”的标准后台页。
+
+```php
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+use Sc\Util\HtmlStructureV2\Dsl\Dialogs;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+use Sc\Util\HtmlStructureV2\Dsl\Pages;
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+$editorDialog = Dialogs::make('editor', '编辑用户')
+    ->saveUrl('/admin/user/save')
+    ->form(
+        Forms::make('user-editor')->addFields(
+            Fields::hidden('id'),
+            Fields::text('username', '用户名')->required(),
+            Fields::password('password', '密码')->minLength(6)
+        )
+    );
+
+$page = Pages::crud('用户管理')
+    ->actions(
+        Actions::create('新建用户', $editorDialog)
+    )
+    ->filters(
+        Forms::make('user-filters')->inline()->addFields(
+            Fields::text('keyword', '关键词')->placeholder('用户名 / 手机号')
         )
     )
     ->table(
         Tables::make('user-table')
             ->dataUrl('/admin/user/list')
-            ->toolbar(
-                Actions::refresh(),
-                Actions::create('新建用户')
-            )
+            ->search('keyword', 'LIKE', 'username&mobile')
             ->addColumns(
-                Tables::column('ID', 'id')->width(80),
-                Tables::column('用户名', 'username')->minWidth(160)->sortable(),
-                Tables::column('手机号', 'mobile')->minWidth(160),
-                Tables::column('状态', 'status')->width(100)->sortable('status')
+                Tables::column('用户名', 'username')->minWidth(180),
+                Tables::column('状态', 'status')->booleanTag('启用', '禁用')->searchable()
             )
             ->rowActions(
-                Actions::edit(),
+                Actions::edit($editorDialog),
                 Actions::delete()
             )
     )
-    ->editor(
-        Dialogs::make('editor', '编辑用户')->form(
-            Forms::make('user-editor')->addFields(
-                Fields::hidden('id'),
-                Fields::text('username', '用户名')
-                    ->required()
-                    ->lengthBetween(2, 20),
-                Fields::password('password', '登录密码')
-                    ->minLength(6),
-                Fields::text('mobile', '手机号')
-                    ->phone(),
-                Fields::radio('gender', '性别')->options([
-                    1 => '男',
-                    2 => '女',
-                ]),
-                Fields::checkbox('tags', '用户标签')->options([
-                    'vip' => 'VIP',
-                    'new' => '新客',
-                    'risk' => '风险关注',
-                ]),
-                Fields::number('sort', '排序')
-                    ->minValue(0)
-                    ->default(0),
-                Fields::cascader('region', '地区')->options([
-                    [
-                        'value' => 'zhejiang',
-                        'label' => '浙江省',
-                        'children' => [
-                            [
-                                'value' => 'hangzhou',
-                                'label' => '杭州市',
-                            ],
-                        ],
-                    ],
-                ]),
-                Fields::date('expire_date', '到期日期'),
-                Fields::image('cover', '封面')
-                    ->uploadUrl('/admin/upload/image')
-                    ->uploadResponsePath('data.url'),
-                Fields::select('department_id', '所属部门')
-                    ->remoteOptions('/admin/department/options', 'id', 'name'),
-                Fields::toggle('status', '状态')->default(true)
-            )
-        )
-    )
-    ->saveUrl('/admin/user/save')
     ->deleteUrl('/admin/user/delete');
 
 echo $page->toHtml();
 ```
 
-## 兼容性
+## 纯表单页示例
 
-- 现有 `V2::page()/V2::text()/V2::table()` 仍然可用。
-- 新代码建议优先使用 `Dsl\\Pages/Forms/Fields/Tables/Dialogs/Actions`，入口语义更清楚。
-
-## 已对齐的老接口约定
-
-- 远程列表查询兼容 `EasySearch`：
-  - `search[search]`
-  - `search[searchType]`
-  - `search[searchField]`
-  - `page`
-  - `pageSize`
-  - `order[field]`
-  - `order[order]`
-- 远程列表返回兼容常见结构：
-  - `{ code, data: { data: [], total } }`
-  - `{ code, data: { list: [], total } }`
-  - `{ code, data: { rows: [], total } }`
-  - `{ data: [] }`
-  - `{ rows: [] }`
-
-## 搜索和排序
-
-- 具备搜索能力的字段可以通过 `searchType()` 覆盖默认搜索类型。
-  - `text/textarea` 默认是 `LIKE`
-  - `daterange` 默认是 `BETWEEN`
-  - `select/radio` 默认是 `=`
-  - `checkbox` 默认是 `IN`
-- 具备搜索能力的字段可以通过 `searchField()` 把表单字段映射到真实查询字段。
-  - 例：`->searchField('username&mobile')`
-- `Column::sortable()` 会开启远程排序。
-- `Column::sortable('table.field')` 或 `->sortField('table.field')` 可以指定后端真实排序字段。
-
-## 表格列快捷展示
-
-- `Column::mapping()` 用于枚举值转文字。
-- `Column::tag()` 用于状态标签展示。
-- `Column::image()` 用于单图预览。
-- `Column::images()` 用于多图预览。
-- `Column::boolean()` 用于布尔值文字展示。
-- `Column::booleanTag()` 用于布尔值标签展示。
-- `Column::date()` / `Column::datetime()` 用于日期时间格式化展示。
-- `Column::placeholder()` 现在会对普通列和快捷展示列生效。
+适合系统设置、配置页、详情编辑页。页面头部请求动作同样可用。
 
 ```php
-V2::table('user-table')->addColumns(
-    V2::column('状态', 'status')->tag([
-        1 => ['label' => '启用', 'type' => 'success'],
-        0 => ['label' => '禁用', 'type' => 'danger'],
-    ]),
-    V2::column('来源', 'source')->mapping([
-        'manual' => '人工创建',
-        'api' => '接口同步',
-    ]),
-    V2::column('已实名', 'verified')->boolean('已实名', '未实名'),
-    V2::column('启用状态', 'enabled')->booleanTag('启用', '停用'),
-    V2::column('创建时间', 'created_at')->datetime(),
-    V2::column('到期日期', 'expire_date')->date(),
-    V2::column('头像', 'avatar')->image(56, 56),
-    V2::column('相册', 'albums')->images(3, 'url', 56, 56)
-);
-```
+<?php
 
-## 新增字段类型
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+use Sc\Util\HtmlStructureV2\Dsl\Pages;
 
-- `V2::password()` 会渲染为 `el-input type=password`
-- `V2::number()` 会渲染为 `el-input-number`
-- `V2::radio()` 会渲染为 `el-radio-group`
-- `V2::checkbox()` 会渲染为 `el-checkbox-group`
-- `V2::cascader()` 会渲染为 `el-cascader`
-- `V2::date()` 会渲染为 `el-date-picker type=date`
-- `V2::datetime()` 会渲染为 `el-date-picker type=datetime`
-- `V2::daterange()` 会渲染为 `el-date-picker type=daterange`
-- `V2::upload()` 会渲染为 `el-upload`
-- `V2::image()` 是图片上传快捷写法，默认 `picture-card`
-
-```php
-V2::password('password', '密码')
-    ->required()
-    ->minLength(6);
-
-V2::radio('status', '状态')->options([
-    1 => '启用',
-    0 => '禁用',
-]);
-
-V2::checkbox('permissions', '权限')->options([
-    'article.create' => '文章创建',
-    'article.publish' => '文章发布',
-]);
-
-V2::cascader('region', '地区')->options([
-    [
-        'value' => 'zhejiang',
-        'label' => '浙江省',
-        'children' => [
-            ['value' => 'hangzhou', 'label' => '杭州市'],
-        ],
-    ],
-]);
-
-V2::number('sort', '排序')->minValue(0)->maxValue(999)->step(1);
-
-V2::date('publish_date', '发布日期');
-
-V2::datetime('published_at', '发布时间')
-    ->valueFormat('YYYY-MM-DD HH:mm:ss');
-
-V2::daterange('created_at', '创建时间');
-```
-
-## 上传字段
-
-- `V2::upload()` 用于附件上传。
-- `V2::image()` 用于图片上传，默认会切到 `picture-card`。
-- 常用链式配置：
-  - `->uploadUrl('/admin/upload/file')`
-  - `->uploadMultiple()`
-  - `->uploadLimit(3)`
-  - `->uploadAccept('image/*')`
-  - `->uploadResponsePath('data.url')`
-  - `->uploadButtonText('上传附件')`
-  - `->uploadTip('建议上传 jpg/png')`
-- 当前默认把上传成功后的值回填成字符串 URL，或字符串 URL 数组。
-- 如果后端返回不是常见的 `data.url / data.data.url / url / path` 结构，需要显式指定 `uploadResponsePath()`。
-
-```php
-V2::image('cover', '封面')
-    ->uploadUrl('/admin/upload/image')
-    ->uploadResponsePath('data.url')
-    ->uploadTip('建议上传 750x420');
-
-V2::upload('attachments', '附件')
-    ->uploadUrl('/admin/upload/file')
-    ->uploadMultiple()
-    ->uploadLimit(3)
-    ->uploadButtonText('上传附件');
-```
-
-## 普通页面表单
-
-- 现在 `AdminPage + Form` 场景也支持：
-  - 远程下拉
-  - 表单校验
-  - 上传字段
-- 不再局限于 `CrudPage`。
-
-```php
-$page = V2::page('系统设置')
-    ->addSection(
-        V2::form('setting-form')->addFields(
-            V2::text('site_name', '站点名称')->required(),
-            V2::select('role_id', '默认角色')
+$page = Pages::form('系统设置')
+    ->actions(
+        Actions::request('清理缓存')
+            ->post('/admin/system/clear-cache')
+            ->confirm('确认清理系统缓存？')
+            ->successMessage('缓存已清理')
+    )
+    ->form(
+        Forms::make('setting-form')->addFields(
+            Fields::text('site_name', '站点名称')->required(),
+            Fields::select('role_id', '默认角色')
                 ->remoteOptions('/admin/role/options', 'id', 'title'),
-            V2::image('logo', '站点 Logo')
+            Fields::image('logo', '站点 Logo')
                 ->uploadUrl('/admin/upload/image')
                 ->uploadResponsePath('data.url')
         )
     );
+
+echo $page->toHtml();
 ```
 
-## 表单校验和远程选项
+## 自定义页面示例
 
-- 具备校验能力的字段可以通过 `required()` 自动补充 Element Plus 校验规则。
-- 还可以继续叠加：
-  - `->rule([...])`
-- 文本字段额外支持：
-  - `->email()`
-  - `->phone()`
-  - `->pattern('/^SC\\d+$/')`
-  - `->minLength(2)`
-  - `->maxLength(30)`
-  - `->lengthBetween(2, 20)`
-- `OptionField::remoteOptions($url, $valueField, $labelField, $params)` 用来声明远程下拉。
-  - 页面加载时会拉取搜索表单的远程选项。
-  - 打开编辑弹窗时会拉取弹窗表单的远程选项。
-  - 已内置选项 loading 状态。
+适合需要手工拼多个区块，但又不属于标准 `form/list/crud` 的页面。
 
 ```php
-V2::select('role_id', '角色')
-    ->required()
-    ->remoteOptions('/admin/role/options', 'id', 'title', [
-        'status' => 1,
-    ]);
+<?php
 
-V2::radio('status', '状态')
-    ->remoteOptions('/admin/status/options', 'value', 'label');
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+use Sc\Util\HtmlStructureV2\Dsl\Pages;
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
 
-V2::checkbox('role_ids', '角色')
-    ->remoteOptions('/admin/role/options', 'id', 'title');
+$page = Pages::custom('运营看板')
+    ->addSection(
+        Forms::make('quick-form')->addFields(
+            Fields::text('keyword', '关键词')
+        )
+    )
+    ->addSection(
+        Tables::make('summary-table')->rows([
+            ['name' => '今日注册', 'value' => 18],
+            ['name' => '今日付费', 'value' => 3],
+        ])->addColumns(
+            Tables::column('指标', 'name'),
+            Tables::column('值', 'value')
+        )
+    );
 
-V2::cascader('region', '地区')
-    ->remoteOptions('/admin/region/tree', 'value', 'label');
+echo $page->toHtml();
 ```
 
-## Cascader 常用配置
+## 动作系统
 
-- `CascaderField::cascaderProps([...])` 用来透传 `el-cascader` 的 `props`。
-- `CascaderField::emitPath(false)` 可以只返回最后一级值。
-- `CascaderField::checkStrictly()` 可以开启父子节点不关联选择。
-- 如果开启 `multiple`，V2 会自动把默认值处理成空数组。
+当前动作建议分三类使用：
+
+- `create/edit/submit/close`：弹窗动作，推荐直接传 `Dialog`
+- `request`：结构化异步请求动作，优先使用
+- `custom`：原生 JS 兜底，只在确实无法抽象时使用
+
+### 弹窗动作推荐写法
+
+推荐直接把 `Dialog` 交给 `Actions::create()/edit()`，页面会自动注册：
 
 ```php
-V2::cascader('region_codes', '地区')
-    ->cascaderProps([
-        'multiple' => true,
-        'value' => 'id',
-        'label' => 'name',
-        'children' => 'children',
-    ])
-    ->emitPath(false)
-    ->checkStrictly();
+$editorDialog = Dialogs::make('editor', '编辑用户')
+    ->saveUrl('/admin/user/save')
+    ->form(...);
+
+Actions::create('新建用户', $editorDialog)
+Actions::edit($editorDialog)
 ```
 
-## 条件显示和字段联动
+也就是说：
 
-- `Field::visibleWhen()` 用来控制字段显示。
-- `Field::disabledWhen()` 用来控制字段禁用。
-- 表达式里的 `model` 会自动映射到当前表单模型，所以 CRUD 搜索、弹窗、普通页面表单都能复用同一套写法。
-- 远程下拉参数里可以直接用 `@字段名` 读取当前表单值。
-- `OptionField::linkageUpdate()` 可以把当前选中项的 `label` 或其他字段自动回填到表单里的其他字段。
-- 如果只是想声明“上游字段变化后重新拉取”，也可以显式加 `->remoteOptionsDependsOn(...)`。
-- 下游字段默认会在依赖变化时清空当前值；如果不想清空，可以 `->remoteOptionsClearOnChange(false)`。
-- 联动回填默认在源字段清空时一并清空目标字段；如果不想清空，可以 `->linkageClearOnEmpty(false)`。
+- 写页面时，动作和弹窗定义可以放在一起
+- 页面内部仍然按 dialog key 建 runtime 配置
+- 同一个 dialog 可以被多个 action 复用
+
+### 显式注册 `dialogs()`
+
+只有在这些场景，再单独写 `dialogs()`：
+
+- 想把 dialog 定义集中管理
+- action 只想引用 key，不想直接持有 `Dialog`
+- 想复用旧式 `editor/create-normal` 这类命名约定
 
 ```php
-V2::select('auth_type', '认证类型')->options([
-    'person' => '个人',
-    'company' => '企业',
-]);
+$editorDialog = Dialogs::make('editor', '编辑用户')->saveUrl('/admin/user/save')->form(...);
 
-V2::text('company_name', '企业名称')
-    ->visibleWhen("model.auth_type === 'company'")
-    ->required();
-
-V2::text('credit_code', '统一信用代码')
-    ->visibleWhen("model.auth_type === 'company'")
-    ->disabledWhen("model.status === 1");
-
-V2::select('province_id', '省份')
-    ->remoteOptions('/admin/region/provinces', 'id', 'name');
-
-V2::select('city_id', '城市')
-    ->remoteOptions('/admin/region/cities', 'id', 'name', [
-        'province_id' => '@province_id',
-    ])
-    ->linkageUpdate('city_name', '@label');
-
-V2::select('district_id', '区县')
-    ->remoteOptions('/admin/region/districts', 'id', 'name', [
-        'city_id' => '@city_id',
-    ])
-    ->remoteOptionsDependsOn('city_id');
-
-V2::select('manager_id', '负责人')
-    ->remoteOptions('/admin/user/options', 'id', 'name')
-    ->linkageUpdates([
-        'manager_name' => '@label',
-        'manager_mobile' => '@mobile',
-        'manager_desc' => '@label（@mobile）',
-    ]);
+$page = Pages::list('用户列表')
+    ->dialogs($editorDialog)
+    ->actions(
+        Actions::create('新建用户', 'editor')
+    )
+    ->table(
+        Tables::make('user-table')->rowActions(
+            Actions::edit('编辑', 'editor')
+        )
+    );
 ```
 
-## 当前范围
+### 结构化请求动作
 
-- 已完成：页面级 CRUD 骨架、显式 `RenderContext`、自维护 `Document`、Element Plus 主题、基础资源注入、搜索/排序/分页、表单校验、远程下拉、上传字段、密码/单选/多选/级联字段、保存/删除反馈、基础条件显示、下拉联动刷新、选中项自动回填、表格列快捷展示、日期/布尔列格式化。
-- 暂未覆盖：旧版 `HtmlStructure` 的全部表单项、更复杂联动规则、导入导出、窗口系统、多主题完整对齐。
+`Actions::request()` 当前支持这些能力：
 
-## 迁移建议
+- `->get('/url')`
+- `->post('/url')`
+- `->put('/url')`
+- `->patch('/url')`
+- `->request('/url', 'delete')`
+- `->payload([...])`
+- `->confirm('确认消息')`
+- `->loadingText('处理中...')`
+- `->successMessage('操作成功')`
+- `->errorMessage('操作失败')`
+- `->reloadTable()`
+- `->reloadPage()`
+- `->dialog('editor')->closeAfterSuccess()`
+- `->before(...)`
+- `->afterSuccess(...)`
+- `->afterFail(...)`
+- `->afterFinally(...)`
 
-1. 新页面直接尝试使用 `HtmlStructureV2`。
-2. 先迁移最重复的“列表页 + 搜索 + 编辑弹窗”。
-3. 复杂组件保留旧版，等 V2 主题能力稳定后再逐步补齐。
+### 请求动作上下文取值
+
+`payload()` 里可以直接写这些 token：
+
+- `@row.id`
+- `@filters.keyword`
+- `@filters.status`
+- `@dialogs.create-normal.name`
+- `@forms.setting-form.site_name`
+
+例如：
+
+```php
+Actions::request('上架')
+    ->post('/admin/product/publish')
+    ->payload([
+        'id' => '@row.id',
+        'keyword' => '@filters.keyword',
+    ])
+    ->reloadTable();
+```
+
+### 请求动作自定义钩子
+
+`before/afterSuccess/afterFail/afterFinally` 接收 `JsExpression`，推荐写成函数：
+
+```php
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+Actions::request('同步')
+    ->post('/admin/product/sync')
+    ->afterSuccess(
+        JsExpression::make('(ctx) => console.log(ctx.row, ctx.payload)')
+    );
+```
+
+钩子里常用上下文：
+
+- `ctx.row`
+- `ctx.filters`
+- `ctx.dialogs`
+- `ctx.forms`
+- `ctx.payload`
+- `ctx.error`
+- `ctx.request`
+- `ctx.vm`
+
+### 原生 JS 兜底
+
+确实没法抽象时，再用 `Actions::custom()`：
+
+```php
+Actions::custom(
+    '复制链接',
+    JsExpression::make(<<<'JS'
+(async () => {
+  await navigator.clipboard.writeText(String(scope.row.share_url || ''));
+  ElementPlus.ElMessage.success('链接已复制');
+})()
+JS)
+)->confirm('确认复制当前链接？');
+```
+
+这条通道是 escape hatch，不建议作为主路径。
+
+## 筛选和排序
+
+- `filters(Form)` 只描述筛选输入 UI
+- `Table::searchSchema()` 适合显式定义完整筛选协议
+- `Table::search($name, $type, $field)` 适合逐项追加筛选定义
+- `Column::searchable()` 适合同名字段的快捷声明
+- `Column::searchable('LIKE', 'table.field')` 可以映射后端真实字段
+- `Column::sortable()` 开启远程排序
+- `Column::sortable('table.field')` 可以映射后端真实排序字段
+
+## 字段能力分层
+
+- `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
+- `Fields::text()`、`Fields::textarea()`、`Fields::password()` 才暴露文本校验快捷方法
+- `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
+- `Fields::cascader()` 才暴露 `cascaderProps()`、`emitPath()`、`checkStrictly()`
+- `Fields::upload()`、`Fields::image()` 才暴露上传相关方法
+- `Fields::number()` 才暴露 `minValue()`、`maxValue()`、`step()`、`precision()`
+- `Fields::date()`、`Fields::datetime()`、`Fields::daterange()` 才暴露 `format()`、`valueFormat()`
+
+## 表格列展示能力
+
+- `Column::mapping()` 枚举值转文字
+- `Column::tag()` 状态标签
+- `Column::image()` 单图预览
+- `Column::images()` 多图预览
+- `Column::boolean()` 布尔文案
+- `Column::booleanTag()` 布尔标签
+- `Column::date()`、`Column::datetime()` 日期格式化
+- `Column::placeholder()` 空值占位
+
+## 远程筛选协议
+
+默认输出以下查询结构：
+
+- `search[search]`
+- `search[searchType]`
+- `search[searchField]`
+- `page`
+- `pageSize`
+- `order[field]`
+- `order[order]`
+
+## 远程列表返回结构
+
+支持以下常见结构：
+
+- `{ code, data: { data: [], total } }`
+- `{ code, data: { list: [], total } }`
+- `{ code, data: { rows: [], total } }`
+- `{ data: [] }`
+- `{ rows: [] }`
+
+## 运行时脚本
+
+- 列表页运行时拆在 `Theme/ElementPlusAdmin/Runtime/scripts/list/`
+- 普通表单运行时拆在 `Theme/ElementPlusAdmin/Runtime/scripts/simple/`
+- 结构化请求动作 runtime 在 `request-action-factory.js`
+- 公共 helper 在 `runtime-helpers.js`
+- 公共表单 runtime 工厂在 `form-runtime-factory.js`
+- PHP 侧通过读取这些文件内容再内联输出，JS 维护和排查比直接塞 heredoc 清楚很多

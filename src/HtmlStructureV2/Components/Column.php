@@ -19,6 +19,7 @@ final class Column
     private ?string $sortField = null;
     private ?string $format = null;
     private ?array $display = null;
+    private ?array $search = null;
     private string $placeholder = '-';
 
     public function __construct(
@@ -71,6 +72,37 @@ final class Column
     {
         $this->sortField = $sortField;
         $this->sortable = true;
+
+        return $this;
+    }
+
+    public function searchable(string|bool $searchable = true, ?string $field = null): self
+    {
+        if ($searchable === false) {
+            $this->search = null;
+
+            return $this;
+        }
+
+        $this->search ??= [];
+        $this->search['type'] = is_string($searchable) ? strtoupper($searchable) : '=';
+        $this->search['field'] = $field ?: $this->prop;
+
+        return $this;
+    }
+
+    public function searchType(string $type): self
+    {
+        $this->search ??= [];
+        $this->search['type'] = strtoupper($type);
+
+        return $this;
+    }
+
+    public function searchField(string $field): self
+    {
+        $this->search ??= [];
+        $this->search['field'] = $field;
 
         return $this;
     }
@@ -250,6 +282,23 @@ final class Column
     public function getDisplay(): ?array
     {
         return $this->display;
+    }
+
+    public function isSearchable(): bool
+    {
+        return $this->search !== null;
+    }
+
+    public function getSearchConfig(): ?array
+    {
+        if ($this->search === null) {
+            return null;
+        }
+
+        return [
+            'type' => strtoupper((string)($this->search['type'] ?? '=')),
+            'field' => $this->search['field'] ?? $this->prop,
+        ];
     }
 
     public function getSortField(): ?string

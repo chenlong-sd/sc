@@ -22,6 +22,8 @@ final class Table implements Renderable
     private bool $stripe = true;
     private bool $border = true;
     private string $emptyText = '暂无数据';
+    private bool $selection = false;
+    private array $searchSchema = [];
 
     public function __construct(
         private readonly string $key
@@ -71,6 +73,29 @@ final class Table implements Renderable
         return $this->dataSource(UrlDataSource::make($url, $query));
     }
 
+    public function search(string $name, string $type = '=', ?string $field = null): self
+    {
+        $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, [
+            'type' => $type,
+            'field' => $field,
+        ]);
+
+        return $this;
+    }
+
+    public function searchSchema(array $schema): self
+    {
+        foreach ($schema as $name => $config) {
+            if (!is_string($name) || $name === '') {
+                continue;
+            }
+
+            $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, $config);
+        }
+
+        return $this;
+    }
+
     public function pagination(bool $pagination = true): self
     {
         $this->pagination = $pagination;
@@ -109,6 +134,13 @@ final class Table implements Renderable
     public function emptyText(string $emptyText): self
     {
         $this->emptyText = $emptyText;
+
+        return $this;
+    }
+
+    public function selection(bool $selection = true): self
+    {
+        $this->selection = $selection;
 
         return $this;
     }
@@ -171,5 +203,57 @@ final class Table implements Renderable
     public function getEmptyText(): string
     {
         return $this->emptyText;
+    }
+
+    public function hasSelection(): bool
+    {
+        return $this->selection;
+    }
+
+    public function getSearchSchema(): array
+    {
+        return array_replace(
+            $this->buildColumnSearchSchema(),
+            $this->searchSchema
+        );
+    }
+
+    private function buildColumnSearchSchema(): array
+    {
+        $schema = [];
+
+        foreach ($this->columns as $column) {
+            if (!$column->isSearchable()) {
+                continue;
+            }
+
+            $schema[$column->prop()] = $this->normalizeSearchSchemaItem(
+                $column->prop(),
+                $column->getSearchConfig() ?? []
+            );
+        }
+
+        return $schema;
+    }
+
+    private function normalizeSearchSchemaItem(string $name, mixed $config): array
+    {
+        if (is_string($config)) {
+            $config = ['type' => $config];
+        }
+
+        if (!is_array($config)) {
+            $config = [];
+        }
+
+        $type = strtoupper((string)($config['type'] ?? '='));
+        $field = $config['field'] ?? null;
+
+        $item = ['type' => $type];
+        if (is_string($field) && $field !== '') {
+            $item['field'] = $field;
+        }
+
+        return $item;
     }
 }

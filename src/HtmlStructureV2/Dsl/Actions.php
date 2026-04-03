@@ -3,6 +3,8 @@
 namespace Sc\Util\HtmlStructureV2\Dsl;
 
 use Sc\Util\HtmlStructureV2\Components\Action;
+use Sc\Util\HtmlStructureV2\Components\Dialog;
+use Sc\Util\HtmlStructureV2\Components\RequestAction;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 final class Actions
@@ -12,14 +14,14 @@ final class Actions
         return Action::make($label);
     }
 
-    public static function create(string $label = '新建', string $dialog = 'editor'): Action
+    public static function create(string|Dialog $labelOrDialog = '新建', string|Dialog|null $dialog = null): Action
     {
-        return Action::create($label, $dialog);
+        return Action::create($labelOrDialog, $dialog);
     }
 
-    public static function edit(string $label = '编辑', string $dialog = 'editor'): Action
+    public static function edit(string|Dialog $labelOrDialog = '编辑', string|Dialog|null $dialog = null): Action
     {
-        return Action::edit($label, $dialog);
+        return Action::edit($labelOrDialog, $dialog);
     }
 
     public static function delete(string $label = '删除'): Action
@@ -30,6 +32,11 @@ final class Actions
     public static function refresh(string $label = '刷新'): Action
     {
         return Action::refresh($label);
+    }
+
+    public static function request(string $label): RequestAction
+    {
+        return RequestAction::make($label);
     }
 
     public static function submit(string $label = '保存', string $dialog = 'editor'): Action

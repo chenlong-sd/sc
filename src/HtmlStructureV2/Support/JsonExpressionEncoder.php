@@ -8,9 +8,23 @@ final class JsonExpressionEncoder
 
     public static function encode(mixed $data): string
     {
+        return self::encodeInternal($data, true);
+    }
+
+    public static function encodeCompact(mixed $data): string
+    {
+        return self::encodeInternal($data, false);
+    }
+
+    private static function encodeInternal(mixed $data, bool $pretty): string
+    {
         $expressions = [];
         $normalized = self::normalize($data, $expressions);
-        $json = json_encode($normalized, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        $flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        if ($pretty) {
+            $flags |= JSON_PRETTY_PRINT;
+        }
+        $json = json_encode($normalized, $flags);
 
         return preg_replace_callback(
             '/"' . self::PLACEHOLDER . '(\d+)' . self::PLACEHOLDER . '"/',

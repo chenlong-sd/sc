@@ -5,7 +5,6 @@ namespace Sc\Util\HtmlStructureV2\Components;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
-use Sc\Util\HtmlStructureV2\Contracts\Fields\SearchableFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
@@ -172,23 +171,6 @@ final class Form implements Renderable
             }
 
             $schema[$field->name()] = $field->getLinkageConfig() ?? [];
-        }
-
-        return $schema;
-    }
-
-    public function searchSchema(): array
-    {
-        $schema = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof SearchableFieldInterface) {
-                continue;
-            }
-
-            $schema[$field->name()] = [
-                'type' => $field->getSearchType(),
-                'field' => $field->getSearchField(),
-            ];
         }
 
         return $schema;

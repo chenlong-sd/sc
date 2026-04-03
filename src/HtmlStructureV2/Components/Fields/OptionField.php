@@ -3,19 +3,16 @@
 namespace Sc\Util\HtmlStructureV2\Components\Fields;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasPlaceholder;
-use Sc\Util\HtmlStructureV2\Components\Concerns\HasSearch;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasValidation;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
-use Sc\Util\HtmlStructureV2\Contracts\Fields\SearchableFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
-class OptionField extends Field implements PlaceholderFieldInterface, SearchableFieldInterface, ValidatableFieldInterface
+class OptionField extends Field implements PlaceholderFieldInterface, ValidatableFieldInterface
 {
     use HasPlaceholder;
-    use HasSearch;
     use HasValidation;
 
     protected array $options = [];
@@ -191,12 +188,6 @@ class OptionField extends Field implements PlaceholderFieldInterface, Searchable
     {
         return 'change';
     }
-
-    protected function defaultSearchType(): string
-    {
-        return $this->type() === FieldType::CHECKBOX ? 'IN' : '=';
-    }
-
     private function getRemoteOptionDependencies(): array
     {
         $dependencies = $this->remoteOptionDependencies;

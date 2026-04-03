@@ -89,8 +89,7 @@ final class Fields
             ->valueFormat('YYYY-MM-DD')
             ->prop('range-separator', '至')
             ->prop('start-placeholder', '开始日期')
-            ->prop('end-placeholder', '结束日期')
-            ->searchType('BETWEEN');
+            ->prop('end-placeholder', '结束日期');
     }
 
     public static function toggle(string $name, ?string $label = null): BasicField

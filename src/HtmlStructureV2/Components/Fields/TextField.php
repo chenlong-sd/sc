@@ -3,19 +3,16 @@
 namespace Sc\Util\HtmlStructureV2\Components\Fields;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasPlaceholder;
-use Sc\Util\HtmlStructureV2\Components\Concerns\HasSearch;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasValidation;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
-use Sc\Util\HtmlStructureV2\Contracts\Fields\SearchableFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
-class TextField extends Field implements PlaceholderFieldInterface, SearchableFieldInterface, ValidatableFieldInterface
+class TextField extends Field implements PlaceholderFieldInterface, ValidatableFieldInterface
 {
     use HasPlaceholder;
-    use HasSearch;
     use HasValidation;
 
     public function __construct(string $name, string $label, FieldType $type = FieldType::TEXT)
@@ -76,12 +73,5 @@ class TextField extends Field implements PlaceholderFieldInterface, SearchableFi
             'message' => $message ?: $this->label() . '长度需在 ' . $min . ' 到 ' . $max . ' 之间',
             'trigger' => $this->normalizeTrigger($trigger),
         ]);
-    }
-
-    protected function defaultSearchType(): string
-    {
-        return in_array($this->type(), [FieldType::TEXT, FieldType::TEXTAREA], true)
-            ? 'LIKE'
-            : '=';
     }
 }
