@@ -133,6 +133,23 @@
               disabled: item.disabled === true
             });
           };
+          const buildOptionState = (configs) => {
+            const state = {};
+            Object.keys(configs || {}).forEach((fieldName) => {
+              const fieldCfg = configs[fieldName] || {};
+              state[fieldName] = Array.isArray(fieldCfg.initialOptions)
+                ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
+                : [];
+            });
+            return state;
+          };
+          const buildFlagState = (configs, initialValue = false) => {
+            const state = {};
+            Object.keys(configs || {}).forEach((fieldName) => {
+              state[fieldName] = initialValue;
+            });
+            return state;
+          };
           const normalizeDependencies = (fieldCfg) => {
             return Array.from(new Set(
               Array.isArray(fieldCfg?.dependencies)
@@ -160,6 +177,21 @@
 
             return query;
           };
+          const dialogScopePrefix = 'dialog:';
+          const toDialogScope = (dialogKey) => {
+            const normalized = String(dialogKey || '').trim();
+            return normalized === '' ? dialogScopePrefix : (dialogScopePrefix + normalized);
+          };
+          const isDialogScope = (scope) => {
+            return typeof scope === 'string' && scope.startsWith(dialogScopePrefix);
+          };
+          const resolveDialogKeyFromScope = (scope) => {
+            if (!isDialogScope(scope)) {
+              return null;
+            }
+
+            return scope.slice(dialogScopePrefix.length) || null;
+          };
           const resolveContextToken = (token, context) => {
             const path = String(token || '').replace(/^@/, '');
             if (path === '') {
@@ -167,6 +199,11 @@
             }
 
             return getByPath(context, path);
+          };
+          const tokenPatternSource = '@[A-Za-z0-9_.$:-]+';
+          const fullTokenPattern = new RegExp('^' + tokenPatternSource + '$');
+          const replaceTokens = (value, resolver) => {
+            return String(value).replace(new RegExp(tokenPatternSource, 'g'), resolver);
           };
           const resolveContextValue = (value, context) => {
             if (typeof value === 'function') {
@@ -186,7 +223,7 @@
             }
 
             if (typeof value === 'string') {
-              if (/^@[\w.]+$/.test(value)) {
+              if (fullTokenPattern.test(value)) {
                 return resolveContextToken(value, context);
               }
 
@@ -194,7 +231,7 @@
                 return value;
               }
 
-              return value.replace(/@[\w.]+/g, (token) => {
+              return replaceTokens(value, (token) => {
                 const resolved = resolveContextToken(token, context);
                 return resolved === null || resolved === undefined ? '' : String(resolved);
               });
@@ -281,11 +318,11 @@
             if (typeof template !== 'string') {
               return template;
             }
-            if (/^@[\w.]+$/.test(template)) {
+            if (fullTokenPattern.test(template)) {
               return resolveLinkageToken(template, context);
             }
 
-            return template.replace(/@[\w.]+/g, (token) => {
+            return replaceTokens(template, (token) => {
               const value = resolveLinkageToken(token, context);
               return value === null || value === undefined ? '' : String(value);
             });
@@ -377,6 +414,107 @@
 
             return fieldCfg?.multiple ? files : files.slice(0, 1);
           };
+          const buildUploadFileState = (configs, model) => {
+            const state = {};
+            Object.keys(configs || {}).forEach((fieldName) => {
+              state[fieldName] = normalizeUploadFiles(getByPath(model, fieldName), configs[fieldName] || {});
+            });
+            return state;
+          };
+          const getConfigState = (vm, config, varKey, pathKey, initialize = false, fallback = {}) => {
+            const varName = config?.[varKey];
+            if (typeof varName === 'string' && varName !== '') {
+              if (initialize && (vm[varName] === undefined || vm[varName] === null)) {
+                vm[varName] = {};
+              }
+              return vm[varName] ?? fallback;
+            }
+
+            const path = Array.isArray(config?.[pathKey]) ? config[pathKey].filter((segment) => segment !== '') : [];
+            if (path.length === 0) {
+              return fallback;
+            }
+
+            let current = vm;
+            for (let index = 0; index < path.length; index += 1) {
+              const segment = path[index];
+              if (current == null || (typeof current !== 'object' && !Array.isArray(current))) {
+                return fallback;
+              }
+
+              if (initialize && (current[segment] === undefined || current[segment] === null)) {
+                current[segment] = {};
+              }
+
+              if (current[segment] === undefined || current[segment] === null) {
+                return fallback;
+              }
+
+              current = current[segment];
+            }
+
+            return current ?? fallback;
+          };
+          const buildFormsContext = (vm, forms = {}) => {
+            const context = {};
+
+            Object.keys(forms || {}).forEach((scope) => {
+              context[scope] = getConfigState(vm, forms[scope] || {}, 'modelVar', 'modelPath');
+            });
+
+            return context;
+          };
+          const initializeConfiguredForms = (forms = {}, handlers = {}) => {
+            Object.keys(forms || {}).forEach((scope) => {
+              const formCfg = forms[scope] || {};
+
+              if (formCfg.registerDependenciesOnMount) {
+                handlers.registerDependencies?.(scope, formCfg);
+              }
+              if (formCfg.initializeOptionsOnMount) {
+                handlers.initializeOptions?.(scope, formCfg);
+              }
+              if (formCfg.initializeUploadsOnMount) {
+                handlers.initializeUploads?.(scope, formCfg);
+              }
+            });
+          };
+          const buildDialogState = (dialogs, factory) => {
+            const state = {};
+            Object.keys(dialogs || {}).forEach((dialogKey) => {
+              state[dialogKey] = factory(dialogs[dialogKey] || {}, dialogKey);
+            });
+            return state;
+          };
+          const buildDialogTitleState = (dialogs) => {
+            const state = {};
+            Object.keys(dialogs || {}).forEach((dialogKey) => {
+              state[dialogKey] = dialogs[dialogKey]?.title || '';
+            });
+            return state;
+          };
+          const buildManagedDialogRuntimeState = (dialogs = {}, forms = {}) => {
+            const getDialogFormConfig = (dialogKey) => forms?.[toDialogScope(dialogKey)] || {};
+
+            return {
+            dialogForms: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
+            dialogInitials: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
+            dialogRules: buildDialogState(dialogs, (_, dialogKey) => getDialogFormConfig(dialogKey).rules || {}),
+            dialogOptions: buildDialogState(dialogs, (_, dialogKey) => buildOptionState(getDialogFormConfig(dialogKey).remoteOptions || {})),
+            dialogOptionLoading: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(getDialogFormConfig(dialogKey).remoteOptions || {})),
+            dialogOptionLoaded: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(getDialogFormConfig(dialogKey).remoteOptions || {})),
+            dialogUploadFiles: buildDialogState(dialogs, (_, dialogKey) => buildUploadFileState(getDialogFormConfig(dialogKey).uploads || {}, getDialogFormConfig(dialogKey).defaults || {})),
+            dialogVisible: buildDialogState(dialogs, () => false),
+            dialogMode: buildDialogState(dialogs, () => 'create'),
+            dialogRows: buildDialogState(dialogs, () => null),
+            dialogLoading: buildDialogState(dialogs, () => false),
+            dialogSubmitting: buildDialogState(dialogs, () => false),
+            dialogTitles: buildDialogTitleState(dialogs),
+            dialogIframeUrls: buildDialogState(dialogs, () => ''),
+            dialogComponentProps: buildDialogState(dialogs, () => ({})),
+            dialogFullscreen: buildDialogState(dialogs, (dialogCfg) => !!dialogCfg.fullscreen),
+          };
+          };
           const syncUploadModelValue = (model, fieldName, fieldCfg, files) => {
             const normalized = normalizeUploadFiles(files, fieldCfg);
             const values = normalized
@@ -389,14 +527,27 @@
           };
 
           return {
+            dialogScopePrefix,
+            isDialogScope,
+            resolveDialogKeyFromScope,
+            toDialogScope,
+            buildDialogState,
+            buildDialogTitleState,
+            buildFlagState,
+            buildFormsContext,
+            buildManagedDialogRuntimeState,
+            buildOptionState,
+            buildUploadFileState,
             buildUrlWithQuery,
             callHook,
             clone,
             ensureSuccess,
             extractFileName,
             extractPayload,
+            getConfigState,
             getByPath,
             hasReadyDependencies,
+            initializeConfiguredForms,
             isBlank,
             isObject,
             isRowArray,

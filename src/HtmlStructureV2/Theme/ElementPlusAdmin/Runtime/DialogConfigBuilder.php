@@ -15,17 +15,19 @@ final class DialogConfigBuilder
                 continue;
             }
 
-            $form = $dialog->getForm();
             $config[$dialog->key()] = [
                 'title' => $dialog->title(),
                 'titleTemplate' => $dialog->getTitleTemplate(),
                 'type' => $dialog->bodyType(),
-                'defaults' => $form?->defaults() ?? [],
-                'rules' => $form?->rules() ?? [],
-                'remoteOptions' => $form?->remoteOptions() ?? [],
-                'selectOptions' => $form?->selectOptions() ?? [],
-                'linkages' => $form?->linkages() ?? [],
-                'uploads' => $form?->uploads() ?? [],
+                'fullscreen' => $dialog->isFullscreen(),
+                'context' => $dialog->getContextData(),
+                'component' => $dialog->getComponentName() ? [
+                    'name' => $dialog->getComponentName(),
+                    'props' => $dialog->getComponentProps(),
+                    'attrs' => $dialog->getComponentAttrs(),
+                    'openMethod' => $dialog->getComponentOpenMethod(),
+                    'closeMethod' => $dialog->getComponentCloseMethod(),
+                ] : null,
                 'saveUrl' => $dialog->getSaveUrl(),
                 'createUrl' => $dialog->getCreateUrl(),
                 'updateUrl' => $dialog->getUpdateUrl(),
@@ -39,6 +41,8 @@ final class DialogConfigBuilder
                 'iframe' => $dialog->getIframeUrl() ? [
                     'url' => $dialog->getIframeUrl(),
                     'query' => $dialog->getIframeQuery() ?? [],
+                    'host' => $dialog->isIframeHostEnabled(),
+                    'fullscreenToggle' => $dialog->hasIframeFullscreenToggle(),
                 ] : null,
                 'beforeOpen' => $dialog->getBeforeOpenHook(),
                 'afterOpen' => $dialog->getAfterOpenHook(),

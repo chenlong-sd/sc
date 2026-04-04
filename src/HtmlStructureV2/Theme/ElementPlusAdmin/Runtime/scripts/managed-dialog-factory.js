@@ -13,6 +13,7 @@
             getByPath,
             isObject,
             makeRequest,
+            toDialogScope,
             resolveContextValue,
             resolveTitleTemplate,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
@@ -26,6 +27,167 @@
           }, formMethodNames || {});
 
           return {
+            ensureDialogBodyRefStore(){
+              if (!isObject(this.__dialogBodyRefs)) {
+                this.__dialogBodyRefs = {};
+              }
+
+              return this.__dialogBodyRefs;
+            },
+            ensureDialogIframeWindowStore(){
+              if (!(this.__dialogIframeWindows instanceof WeakMap)) {
+                this.__dialogIframeWindows = new WeakMap();
+              }
+
+              return this.__dialogIframeWindows;
+            },
+            ensureDialogMessageBridge(){
+              if (this.__dialogMessageBridgeBound) {
+                return;
+              }
+
+              this.__dialogMessageBridgeBound = true;
+              this.__dialogMessageBridgeHandler = (event) => this.handleDialogHostMessage(event);
+              window.addEventListener('message', this.__dialogMessageBridgeHandler);
+            },
+            resolveDialogKeyFromMessage(event, payload = {}){
+              if (typeof payload?.dialogKey === 'string' && payload.dialogKey !== '') {
+                return payload.dialogKey;
+              }
+
+              const source = event?.source;
+              if (!source || typeof source !== 'object') {
+                return '';
+              }
+
+              const dialogWindows = this.ensureDialogIframeWindowStore();
+              return dialogWindows.get(source) || '';
+            },
+            getDialogBodyRefs(dialogKey){
+              return this.ensureDialogBodyRefStore()[dialogKey] || {};
+            },
+            setDialogComponentRef(dialogKey, instance){
+              const store = this.ensureDialogBodyRefStore();
+              store[dialogKey] = store[dialogKey] || {};
+              store[dialogKey].component = instance || null;
+
+              return instance || null;
+            },
+            setDialogIframeRef(dialogKey, iframe){
+              const store = this.ensureDialogBodyRefStore();
+              store[dialogKey] = store[dialogKey] || {};
+              store[dialogKey].iframe = iframe || null;
+
+              if (iframe?.contentWindow && cfg.dialogs?.[dialogKey]?.iframe?.host) {
+                this.ensureDialogIframeWindowStore().set(iframe.contentWindow, dialogKey);
+              }
+
+              return iframe || null;
+            },
+            handleDialogIframeLoad(dialogKey, event){
+              const iframe = event?.target || this.getDialogBodyRefs(dialogKey)?.iframe || null;
+              if (iframe?.contentWindow && cfg.dialogs?.[dialogKey]?.iframe?.host) {
+                this.ensureDialogIframeWindowStore().set(iframe.contentWindow, dialogKey);
+              }
+            },
+            setDialogTitle(dialogKey, title){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return;
+              }
+
+              this.dialogTitles[dialogKey] = title == null ? '' : String(title);
+            },
+            setDialogFullscreen(dialogKey, value = true){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return;
+              }
+
+              this.dialogFullscreen[dialogKey] = value === undefined ? true : !!value;
+            },
+            toggleDialogFullscreen(dialogKey){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return;
+              }
+
+              this.dialogFullscreen[dialogKey] = !(this.dialogFullscreen?.[dialogKey] || false);
+            },
+            refreshDialogIframe(dialogKey){
+              const iframe = this.getDialogBodyRefs(dialogKey)?.iframe || null;
+              const windowRef = iframe?.contentWindow;
+
+              try {
+                if (windowRef?.location?.reload) {
+                  windowRef.location.reload();
+                } else if (iframe?.src) {
+                  iframe.src = iframe.src;
+                }
+              } catch (error) {
+                if (iframe?.src) {
+                  iframe.src = iframe.src;
+                }
+              }
+            },
+            invokeDialogComponentMethod(dialogKey, methodName, context){
+              if (typeof methodName !== 'string' || methodName === '') {
+                return Promise.resolve(null);
+              }
+
+              const instance = this.getDialogBodyRefs(dialogKey)?.component || null;
+              const handler = instance?.[methodName];
+              if (typeof handler !== 'function') {
+                return Promise.resolve(null);
+              }
+
+              try {
+                return Promise.resolve(handler.call(instance, context));
+              } catch (error) {
+                return Promise.reject(error);
+              }
+            },
+            handleDialogHostMessage(event){
+              const payload = event?.data?.__scV2DialogHost;
+              if (!isObject(payload)) {
+                return;
+              }
+
+              const dialogKey = this.resolveDialogKeyFromMessage(event, payload);
+              if (!dialogKey || !cfg.dialogs?.[dialogKey]?.iframe?.host) {
+                return;
+              }
+
+              const context = this.buildDialogContext(dialogKey, undefined, {
+                hostMessage: payload,
+                hostEvent: event,
+              });
+
+              switch (payload.action) {
+                case 'close':
+                  this.closeDialog(dialogKey);
+                  break;
+                case 'reloadTable':
+                  if (typeof context.reloadTable === 'function') {
+                    context.reloadTable();
+                  }
+                  break;
+                case 'openDialog':
+                  this.openDialog(payload.target, payload.row || null);
+                  break;
+                case 'setTitle':
+                  this.setDialogTitle(dialogKey, payload.title || '');
+                  break;
+                case 'setFullscreen':
+                  this.setDialogFullscreen(dialogKey, payload.value !== false);
+                  break;
+                case 'toggleFullscreen':
+                  this.toggleDialogFullscreen(dialogKey);
+                  break;
+                case 'refreshIframe':
+                  this.refreshDialogIframe(dialogKey);
+                  break;
+                default:
+                  break;
+              }
+            },
             ensureDialogRequestStore(){
               if (!isObject(this.__dialogRequestTokens)) {
                 this.__dialogRequestTokens = {};
@@ -68,14 +230,29 @@
 
               return this.__dialogClosingStates;
             },
+            resolveDialogExtraContext(dialogCfg, baseContext = {}){
+              if (!dialogCfg) {
+                return {};
+              }
+
+              const resolved = resolveContextValue(dialogCfg.context || {}, baseContext);
+              return isObject(resolved) ? resolved : {};
+            },
+            resolveDialogComponentProps(dialogCfg, context){
+              if (dialogCfg?.type !== 'component') {
+                return {};
+              }
+
+              const resolved = resolveContextValue(dialogCfg.component?.props || {}, context);
+              return isObject(resolved) ? resolved : {};
+            },
             buildDialogContext(dialogKey, row = undefined, overrides = {}){
               const dialogCfg = cfg.dialogs?.[dialogKey] || {};
               const activeRow = row === undefined
                 ? (this.dialogRows?.[dialogKey] || null)
                 : (row || null);
               const baseContext = getBaseContext(this, dialogKey, activeRow) || {};
-
-              return Object.assign({
+              const defaults = {
                 row: activeRow,
                 mode: this.dialogMode?.[dialogKey] || (activeRow ? 'edit' : 'create'),
                 dialogKey,
@@ -83,11 +260,28 @@
                 dialog: this.dialogForms?.[dialogKey] || {},
                 dialogs: this.dialogForms || {},
                 dialogLoading: this.dialogLoading?.[dialogKey] || false,
+                dialogSubmitting: this.dialogSubmitting?.[dialogKey] || false,
+                dialogVisible: this.dialogVisible?.[dialogKey] || false,
+                dialogTitle: this.dialogTitles?.[dialogKey] || dialogCfg.title || '',
+                dialogFullscreen: this.dialogFullscreen?.[dialogKey] || false,
+                dialogComponentProps: this.dialogComponentProps?.[dialogKey] || {},
+                dialogComponentRef: this.getDialogBodyRefs(dialogKey)?.component || null,
+                dialogIframeRef: this.getDialogBodyRefs(dialogKey)?.iframe || null,
                 vm: this,
                 reloadTable: () => undefined,
                 closeDialog: (target = dialogKey) => this.closeDialog(target),
                 openDialog: (target, data = null) => this.openDialog(target, data),
-              }, baseContext, overrides);
+                setDialogTitle: (title) => this.setDialogTitle(dialogKey, title),
+                setDialogFullscreen: (value = true) => this.setDialogFullscreen(dialogKey, value),
+                toggleDialogFullscreen: () => this.toggleDialogFullscreen(dialogKey),
+                refreshDialogIframe: () => this.refreshDialogIframe(dialogKey),
+              };
+              const resolvedDialogContext = this.resolveDialogExtraContext(dialogCfg, Object.assign({}, defaults, baseContext, overrides));
+
+              return Object.assign({
+                dialogContext: resolvedDialogContext,
+                data: resolvedDialogContext,
+              }, defaults, baseContext, resolvedDialogContext, overrides);
             },
             resolveDialogTitle(dialogCfg, context){
               return resolveTitleTemplate(dialogCfg.titleTemplate || dialogCfg.title || '', context);
@@ -104,6 +298,7 @@
               const context = this.buildDialogContext(dialogKey, row);
               this.dialogTitles[dialogKey] = this.resolveDialogTitle(dialogCfg, context);
               this.dialogIframeUrls[dialogKey] = this.resolveDialogIframeUrl(dialogCfg, context);
+              this.dialogComponentProps[dialogKey] = this.resolveDialogComponentProps(dialogCfg, context);
 
               return context;
             },
@@ -113,7 +308,7 @@
                 return {};
               }
 
-              const scope = 'dialog:' + dialogKey;
+              const scope = toDialogScope(dialogKey);
               const activeRow = row === undefined
                 ? (this.dialogRows?.[dialogKey] || null)
                 : (row || null);
@@ -267,7 +462,7 @@
                 return Promise.resolve(null);
               }
 
-              const scope = 'dialog:' + dialogKey;
+              const scope = toDialogScope(dialogKey);
               const sourceRow = row || null;
               const mode = sourceRow ? 'edit' : 'create';
               const initialContext = this.buildDialogContext(dialogKey, sourceRow, {
@@ -288,6 +483,8 @@
                   this.dialogRows[dialogKey] = sourceRow ? clone(sourceRow) : null;
                   this.dialogSubmitting[dialogKey] = false;
                   this.dialogLoading[dialogKey] = false;
+                  this.dialogFullscreen[dialogKey] = !!dialogCfg.fullscreen;
+                  this.dialogComponentProps[dialogKey] = {};
                   this.resetDialogFormState(dialogKey, sourceRow);
                   this.dialogVisible[dialogKey] = true;
 
@@ -305,7 +502,9 @@
                       this[names.clearFormValidate](scope);
                     }
 
-                    return callHook(dialogCfg.afterOpen, context || this.buildDialogContext(dialogKey));
+                    const finalContext = context || this.buildDialogContext(dialogKey);
+                    return this.invokeDialogComponentMethod(dialogKey, dialogCfg.component?.openMethod, finalContext)
+                      .then(() => callHook(dialogCfg.afterOpen, finalContext));
                   }));
                 })
                 .catch((error) => {
@@ -366,7 +565,7 @@
                 return Promise.resolve(null);
               }
 
-              const scope = 'dialog:' + dialogKey;
+              const scope = toDialogScope(dialogKey);
               const closingContext = this.consumeDialogCloseContext(dialogKey) || this.buildDialogContext(dialogKey);
 
               this.ensureDialogClosingStore()[dialogKey] = false;
@@ -379,7 +578,11 @@
               this.dialogLoading[dialogKey] = false;
               this.dialogTitles[dialogKey] = dialogCfg.title || '';
               this.dialogIframeUrls[dialogKey] = '';
+              this.dialogFullscreen[dialogKey] = !!dialogCfg.fullscreen;
+              this.dialogComponentProps[dialogKey] = {};
               this.dialogRows[dialogKey] = null;
+              this.setDialogComponentRef(dialogKey, null);
+              this.setDialogIframeRef(dialogKey, null);
 
               if (typeof this[names.withDependencyResetSuspended] === 'function') {
                 this[names.withDependencyResetSuspended](scope, () => {
@@ -395,7 +598,8 @@
                 }
               }
 
-              return Vue.nextTick(() => callHook(dialogCfg.afterClose, closingContext))
+              return Vue.nextTick(() => this.invokeDialogComponentMethod(dialogKey, dialogCfg.component?.closeMethod, closingContext)
+                .then(() => callHook(dialogCfg.afterClose, closingContext)))
                 .catch((error) => {
                   const message = error?.message || '弹窗关闭回调执行失败';
                   ElementPlus.ElMessage.error(message);
@@ -416,7 +620,7 @@
                 return;
               }
 
-              const scope = 'dialog:' + dialogKey;
+              const scope = toDialogScope(dialogKey);
               const validate = typeof this[names.validateForm] === 'function'
                 ? this[names.validateForm](scope)
                 : Promise.resolve(true);

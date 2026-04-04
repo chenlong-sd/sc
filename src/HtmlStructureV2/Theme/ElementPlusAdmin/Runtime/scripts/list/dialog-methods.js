@@ -1,4 +1,5 @@
         globalThis.__SC_V2_CREATE_LIST_DIALOG_METHODS__ = ({
+          buildFormsContext,
           clone,
           cfg,
           ensureSuccess,
@@ -16,6 +17,7 @@
               extractPayload,
               resolveMessage,
               getBaseContext: (vm) => ({
+                forms: buildFormsContext(vm),
                 filters: vm.filterModel || {},
                 selection: Array.isArray(vm.tableSelection) ? vm.tableSelection : [],
                 reloadTable: () => typeof vm.loadTableData === 'function' ? vm.loadTableData() : undefined,

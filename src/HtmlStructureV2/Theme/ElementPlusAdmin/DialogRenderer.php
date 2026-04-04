@@ -7,9 +7,12 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class DialogRenderer
 {
+    use EncodesJsValues;
+
     public function __construct(
         private readonly FormRenderer $formRenderer,
         private readonly ActionButtonRenderer $actionButtonRenderer,
@@ -22,32 +25,32 @@ final class DialogRenderer
         string $visibleModel,
         FormRenderOptions $options,
         ?RenderContext $context = null,
-        ?string $titleExpression = null,
-        ?string $iframeUrlExpression = null,
-        ?string $loadingExpression = null,
-        ?string $beforeCloseExpression = null,
-        ?string $closedExpression = null
+        ?DialogRenderBindings $bindings = null
     ): AbstractHtmlElement {
+        $bindings ??= DialogRenderBindings::make();
         $attrs = array_merge([
             'v-model' => $visibleModel,
             'width' => $dialog->getWidth(),
             ':close-on-click-modal' => $dialog->shouldCloseOnClickModal() ? 'true' : 'false',
             ':draggable' => $dialog->isDraggable() ? 'true' : 'false',
-            ':fullscreen' => $dialog->isFullscreen() ? 'true' : 'false',
         ], $dialog->attrs());
 
-        if ($titleExpression !== null && $titleExpression !== '') {
-            $attrs[':title'] = $titleExpression;
+        $attrs[':fullscreen'] = $bindings->fullscreenExpression() !== null && $bindings->fullscreenExpression() !== ''
+            ? $bindings->fullscreenExpression()
+            : ($dialog->isFullscreen() ? 'true' : 'false');
+
+        if ($bindings->titleExpression() !== null && $bindings->titleExpression() !== '') {
+            $attrs[':title'] = $bindings->titleExpression();
         } else {
             $attrs['title'] = $dialog->title();
         }
 
-        if ($beforeCloseExpression !== null && $beforeCloseExpression !== '') {
-            $attrs[':before-close'] = $beforeCloseExpression;
+        if ($bindings->beforeCloseExpression() !== null && $bindings->beforeCloseExpression() !== '') {
+            $attrs[':before-close'] = $bindings->beforeCloseExpression();
         }
 
-        if ($closedExpression !== null && $closedExpression !== '') {
-            $attrs['@closed'] = $closedExpression;
+        if ($bindings->closedExpression() !== null && $bindings->closedExpression() !== '') {
+            $attrs['@closed'] = $bindings->closedExpression();
         }
 
         if ($dialog->shouldDestroyOnClose()) {
@@ -59,7 +62,40 @@ final class DialogRenderer
         }
 
         $element = El::double('el-dialog')->setAttrs($attrs);
-        $element->append($this->renderBody($dialog, $formModel, $options, $context, $iframeUrlExpression, $loadingExpression));
+        if ($dialog->bodyType() === 'iframe'
+            && $bindings->toggleFullscreenExpression() !== null
+            && $bindings->toggleFullscreenExpression() !== '') {
+            $header = El::double('template')->setAttr('#header', '{ titleId, titleClass }')
+                ->append(
+                    El::double('div')->setAttrs([
+                        'style' => 'display:flex;align-items:center;justify-content:space-between;gap:12px;',
+                    ])->append(
+                        El::double('span')->setAttrs([
+                            ':id' => 'titleId',
+                            ':class' => 'titleClass',
+                        ])->append(
+                            $bindings->titleExpression() !== null && $bindings->titleExpression() !== ''
+                                ? '{{ ' . $bindings->titleExpression() . ' }}'
+                                : $dialog->title()
+                        )
+                    )->append(
+                        El::double('el-button')->setAttrs([
+                            'link' => '',
+                            'type' => 'primary',
+                            '@click' => $bindings->toggleFullscreenExpression(),
+                        ])->append('全屏切换')
+                    )
+                );
+            $element->append($header);
+        }
+
+        $element->append($this->renderBody(
+            $dialog,
+            $formModel,
+            $options,
+            $context,
+            $bindings
+        ));
 
         $footerActions = $this->resolveFooterActions($dialog);
         if ($footerActions) {
@@ -78,12 +114,11 @@ final class DialogRenderer
         string $formModel,
         FormRenderOptions $options,
         ?RenderContext $context,
-        ?string $iframeUrlExpression,
-        ?string $loadingExpression
+        DialogRenderBindings $bindings
     ): AbstractHtmlElement {
         $body = El::double('div');
-        if ($loadingExpression !== null && $loadingExpression !== '') {
-            $body->setAttr('v-loading', $loadingExpression);
+        if ($bindings->loadingExpression() !== null && $bindings->loadingExpression() !== '') {
+            $body->setAttr('v-loading', $bindings->loadingExpression());
         }
 
         if ($dialog->getHeight()) {
@@ -96,14 +131,48 @@ final class DialogRenderer
             return $body;
         }
 
+        if ($dialog->bodyType() === 'component' && $dialog->getComponentName()) {
+            $component = El::double('component')->setAttr(':is', $this->jsString($dialog->getComponentName()));
+            $component->setAttr('v-bind', $bindings->componentPropsExpression() ?: $this->jsValue($dialog->getComponentProps()));
+
+            foreach ($dialog->getComponentAttrs() as $key => $value) {
+                $component->setAttr(
+                    $key,
+                    $value instanceof \Sc\Util\HtmlStructureV2\Support\JsExpression
+                        ? $value->expression()
+                        : (is_array($value) || is_bool($value) || is_int($value) || is_float($value) || $value === null
+                            ? $this->jsValue($value)
+                            : (string) $value)
+                );
+            }
+
+            if ($bindings->componentRefExpression() !== null && $bindings->componentRefExpression() !== '') {
+                $component->setAttr(':ref', $bindings->componentRefExpression());
+            }
+
+            $body->append($component);
+
+            return $body;
+        }
+
         if ($dialog->bodyType() === 'iframe') {
-            $body->append(El::double('iframe')->setAttrs([
-                ':src' => $iframeUrlExpression ?: $this->jsString($dialog->getIframeUrl() ?? ''),
+            $iframe = El::double('iframe')->setAttrs([
+                ':src' => $bindings->iframeUrlExpression() ?: $this->jsString($dialog->getIframeUrl() ?? ''),
                 'style' => sprintf(
                     'width:100%%;height:%s;border:none;display:block',
                     $dialog->getHeight() ?: '70vh'
                 ),
-            ]));
+            ]);
+
+            if ($bindings->iframeRefExpression() !== null && $bindings->iframeRefExpression() !== '') {
+                $iframe->setAttr(':ref', $bindings->iframeRefExpression());
+            }
+
+            if ($bindings->iframeLoadExpression() !== null && $bindings->iframeLoadExpression() !== '') {
+                $iframe->setAttr('@load', $bindings->iframeLoadExpression());
+            }
+
+            $body->append($iframe);
 
             return $body;
         }
@@ -140,14 +209,5 @@ final class DialogRenderer
         }
 
         return [];
-    }
-
-    private function jsString(string $value): string
-    {
-        return "'" . str_replace(
-            ['\\', '\''],
-            ['\\\\', '\\\''],
-            $value
-        ) . "'";
     }
 }

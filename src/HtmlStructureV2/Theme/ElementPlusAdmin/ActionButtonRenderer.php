@@ -7,10 +7,12 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
-use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class ActionButtonRenderer
 {
+    use EncodesJsValues;
+
     public function render(Action $action, bool $rowScoped = false, string $size = 'default'): AbstractHtmlElement
     {
         $attrs = array_merge([
@@ -149,55 +151,5 @@ final class ActionButtonRenderer
             $stateName,
             $this->jsString($action->targetName() ?: 'editor')
         );
-    }
-
-    private function jsString(string $value): string
-    {
-        return "'" . str_replace(
-            ['\\', '\''],
-            ['\\\\', '\\\''],
-            $value
-        ) . "'";
-    }
-
-    private function jsValue(mixed $value): string
-    {
-        if ($value instanceof JsExpression) {
-            return $value->expression();
-        }
-
-        if ($value instanceof \BackedEnum) {
-            $value = $value->value;
-        }
-
-        if (is_array($value)) {
-            return $this->isList($value)
-                ? '[' . implode(', ', array_map(fn(mixed $item) => $this->jsValue($item), $value)) . ']'
-                : '{' . implode(', ', array_map(
-                    fn(string|int $key, mixed $item) => $this->jsString((string)$key) . ': ' . $this->jsValue($item),
-                    array_keys($value),
-                    $value
-                )) . '}';
-        }
-
-        if ($value instanceof \Stringable) {
-            $value = (string)$value;
-        }
-
-        return match (true) {
-            is_int($value), is_float($value) => (string)$value,
-            is_bool($value) => $value ? 'true' : 'false',
-            $value === null => 'null',
-            default => $this->jsString((string)$value),
-        };
-    }
-
-    private function isList(array $value): bool
-    {
-        if (function_exists('array_is_list')) {
-            return array_is_list($value);
-        }
-
-        return array_keys($value) === range(0, count($value) - 1);
     }
 }

@@ -1,25 +1,7 @@
         globalThis.__SC_V2_CREATE_LIST_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
-          const dialogScopePrefix = 'dialog:';
-          const normalizeDialogKey = (value) => {
-            const normalized = String(value || '').replace(/[^a-zA-Z0-9_$]+/g, '_');
-            return normalized || 'dialog';
-          };
-          const resolveDialogKey = (scope) => {
-            if (typeof scope !== 'string' || !scope.startsWith(dialogScopePrefix)) {
-              return null;
-            }
-
-            return scope.slice(dialogScopePrefix.length) || null;
-          };
-          const getDialogConfig = (scope) => {
-            const dialogKey = resolveDialogKey(scope);
-            if (!dialogKey) {
-              return null;
-            }
-
-            return cfg.dialogs?.[dialogKey] || null;
-          };
+          const { getConfigState } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const getScopedFormConfig = (scope) => cfg?.forms?.[scope] || null;
 
           return createManagedFormMethods({
             tokenStoreKey: '__remoteRequestTokens',
@@ -53,65 +35,15 @@
               handleUploadExceed: 'handleUploadExceed',
               handleUploadPreview: 'handleUploadPreview'
             },
-            getRefName: (scope) => {
-              if (scope === 'filter') {
-                return 'filterFormRef';
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? ('dialogFormRef_' + normalizeDialogKey(dialogKey)) : null;
-            },
-            getFormModel: (vm, scope) => {
-              if (scope === 'filter') {
-                return vm.filterModel;
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? (vm.dialogForms?.[dialogKey] || {}) : {};
-            },
-            getOptionState: (vm, scope) => {
-              if (scope === 'filter') {
-                return vm.filterOptions;
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? (vm.dialogOptions?.[dialogKey] || {}) : {};
-            },
-            getOptionLoadingState: (vm, scope) => {
-              if (scope === 'filter') {
-                return vm.filterOptionLoading;
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? (vm.dialogOptionLoading?.[dialogKey] || {}) : {};
-            },
-            getOptionLoadedState: (vm, scope) => {
-              if (scope === 'filter') {
-                return vm.filterOptionLoaded;
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? (vm.dialogOptionLoaded?.[dialogKey] || {}) : {};
-            },
-            getUploadFileState: (vm, scope) => {
-              if (scope === 'filter') {
-                return vm.filterUploadFiles;
-              }
-
-              const dialogKey = resolveDialogKey(scope);
-              return dialogKey ? (vm.dialogUploadFiles?.[dialogKey] || {}) : {};
-            },
-            getRemoteOptionsMap: (scope) => scope === 'filter'
-              ? (cfg.filterRemoteOptions || {})
-              : (getDialogConfig(scope)?.remoteOptions || {}),
-            getSelectOptionsMap: (scope) => scope === 'filter'
-              ? (cfg.filterSelectOptions || {})
-              : (getDialogConfig(scope)?.selectOptions || {}),
-            getLinkagesMap: (scope) => scope === 'filter'
-              ? (cfg.filterLinkages || {})
-              : (getDialogConfig(scope)?.linkages || {}),
-            getUploadsMap: (scope) => scope === 'filter'
-              ? (cfg.filterUploads || {})
-              : (getDialogConfig(scope)?.uploads || {})
+            getRefName: (scope) => getScopedFormConfig(scope)?.ref || null,
+            getFormModel: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'modelVar', 'modelPath'),
+            getOptionState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionStateVar', 'optionStatePath', true),
+            getOptionLoadingState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionLoadingVar', 'optionLoadingPath', true),
+            getOptionLoadedState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionLoadedVar', 'optionLoadedPath', true),
+            getUploadFileState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'uploadFilesVar', 'uploadFilesPath', true),
+            getRemoteOptionsMap: (scope) => getScopedFormConfig(scope)?.remoteOptions || {},
+            getSelectOptionsMap: (scope) => getScopedFormConfig(scope)?.selectOptions || {},
+            getLinkagesMap: (scope) => getScopedFormConfig(scope)?.linkages || {},
+            getUploadsMap: (scope) => getScopedFormConfig(scope)?.uploads || {}
           });
         };

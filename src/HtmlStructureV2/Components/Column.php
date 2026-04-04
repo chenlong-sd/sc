@@ -107,14 +107,14 @@ final class Column
         return $this;
     }
 
-    public function format(string $format): self
+    public function displayFormat(string $format): self
     {
         $this->format = $format;
 
         return $this;
     }
 
-    public function mapping(array $options, string $separator = ', '): self
+    public function displayMapping(array $options, string $separator = ', '): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_MAPPING,
@@ -125,7 +125,7 @@ final class Column
         return $this;
     }
 
-    public function tag(array $options, string $defaultType = 'info'): self
+    public function displayTag(array $options, string $defaultType = 'info'): self
     {
         $normalized = [];
         foreach ($options as $value => $option) {
@@ -155,7 +155,7 @@ final class Column
         return $this;
     }
 
-    public function image(
+    public function displayImage(
         int $width = 60,
         int $height = 60,
         string $fit = 'cover'
@@ -170,7 +170,7 @@ final class Column
         return $this;
     }
 
-    public function boolean(string $truthyLabel = '是', string $falsyLabel = '否'): self
+    public function displayBoolean(string $truthyLabel = '是', string $falsyLabel = '否'): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_BOOLEAN,
@@ -181,7 +181,7 @@ final class Column
         return $this;
     }
 
-    public function booleanTag(
+    public function displayBooleanTag(
         string $truthyLabel = '是',
         string $falsyLabel = '否',
         string $truthyType = 'success',
@@ -198,7 +198,7 @@ final class Column
         return $this;
     }
 
-    public function date(string $format = 'YYYY-MM-DD'): self
+    public function displayDate(string $format = 'YYYY-MM-DD'): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_DATETIME,
@@ -208,12 +208,12 @@ final class Column
         return $this;
     }
 
-    public function datetime(string $format = 'YYYY-MM-DD HH:mm:ss'): self
+    public function displayDatetime(string $format = 'YYYY-MM-DD HH:mm:ss'): self
     {
-        return $this->date($format);
+        return $this->displayDate($format);
     }
 
-    public function images(
+    public function displayImages(
         int $previewNumber = 3,
         string $srcPath = 'url',
         int $width = 60,
@@ -232,7 +232,7 @@ final class Column
         return $this;
     }
 
-    public function placeholder(string $placeholder): self
+    public function displayPlaceholder(string $placeholder): self
     {
         $this->placeholder = $placeholder;
 

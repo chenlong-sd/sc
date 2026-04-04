@@ -5,10 +5,12 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Page\ListPage;
 use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderStateFactory;
 
 final class ListRuntimeBuilder
 {
     private ?DialogConfigBuilder $dialogConfigBuilder = null;
+    private ?FormRenderStateFactory $formRenderStateFactory = null;
 
     public function build(ListPage $page): string
     {
@@ -17,13 +19,8 @@ final class ListRuntimeBuilder
 
         $config = JsonExpressionEncoder::encode([
             'title' => $page->title(),
-            'filterDefaults' => $page->getFilterForm()?->defaults() ?? [],
             'searchSchema' => $table?->getSearchSchema() ?? [],
-            'filterRules' => $page->getFilterForm()?->rules() ?? [],
-            'filterRemoteOptions' => $page->getFilterForm()?->remoteOptions() ?? [],
-            'filterSelectOptions' => $page->getFilterForm()?->selectOptions() ?? [],
-            'filterLinkages' => $page->getFilterForm()?->linkages() ?? [],
-            'filterUploads' => $page->getFilterForm()?->uploads() ?? [],
+            'forms' => $this->buildFormsConfig($page),
             'dialogs' => $this->buildDialogConfig($page->getDialogs()),
             'initialRows' => $dataSource?->initialRows() ?? [],
             'list' => $dataSource?->toClientConfig(),
@@ -57,6 +54,29 @@ final class ListRuntimeBuilder
         return $this->dialogConfigBuilder()->build($dialogs);
     }
 
+    private function buildFormsConfig(ListPage $page): array
+    {
+        $forms = [];
+
+        $filterForm = $page->getFilterForm();
+        if ($filterForm !== null) {
+            $filterState = $this->formRenderStateFactory()->createFilter();
+            $forms[$filterState->scope->value()] = $filterState->simpleRuntimeConfig($filterForm);
+        }
+
+        foreach ($page->getDialogs() as $dialog) {
+            $form = $dialog->getForm();
+            if ($form === null) {
+                continue;
+            }
+
+            $dialogState = $this->formRenderStateFactory()->createManagedDialog($dialog->key());
+            $forms[$dialogState->scope->value()] = $dialogState->simpleRuntimeConfig($form);
+        }
+
+        return $forms;
+    }
+
     private function getSortFieldMap(?Table $table): array
     {
         if ($table === null) {
@@ -76,5 +96,10 @@ final class ListRuntimeBuilder
     private function dialogConfigBuilder(): DialogConfigBuilder
     {
         return $this->dialogConfigBuilder ??= new DialogConfigBuilder();
+    }
+
+    private function formRenderStateFactory(): FormRenderStateFactory
+    {
+        return $this->formRenderStateFactory ??= new FormRenderStateFactory();
     }
 }

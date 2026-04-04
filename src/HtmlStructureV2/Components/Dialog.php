@@ -25,8 +25,15 @@ final class Dialog implements Renderable
     private array $footerActions = [];
     private ?Form $form = null;
     private string|AbstractHtmlElement|null $content = null;
+    private ?string $componentName = null;
+    private array|JsExpression $componentProps = [];
+    private array $componentAttrs = [];
+    private ?string $componentOpenMethod = 'onShow';
+    private ?string $componentCloseMethod = null;
     private array|JsExpression|null $iframeQuery = null;
     private ?string $iframeUrl = null;
+    private bool $iframeHostEnabled = false;
+    private bool $iframeFullscreenToggle = false;
     private ?string $loadUrl = null;
     private string $loadMethod = 'get';
     private array|JsExpression $loadPayload = [];
@@ -36,6 +43,7 @@ final class Dialog implements Renderable
     private ?JsExpression $afterOpenHook = null;
     private ?JsExpression $beforeCloseHook = null;
     private ?JsExpression $afterCloseHook = null;
+    private array|JsExpression $contextData = [];
     private array $props = [];
 
     public function __construct(
@@ -130,6 +138,11 @@ final class Dialog implements Renderable
     {
         $this->form = $form;
         $this->content = null;
+        $this->componentName = null;
+        $this->componentProps = [];
+        $this->componentAttrs = [];
+        $this->componentOpenMethod = 'onShow';
+        $this->componentCloseMethod = null;
         $this->iframeUrl = null;
         $this->iframeQuery = null;
 
@@ -140,8 +153,57 @@ final class Dialog implements Renderable
     {
         $this->content = $content;
         $this->form = null;
+        $this->componentName = null;
+        $this->componentProps = [];
+        $this->componentAttrs = [];
+        $this->componentOpenMethod = 'onShow';
+        $this->componentCloseMethod = null;
         $this->iframeUrl = null;
         $this->iframeQuery = null;
+
+        return $this;
+    }
+
+    public function component(
+        string $name,
+        array|JsExpression $props = [],
+        array $attrs = []
+    ): self {
+        $this->componentName = $name;
+        $this->componentProps = $props;
+        $this->componentAttrs = array_merge($this->componentAttrs, $attrs);
+        $this->form = null;
+        $this->content = null;
+        $this->iframeUrl = null;
+        $this->iframeQuery = null;
+
+        return $this;
+    }
+
+    public function componentProps(array|JsExpression $props): self
+    {
+        $this->componentProps = $props;
+
+        return $this;
+    }
+
+    public function componentAttrs(array $attrs): self
+    {
+        $this->componentAttrs = array_merge($this->componentAttrs, $attrs);
+
+        return $this;
+    }
+
+    public function componentOpenMethod(?string $method): self
+    {
+        $this->componentOpenMethod = $method;
+
+        return $this;
+    }
+
+    public function componentCloseMethod(?string $method): self
+    {
+        $this->componentCloseMethod = $method;
 
         return $this;
     }
@@ -150,8 +212,29 @@ final class Dialog implements Renderable
     {
         $this->iframeUrl = $url;
         $this->iframeQuery = $query;
+        $this->iframeHostEnabled = true;
+        $this->iframeFullscreenToggle = true;
         $this->form = null;
         $this->content = null;
+        $this->componentName = null;
+        $this->componentProps = [];
+        $this->componentAttrs = [];
+        $this->componentOpenMethod = 'onShow';
+        $this->componentCloseMethod = null;
+
+        return $this;
+    }
+
+    public function iframeHost(bool $enabled = true): self
+    {
+        $this->iframeHostEnabled = $enabled;
+
+        return $this;
+    }
+
+    public function iframeFullscreenToggle(bool $enabled = true): self
+    {
+        $this->iframeFullscreenToggle = $enabled;
 
         return $this;
     }
@@ -212,6 +295,17 @@ final class Dialog implements Renderable
     public function afterClose(JsExpression $afterCloseHook): self
     {
         $this->afterCloseHook = $afterCloseHook;
+
+        return $this;
+    }
+
+    public function context(array|JsExpression $contextData): self
+    {
+        if (is_array($contextData) && is_array($this->contextData)) {
+            $this->contextData = array_merge($this->contextData, $contextData);
+        } else {
+            $this->contextData = $contextData;
+        }
 
         return $this;
     }
@@ -305,6 +399,31 @@ final class Dialog implements Renderable
         return $this->content;
     }
 
+    public function getComponentName(): ?string
+    {
+        return $this->componentName;
+    }
+
+    public function getComponentProps(): array|JsExpression
+    {
+        return $this->componentProps;
+    }
+
+    public function getComponentAttrs(): array
+    {
+        return $this->componentAttrs;
+    }
+
+    public function getComponentOpenMethod(): ?string
+    {
+        return $this->componentOpenMethod;
+    }
+
+    public function getComponentCloseMethod(): ?string
+    {
+        return $this->componentCloseMethod;
+    }
+
     public function getIframeUrl(): ?string
     {
         return $this->iframeUrl;
@@ -313,6 +432,16 @@ final class Dialog implements Renderable
     public function getIframeQuery(): array|JsExpression|null
     {
         return $this->iframeQuery;
+    }
+
+    public function isIframeHostEnabled(): bool
+    {
+        return $this->iframeHostEnabled;
+    }
+
+    public function hasIframeFullscreenToggle(): bool
+    {
+        return $this->iframeFullscreenToggle;
     }
 
     public function getLoadUrl(): ?string
@@ -360,6 +489,11 @@ final class Dialog implements Renderable
         return $this->afterCloseHook;
     }
 
+    public function getContextData(): array|JsExpression
+    {
+        return $this->contextData;
+    }
+
     public function getFooterActions(): array
     {
         return $this->footerActions;
@@ -374,6 +508,10 @@ final class Dialog implements Renderable
     {
         if ($this->iframeUrl !== null && $this->iframeUrl !== '') {
             return 'iframe';
+        }
+
+        if ($this->componentName !== null && $this->componentName !== '') {
+            return 'component';
         }
 
         if ($this->form !== null) {

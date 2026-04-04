@@ -1,16 +1,21 @@
         (function(cfg){
           const {
+            buildFlagState,
+            buildFormsContext,
+            buildManagedDialogRuntimeState,
+            buildOptionState,
+            buildUploadFileState,
             clone,
             extractPayload,
             ensureSuccess,
-            getByPath,
+            initializeConfiguredForms,
             isBlank,
             makeRequest,
-            normalizeOption,
-            normalizeUploadFiles,
             pickRows,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const forms = cfg.forms || {};
+          const filterConfig = forms.filter || {};
 
           const createRequestActionMethods = globalThis.__SC_V2_CREATE_REQUEST_ACTION_METHODS__;
           const createListFormMethods = globalThis.__SC_V2_CREATE_LIST_FORM_METHODS__;
@@ -108,69 +113,17 @@
               });
             });
           };
-          const buildOptionState = (configs) => {
-            const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              const fieldCfg = configs[fieldName] || {};
-              state[fieldName] = Array.isArray(fieldCfg.initialOptions)
-                ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
-                : [];
-            });
-            return state;
-          };
-          const buildFlagState = (configs, initialValue = false) => {
-            const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              state[fieldName] = initialValue;
-            });
-            return state;
-          };
-          const buildUploadFileState = (configs, model) => {
-            const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              state[fieldName] = normalizeUploadFiles(getByPath(model, fieldName), configs[fieldName] || {});
-            });
-            return state;
-          };
-          const buildDialogState = (dialogs, factory) => {
-            const state = {};
-            Object.keys(dialogs || {}).forEach((dialogKey) => {
-              state[dialogKey] = factory(dialogs[dialogKey] || {}, dialogKey);
-            });
-            return state;
-          };
-          const buildDialogTitleState = (dialogs) => {
-            const state = {};
-            Object.keys(dialogs || {}).forEach((dialogKey) => {
-              state[dialogKey] = dialogs[dialogKey]?.title || '';
-            });
-            return state;
-          };
-
           const app = Vue.createApp({
             data(){
               return {
-                filterModel: clone(cfg.filterDefaults),
-                filterInitial: clone(cfg.filterDefaults),
-                filterRules: cfg.filterRules || {},
-                filterOptions: buildOptionState(cfg.filterRemoteOptions),
-                filterOptionLoading: buildFlagState(cfg.filterRemoteOptions),
-                filterOptionLoaded: buildFlagState(cfg.filterRemoteOptions),
-                filterUploadFiles: buildUploadFileState(cfg.filterUploads, cfg.filterDefaults),
-                dialogForms: buildDialogState(cfg.dialogs, (dialogCfg) => clone(dialogCfg.defaults || {})),
-                dialogInitials: buildDialogState(cfg.dialogs, (dialogCfg) => clone(dialogCfg.defaults || {})),
-                dialogRules: buildDialogState(cfg.dialogs, (dialogCfg) => dialogCfg.rules || {}),
-                dialogOptions: buildDialogState(cfg.dialogs, (dialogCfg) => buildOptionState(dialogCfg.remoteOptions || {})),
-                dialogOptionLoading: buildDialogState(cfg.dialogs, (dialogCfg) => buildFlagState(dialogCfg.remoteOptions || {})),
-                dialogOptionLoaded: buildDialogState(cfg.dialogs, (dialogCfg) => buildFlagState(dialogCfg.remoteOptions || {})),
-                dialogUploadFiles: buildDialogState(cfg.dialogs, (dialogCfg) => buildUploadFileState(dialogCfg.uploads || {}, dialogCfg.defaults || {})),
-                dialogVisible: buildDialogState(cfg.dialogs, () => false),
-                dialogMode: buildDialogState(cfg.dialogs, () => 'create'),
-                dialogRows: buildDialogState(cfg.dialogs, () => null),
-                dialogLoading: buildDialogState(cfg.dialogs, () => false),
-                dialogSubmitting: buildDialogState(cfg.dialogs, () => false),
-                dialogTitles: buildDialogTitleState(cfg.dialogs),
-                dialogIframeUrls: buildDialogState(cfg.dialogs, () => ''),
+                filterModel: clone(filterConfig.defaults || {}),
+                filterInitial: clone(filterConfig.defaults || {}),
+                filterRules: filterConfig.rules || {},
+                filterOptions: buildOptionState(filterConfig.remoteOptions),
+                filterOptionLoading: buildFlagState(filterConfig.remoteOptions),
+                filterOptionLoaded: buildFlagState(filterConfig.remoteOptions),
+                filterUploadFiles: buildUploadFileState(filterConfig.uploads, filterConfig.defaults),
+                ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
                 actionLoading: {},
                 tableRows: clone(cfg.initialRows),
                 tableAllRows: clone(cfg.initialRows),
@@ -186,14 +139,11 @@
               };
             },
             mounted(){
-              this.registerFormDependencies('filter');
-              this.initializeFormOptions('filter');
-              this.initializeUploadFiles('filter');
-
-              Object.keys(cfg.dialogs || {}).forEach((dialogKey) => {
-                const scope = 'dialog:' + dialogKey;
-                this.registerFormDependencies(scope);
-                this.initializeUploadFiles(scope);
+              this.ensureDialogMessageBridge();
+              initializeConfiguredForms(forms, {
+                registerDependencies: (scope) => this.registerFormDependencies(scope),
+                initializeOptions: (scope) => this.initializeFormOptions(scope),
+                initializeUploads: (scope) => this.initializeUploadFiles(scope),
               });
 
               if (cfg.list && cfg.list.type === 'remote') {
@@ -206,6 +156,7 @@
               {},
               createRequestActionMethods({
                 getBaseContext: (vm) => ({
+                  forms: buildFormsContext(vm, forms),
                   filters: vm.filterModel || {},
                   dialogs: vm.dialogForms || {},
                   selection: Array.isArray(vm.tableSelection) ? vm.tableSelection : [],
@@ -229,6 +180,7 @@
                 resolveMessage
               }),
               createListDialogMethods({
+                buildFormsContext: (vm) => buildFormsContext(vm, forms),
                 clone,
                 cfg,
                 ensureSuccess,

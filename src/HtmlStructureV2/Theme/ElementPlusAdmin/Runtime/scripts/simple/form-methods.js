@@ -1,5 +1,6 @@
         globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
+          const { getConfigState } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const getFormConfig = (scope) => cfg?.forms?.[scope] || null;
 
           return createManagedFormMethods({
@@ -34,34 +35,11 @@
               handleUploadPreview: 'handleSimpleUploadPreview'
             },
             getRefName: (scope) => getFormConfig(scope)?.ref || null,
-            getFormModel: (vm, scope) => {
-              const varName = getFormConfig(scope)?.modelVar;
-              return varName ? (vm[varName] || {}) : {};
-            },
-            getOptionState: (vm, scope) => {
-              const varName = getFormConfig(scope)?.optionStateVar;
-              if (!varName) return {};
-              vm[varName] ??= {};
-              return vm[varName];
-            },
-            getOptionLoadingState: (vm, scope) => {
-              const varName = getFormConfig(scope)?.optionLoadingVar;
-              if (!varName) return {};
-              vm[varName] ??= {};
-              return vm[varName];
-            },
-            getOptionLoadedState: (vm, scope) => {
-              const varName = getFormConfig(scope)?.optionLoadedVar;
-              if (!varName) return {};
-              vm[varName] ??= {};
-              return vm[varName];
-            },
-            getUploadFileState: (vm, scope) => {
-              const varName = getFormConfig(scope)?.uploadFilesVar;
-              if (!varName) return {};
-              vm[varName] ??= {};
-              return vm[varName];
-            },
+            getFormModel: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'modelVar', 'modelPath'),
+            getOptionState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionStateVar', 'optionStatePath', true),
+            getOptionLoadingState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadingVar', 'optionLoadingPath', true),
+            getOptionLoadedState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadedVar', 'optionLoadedPath', true),
+            getUploadFileState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'uploadFilesVar', 'uploadFilesPath', true),
             getRemoteOptionsMap: (scope) => getFormConfig(scope)?.remoteOptions || {},
             getSelectOptionsMap: (scope) => getFormConfig(scope)?.selectOptions || {},
             getLinkagesMap: (scope) => getFormConfig(scope)?.linkages || {},

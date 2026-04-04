@@ -21,9 +21,11 @@ use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ActionButtonRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ColumnRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\DialogRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\DialogRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FieldRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderOptions;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\DialogConfigBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\ListRuntimeBuilder;
@@ -37,6 +39,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private ?FormRenderer $formRenderer = null;
     private ?TableRenderer $tableRenderer = null;
     private ?DialogRenderer $dialogRenderer = null;
+    private ?DialogRenderStateFactory $dialogRenderStateFactory = null;
+    private ?FormRenderStateFactory $formRenderStateFactory = null;
     private ?SimpleRuntimeBuilder $simpleRuntimeBuilder = null;
     private ?ListRuntimeBuilder $listRuntimeBuilder = null;
     private ?DialogConfigBuilder $dialogConfigBuilder = null;
@@ -101,26 +105,10 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $body->append($this->renderPageHeader($page));
 
         if ($page->getFilterForm()) {
+            $filterState = $this->formRenderStateFactory()->createFilter();
             $filterCard = $this->card('筛选条件');
             $filterCard->append(
-                $this->renderForm($page->getFilterForm(), 'filterModel', [
-                    'mode' => 'filters',
-                    'ref' => 'filterFormRef',
-                    'rules' => 'filterRules',
-                    'submitMethod' => 'submitFilters',
-                    'resetMethod' => 'resetFilters',
-                    'remoteOptionsState' => 'filterOptions',
-                    'remoteLoadingState' => 'filterOptionLoading',
-                    'remoteLoadMethod' => 'loadFormFieldOptions',
-                    'remoteScope' => 'filter',
-                    'uploadFilesState' => 'filterUploadFiles',
-                    'uploadScope' => 'filter',
-                    'uploadSuccessMethod' => 'handleUploadSuccess',
-                    'uploadRemoveMethod' => 'handleUploadRemove',
-                    'uploadExceedMethod' => 'handleUploadExceed',
-                    'uploadPreviewMethod' => 'handleUploadPreview',
-                    'linkageMethod' => 'applyFormLinkage',
-                ])
+                $this->renderForm($page->getFilterForm(), $filterState->model, $filterState->renderOptions)
             );
             $body->append($filterCard);
         }
@@ -191,61 +179,13 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function renderStandaloneForm(Form $form, RenderContext $context): AbstractHtmlElement
     {
-        $scope = $form->key();
-        $modelName = $this->jsStateVariable($scope, 'Model');
-        $rulesName = $this->jsStateVariable($scope, 'Rules');
-        $optionsStateName = $this->jsStateVariable($scope, 'Options');
-        $optionLoadingName = $this->jsStateVariable($scope, 'OptionLoading');
-        $optionLoadedName = $this->jsStateVariable($scope, 'OptionLoaded');
-        $uploadFilesName = $this->jsStateVariable($scope, 'UploadFiles');
-        $formRef = $this->jsStateVariable($scope, 'FormRef');
+        $state = $this->formRenderStateFactory()->createStandalone($form->key());
 
-        $this->mergeSimpleState($context, [
-            $modelName => $form->defaults(),
-            $rulesName => $form->rules(),
-            $optionsStateName => $this->buildInitialOptionState($form->remoteOptions()),
-            $optionLoadingName => $this->buildFlagState(array_keys($form->remoteOptions())),
-            $optionLoadedName => $this->buildFlagState(array_keys($form->remoteOptions())),
-            $uploadFilesName => [],
-        ]);
-        $simpleConfig = $context->get('v2.simple.config', []);
-        $this->mergeSimpleConfig($context, [
-            'forms' => array_merge(
-                $simpleConfig['forms'] ?? [],
-                [
-                    $scope => [
-                        'ref' => $formRef,
-                        'modelVar' => $modelName,
-                        'rulesVar' => $rulesName,
-                        'optionStateVar' => $optionsStateName,
-                        'optionLoadingVar' => $optionLoadingName,
-                        'optionLoadedVar' => $optionLoadedName,
-                        'uploadFilesVar' => $uploadFilesName,
-                        'remoteOptions' => $form->remoteOptions(),
-                        'selectOptions' => $form->selectOptions(),
-                        'linkages' => $form->linkages(),
-                        'uploads' => $form->uploads(),
-                    ],
-                ]
-            ),
-        ]);
+        $this->mergeSimpleState($context, $state->simpleRuntimeState($form));
+        $this->mergeSimpleFormConfig($context, $state, $form);
 
         return $this->card('表单')->append(
-            $this->renderForm($form, $modelName, [
-                'ref' => $formRef,
-                'rules' => $rulesName,
-                'remoteOptionsState' => $optionsStateName,
-                'remoteLoadingState' => $optionLoadingName,
-                'remoteLoadMethod' => 'loadSimpleFormFieldOptions',
-                'remoteScope' => $scope,
-                'uploadFilesState' => $uploadFilesName,
-                'uploadScope' => $scope,
-                'uploadSuccessMethod' => 'handleSimpleUploadSuccess',
-                'uploadRemoveMethod' => 'handleSimpleUploadRemove',
-                'uploadExceedMethod' => 'handleSimpleUploadExceed',
-                'uploadPreviewMethod' => 'handleSimpleUploadPreview',
-                'linkageMethod' => 'applySimpleFormLinkage',
-            ])
+            $this->renderForm($form, $state->model, $state->renderOptions)
         );
     }
 
@@ -311,58 +251,32 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function renderManagedDialog(Dialog $dialog, RenderContext $context): AbstractHtmlElement
     {
-        $dialogKey = $this->jsLiteral($dialog->key());
+        $state = $this->dialogRenderStateFactory()->createManaged(
+            $dialog->key(),
+            $this->dialogFormRef($dialog->key())
+        );
 
         return $this->dialogRenderer()->render(
             $dialog,
-            sprintf('dialogForms[%s]', $dialogKey),
-            sprintf('dialogVisible[%s]', $dialogKey),
-            FormRenderOptions::fromArray([
-                'ref' => $this->dialogFormRef($dialog->key()),
-                'rules' => sprintf('dialogRules[%s]', $dialogKey),
-                'remoteOptionsState' => sprintf('dialogOptions[%s]', $dialogKey),
-                'remoteLoadingState' => sprintf('dialogOptionLoading[%s]', $dialogKey),
-                'remoteLoadMethod' => 'loadFormFieldOptions',
-                'remoteScope' => 'dialog:' . $dialog->key(),
-                'uploadFilesState' => sprintf('dialogUploadFiles[%s]', $dialogKey),
-                'uploadScope' => 'dialog:' . $dialog->key(),
-                'uploadSuccessMethod' => 'handleUploadSuccess',
-                'uploadRemoveMethod' => 'handleUploadRemove',
-                'uploadExceedMethod' => 'handleUploadExceed',
-                'uploadPreviewMethod' => 'handleUploadPreview',
-                'linkageMethod' => 'applyFormLinkage',
-            ]),
+            $state->formModel,
+            $state->visibleModel,
+            $state->formOptions,
             $context,
-            sprintf('dialogTitles[%s]', $dialogKey),
-            sprintf('dialogIframeUrls[%s]', $dialogKey),
-            sprintf('dialogLoading[%s] || false', $dialogKey),
-            sprintf('(done) => handleDialogBeforeClose(%s, done)', $dialogKey),
-            sprintf('handleDialogClosed(%s)', $dialogKey)
+            $state->bindings
         );
     }
 
     private function renderDialog(Dialog $dialog, string $formModel, string $visibleModel, RenderContext $context): AbstractHtmlElement
     {
+        $state = $this->dialogRenderStateFactory()->createStandalone();
+
         return $this->dialogRenderer()->render(
             $dialog,
-            $formModel,
-            $visibleModel,
-            FormRenderOptions::fromArray([
-                'ref' => 'dialogFormRef',
-                'rules' => 'dialogRules',
-                'remoteOptionsState' => 'dialogOptions',
-                'remoteLoadingState' => 'dialogOptionLoading',
-                'remoteLoadMethod' => 'loadFormFieldOptions',
-                'remoteScope' => 'dialog',
-                'uploadFilesState' => 'dialogUploadFiles',
-                'uploadScope' => 'dialog',
-                'uploadSuccessMethod' => 'handleUploadSuccess',
-                'uploadRemoveMethod' => 'handleUploadRemove',
-                'uploadExceedMethod' => 'handleUploadExceed',
-                'uploadPreviewMethod' => 'handleUploadPreview',
-                'linkageMethod' => 'applyFormLinkage',
-            ]),
-            $context
+            $formModel ?: $state->formModel,
+            $visibleModel ?: $state->visibleModel,
+            $state->formOptions,
+            $context,
+            $state->bindings
         );
     }
 
@@ -403,6 +317,13 @@ final class ElementPlusAdminTheme implements ThemeInterface
         ]);
 
         foreach ($dialogs as $dialog) {
+            if ($dialog->getForm() !== null) {
+                $this->mergeSimpleFormConfig(
+                    $context,
+                    $this->formRenderStateFactory()->createManagedDialog($dialog->key()),
+                    $dialog->getForm()
+                );
+            }
             $body->append($this->renderManagedDialog($dialog, $context));
         }
     }
@@ -412,48 +333,22 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->listRuntimeBuilder()->build($page);
     }
 
-    private function buildInitialOptionState(array $remoteOptions): array
+    private function mergeSimpleFormConfig(RenderContext $context, \Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderState $state, Form $form): void
     {
-        $state = [];
-        foreach ($remoteOptions as $fieldName => $fieldConfig) {
-            $state[$fieldName] = array_values($fieldConfig['initialOptions'] ?? []);
-        }
-
-        return $state;
-    }
-
-    private function buildFlagState(array $keys, bool $initial = false): array
-    {
-        $state = [];
-        foreach ($keys as $key) {
-            $state[$key] = $initial;
-        }
-
-        return $state;
-    }
-
-    private function jsStateVariable(string $key, string $suffix): string
-    {
-        $normalized = preg_replace('/[^a-zA-Z0-9_$]+/', '_', $key) ?: 'form';
-        if (preg_match('/^[0-9]/', $normalized)) {
-            $normalized = 'v2_' . $normalized;
-        }
-
-        return $normalized . $suffix;
+        $simpleConfig = $context->get('v2.simple.config', []);
+        $this->mergeSimpleConfig($context, [
+            'forms' => array_merge(
+                $simpleConfig['forms'] ?? [],
+                [
+                    $state->scope->value() => $state->simpleRuntimeConfig($form),
+                ]
+            ),
+        ]);
     }
 
     private function dialogFormRef(string $dialogKey): string
     {
-        return 'dialogFormRef_' . $this->jsStateVariable($dialogKey, '');
-    }
-
-    private function jsLiteral(string $value): string
-    {
-        return "'" . str_replace(
-            ['\\', '\''],
-            ['\\\\', '\\\''],
-            $value
-        ) . "'";
+        return $this->formRenderStateFactory()->createManagedDialog($dialogKey)->ref ?? 'dialogFormRef';
     }
 
     private function fieldRenderer(): FieldRenderer
@@ -490,6 +385,16 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $this->formRenderer(),
             $this->actionButtonRenderer()
         );
+    }
+
+    private function dialogRenderStateFactory(): DialogRenderStateFactory
+    {
+        return $this->dialogRenderStateFactory ??= new DialogRenderStateFactory();
+    }
+
+    private function formRenderStateFactory(): FormRenderStateFactory
+    {
+        return $this->formRenderStateFactory ??= new FormRenderStateFactory();
     }
 
     private function simpleRuntimeBuilder(): SimpleRuntimeBuilder
