@@ -2,7 +2,9 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
+use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
@@ -11,9 +13,10 @@ use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
     use HasSpan;
+    use HasFormNodeChildren;
 
-    /** @var FormNode[] */
-    private array $children = [];
+    /** @var Action[] */
+    private array $headerActions = [];
     private ?string $description = null;
     private bool $plain = false;
 
@@ -29,14 +32,19 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     public function addChildren(FormNode ...$children): self
     {
-        $this->children = array_merge($this->children, $children);
-
-        return $this;
+        return $this->appendFormNodeChildren(...$children);
     }
 
     public function description(?string $description): self
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function headerActions(Action ...$actions): self
+    {
+        $this->headerActions = array_merge($this->headerActions, $actions);
 
         return $this;
     }
@@ -58,12 +66,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      */
     public function getChildren(): array
     {
-        return $this->children;
-    }
-
-    public function childNodes(): array
-    {
-        return $this->children;
+        return $this->getFormNodeChildren();
     }
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
@@ -74,6 +77,14 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
     public function descriptionText(): ?string
     {
         return $this->description;
+    }
+
+    /**
+     * @return Action[]
+     */
+    public function getHeaderActions(): array
+    {
+        return $this->headerActions;
     }
 
     public function isPlain(): bool

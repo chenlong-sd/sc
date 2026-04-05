@@ -19,6 +19,7 @@ use Sc\Util\HtmlStructureV2\Page\FormPage;
 use Sc\Util\HtmlStructureV2\Page\ListPage;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\PageCompositionInspector;
+use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ActionButtonRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ColumnRenderer;
@@ -35,7 +36,7 @@ use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PreparedListWidget;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\RuntimePreparationCoordinator;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\SectionCardFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderBindings;
-use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableCardRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableBlockRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\DialogConfigBuilder;
@@ -45,6 +46,8 @@ use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\TableRuntimeConfigBui
 
 final class ElementPlusAdminTheme implements ThemeInterface
 {
+    use ResolvesClassMappedMethod;
+
     private const COMPONENT_RENDERERS = [
         CrudPage::class => 'renderListPage',
         ListPage::class => 'renderListPage',
@@ -73,7 +76,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private ?PageCompositionInspector $pageCompositionInspector = null;
     private ?RuntimePreparationCoordinator $runtimePreparationCoordinator = null;
     private ?SectionCardFactory $sectionCardFactory = null;
-    private ?TableCardRenderer $tableCardRenderer = null;
+    private ?TableBlockRenderer $tableBlockRenderer = null;
     private ?PageFrameRenderer $pageFrameRenderer = null;
     private ?LightweightComponentRenderer $lightweightComponentRenderer = null;
 
@@ -84,6 +87,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     #app{min-height:100%;box-sizing:border-box;padding:24px}
     .sc-v2-page{display:flex;flex-direction:column;gap:18px}
     .sc-v2-list{display:flex;flex-direction:column;gap:18px}
+    .sc-v2-table-block{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-list__filters{display:flex;flex-direction:column;gap:12px}
     .sc-v2-page__header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
     .sc-v2-page__title{display:flex;flex-direction:column;gap:6px}
     .sc-v2-page__title h1{margin:0;font-size:28px;line-height:1.2;color:#111827}
@@ -111,9 +116,17 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-block-text--muted{color:#6b7280}
     .sc-v2-form-section{display:flex;flex-direction:column;gap:16px}
     .sc-v2-form-section__header{display:flex;flex-direction:column;gap:4px}
+    .sc-v2-form-section__heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .sc-v2-form-section__heading-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .sc-v2-form-section__actions{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto}
     .sc-v2-form-section__header h3{margin:0;font-size:18px;line-height:1.3;color:#111827}
     .sc-v2-form-section__header p{margin:0;color:#6b7280;font-size:13px}
     .sc-v2-form-inline{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .sc-v2-form-tabs{display:flex;flex-direction:column;gap:8px}
+    .sc-v2-form-tabs .el-tabs__content{overflow:visible}
+    .sc-v2-form-tabs__pane{padding-top:8px}
+    .sc-v2-form-collapse{display:flex;flex-direction:column;gap:8px}
+    .sc-v2-form-collapse__item-body{padding-top:8px}
     .sc-v2-form-array{display:flex;flex-direction:column;gap:12px}
     .sc-v2-form-array__header{display:flex;justify-content:space-between;align-items:center;gap:12px}
     .sc-v2-form-array__header h4{margin:0;font-size:14px;line-height:1.4;color:#374151}
@@ -136,6 +149,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
       .sc-v2-form__suffix{width:100%}
+      .sc-v2-form-section__heading{flex-direction:column;align-items:stretch}
+      .sc-v2-form-section__actions{width:100%}
       .sc-v2-grid{grid-template-columns:minmax(0,1fr)!important}
     }
     CSS;
@@ -187,7 +202,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $body = $this->pageFrameRenderer()->render(
             $page,
             $renderedSections,
-            $this->renderPreparedListWidget($list, $context, $prepared),
+            $this->renderPreparedListWidget($list, $context, $prepared, true),
             $prepared->tableState?->bindings
         );
 
@@ -206,7 +221,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $body = $this->pageFrameRenderer()->render(
             $page,
             $renderedSections,
-            $page->getForm() ? $this->renderStandaloneForm($page->getForm(), $context) : null
+            $page->getForm() ? $this->wrapInSectionCard($this->renderStandaloneForm($page->getForm(), $context)) : null
         );
 
         $this->appendManagedDialogs($body, $context, $managedDialogs);
@@ -239,9 +254,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $form
         );
 
-        return $this->sectionCardFactory()->make('表单')->append(
-            $this->renderForm($form, $state->model, $state->renderOptions)
-        );
+        return $this->renderForm($form, $state->model, $state->renderOptions, $context);
     }
 
     private function renderStandaloneTable(Table $table, RenderContext $context): AbstractHtmlElement
@@ -250,7 +263,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $this->runtimeRegistry($context),
             $table
         );
-        return $this->tableCardRenderer()->render($table, $state->bindings, true);
+        return $this->tableBlockRenderer()->render($table, $state->bindings, true);
     }
 
     private function renderListWidgetComponent(ListWidget $list, RenderContext $context): AbstractHtmlElement
@@ -265,12 +278,18 @@ final class ElementPlusAdminTheme implements ThemeInterface
         );
     }
 
-    private function renderForm(Form $form, string $modelName, array|FormRenderOptions $options = []): AbstractHtmlElement
+    private function renderForm(
+        Form $form,
+        string $modelName,
+        array|FormRenderOptions $options = [],
+        ?RenderContext $context = null
+    ): AbstractHtmlElement
     {
         return $this->formRenderer()->render(
             $form,
             $modelName,
-            is_array($options) ? FormRenderOptions::fromArray($options) : $options
+            is_array($options) ? FormRenderOptions::fromArray($options) : $options,
+            $context
         );
     }
 
@@ -376,7 +395,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private function renderPreparedListWidget(
         ListWidget $list,
         RenderContext $context,
-        PreparedListWidget $prepared
+        PreparedListWidget $prepared,
+        bool $wrapInSectionCards = false
     ): AbstractHtmlElement
     {
         $body = El::double('div')->addClass('sc-v2-list');
@@ -384,18 +404,22 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $filterForm = $list->getFilterForm();
         $filterState = $prepared->filterState;
         if ($filterForm !== null && $filterState !== null) {
-            $filterCard = $this->sectionCardFactory()->make($list->getFilterTitle());
-            $filterCard->append(
-                $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions)
+            $filterContent = $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions, $context);
+            $body->append(
+                $wrapInSectionCards
+                    ? $this->wrapInSectionCard($filterContent, $list->getFilterTitle())
+                    : El::double('div')->addClass('sc-v2-list__filters')->append($filterContent)
             );
-            $body->append($filterCard);
         }
 
         $table = $list->getTable();
         $tableState = $prepared->tableState;
         if ($table !== null && $tableState !== null) {
+            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary());
             $body->append(
-                $this->tableCardRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary())
+                $wrapInSectionCards
+                    ? $this->wrapInSectionCard($tableContent)
+                    : $tableContent
             );
         }
 
@@ -404,6 +428,11 @@ final class ElementPlusAdminTheme implements ThemeInterface
         }
 
         return $body;
+    }
+
+    private function wrapInSectionCard(AbstractHtmlElement $content, string $title = ''): AbstractHtmlElement
+    {
+        return $this->sectionCardFactory()->make($title)->append($content);
     }
 
     /**
@@ -436,13 +465,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function resolveRenderableRendererMethod(Renderable $component): ?string
     {
-        foreach (self::COMPONENT_RENDERERS as $class => $method) {
-            if ($component instanceof $class) {
-                return $method;
-            }
-        }
-
-        return null;
+        return $this->resolveClassMappedMethod($component, self::COMPONENT_RENDERERS);
     }
 
     private function pageCompositionInspector(): PageCompositionInspector
@@ -475,11 +498,10 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->sectionCardFactory ??= new SectionCardFactory();
     }
 
-    private function tableCardRenderer(): TableCardRenderer
+    private function tableBlockRenderer(): TableBlockRenderer
     {
-        return $this->tableCardRenderer ??= new TableCardRenderer(
-            $this->tableRenderer(),
-            $this->sectionCardFactory()
+        return $this->tableBlockRenderer ??= new TableBlockRenderer(
+            $this->tableRenderer()
         );
     }
 
@@ -507,7 +529,12 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function formRenderer(): FormRenderer
     {
-        return $this->formRenderer ??= new FormRenderer($this->fieldRenderer());
+        return $this->formRenderer ??= new FormRenderer(
+            $this->fieldRenderer(),
+            new \Sc\Util\HtmlStructureV2\Support\FormTableColumnWalker(),
+            $this->actionButtonRenderer(),
+            $this->lightweightComponentRenderer()
+        );
     }
 
     private function tableRenderer(): TableRenderer

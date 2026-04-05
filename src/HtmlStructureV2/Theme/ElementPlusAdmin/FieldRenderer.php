@@ -256,8 +256,8 @@ final class FieldRenderer
                 'action' => (string)($upload['action'] ?? ''),
                 'method' => (string)($upload['method'] ?? 'post'),
                 'name' => (string)($upload['name'] ?? 'file'),
-                ':headers' => JsonExpressionEncoder::encode($upload['headers'] ?? []),
-                ':data' => JsonExpressionEncoder::encode($upload['data'] ?? []),
+                ':headers' => JsonExpressionEncoder::encodeCompact($upload['headers'] ?? []),
+                ':data' => JsonExpressionEncoder::encodeCompact($upload['data'] ?? []),
                 ':multiple' => ($upload['multiple'] ?? false) ? 'true' : 'false',
                 ':limit' => isset($upload['limit']) ? (string)$upload['limit'] : null,
                 ':show-file-list' => 'true',
@@ -370,7 +370,7 @@ final class FieldRenderer
                     ? ($fieldPathExpression === null
                         ? $options->remoteOptionsExpression($fieldPath)
                         : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
-                    : JsonExpressionEncoder::encode($optionField->getOptions())
+                    : JsonExpressionEncoder::encodeCompact($optionField->getOptions())
             );
         }
     }

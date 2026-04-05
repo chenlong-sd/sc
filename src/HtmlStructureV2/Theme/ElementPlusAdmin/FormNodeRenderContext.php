@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\FormPath;
 
 final class FormNodeRenderContext
@@ -10,6 +11,7 @@ final class FormNodeRenderContext
         public readonly string $modelName,
         public readonly bool $inline,
         public readonly FormRenderOptions $options,
+        public readonly ?RenderContext $renderContext = null,
         public readonly string $pathPrefix = '',
         public readonly ?string $arrayPath = null,
         public readonly ?string $arrayPathExpression = null,
@@ -24,6 +26,7 @@ final class FormNodeRenderContext
             modelName: $this->modelName,
             inline: $inline,
             options: $this->options,
+            renderContext: $this->renderContext,
             pathPrefix: $this->pathPrefix,
             arrayPath: $this->arrayPath,
             arrayPathExpression: $this->arrayPathExpression,
@@ -38,6 +41,7 @@ final class FormNodeRenderContext
             modelName: $modelName,
             inline: $inline ?? $this->inline,
             options: $this->options,
+            renderContext: $this->renderContext,
             pathPrefix: $pathPrefix,
             arrayPath: $this->arrayPath,
             arrayPathExpression: $this->arrayPathExpression,
@@ -59,6 +63,7 @@ final class FormNodeRenderContext
             modelName: $modelName,
             inline: false,
             options: $this->options,
+            renderContext: $this->renderContext,
             pathPrefix: $pathPrefix,
             arrayPath: $arrayPath,
             arrayPathExpression: $arrayPathExpression,

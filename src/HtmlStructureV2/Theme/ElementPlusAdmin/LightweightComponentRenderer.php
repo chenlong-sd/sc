@@ -6,6 +6,7 @@ use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Block\Alert;
+use Sc\Util\HtmlStructureV2\Components\Block\Button;
 use Sc\Util\HtmlStructureV2\Components\Block\Divider;
 use Sc\Util\HtmlStructureV2\Components\Block\Text;
 use Sc\Util\HtmlStructureV2\Components\Block\Title;
@@ -13,12 +14,17 @@ use Sc\Util\HtmlStructureV2\Components\Display\Descriptions;
 use Sc\Util\HtmlStructureV2\Components\Layout\Card as LayoutCard;
 use Sc\Util\HtmlStructureV2\Components\Layout\Grid as LayoutGrid;
 use Sc\Util\HtmlStructureV2\Components\Layout\Stack as LayoutStack;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
+use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
 
 final class LightweightComponentRenderer
 {
+    use ResolvesClassMappedMethod;
+
     private const RENDERERS = [
         LayoutStack::class => 'renderLayoutStack',
         LayoutGrid::class => 'renderLayoutGrid',
@@ -27,6 +33,7 @@ final class LightweightComponentRenderer
         Divider::class => 'renderBlockDivider',
         Text::class => 'renderBlockText',
         Alert::class => 'renderBlockAlert',
+        Button::class => 'renderBlockButton',
         Descriptions::class => 'renderDescriptions',
     ];
 
@@ -40,53 +47,106 @@ final class LightweightComponentRenderer
         return $this->resolveRendererMethod($component) !== null;
     }
 
-    public function render(Renderable $component, RenderContext $context): AbstractHtmlElement
+    public function supportsTree(Renderable $component): bool
+    {
+        if (!$this->supports($component)) {
+            return false;
+        }
+
+        if (!$component instanceof RenderableContainer) {
+            return true;
+        }
+
+        foreach ($component->renderChildren() as $child) {
+            if (!$this->supportsTree($child)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function render(
+        Renderable $component,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         $method = $this->resolveRendererMethod($component);
         if ($method === null) {
             throw new InvalidArgumentException('Unsupported lightweight V2 renderable: ' . $component::class);
         }
 
-        return $this->{$method}($component, $context);
+        return $this->{$method}($component, $context, $eventContextExpression);
     }
 
-    private function renderLayoutStack(LayoutStack $stack, RenderContext $context): AbstractHtmlElement
+    private function renderLayoutStack(
+        LayoutStack $stack,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         return $this->appendRenderedChildren(
-            El::double('div')
-                ->addClass('sc-v2-stack')
-                ->setAttr('style', sprintf('gap:%s', $stack->getGap())),
+            $this->applyComponentEvents(
+                El::double('div')
+                    ->addClass('sc-v2-stack')
+                    ->setAttr('style', sprintf('gap:%s', $stack->getGap())),
+                $stack,
+                $eventContextExpression
+            ),
             $stack,
-            $context
+            $context,
+            $eventContextExpression
         );
     }
 
-    private function renderLayoutGrid(LayoutGrid $grid, RenderContext $context): AbstractHtmlElement
+    private function renderLayoutGrid(
+        LayoutGrid $grid,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         return $this->appendRenderedChildren(
-            El::double('div')
-                ->addClass('sc-v2-grid')
-                ->setAttr(
-                    'style',
-                    sprintf(
-                        'grid-template-columns:repeat(%d,minmax(0,1fr));gap:%s',
-                        $grid->getColumns(),
-                        $grid->getGap()
-                    )
-                ),
+            $this->applyComponentEvents(
+                El::double('div')
+                    ->addClass('sc-v2-grid')
+                    ->setAttr(
+                        'style',
+                        sprintf(
+                            'grid-template-columns:repeat(%d,minmax(0,1fr));gap:%s',
+                            $grid->getColumns(),
+                            $grid->getGap()
+                        )
+                    ),
+                $grid,
+                $eventContextExpression
+            ),
             $grid,
-            $context
+            $context,
+            $eventContextExpression
         );
     }
 
-    private function renderLayoutCard(LayoutCard $card, RenderContext $context): AbstractHtmlElement
+    private function renderLayoutCard(
+        LayoutCard $card,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
-        $element = $this->sectionCardFactory->make($card->getTitle() ?? '');
+        $element = $this->applyComponentEvents(
+            $this->sectionCardFactory->make($card->getTitle() ?? ''),
+            $card,
+            $eventContextExpression
+        );
 
-        return $this->appendRenderedChildren($element, $card, $context);
+        return $this->appendRenderedChildren($element, $card, $context, $eventContextExpression);
     }
 
-    private function renderBlockTitle(Title $title, RenderContext $context): AbstractHtmlElement
+    private function renderBlockTitle(
+        Title $title,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         $element = El::double('div')->addClass('sc-v2-block-title')
             ->append(El::double('h2')->append($title->text()));
@@ -95,10 +155,14 @@ final class LightweightComponentRenderer
             $element->append(El::double('p')->append($title->getDescription()));
         }
 
-        return $element;
+        return $this->applyComponentEvents($element, $title, $eventContextExpression);
     }
 
-    private function renderBlockDivider(Divider $divider, RenderContext $context): AbstractHtmlElement
+    private function renderBlockDivider(
+        Divider $divider,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         $element = El::double('el-divider');
 
@@ -106,30 +170,63 @@ final class LightweightComponentRenderer
             $element->append($divider->text());
         }
 
-        return $element;
+        return $this->applyComponentEvents($element, $divider, $eventContextExpression);
     }
 
-    private function renderBlockText(Text $text, RenderContext $context): AbstractHtmlElement
+    private function renderBlockText(
+        Text $text,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         $class = $text->getType() === 'muted'
             ? 'sc-v2-block-text sc-v2-block-text--muted'
             : 'sc-v2-block-text';
 
-        return El::double('p')->addClass($class)->append($text->content());
+        return $this->applyComponentEvents(
+            El::double('p')->addClass($class)->append($text->content()),
+            $text,
+            $eventContextExpression
+        );
     }
 
-    private function renderBlockAlert(Alert $alert, RenderContext $context): AbstractHtmlElement
+    private function renderBlockAlert(
+        Alert $alert,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
-        return El::double('el-alert')->setAttrs(array_filter([
+        return $this->applyComponentEvents(El::double('el-alert')->setAttrs(array_filter([
             'title' => $alert->title(),
             'description' => $alert->description(),
             'type' => $alert->getType(),
             'show-icon' => '',
             ':closable' => 'false',
-        ], static fn(mixed $value): bool => $value !== null));
+        ], static fn(mixed $value): bool => $value !== null)), $alert, $eventContextExpression);
     }
 
-    private function renderDescriptions(Descriptions $descriptions, RenderContext $context): AbstractHtmlElement
+    private function renderBlockButton(
+        Button $button,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
+    {
+        $element = El::double('el-button')->setAttrs(array_filter([
+            'type' => $button->buttonType(),
+            'size' => $button->buttonSize(),
+            'plain' => $button->isPlain() ? '' : null,
+            'link' => $button->isLink() ? '' : null,
+        ], static fn(mixed $value): bool => $value !== null));
+        $element->append($button->label());
+
+        return $this->applyComponentEvents($element, $button, $eventContextExpression);
+    }
+
+    private function renderDescriptions(
+        Descriptions $descriptions,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
     {
         $element = El::double('el-descriptions')->setAttrs([
             ':column' => (string) $descriptions->getColumns(),
@@ -148,16 +245,52 @@ final class LightweightComponentRenderer
             );
         }
 
-        return $element;
+        return $this->applyComponentEvents($element, $descriptions, $eventContextExpression);
     }
 
     private function appendRenderedChildren(
         AbstractHtmlElement $element,
         RenderableContainer $container,
-        RenderContext $context
+        RenderContext $context,
+        ?string $eventContextExpression = null
     ): AbstractHtmlElement {
         foreach ($container->renderChildren() as $child) {
-            $element->append($child->render($context));
+            $element->append(
+                $this->supports($child)
+                    ? $this->render($child, $context, $eventContextExpression)
+                    : $child->render($context)
+            );
+        }
+
+        return $element;
+    }
+
+    private function applyComponentEvents(
+        AbstractHtmlElement $element,
+        Renderable $component,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement {
+        if (!$component instanceof EventAware || !$component->hasEventHandlers()) {
+            return $element;
+        }
+
+        foreach ($component->getEventHandlers() as $eventName => $handlers) {
+            if (!is_string($eventName) || trim($eventName) === '' || $handlers === []) {
+                continue;
+            }
+
+            $contextExpression = $eventContextExpression === null || trim($eventContextExpression) === ''
+                ? '{ event: $event }'
+                : sprintf('Object.assign({ event: $event }, %s)', $eventContextExpression);
+
+            $element->setAttr(
+                '@' . ltrim(trim($eventName), '@'),
+                sprintf(
+                    'runPageEventHandlers(%s, %s)',
+                    JsonExpressionEncoder::encodeCompact(array_values($handlers)),
+                    $contextExpression
+                )
+            );
         }
 
         return $element;
@@ -165,12 +298,6 @@ final class LightweightComponentRenderer
 
     private function resolveRendererMethod(Renderable $component): ?string
     {
-        foreach (self::RENDERERS as $class => $method) {
-            if ($component instanceof $class) {
-                return $method;
-            }
-        }
-
-        return null;
+        return $this->resolveClassMappedMethod($component, self::RENDERERS);
     }
 }

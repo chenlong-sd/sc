@@ -3,13 +3,14 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\DataSource\ArrayDataSource;
 use Sc\Util\HtmlStructureV2\DataSource\DataSourceInterface;
 use Sc\Util\HtmlStructureV2\DataSource\UrlDataSource;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Table implements Renderable
+final class Table implements Renderable, EventAware
 {
     use HasEvents;
     use RendersWithTheme;

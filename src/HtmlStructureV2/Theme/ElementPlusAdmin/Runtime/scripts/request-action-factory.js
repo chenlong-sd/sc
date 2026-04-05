@@ -3,56 +3,12 @@
             emitConfiguredEvent,
             ensureSuccess,
             extractPayload,
-            getByPath,
             isEventCanceled,
             isObject,
             makeRequest,
+            resolveContextValue,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
-
-          const resolveToken = (token, context) => {
-            const path = String(token || '').replace(/^@/, '');
-            if (path === '') {
-              return undefined;
-            }
-
-            return getByPath(context, path);
-          };
-
-          const resolveActionValue = (value, context) => {
-            if (typeof value === 'function') {
-              return resolveActionValue(value(context), context);
-            }
-
-            if (Array.isArray(value)) {
-              return value.map((item) => resolveActionValue(item, context));
-            }
-
-            if (isObject(value)) {
-              const output = {};
-              Object.keys(value).forEach((key) => {
-                output[key] = resolveActionValue(value[key], context);
-              });
-              return output;
-            }
-
-            if (typeof value === 'string') {
-              if (/^@[\w.]+$/.test(value)) {
-                return resolveToken(value, context);
-              }
-
-              if (!value.includes('@')) {
-                return value;
-              }
-
-              return value.replace(/@[\w.]+/g, (token) => {
-                const resolved = resolveToken(token, context);
-                return resolved === null || resolved === undefined ? '' : String(resolved);
-              });
-            }
-
-            return value;
-          };
           const confirmAction = (confirmText, executor) => {
             if (!confirmText) {
               return Promise.resolve().then(() => executor());
@@ -156,6 +112,40 @@
 
               return context;
             },
+            buildPageEventContext(overrides = {}){
+              const normalizedOverrides = isObject(overrides) ? overrides : {};
+              const actionConfig = {
+                tableKey: normalizedOverrides.tableKey || null,
+                listKey: normalizedOverrides.listKey || null,
+                dialogTarget: normalizedOverrides.dialogKey || normalizedOverrides.dialogTarget || null,
+              };
+              const context = this.buildActionContext(actionConfig, normalizedOverrides.row || null);
+
+              return Object.assign(context, normalizedOverrides);
+            },
+            runPageEventHandlers(handlers, overrides = {}){
+              const queue = Array.isArray(handlers)
+                ? handlers.filter(Boolean)
+                : (handlers ? [handlers] : []);
+              if (queue.length === 0) {
+                return Promise.resolve([]);
+              }
+
+              const context = this.buildPageEventContext(overrides);
+
+              return emitConfiguredEvent({ events: { trigger: queue } }, 'trigger', context)
+                .catch((error) => {
+                  const message = error?.message || '事件执行失败';
+                  if (message) {
+                    ElementPlus.ElMessage.error(message);
+                  }
+
+                  return null;
+                });
+            },
+            runPageEvent(handler, overrides = {}){
+              return this.runPageEventHandlers(handler ? [handler] : [], overrides);
+            },
             runAction(actionConfig, row = null, executor = null){
               if (!actionConfig?.key) {
                 return Promise.resolve(null);
@@ -198,8 +188,8 @@
                 let loadingInstance = null;
                 const request = {
                   method: actionConfig.request.method || 'post',
-                  url: resolveActionValue(actionConfig.request.url, context),
-                  query: resolveActionValue(actionConfig.request.query || {}, context),
+                  url: resolveContextValue(actionConfig.request.url, context),
+                  query: resolveContextValue(actionConfig.request.query || {}, context),
                 };
 
                 context.request = request;

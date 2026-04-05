@@ -4,15 +4,132 @@ namespace Sc\Util\HtmlStructureV2\Support;
 
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\CustomNode;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\FormArrayGroup;
 
 final class FormTableColumnSchema
 {
-    public function __construct(
-        private readonly Field|CustomNode $node,
-        private readonly string $path,
+    /** @var self[] */
+    private array $children = [];
+
+    private function __construct(
+        private readonly Field|CustomNode|FormArrayGroup|null $node = null,
+        private readonly string $path = '',
         private readonly string $modelPath = '',
-        private readonly ?string $label = null,
+        private string $label = '',
+        array $children = [],
     ) {
+        $this->children = array_values($children);
+    }
+
+    public static function fromField(
+        Field $field,
+        string $path,
+        string $modelPath = '',
+        ?string $label = null
+    ): self {
+        return new self(
+            node: $field,
+            path: $path,
+            modelPath: $modelPath,
+            label: $label ?? $field->label(),
+        );
+    }
+
+    public static function fromCustom(
+        CustomNode $customNode,
+        string $path = '',
+        string $modelPath = '',
+        ?string $label = null
+    ): self {
+        return new self(
+            node: $customNode,
+            path: $path,
+            modelPath: $modelPath,
+            label: $label ?? '',
+        );
+    }
+
+    public static function fromArrayGroup(
+        FormArrayGroup $group,
+        string $path,
+        string $modelPath = '',
+        ?string $label = null
+    ): self {
+        return new self(
+            node: $group,
+            path: $path,
+            modelPath: $modelPath,
+            label: $label ?? $group->name(),
+        );
+    }
+
+    /**
+     * @param self[] $children
+     */
+    public static function group(string $label, array $children = []): self
+    {
+        return new self(
+            node: null,
+            label: $label,
+            children: $children,
+        );
+    }
+
+    public function isGroup(): bool
+    {
+        return $this->node === null;
+    }
+
+    /**
+     * @return self[]
+     */
+    public function children(): array
+    {
+        return $this->children;
+    }
+
+    public function appendChild(self $child): void
+    {
+        $this->children[] = $child;
+    }
+
+    public function ensureGroupChild(string $label): self
+    {
+        foreach ($this->children as $child) {
+            if ($child->isGroup() && $child->label() === $label) {
+                return $child;
+            }
+        }
+
+        $group = self::group($label);
+        $this->children[] = $group;
+
+        return $group;
+    }
+
+    public function withLabel(string $label): self
+    {
+        return new self(
+            node: $this->node,
+            path: $this->path,
+            modelPath: $this->modelPath,
+            label: $label,
+            children: $this->children,
+        );
+    }
+
+    /**
+     * @param self[] $children
+     */
+    public function withChildren(array $children): self
+    {
+        return new self(
+            node: $this->node,
+            path: $this->path,
+            modelPath: $this->modelPath,
+            label: $this->label,
+            children: $children,
+        );
     }
 
     public function field(): ?Field
@@ -23,6 +140,11 @@ final class FormTableColumnSchema
     public function customNode(): ?CustomNode
     {
         return $this->node instanceof CustomNode ? $this->node : null;
+    }
+
+    public function arrayGroup(): ?FormArrayGroup
+    {
+        return $this->node instanceof FormArrayGroup ? $this->node : null;
     }
 
     public function isField(): bool
@@ -42,10 +164,6 @@ final class FormTableColumnSchema
 
     public function label(): string
     {
-        if ($this->label !== null) {
-            return $this->label;
-        }
-
-        return $this->field()?->label() ?? '';
+        return $this->label;
     }
 }

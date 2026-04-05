@@ -3,12 +3,14 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
+use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-class Action implements Renderable
+class Action implements Renderable, EventAware
 {
     use HasEvents;
     use RendersWithTheme;
@@ -99,7 +101,7 @@ class Action implements Renderable
             ->target($dialog);
     }
 
-    public static function custom(string $label, string|JsExpression $handler): self
+    public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): self
     {
         return (new self($label, ActionIntent::CUSTOM))->onClick($handler);
     }
@@ -153,8 +155,12 @@ class Action implements Renderable
         return $this;
     }
 
-    public function onClick(string|JsExpression $handler): static
+    public function onClick(string|JsExpression|StructuredEventInterface $handler): static
     {
+        if ($handler instanceof StructuredEventInterface) {
+            return $this->on('click', $handler);
+        }
+
         $this->handler = $handler;
 
         return $this;

@@ -2,12 +2,15 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Layout;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Stack implements RenderableContainer
+final class Stack implements RenderableContainer, EventAware
 {
+    use HasEvents;
     use RendersWithTheme;
 
     /** @var Renderable[] */

@@ -2,11 +2,14 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Block;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Alert implements Renderable
+final class Alert implements Renderable, EventAware
 {
+    use HasEvents;
     use RendersWithTheme;
 
     private string $type = 'info';

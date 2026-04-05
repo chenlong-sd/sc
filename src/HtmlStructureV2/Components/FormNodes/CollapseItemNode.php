@@ -9,20 +9,21 @@ use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 
-final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
+final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
     use HasSpan;
     use HasFormNodeChildren;
-    private int $gutter = 16;
 
-    public function __construct(FormNode ...$children)
-    {
+    public function __construct(
+        private readonly string $title,
+        FormNode ...$children
+    ) {
         $this->setFormNodeChildren(...$children);
     }
 
-    public static function make(FormNode ...$children): self
+    public static function make(string $title, FormNode ...$children): self
     {
-        return new self(...$children);
+        return new self($title, ...$children);
     }
 
     public function addChildren(FormNode ...$children): self
@@ -30,11 +31,9 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         return $this->appendFormNodeChildren(...$children);
     }
 
-    public function gutter(int $gutter): self
+    public function title(): string
     {
-        $this->gutter = max(0, $gutter);
-
-        return $this;
+        return $this->title;
     }
 
     /**
@@ -47,11 +46,6 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context;
-    }
-
-    public function getGutter(): int
-    {
-        return $this->gutter;
+        return $context->withLabelSegment($this->title);
     }
 }

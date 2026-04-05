@@ -9,38 +9,38 @@ use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 
-final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
+final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
     use HasSpan;
     use HasFormNodeChildren;
-    private int $gutter = 16;
+    private bool $accordion = false;
 
-    public function __construct(FormNode ...$children)
+    public function __construct(CollapseItemNode ...$items)
     {
-        $this->setFormNodeChildren(...$children);
+        $this->setFormNodeChildren(...$items);
     }
 
-    public static function make(FormNode ...$children): self
+    public static function make(CollapseItemNode ...$items): self
     {
-        return new self(...$children);
+        return new self(...$items);
     }
 
-    public function addChildren(FormNode ...$children): self
+    public function addItems(CollapseItemNode ...$items): self
     {
-        return $this->appendFormNodeChildren(...$children);
+        return $this->appendFormNodeChildren(...$items);
     }
 
-    public function gutter(int $gutter): self
+    public function accordion(bool $accordion = true): self
     {
-        $this->gutter = max(0, $gutter);
+        $this->accordion = $accordion;
 
         return $this;
     }
 
     /**
-     * @return FormNode[]
+     * @return CollapseItemNode[]
      */
-    public function getChildren(): array
+    public function getItems(): array
     {
         return $this->getFormNodeChildren();
     }
@@ -50,8 +50,8 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         return $context;
     }
 
-    public function getGutter(): int
+    public function isAccordion(): bool
     {
-        return $this->gutter;
+        return $this->accordion;
     }
 }

@@ -2,24 +2,25 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Concerns;
 
+use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 trait HasEvents
 {
-    /** @var array<string, JsExpression[]> */
+    /** @var array<string, array<int, JsExpression|StructuredEventInterface>> */
     protected array $events = [];
 
-    public function on(string $event, string|JsExpression $handler): static
+    public function on(string $event, string|JsExpression|StructuredEventInterface $handler): static
     {
-        $event = trim($event);
+        $event = ltrim(trim($event), '@');
         if ($event === '') {
             return $this;
         }
 
         $this->events[$event] ??= [];
-        $this->events[$event][] = $handler instanceof JsExpression
-            ? $handler
-            : JsExpression::make($handler);
+        $this->events[$event][] = is_string($handler)
+            ? JsExpression::make($handler)
+            : $handler;
 
         return $this;
     }
@@ -33,7 +34,11 @@ trait HasEvents
 
             $handlers = is_array($handlers) ? $handlers : [$handlers];
             foreach ($handlers as $handler) {
-                if (is_string($handler) || $handler instanceof JsExpression) {
+                if (
+                    is_string($handler)
+                    || $handler instanceof JsExpression
+                    || $handler instanceof StructuredEventInterface
+                ) {
                     $this->on($event, $handler);
                 }
             }
@@ -51,7 +56,7 @@ trait HasEvents
         return $this->events[$event] ?? [];
     }
 
-    public function getFirstEventHandler(string $event): ?JsExpression
+    public function getFirstEventHandler(string $event): JsExpression|StructuredEventInterface|null
     {
         $handlers = $this->getEventHandlers($event);
 

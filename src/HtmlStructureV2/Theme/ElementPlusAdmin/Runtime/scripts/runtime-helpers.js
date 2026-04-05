@@ -81,6 +81,9 @@
             }
             throw new Error(resolveMessage(payload, fallback));
           };
+          const isStructuredEventHandler = (handler) => {
+            return isObject(handler) && typeof handler.type === 'string' && handler.type !== '';
+          };
           const callHook = (hook, context) => {
             if (typeof hook !== 'function') {
               return Promise.resolve(undefined);
@@ -92,14 +95,200 @@
               return Promise.reject(error);
             }
           };
+          const executeStructuredEvent = (handler, context) => {
+            const vm = context?.vm;
+            const type = String(handler?.type || '');
+
+            if (type === 'openUrl') {
+              const url = buildUrlWithQuery(handler.url || '', handler.query || {}, context);
+              if (!url) {
+                throw new Error('Structured event [openUrl] requires a resolvable url.');
+              }
+
+              const target = typeof handler.target === 'string' && handler.target !== ''
+                ? handler.target
+                : '_self';
+              const features = resolveContextValue(handler.features ?? null, context);
+
+              if (target === '_self') {
+                window.location.href = url;
+                return url;
+              }
+
+              window.open(
+                url,
+                target,
+                typeof features === 'string' && features !== '' ? features : undefined
+              );
+
+              return url;
+            }
+
+            if (type === 'openDialog') {
+              const dialogKey = resolveContextValue(handler.dialogKey ?? null, context);
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                throw new Error('Structured event [openDialog] requires dialogKey.');
+              }
+              if (typeof vm?.openDialog !== 'function') {
+                throw new Error('Structured event [openDialog] requires dialog runtime support.');
+              }
+
+              const row = resolveContextValue(handler.row ?? context?.row ?? null, context);
+              const tableKey = resolveContextValue(handler.tableKey ?? context?.tableKey ?? null, context);
+
+              return vm.openDialog(
+                dialogKey,
+                row ?? null,
+                typeof tableKey === 'string' && tableKey !== '' ? tableKey : null
+              );
+            }
+
+            if (type === 'closeDialog') {
+              const dialogKey = resolveContextValue(handler.dialogKey ?? context?.dialogKey ?? null, context);
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                throw new Error('Structured event [closeDialog] requires dialogKey.');
+              }
+
+              if (typeof context?.closeDialog === 'function') {
+                return context.closeDialog(dialogKey);
+              }
+              if (typeof vm?.closeDialog === 'function') {
+                return vm.closeDialog(dialogKey);
+              }
+
+              throw new Error('Structured event [closeDialog] requires dialog runtime support.');
+            }
+
+            if (type === 'reloadTable') {
+              const tableKey = resolveContextValue(handler.tableKey ?? context?.tableKey ?? null, context);
+              if (typeof tableKey !== 'string' || tableKey === '') {
+                throw new Error('Structured event [reloadTable] requires explicit tableKey or runtime table context.');
+              }
+
+              if (typeof context?.reloadTable === 'function') {
+                return context.reloadTable(tableKey);
+              }
+              if (typeof vm?.reloadTable === 'function') {
+                return vm.reloadTable(tableKey);
+              }
+              if (typeof vm?.loadTableData === 'function') {
+                return vm.loadTableData(tableKey);
+              }
+
+              throw new Error('Structured event [reloadTable] requires table runtime support.');
+            }
+
+            if (type === 'reloadList') {
+              const listKey = resolveContextValue(handler.listKey ?? context?.listKey ?? null, context);
+              if (typeof listKey !== 'string' || listKey === '') {
+                throw new Error('Structured event [reloadList] requires explicit listKey or runtime list context.');
+              }
+
+              if (typeof context?.reloadList === 'function') {
+                return context.reloadList(listKey);
+              }
+              if (typeof vm?.reloadList === 'function') {
+                return vm.reloadList(listKey);
+              }
+
+              throw new Error('Structured event [reloadList] requires list runtime support.');
+            }
+
+            if (type === 'reloadPage') {
+              if (typeof context?.reloadPage === 'function') {
+                return context.reloadPage();
+              }
+
+              window.location.reload();
+
+              return true;
+            }
+
+            if (type === 'message') {
+              const message = resolveContextValue(handler.message ?? '', context);
+              if (message === null || message === undefined || message === '') {
+                return null;
+              }
+
+              const messageType = typeof handler.messageType === 'string' && handler.messageType !== ''
+                ? handler.messageType
+                : 'info';
+              const emitter = ElementPlus.ElMessage?.[messageType] || ElementPlus.ElMessage;
+
+              return emitter(String(message));
+            }
+
+            if (type === 'request') {
+              const request = {
+                method: resolveContextValue(handler.method || 'post', context) || 'post',
+                url: resolveContextValue(handler.url || '', context),
+                query: resolveContextValue(handler.query || {}, context),
+              };
+              if (typeof request.url !== 'string' || request.url === '') {
+                throw new Error('Structured event [request] requires a resolvable url.');
+              }
+
+              let loadingInstance = null;
+              context.request = request;
+
+              if (handler.loadingText) {
+                const loadingText = resolveContextValue(handler.loadingText, context);
+                if (loadingText) {
+                  loadingInstance = ElementPlus.ElLoading.service({
+                    lock: true,
+                    text: String(loadingText),
+                    background: 'rgba(255,255,255,0.35)',
+                  });
+                }
+              }
+
+              return makeRequest(request)
+                .then((response) => {
+                  const payload = ensureSuccess(
+                    extractPayload(response),
+                    handler.errorMessage || '操作失败'
+                  );
+
+                  context.response = response;
+                  context.payload = payload;
+
+                  const successMessage = handler.successMessage ?? resolveMessage(payload, '');
+                  if (successMessage) {
+                    ElementPlus.ElMessage.success(String(successMessage));
+                  }
+
+                  return payload;
+                })
+                .catch((error) => {
+                  context.error = error;
+                  const message = error?.message || resolveMessage(
+                    error?.response?.data,
+                    handler.errorMessage || '操作失败'
+                  );
+
+                  if (message) {
+                    ElementPlus.ElMessage.error(String(message));
+                  }
+
+                  throw error;
+                })
+                .finally(() => {
+                  if (loadingInstance && typeof loadingInstance.close === 'function') {
+                    loadingInstance.close();
+                  }
+                });
+            }
+
+            return callHook(handler, context);
+          };
           const callHooks = (hooks, context) => {
             const queue = Array.isArray(hooks)
-              ? hooks.filter((hook) => typeof hook === 'function')
+              ? hooks.filter((hook) => typeof hook === 'function' || isStructuredEventHandler(hook))
               : [];
 
             return queue.reduce(
               (promise, hook) => promise.then((results) => {
-                return callHook(hook, context).then((result) => {
+                return Promise.resolve(executeStructuredEvent(hook, context)).then((result) => {
                   results.push(result);
                   return results;
                 });
@@ -806,6 +995,7 @@
             callHook,
             callHooks,
             clone,
+            executeStructuredEvent,
             emitConfiguredEvent,
             ensureSuccess,
             extractFileName,

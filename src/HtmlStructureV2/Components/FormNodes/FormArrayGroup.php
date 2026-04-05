@@ -4,15 +4,14 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
 use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 
 class FormArrayGroup implements FormNode, FormNodeContainer
 {
     use HasSpan;
-
-    /** @var FormNode[] */
-    private array $children = [];
+    use HasFormNodeChildren;
     private array $defaultRows = [];
     private ?string $title = null;
     private string $addButtonText = '新增一组';
@@ -30,7 +29,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
             throw new InvalidArgumentException('Form array group name cannot be empty.');
         }
 
-        $this->children = $children;
+        $this->setFormNodeChildren(...$children);
     }
 
     public static function make(string $name, FormNode ...$children): static
@@ -40,9 +39,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
 
     public function addChildren(FormNode ...$children): static
     {
-        $this->children = array_merge($this->children, $children);
-
-        return $this;
+        return $this->appendFormNodeChildren(...$children);
     }
 
     public function defaultRows(array $rows): static
@@ -111,12 +108,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      */
     public function getChildren(): array
     {
-        return $this->children;
-    }
-
-    public function childNodes(): array
-    {
-        return $this->children;
+        return $this->getFormNodeChildren();
     }
 
     public function getDefaultRows(): array

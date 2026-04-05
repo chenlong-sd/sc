@@ -2,11 +2,14 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Display;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Descriptions implements Renderable
+final class Descriptions implements Renderable, EventAware
 {
+    use HasEvents;
     use RendersWithTheme;
 
     private ?string $title = null;

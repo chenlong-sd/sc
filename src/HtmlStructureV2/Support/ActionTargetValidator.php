@@ -8,6 +8,11 @@ use Sc\Util\HtmlStructureV2\Components\RequestAction;
 
 final class ActionTargetValidator
 {
+    public function __construct(
+        private readonly StructuredEventInspector $structuredEventInspector = new StructuredEventInspector(),
+    ) {
+    }
+
     /**
      * @param Action[] $actions
      * @param string[] $knownTableKeys
@@ -35,6 +40,16 @@ final class ActionTargetValidator
             $dialogTarget = $action->targetName();
             if ($this->shouldValidateDialogTarget($action) && is_string($dialogTarget) && $dialogTarget !== '') {
                 $this->assertKnownTarget('dialog', $dialogTarget, $knownDialogKeys, $action, $owner);
+            }
+
+            if ($action->hasEventHandlers()) {
+                $this->structuredEventInspector->validateEventMap(
+                    $action->getEventHandlers(),
+                    $knownTableKeys,
+                    $knownListKeys,
+                    $knownDialogKeys,
+                    sprintf('%s action [%s]', $owner, $action->label())
+                );
             }
         }
     }

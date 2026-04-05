@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns;
 
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 
 trait EncodesJsValues
 {
@@ -23,6 +24,10 @@ trait EncodesJsValues
 
         if ($value instanceof \BackedEnum) {
             $value = $value->value;
+        }
+
+        if ($value instanceof \JsonSerializable) {
+            return JsonExpressionEncoder::encodeCompact($value);
         }
 
         if (is_array($value)) {

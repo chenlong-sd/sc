@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
 use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
@@ -12,9 +13,7 @@ use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
     use HasSpan;
-
-    /** @var FormNode[] */
-    private array $children = [];
+    use HasFormNodeChildren;
 
     public function __construct(
         private readonly string $name,
@@ -24,7 +23,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
             throw new InvalidArgumentException('Form object group name cannot be empty.');
         }
 
-        $this->children = $children;
+        $this->setFormNodeChildren(...$children);
     }
 
     public static function make(string $name, FormNode ...$children): self
@@ -34,9 +33,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
 
     public function addChildren(FormNode ...$children): self
     {
-        $this->children = array_merge($this->children, $children);
-
-        return $this;
+        return $this->appendFormNodeChildren(...$children);
     }
 
     public function name(): string
@@ -49,12 +46,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
      */
     public function getChildren(): array
     {
-        return $this->children;
-    }
-
-    public function childNodes(): array
-    {
-        return $this->children;
+        return $this->getFormNodeChildren();
     }
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext

@@ -43,6 +43,7 @@
               createRequestActionMethods({
                 getBaseContext: (vm, actionConfig) => ({
                   forms: buildFormsContext(vm, forms),
+                  dialogs: vm.dialogForms || {},
                   selection: typeof vm.getTableSelection === 'function'
                     ? vm.getTableSelection(actionConfig?.tableKey || null)
                     : [],

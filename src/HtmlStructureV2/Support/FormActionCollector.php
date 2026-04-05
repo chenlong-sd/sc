@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructureV2\Support;
 
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\SectionNode;
 
 final class FormActionCollector
 {
@@ -22,6 +23,12 @@ final class FormActionCollector
         $actions = [];
 
         $this->formNodeWalker->walk($nodes, static function (mixed $node) use (&$actions): void {
+            if ($node instanceof SectionNode) {
+                foreach ($node->getHeaderActions() as $action) {
+                    $actions[] = $action;
+                }
+            }
+
             if (!$node instanceof Field) {
                 return;
             }

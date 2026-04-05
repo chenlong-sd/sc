@@ -3,20 +3,26 @@
 namespace Sc\Util\HtmlStructureV2\Support;
 
 use InvalidArgumentException;
+use ReflectionClass;
+use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
-use Sc\Util\HtmlStructureV2\Components\DialogAction;
 use Sc\Util\HtmlStructureV2\Components\Form;
 use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Page\AbstractPage;
+use Sc\Util\HtmlStructureV2\Support\PageManaged\ManagedActionCollection;
+use Sc\Util\HtmlStructureV2\Support\PageManaged\MetadataRegistry;
 
 final class PageCompositionInspector
 {
     public function __construct(
         private readonly RenderableComponentWalker $renderableComponentWalker = new RenderableComponentWalker(),
-        private readonly FormActionCollector $formActionCollector = new FormActionCollector(),
         private readonly ActionTargetValidator $actionTargetValidator = new ActionTargetValidator(),
+        private readonly MetadataRegistry $metadataRegistry = new MetadataRegistry(),
+        private readonly StructuredEventInspector $structuredEventInspector = new StructuredEventInspector(),
+        private readonly FormCustomRenderableEventInspector $formCustomRenderableEventInspector = new FormCustomRenderableEventInspector(),
     ) {
     }
 
@@ -29,13 +35,13 @@ final class PageCompositionInspector
         $dialogs = [];
 
         foreach ($page->getDialogs() as $dialog) {
-            $this->registerCollectedDialog($dialogs, $dialog);
+            $this->registerCollectedDialogs($dialogs, $this->collectRenderableManagedDialogs($dialog));
         }
 
         $this->renderableComponentWalker->walk(
             $components,
             function (Renderable $component) use (&$dialogs): void {
-                $this->collectDialogsFromComponent($dialogs, $component);
+                $this->registerCollectedDialogs($dialogs, $this->collectRenderableManagedDialogs($component));
             }
         );
 
@@ -70,7 +76,7 @@ final class PageCompositionInspector
 
         $this->renderableComponentWalker->walk(
             $components,
-            fn(Renderable $component) => $this->validateComponentActionTargets(
+            fn(Renderable $component) => $this->validateRenderableTargets(
                 $component,
                 $knownTableKeys,
                 $knownListKeys,
@@ -79,151 +85,46 @@ final class PageCompositionInspector
         );
 
         foreach ($dialogs as $dialog) {
-            if ($dialog->getForm() !== null) {
-                $this->actionTargetValidator->validate(
-                    $this->formActionCollector->collect($dialog->getForm()),
-                    $knownTableKeys,
-                    $knownListKeys,
-                    $knownDialogKeys,
-                    sprintf('dialog [%s] form', $dialog->key())
-                );
-            }
-
-            $this->actionTargetValidator->validate(
-                $dialog->getFooterActions(),
+            $this->validateRenderableTargets(
+                $dialog,
                 $knownTableKeys,
                 $knownListKeys,
                 $knownDialogKeys,
-                sprintf('dialog [%s] footer', $dialog->key())
             );
         }
     }
 
     /**
-     * @param array<string, Dialog> $dialogs
-     */
-    private function collectDialogsFromComponent(array &$dialogs, Renderable $component): void
-    {
-        if ($component instanceof Form) {
-            $this->collectDialogsFromActions($dialogs, $this->formActionCollector->collect($component));
-
-            return;
-        }
-
-        if ($component instanceof ListWidget) {
-            if ($component->getFilterForm() !== null) {
-                $this->collectDialogsFromActions($dialogs, $this->formActionCollector->collect($component->getFilterForm()));
-            }
-
-            foreach ($component->getDialogs() as $dialog) {
-                $this->registerCollectedDialog($dialogs, $dialog);
-            }
-
-            return;
-        }
-
-        if ($component instanceof Table) {
-            $this->collectDialogsFromActions($dialogs, $component->getToolbarActions());
-            $this->collectDialogsFromActions($dialogs, $component->getRowActions());
-
-            return;
-        }
-
-        if ($component instanceof Dialog) {
-            $this->registerCollectedDialog($dialogs, $component);
-        }
-    }
-
-    /**
-     * @param array<string, Dialog> $dialogs
-     * @param array<int, mixed> $actions
-     */
-    private function collectDialogsFromActions(array &$dialogs, array $actions): void
-    {
-        foreach ($actions as $action) {
-            if (!$action instanceof DialogAction) {
-                continue;
-            }
-
-            $dialog = $action->getDialog();
-            if ($dialog === null) {
-                continue;
-            }
-
-            $this->registerCollectedDialog($dialogs, $dialog);
-        }
-    }
-
-    /**
+     * @param ManagedActionCollection[] $collections
      * @param string[] $knownTableKeys
      * @param string[] $knownListKeys
      * @param string[] $knownDialogKeys
      */
-    private function validateComponentActionTargets(
-        Renderable $component,
+    private function validateActionCollections(
+        array $collections,
         array $knownTableKeys,
         array $knownListKeys,
         array $knownDialogKeys
-    ): void {
-        if ($component instanceof Form) {
+    ): void
+    {
+        foreach ($collections as $collection) {
             $this->actionTargetValidator->validate(
-                $this->formActionCollector->collect($component),
+                $collection->actions,
                 $knownTableKeys,
                 $knownListKeys,
                 $knownDialogKeys,
-                sprintf('form [%s]', $component->key())
+                $collection->owner
             );
-
-            return;
         }
+    }
 
-        if ($component instanceof ListWidget) {
-            if ($component->getFilterForm() !== null) {
-                $this->actionTargetValidator->validate(
-                    $this->formActionCollector->collect($component->getFilterForm()),
-                    $knownTableKeys,
-                    $knownListKeys,
-                    $knownDialogKeys,
-                    sprintf('list [%s] filters', $component->key())
-                );
-            }
-
-            $table = $component->getTable();
-            if ($table !== null) {
-                $this->actionTargetValidator->validate(
-                    $table->getToolbarActions(),
-                    $knownTableKeys,
-                    $knownListKeys,
-                    $knownDialogKeys,
-                    sprintf('list [%s] toolbar', $component->key())
-                );
-                $this->actionTargetValidator->validate(
-                    $table->getRowActions(),
-                    $knownTableKeys,
-                    $knownListKeys,
-                    $knownDialogKeys,
-                    sprintf('list [%s] row actions', $component->key())
-                );
-            }
-
-            return;
-        }
-
-        if ($component instanceof Table) {
-            $this->actionTargetValidator->validate(
-                $component->getToolbarActions(),
-                $knownTableKeys,
-                $knownListKeys,
-                $knownDialogKeys,
-                sprintf('table [%s] toolbar', $component->key())
-            );
-            $this->actionTargetValidator->validate(
-                $component->getRowActions(),
-                $knownTableKeys,
-                $knownListKeys,
-                $knownDialogKeys,
-                sprintf('table [%s] row actions', $component->key())
-            );
+    /**
+     * @param array<string, Dialog> $dialogs
+     */
+    private function registerCollectedDialogs(array &$dialogs, array $collectedDialogs): void
+    {
+        foreach ($collectedDialogs as $dialog) {
+            $this->registerCollectedDialog($dialogs, $dialog);
         }
     }
 
@@ -242,10 +143,118 @@ final class PageCompositionInspector
         }
 
         $dialogs[$dialog->key()] = $dialog;
-        $this->collectDialogsFromActions($dialogs, $dialog->getFooterActions());
+        $this->registerCollectedDialogs($dialogs, $this->collectRenderableManagedDialogs($dialog));
+    }
 
-        if ($dialog->getForm() !== null) {
-            $this->collectDialogsFromActions($dialogs, $this->formActionCollector->collect($dialog->getForm()));
+    /**
+     * @return Dialog[]
+     */
+    private function collectRenderableManagedDialogs(Renderable $component): array
+    {
+        $dialogs = [];
+        $this->mergeCollectedDialogs($dialogs, $this->metadataRegistry->dialogs($component));
+
+        if ($component instanceof EventAware && $component->hasEventHandlers()) {
+            $this->mergeCollectedDialogs(
+                $dialogs,
+                $this->structuredEventInspector->collectDialogsFromEventMap($component->getEventHandlers())
+            );
+        }
+
+        if ($component instanceof Form) {
+            $this->mergeCollectedDialogs(
+                $dialogs,
+                $this->formCustomRenderableEventInspector->collectDialogsFromNodes($component->children())
+            );
+        } elseif ($component instanceof Dialog && $component->getForm() !== null) {
+            $this->mergeCollectedDialogs(
+                $dialogs,
+                $this->formCustomRenderableEventInspector->collectDialogsFromNodes($component->getForm()->children())
+            );
+        }
+
+        return array_values($dialogs);
+    }
+
+    /**
+     * @param string[] $knownTableKeys
+     * @param string[] $knownListKeys
+     * @param string[] $knownDialogKeys
+     */
+    private function validateRenderableTargets(
+        Renderable $component,
+        array $knownTableKeys,
+        array $knownListKeys,
+        array $knownDialogKeys
+    ): void {
+        $this->validateActionCollections(
+            $this->metadataRegistry->actionCollections($component),
+            $knownTableKeys,
+            $knownListKeys,
+            $knownDialogKeys
+        );
+
+        if ($component instanceof EventAware && $component->hasEventHandlers()) {
+            $this->structuredEventInspector->validateEventMap(
+                $component->getEventHandlers(),
+                $knownTableKeys,
+                $knownListKeys,
+                $knownDialogKeys,
+                $this->describeRenderableOwner($component)
+            );
+        }
+
+        if ($component instanceof Form) {
+            $this->formCustomRenderableEventInspector->validateTargetsInNodes(
+                $component->children(),
+                $knownTableKeys,
+                $knownListKeys,
+                $knownDialogKeys,
+                sprintf('form [%s]', $component->key())
+            );
+        } elseif ($component instanceof Dialog && $component->getForm() !== null) {
+            $this->formCustomRenderableEventInspector->validateTargetsInNodes(
+                $component->getForm()->children(),
+                $knownTableKeys,
+                $knownListKeys,
+                $knownDialogKeys,
+                sprintf('dialog [%s] form', $component->key())
+            );
+        }
+    }
+
+    private function describeRenderableOwner(Renderable $component): string
+    {
+        return match (true) {
+            $component instanceof Action => sprintf('action [%s]', $component->label()),
+            $component instanceof Form => sprintf('form [%s]', $component->key()),
+            $component instanceof Table => sprintf('table [%s]', $component->key()),
+            $component instanceof ListWidget => sprintf('list [%s]', $component->key()),
+            $component instanceof Dialog => sprintf('dialog [%s]', $component->key()),
+            default => sprintf(
+                'renderable [%s]',
+                (new ReflectionClass($component))->getShortName()
+            ),
+        };
+    }
+
+    /**
+     * @param array<string, Dialog> $dialogs
+     * @param Dialog[] $collectedDialogs
+     */
+    private function mergeCollectedDialogs(array &$dialogs, array $collectedDialogs): void
+    {
+        foreach ($collectedDialogs as $dialog) {
+            $current = $dialogs[$dialog->key()] ?? null;
+            if ($current instanceof Dialog) {
+                if (spl_object_id($current) !== spl_object_id($dialog)) {
+                    throw new InvalidArgumentException(sprintf('Duplicate V2 dialog key detected: %s', $dialog->key()));
+                }
+
+                continue;
+            }
+
+            $dialogs[$dialog->key()] = $dialog;
         }
     }
 }

@@ -3,13 +3,14 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Support\FormSchema;
 use Sc\Util\HtmlStructureV2\Support\FormSchemaWalker;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
-final class Form implements Renderable
+final class Form implements Renderable, EventAware
 {
     use HasEvents;
     use RendersWithTheme;

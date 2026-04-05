@@ -72,7 +72,7 @@ final class TableRenderer
                     'layout' => 'total, sizes, prev, pager, next, jumper',
                     ':current-page' => $bindings->pageExpression(),
                     ':page-size' => $bindings->pageSizeExpression(),
-                    ':page-sizes' => JsonExpressionEncoder::encode($table->getPageSizes()),
+                    ':page-sizes' => JsonExpressionEncoder::encodeCompact($table->getPageSizes()),
                     ':total' => $bindings->totalExpression(),
                     '@size-change' => $bindings->pageSizeChangeExpression(),
                     '@current-change' => $bindings->pageChangeExpression(),

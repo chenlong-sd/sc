@@ -9,20 +9,22 @@ use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 
-final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
+final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
     use HasSpan;
     use HasFormNodeChildren;
-    private int $gutter = 16;
+    private bool $lazy = false;
 
-    public function __construct(FormNode ...$children)
-    {
+    public function __construct(
+        private readonly string $label,
+        FormNode ...$children
+    ) {
         $this->setFormNodeChildren(...$children);
     }
 
-    public static function make(FormNode ...$children): self
+    public static function make(string $label, FormNode ...$children): self
     {
-        return new self(...$children);
+        return new self($label, ...$children);
     }
 
     public function addChildren(FormNode ...$children): self
@@ -30,11 +32,16 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         return $this->appendFormNodeChildren(...$children);
     }
 
-    public function gutter(int $gutter): self
+    public function lazy(bool $lazy = true): self
     {
-        $this->gutter = max(0, $gutter);
+        $this->lazy = $lazy;
 
         return $this;
+    }
+
+    public function label(): string
+    {
+        return $this->label;
     }
 
     /**
@@ -47,11 +54,11 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context;
+        return $context->withLabelSegment($this->label);
     }
 
-    public function getGutter(): int
+    public function isLazy(): bool
     {
-        return $this->gutter;
+        return $this->lazy;
     }
 }

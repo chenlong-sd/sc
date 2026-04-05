@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Dsl;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
+use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 final class Actions
@@ -49,7 +50,7 @@ final class Actions
         return Action::close($label, $dialog);
     }
 
-    public static function custom(string $label, string|JsExpression $handler): Action
+    public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): Action
     {
         return Action::custom($label, $handler);
     }

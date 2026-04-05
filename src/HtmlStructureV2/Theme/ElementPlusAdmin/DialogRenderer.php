@@ -126,7 +126,7 @@ final class DialogRenderer
         }
 
         if ($dialog->getForm()) {
-            $body->append($this->formRenderer->render($dialog->getForm(), $formModel, $options));
+            $body->append($this->formRenderer->render($dialog->getForm(), $formModel, $options, $context));
 
             return $body;
         }

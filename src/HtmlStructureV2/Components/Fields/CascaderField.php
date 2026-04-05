@@ -17,7 +17,7 @@ final class CascaderField extends OptionField
     public function cascaderProps(array $props): static
     {
         $this->cascaderProps = array_merge($this->cascaderProps, $props);
-        $this->props[':props'] = JsonExpressionEncoder::encode($this->cascaderProps);
+        $this->props[':props'] = JsonExpressionEncoder::encodeCompact($this->cascaderProps);
 
         if (($this->cascaderProps['multiple'] ?? false) === true && $this->default === null) {
             $this->default = [];

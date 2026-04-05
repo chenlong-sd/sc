@@ -7,6 +7,8 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\CollapseItemNode;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\CollapseNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\FormArrayGroup;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\FormObjectGroup;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\FormTable;
@@ -14,23 +16,33 @@ use Sc\Util\HtmlStructureV2\Components\FormNodes\CustomNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\GridNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\InlineNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\SectionNode;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\TabPaneNode;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\TabsNode;
+use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\FormPath;
 use Sc\Util\HtmlStructureV2\Support\FormTableColumnSchema;
 use Sc\Util\HtmlStructureV2\Support\FormTableColumnWalker;
+use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 use RuntimeException;
 
 final class FormRenderer
 {
     use BuildsJsExpressions;
+    use ResolvesClassMappedMethod;
 
     private const NODE_RENDERERS = [
         Field::class => 'renderFieldNode',
         SectionNode::class => 'renderSectionNode',
         InlineNode::class => 'renderInlineNode',
         GridNode::class => 'renderGridNode',
+        TabsNode::class => 'renderTabsNode',
+        TabPaneNode::class => 'renderUnsupportedTabPaneNode',
+        CollapseNode::class => 'renderCollapseNode',
+        CollapseItemNode::class => 'renderUnsupportedCollapseItemNode',
         FormObjectGroup::class => 'renderObjectGroup',
         FormTable::class => 'renderFormTable',
         FormArrayGroup::class => 'renderArrayGroup',
@@ -40,10 +52,17 @@ final class FormRenderer
     public function __construct(
         private readonly FieldRenderer $fieldRenderer,
         private readonly FormTableColumnWalker $formTableColumnWalker = new FormTableColumnWalker(),
+        private readonly ActionButtonRenderer $actionButtonRenderer = new ActionButtonRenderer(),
+        private readonly ?LightweightComponentRenderer $lightweightComponentRenderer = null,
     ) {
     }
 
-    public function render(Form $form, string $modelName, FormRenderOptions $options): AbstractHtmlElement
+    public function render(
+        Form $form,
+        string $modelName,
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $attrs = [
             ':model' => $modelName,
@@ -62,6 +81,7 @@ final class FormRenderer
             modelName: $modelName,
             inline: $form->isInline(),
             options: $options,
+            renderContext: $renderContext,
         );
 
         if ($form->isInline()) {
@@ -117,21 +137,11 @@ final class FormRenderer
     private function renderSectionNode(SectionNode $section, FormNodeRenderContext $context): AbstractHtmlElement
     {
         $body = El::double('div')->addClass('sc-v2-form-section');
-
-        if ($section->title() !== '' || $section->descriptionText() !== null) {
-            $header = El::double('div')->addClass('sc-v2-form-section__header');
-            if ($section->title() !== '') {
-                $header->append(El::double('h3')->append($section->title()));
-            }
-            if ($section->descriptionText() !== null && $section->descriptionText() !== '') {
-                $header->append(El::double('p')->append($section->descriptionText()));
-            }
+        $header = $this->renderSectionHeader($section);
+        if ($header !== null) {
             $body->append($header);
         }
-
-        $grid = El::double('el-row')->setAttr(':gutter', 16);
-        $this->appendRenderedChildren($grid, $section->getChildren(), $context->withInline(false));
-        $body->append($grid);
+        $body->append($this->renderChildrenRow($section->getChildren(), $context));
 
         $wrapped = $section->isPlain()
             ? $body
@@ -156,6 +166,77 @@ final class FormRenderer
         return $this->wrapBlockNode($row, $gridNode->getSpan());
     }
 
+    private function renderTabsNode(TabsNode $tabsNode, FormNodeRenderContext $context): AbstractHtmlElement
+    {
+        $tabs = El::double('el-tabs')->addClass('sc-v2-form-tabs');
+
+        if ($tabsNode->getType() !== '') {
+            $tabs->setAttr('type', $tabsNode->getType());
+        }
+        if ($tabsNode->getTabPosition() !== 'top') {
+            $tabs->setAttr('tab-position', $tabsNode->getTabPosition());
+        }
+        if ($tabsNode->isStretch()) {
+            $tabs->setAttr('stretch', '');
+        }
+
+        foreach ($tabsNode->getTabs() as $index => $tab) {
+            $pane = El::double('el-tab-pane')->setAttrs([
+                'label' => $tab->label(),
+                'name' => (string) $index,
+            ]);
+            if ($tab->isLazy()) {
+                $pane->setAttr('lazy', '');
+            }
+
+            $pane->append($this->renderChildrenBodyContainer('sc-v2-form-tabs__pane', $tab->getChildren(), $context));
+            $tabs->append($pane);
+        }
+
+        return $this->wrapBlockNode($tabs, $tabsNode->getSpan());
+    }
+
+    private function renderCollapseNode(CollapseNode $collapseNode, FormNodeRenderContext $context): AbstractHtmlElement
+    {
+        $collapse = El::double('el-collapse')->addClass('sc-v2-form-collapse');
+        if ($collapseNode->isAccordion()) {
+            $collapse->setAttr('accordion', '');
+        }
+
+        foreach ($collapseNode->getItems() as $index => $item) {
+            $collapse->append(
+                El::double('el-collapse-item')->setAttrs([
+                    'title' => $item->title(),
+                    'name' => (string) $index,
+                ])->append($this->renderChildrenBodyContainer(
+                    'sc-v2-form-collapse__item-body',
+                    $item->getChildren(),
+                    $context
+                ))
+            );
+        }
+
+        return $this->wrapBlockNode($collapse, $collapseNode->getSpan());
+    }
+
+    private function renderUnsupportedTabPaneNode(TabPaneNode $tabPaneNode, FormNodeRenderContext $context): AbstractHtmlElement
+    {
+        throw new InvalidArgumentException(sprintf(
+            'Forms::tab("%s") can only be used inside Forms::tabs().',
+            $tabPaneNode->label()
+        ));
+    }
+
+    private function renderUnsupportedCollapseItemNode(
+        CollapseItemNode $collapseItemNode,
+        FormNodeRenderContext $context
+    ): AbstractHtmlElement {
+        throw new InvalidArgumentException(sprintf(
+            'Forms::collapseItem("%s") can only be used inside Forms::collapse().',
+            $collapseItemNode->title()
+        ));
+    }
+
     private function renderObjectGroup(FormObjectGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
         $content = El::fictitious();
@@ -178,12 +259,9 @@ final class FormRenderer
         [$rowVariable, $rowIndexVariable] = $this->arrayLoopVariables($context);
 
         $body = El::double('div')->addClass('sc-v2-form-array');
-        if ($group->getTitle()) {
-            $body->append(
-                El::double('div')->addClass('sc-v2-form-array__header')->append(
-                    El::double('h4')->append($group->getTitle())
-                )
-            );
+        $header = $this->renderBlockTitleHeader($group->getTitle(), 'sc-v2-form-array__header');
+        if ($header !== null) {
+            $body->append($header);
         }
 
         $rows = El::double('div')->addClass('sc-v2-form-array__rows');
@@ -217,19 +295,11 @@ final class FormRenderer
         $body->append($rows);
 
         if ($group->isAddable()) {
-            $body->append(
-                El::double('div')->addClass('sc-v2-form-array__footer')->append(
-                    El::double('el-button')->setAttrs([
-                        'type' => 'primary',
-                        'plain' => '',
-                        '@click' => sprintf(
-                            'addFormArrayRow(%s, %s)',
-                            $scopeLiteral,
-                            $arrayPathExpression
-                        ),
-                    ])->append($group->getAddButtonText())
-                )
-            );
+            $body->append($this->renderAddRowFooter(
+                'sc-v2-form-array__footer',
+                $group->getAddButtonText(),
+                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression)
+            ));
         }
 
         if ($context->inline) {
@@ -248,12 +318,9 @@ final class FormRenderer
         $arrayPathExpression = $this->resolveArrayPathExpression($context, $arrayPath);
 
         $body = El::double('div')->addClass('sc-v2-form-table');
-        if ($table->getTitle()) {
-            $body->append(
-                El::double('div')->addClass('sc-v2-form-table__header')->append(
-                    El::double('h4')->append($table->getTitle())
-                )
-            );
+        $header = $this->renderBlockTitleHeader($table->getTitle(), 'sc-v2-form-table__header');
+        if ($header !== null) {
+            $body->append($header);
         }
 
         $tableElement = El::double('el-table')->setAttrs([
@@ -265,7 +332,14 @@ final class FormRenderer
         ]);
 
         foreach ($columns as $columnSchema) {
-            $tableElement->append($this->renderFormTableColumn($columnSchema, $arrayPathExpression, $context->options));
+            $tableElement->append(
+                $this->renderFormTableColumnNode(
+                    $columnSchema,
+                    $arrayPathExpression,
+                    $context->options,
+                    $context->renderContext
+                )
+            );
         }
 
         if ($table->isReorderable() || $table->isRemovable()) {
@@ -275,19 +349,11 @@ final class FormRenderer
         $body->append($tableElement);
 
         if ($table->isAddable()) {
-            $body->append(
-                El::double('div')->addClass('sc-v2-form-table__footer')->append(
-                    El::double('el-button')->setAttrs([
-                        'type' => 'primary',
-                        'plain' => '',
-                        '@click' => sprintf(
-                            'addFormArrayRow(%s, %s)',
-                            $scopeLiteral,
-                            $arrayPathExpression
-                        ),
-                    ])->append($table->getAddButtonText())
-                )
-            );
+            $body->append($this->renderAddRowFooter(
+                'sc-v2-form-table__footer',
+                $table->getAddButtonText(),
+                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression)
+            ));
         }
 
         if ($context->inline) {
@@ -297,14 +363,28 @@ final class FormRenderer
         return $this->wrapBlockNode($body, $table->getSpan());
     }
 
-    private function renderFormTableColumn(
+    private function renderFormTableColumnNode(
         FormTableColumnSchema $columnSchema,
         string $arrayPathExpression,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement {
         $column = El::double('el-table-column');
         if ($columnSchema->label() !== '') {
             $column->setAttr('label', $columnSchema->label());
+        }
+
+        if ($columnSchema->isGroup()) {
+            foreach ($columnSchema->children() as $childColumn) {
+                $column->append($this->renderFormTableColumnNode(
+                    $childColumn,
+                    $arrayPathExpression,
+                    $options,
+                    $renderContext
+                ));
+            }
+
+            return $column;
         }
 
         $template = El::double('template')->setAttr('#default', 'scope');
@@ -333,6 +413,13 @@ final class FormRenderer
                     $options
                 )
             );
+        } elseif ($columnSchema->arrayGroup() !== null) {
+            $template->append($this->renderFormTableArrayColumn(
+                $columnSchema,
+                $arrayPathExpression,
+                $options,
+                $renderContext
+            ));
         } else {
             $customNode = $columnSchema->customNode();
             if ($customNode === null) {
@@ -344,7 +431,8 @@ final class FormRenderer
                 new FormNodeRenderContext(
                     modelName: 'scope.row',
                     inline: true,
-                    options: $options
+                    options: $options,
+                    renderContext: $renderContext
                 )
             ));
         }
@@ -352,6 +440,35 @@ final class FormRenderer
         $column->append($template);
 
         return $column;
+    }
+
+    private function renderFormTableArrayColumn(
+        FormTableColumnSchema $columnSchema,
+        string $arrayPathExpression,
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement {
+        $group = $columnSchema->arrayGroup();
+        if ($group === null) {
+            return El::fictitious();
+        }
+
+        $rowContext = new FormNodeRenderContext(
+            modelName: 'scope.row',
+            inline: true,
+            options: $options,
+            renderContext: $renderContext,
+            arrayPath: '__table_row__',
+            arrayPathExpression: $arrayPathExpression,
+            rowIndexExpression: 'scope.$index',
+            arrayDepth: 1,
+        );
+
+        if ($group instanceof FormTable) {
+            return $this->renderFormTable($group, $rowContext);
+        }
+
+        return $this->renderArrayGroup($group, $rowContext);
     }
 
     private function renderFormTableActionColumn(
@@ -503,10 +620,8 @@ final class FormRenderer
         string $rowVariable,
         string $rowIndexVariable
     ): AbstractHtmlElement {
-        $body = El::double('div')->addClass('sc-v2-form-array__item-body');
-        $row = El::double('el-row')->setAttr(':gutter', 16);
-        $this->appendRenderedChildren(
-            $row,
+        return $this->renderChildrenBodyContainer(
+            'sc-v2-form-array__item-body',
             $group->getChildren(),
             $context->forArrayRow(
                 $rowVariable,
@@ -516,9 +631,87 @@ final class FormRenderer
                 arrayDepth: $context->arrayDepth + 1
             )
         );
-        $body->append($row);
+    }
 
-        return $body;
+    /**
+     * @param FormNode[] $children
+     */
+    private function renderChildrenRow(array $children, FormNodeRenderContext $context, int $gutter = 16): AbstractHtmlElement
+    {
+        $row = El::double('el-row')->setAttr(':gutter', $gutter);
+        $this->appendRenderedChildren($row, $children, $context->withInline(false));
+
+        return $row;
+    }
+
+    /**
+     * @param FormNode[] $children
+     */
+    private function renderChildrenBodyContainer(
+        string $className,
+        array $children,
+        FormNodeRenderContext $context,
+        int $gutter = 16
+    ): AbstractHtmlElement {
+        return El::double('div')
+            ->addClass($className)
+            ->append($this->renderChildrenRow($children, $context, $gutter));
+    }
+
+    private function renderSectionHeader(SectionNode $section): ?AbstractHtmlElement
+    {
+        if ($section->title() === '' && $section->descriptionText() === null && $section->getHeaderActions() === []) {
+            return null;
+        }
+
+        $header = El::double('div')->addClass('sc-v2-form-section__header');
+        $heading = El::double('div')->addClass('sc-v2-form-section__heading');
+        $headingBody = El::double('div')->addClass('sc-v2-form-section__heading-body');
+
+        if ($section->title() !== '') {
+            $headingBody->append(El::double('h3')->append($section->title()));
+        }
+        if ($section->descriptionText() !== null && $section->descriptionText() !== '') {
+            $headingBody->append(El::double('p')->append($section->descriptionText()));
+        }
+
+        $heading->append($headingBody);
+
+        if ($section->getHeaderActions() !== []) {
+            $actions = El::double('div')->addClass('sc-v2-form-section__actions');
+            foreach ($section->getHeaderActions() as $action) {
+                $actions->append($this->actionButtonRenderer->render($action, false, 'small'));
+            }
+            $heading->append($actions);
+        }
+
+        return $header->append($heading);
+    }
+
+    private function renderBlockTitleHeader(?string $title, string $className): ?AbstractHtmlElement
+    {
+        $title = trim((string) $title);
+        if ($title === '') {
+            return null;
+        }
+
+        return El::double('div')
+            ->addClass($className)
+            ->append(El::double('h4')->append($title));
+    }
+
+    private function renderAddRowFooter(
+        string $className,
+        string $buttonText,
+        string $clickExpression
+    ): AbstractHtmlElement {
+        return El::double('div')->addClass($className)->append(
+            El::double('el-button')->setAttrs([
+                'type' => 'primary',
+                'plain' => '',
+                '@click' => $clickExpression,
+            ])->append($buttonText)
+        );
     }
 
     /**
@@ -578,9 +771,29 @@ final class FormRenderer
 
     private function renderCustomNode(CustomNode $customNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $content = $customNode->content() instanceof AbstractHtmlElement
-            ? $customNode->content()
-            : El::double('div')->append($customNode->content());
+        $rawContent = $customNode->content();
+        if ($rawContent instanceof AbstractHtmlElement) {
+            $content = $rawContent;
+        } elseif ($rawContent instanceof Renderable) {
+            if ($context->renderContext === null) {
+                throw new RuntimeException('Renderable form custom node requires render context.');
+            }
+            if ($this->lightweightComponentRenderer === null || !$this->lightweightComponentRenderer->supportsTree($rawContent)) {
+                throw new InvalidArgumentException(
+                    'Unsupported V2 form custom renderable tree: '
+                    . $rawContent::class
+                    . '. Forms::custom() only accepts lightweight layouts/blocks/displays.'
+                );
+            }
+
+            $content = $this->lightweightComponentRenderer->render(
+                $rawContent,
+                $context->renderContext,
+                $this->customRenderableEventContextExpression($context)
+            );
+        } else {
+            $content = El::double('div')->append($rawContent);
+        }
 
         if ($context->inline) {
             return $content;
@@ -592,6 +805,16 @@ final class FormRenderer
     private function wrapBlockNode(AbstractHtmlElement $content, int $span): AbstractHtmlElement
     {
         return El::double('el-col')->setAttr(':span', $span)->append($content);
+    }
+
+    private function customRenderableEventContextExpression(FormNodeRenderContext $context): ?string
+    {
+        $modelName = trim($context->modelName);
+        if ($modelName === '') {
+            return null;
+        }
+
+        return sprintf('{ model: %s }', $modelName);
     }
 
     private function renderFilterActions(Form $form, FormRenderOptions $options): AbstractHtmlElement
@@ -624,12 +847,6 @@ final class FormRenderer
 
     private function resolveNodeRendererMethod(FormNode $node): ?string
     {
-        foreach (self::NODE_RENDERERS as $class => $method) {
-            if ($node instanceof $class) {
-                return $method;
-            }
-        }
-
-        return null;
+        return $this->resolveClassMappedMethod($node, self::NODE_RENDERERS);
     }
 }

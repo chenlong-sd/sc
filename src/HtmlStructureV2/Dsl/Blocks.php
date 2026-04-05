@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Dsl;
 
 use Sc\Util\HtmlStructureV2\Components\Block\Alert;
+use Sc\Util\HtmlStructureV2\Components\Block\Button;
 use Sc\Util\HtmlStructureV2\Components\Block\Divider;
 use Sc\Util\HtmlStructureV2\Components\Block\Text;
 use Sc\Util\HtmlStructureV2\Components\Block\Title;
@@ -27,5 +28,10 @@ final class Blocks
     public static function alert(string $title, ?string $description = null): Alert
     {
         return Alert::make($title, $description);
+    }
+
+    public static function button(string $label): Button
+    {
+        return Button::make($label);
     }
 }
