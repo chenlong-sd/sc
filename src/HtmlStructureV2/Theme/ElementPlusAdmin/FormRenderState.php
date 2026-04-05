@@ -3,6 +3,9 @@
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Support\FormArrayGroupSchema;
+use Sc\Util\HtmlStructureV2\Support\FormPath;
+use Sc\Util\HtmlStructureV2\Support\FormSchema;
 
 final class FormRenderState
 {
@@ -30,21 +33,25 @@ final class FormRenderState
 
     public function simpleRuntimeState(Form $form): array
     {
+        $schema = $form->schema();
+
         return array_filter([
-            $this->model => $form->defaults(),
-            $this->rules => $form->rules(),
-            $this->optionState => $this->buildInitialOptionState($form->remoteOptions()),
-            $this->optionLoading => $this->buildFlagState(array_keys($form->remoteOptions())),
-            $this->optionLoaded => $this->buildFlagState(array_keys($form->remoteOptions())),
-            $this->uploadFiles => [],
+            $this->model => $schema->defaults(),
+            $this->rules => $schema->rules(),
+            $this->optionState => $this->buildInitialOptionState($schema),
+            $this->optionLoading => $this->buildFlagState($schema->remoteOptionPaths()),
+            $this->optionLoaded => $this->buildFlagState($schema->remoteOptionPaths()),
+            $this->uploadFiles => $this->buildInitialUploadState($schema->uploadPaths()),
         ], static fn(mixed $value, mixed $key) => is_string($key) && $key !== '', ARRAY_FILTER_USE_BOTH);
     }
 
     public function simpleRuntimeConfig(Form $form): array
     {
+        $schema = $form->schema();
+
         return [
-            'defaults' => $form->defaults(),
-            'rules' => $form->rules(),
+            'defaults' => $schema->defaults(),
+            'rules' => $schema->rules(),
             'ref' => $this->ref,
             'modelVar' => $this->modelPath === null ? $this->model : null,
             'modelPath' => $this->modelPath,
@@ -61,18 +68,29 @@ final class FormRenderState
             'registerDependenciesOnMount' => $this->registerDependenciesOnMount,
             'initializeOptionsOnMount' => $this->initializeOptionsOnMount,
             'initializeUploadsOnMount' => $this->initializeUploadsOnMount,
-            'remoteOptions' => $form->remoteOptions(),
-            'selectOptions' => $form->selectOptions(),
-            'linkages' => $form->linkages(),
-            'uploads' => $form->uploads(),
+            'events' => $form->getEventHandlers(),
+            'remoteOptions' => $schema->remoteOptions(),
+            'remoteOptionPaths' => $schema->remoteOptionPaths(),
+            'selectOptions' => $schema->selectOptions(),
+            'linkages' => $schema->linkages(),
+            'uploads' => $schema->uploads(),
+            'uploadPaths' => $schema->uploadPaths(),
+            'arrayGroups' => array_map(
+                static fn(FormArrayGroupSchema $groupSchema) => $groupSchema->toRuntimeConfig(),
+                $schema->arrayGroups()
+            ),
         ];
     }
 
-    private function buildInitialOptionState(array $remoteOptions): array
+    private function buildInitialOptionState(FormSchema $schema): array
     {
         $state = [];
-        foreach ($remoteOptions as $fieldName => $fieldConfig) {
-            $state[$fieldName] = array_values($fieldConfig['initialOptions'] ?? []);
+        foreach ($schema->remoteOptionPaths() as $fieldPath) {
+            FormPath::set(
+                $state,
+                $fieldPath,
+                array_values(FormPath::get($schema->remoteOptions(), $fieldPath, [])['initialOptions'] ?? [])
+            );
         }
 
         return $state;
@@ -82,7 +100,17 @@ final class FormRenderState
     {
         $state = [];
         foreach ($keys as $key) {
-            $state[$key] = $initial;
+            FormPath::set($state, $key, $initial);
+        }
+
+        return $state;
+    }
+
+    private function buildInitialUploadState(array $keys): array
+    {
+        $state = [];
+        foreach ($keys as $key) {
+            FormPath::set($state, $key, []);
         }
 
         return $state;

@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
@@ -17,6 +18,7 @@ use Sc\Util\HtmlStructureV2\Page\CustomPage;
 use Sc\Util\HtmlStructureV2\Page\FormPage;
 use Sc\Util\HtmlStructureV2\Page\ListPage;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\PageCompositionInspector;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ActionButtonRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ColumnRenderer;
@@ -26,13 +28,35 @@ use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FieldRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderOptions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderStateFactory;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\LightweightComponentRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PageFrameRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PageRuntimeRegistry;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PreparedListWidget;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\RuntimePreparationCoordinator;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\SectionCardFactory;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderBindings;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableCardRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\DialogConfigBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\ListRuntimeBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\SimpleRuntimeBuilder;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\TableRuntimeConfigBuilder;
 
 final class ElementPlusAdminTheme implements ThemeInterface
 {
+    private const COMPONENT_RENDERERS = [
+        CrudPage::class => 'renderListPage',
+        ListPage::class => 'renderListPage',
+        FormPage::class => 'renderFormPage',
+        CustomPage::class => 'renderCustomPage',
+        ListWidget::class => 'renderListWidgetComponent',
+        Form::class => 'renderStandaloneForm',
+        Table::class => 'renderStandaloneTable',
+        Dialog::class => 'renderStandaloneDialog',
+        Action::class => 'renderStandaloneAction',
+    ];
+
     private ?ActionButtonRenderer $actionButtonRenderer = null;
     private ?FieldRenderer $fieldRenderer = null;
     private ?ColumnRenderer $columnRenderer = null;
@@ -41,9 +65,17 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private ?DialogRenderer $dialogRenderer = null;
     private ?DialogRenderStateFactory $dialogRenderStateFactory = null;
     private ?FormRenderStateFactory $formRenderStateFactory = null;
+    private ?TableRenderStateFactory $tableRenderStateFactory = null;
     private ?SimpleRuntimeBuilder $simpleRuntimeBuilder = null;
     private ?ListRuntimeBuilder $listRuntimeBuilder = null;
     private ?DialogConfigBuilder $dialogConfigBuilder = null;
+    private ?TableRuntimeConfigBuilder $tableRuntimeConfigBuilder = null;
+    private ?PageCompositionInspector $pageCompositionInspector = null;
+    private ?RuntimePreparationCoordinator $runtimePreparationCoordinator = null;
+    private ?SectionCardFactory $sectionCardFactory = null;
+    private ?TableCardRenderer $tableCardRenderer = null;
+    private ?PageFrameRenderer $pageFrameRenderer = null;
+    private ?LightweightComponentRenderer $lightweightComponentRenderer = null;
 
     private const BASE_CSS = <<<CSS
     [v-cloak]{display:none}
@@ -51,6 +83,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
     body{margin:0;background:#f5f7fa;color:#1f2937;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif}
     #app{min-height:100%;box-sizing:border-box;padding:24px}
     .sc-v2-page{display:flex;flex-direction:column;gap:18px}
+    .sc-v2-list{display:flex;flex-direction:column;gap:18px}
     .sc-v2-page__header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
     .sc-v2-page__title{display:flex;flex-direction:column;gap:6px}
     .sc-v2-page__title h1{margin:0;font-size:28px;line-height:1.2;color:#111827}
@@ -60,15 +93,50 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-section__header{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
     .sc-v2-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .sc-v2-toolbar__actions{display:flex;gap:12px;flex-wrap:wrap}
+    .sc-v2-form__control{display:flex;align-items:flex-start;gap:12px;width:100%}
+    .sc-v2-form__control>:first-child{flex:1 1 auto;min-width:0}
+    .sc-v2-form__suffix{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
+    .sc-v2-form__suffix-text{font-size:13px;line-height:1.5;color:#6b7280}
     .sc-v2-form__help{margin-top:6px;font-size:12px;line-height:1.5;color:#909399}
     .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
     .sc-v2-row-actions{display:flex;gap:8px;flex-wrap:wrap}
     .sc-v2-filters__actions{display:flex;gap:12px;flex-wrap:wrap}
     .sc-v2-table__images{display:flex;gap:8px;flex-wrap:wrap}
+    .sc-v2-stack{display:flex;flex-direction:column}
+    .sc-v2-grid{display:grid}
+    .sc-v2-block-title{display:flex;flex-direction:column;gap:6px}
+    .sc-v2-block-title h2{margin:0;font-size:22px;line-height:1.25;color:#111827}
+    .sc-v2-block-title p{margin:0;color:#6b7280;font-size:14px}
+    .sc-v2-block-text{margin:0;line-height:1.7;color:#374151}
+    .sc-v2-block-text--muted{color:#6b7280}
+    .sc-v2-form-section{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-form-section__header{display:flex;flex-direction:column;gap:4px}
+    .sc-v2-form-section__header h3{margin:0;font-size:18px;line-height:1.3;color:#111827}
+    .sc-v2-form-section__header p{margin:0;color:#6b7280;font-size:13px}
+    .sc-v2-form-inline{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .sc-v2-form-array{display:flex;flex-direction:column;gap:12px}
+    .sc-v2-form-array__header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .sc-v2-form-array__header h4{margin:0;font-size:14px;line-height:1.4;color:#374151}
+    .sc-v2-form-array__rows{display:flex;flex-direction:column;gap:12px}
+    .sc-v2-form-array__item .el-card__body{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-form-array__item-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .sc-v2-form-array__item-title{font-size:14px;font-weight:600;color:#374151}
+    .sc-v2-form-array__item-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .sc-v2-form-array__item-body{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-form-array__footer{display:flex;justify-content:flex-start}
+    .sc-v2-form-table{display:flex;flex-direction:column;gap:12px}
+    .sc-v2-form-table__header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .sc-v2-form-table__header h4{margin:0;font-size:14px;line-height:1.4;color:#374151}
+    .sc-v2-form-table__footer{display:flex;justify-content:flex-start}
+    .sc-v2-form-table__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .sc-v2-form-table__item{margin-bottom:0}
     @media (max-width: 768px){
       #app{padding:16px}
       .sc-v2-page__header{flex-direction:column;align-items:stretch}
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions{width:100%}
+      .sc-v2-form__control{flex-direction:column;align-items:stretch}
+      .sc-v2-form__suffix{width:100%}
+      .sc-v2-grid{grid-template-columns:minmax(0,1fr)!important}
     }
     CSS;
 
@@ -86,93 +154,77 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     public function render(Renderable $component, RenderContext $context): AbstractHtmlElement
     {
-        return match (true) {
-            $component instanceof CrudPage => $this->renderListPage($component, $context),
-            $component instanceof ListPage => $this->renderListPage($component, $context),
-            $component instanceof FormPage => $this->renderFormPage($component, $context),
-            $component instanceof CustomPage => $this->renderCustomPage($component, $context),
-            $component instanceof Form => $this->renderStandaloneForm($component, $context),
-            $component instanceof Table => $this->renderStandaloneTable($component, $context),
-            $component instanceof Dialog => $this->renderDialog($component, 'dialogForm', 'dialogVisible', $context),
-            $component instanceof Action => $this->renderActionButton($component),
-            default => throw new \InvalidArgumentException('Unsupported V2 renderable: ' . $component::class),
-        };
+        if ($this->lightweightComponentRenderer()->supports($component)) {
+            return $this->lightweightComponentRenderer()->render($component, $context);
+        }
+
+        $method = $this->resolveRenderableRendererMethod($component);
+        if ($method === null) {
+            throw new \InvalidArgumentException('Unsupported V2 renderable: ' . $component::class);
+        }
+
+        return $this->{$method}($component, $context);
     }
 
     private function renderListPage(ListPage $page, RenderContext $context): AbstractHtmlElement
     {
-        $body = El::double('div')->addClass('sc-v2-page');
-        $body->append($this->renderPageHeader($page));
+        $list = $page->toListWidget();
+        $prepared = $this->runtimePreparationCoordinator()->prepareListWidget(
+            $this->runtimeRegistry($context),
+            $list,
+            [
+            'deleteUrl' => $page->getDeleteUrl() ?? $page->getTable()?->getDeleteUrl(),
+            'deleteKey' => $page->getDeleteUrl() !== null
+                ? $page->getDeleteKey()
+                : $page->getTable()?->getDeleteKey(),
+            ],
+            true
+        );
+        $renderedSections = $this->renderSections($page->getSections(), $context);
+        $managedDialogs = $this->collectPageManagedDialogs($page, array_merge([$list], $page->getSections()));
+        $this->validatePageActionTargets($page, $context, array_merge([$list], $page->getSections()), $managedDialogs);
 
-        if ($page->getFilterForm()) {
-            $filterState = $this->formRenderStateFactory()->createFilter();
-            $filterCard = $this->card('筛选条件');
-            $filterCard->append(
-                $this->renderForm($page->getFilterForm(), $filterState->model, $filterState->renderOptions)
-            );
-            $body->append($filterCard);
-        }
+        $body = $this->pageFrameRenderer()->render(
+            $page,
+            $renderedSections,
+            $this->renderPreparedListWidget($list, $context, $prepared),
+            $prepared->tableState?->bindings
+        );
 
-        if ($page->getTable()) {
-            $tableCard = $this->card();
-            if ($page->getTable()->getToolbarActions()) {
-                $tableCard->append($this->renderTableToolbar($page->getTable()));
-            }
-            $tableCard->append($this->renderTable($page->getTable()));
-            if ($page->getTable()->usePagination()) {
-                $tableCard->append($this->renderPagination($page->getTable()));
-            }
-            $tableCard->append(
-                El::double('div')->addClass('sc-v2-table__footer')->append(
-                    El::double('span')->append('共 {{ tableTotal || tableRows.length }} 条数据')
-                )
-            );
-            $body->append($tableCard);
-        }
-
-        foreach ($page->getSections() as $section) {
-            $body->append($section->render($context));
-        }
-
-        foreach ($page->getDialogs() as $dialog) {
-            $body->append($this->renderManagedDialog($dialog, $context));
-        }
-
-        $context->document()->assets()->addInlineScript($this->buildListRuntime($page));
+        $this->appendManagedDialogs($body, $context, $managedDialogs);
+        $this->appendListRuntime($context);
 
         return $body;
     }
 
     private function renderFormPage(FormPage $page, RenderContext $context): AbstractHtmlElement
     {
-        $body = El::double('div')->addClass('sc-v2-page');
-        $body->append($this->renderPageHeader($page));
+        $renderedSections = $this->renderSections($page->getSections(), $context);
+        $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
+        $this->validatePageActionTargets($page, $context, $page->getSections(), $managedDialogs);
 
-        if ($page->getForm()) {
-            $body->append($this->renderStandaloneForm($page->getForm(), $context));
-        }
+        $body = $this->pageFrameRenderer()->render(
+            $page,
+            $renderedSections,
+            $page->getForm() ? $this->renderStandaloneForm($page->getForm(), $context) : null
+        );
 
-        foreach ($page->getSections() as $section) {
-            $body->append($section->render($context));
-        }
-
-        $this->appendManagedDialogs($body, $page, $context);
-        $this->appendSimpleRuntime($context);
+        $this->appendManagedDialogs($body, $context, $managedDialogs);
+        $this->appendPageRuntime($context);
 
         return $body;
     }
 
     private function renderCustomPage(CustomPage $page, RenderContext $context): AbstractHtmlElement
     {
-        $body = El::double('div')->addClass('sc-v2-page');
-        $body->append($this->renderPageHeader($page));
+        $renderedSections = $this->renderSections($page->getSections(), $context);
+        $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
+        $this->validatePageActionTargets($page, $context, $page->getSections(), $managedDialogs);
 
-        foreach ($page->getSections() as $section) {
-            $body->append($section->render($context));
-        }
+        $body = $this->pageFrameRenderer()->render($page, $renderedSections);
 
-        $this->appendManagedDialogs($body, $page, $context);
-        $this->appendSimpleRuntime($context);
+        $this->appendManagedDialogs($body, $context, $managedDialogs);
+        $this->appendPageRuntime($context);
 
         return $body;
     }
@@ -181,48 +233,36 @@ final class ElementPlusAdminTheme implements ThemeInterface
     {
         $state = $this->formRenderStateFactory()->createStandalone($form->key());
 
-        $this->mergeSimpleState($context, $state->simpleRuntimeState($form));
-        $this->mergeSimpleFormConfig($context, $state, $form);
+        $this->runtimePreparationCoordinator()->registerSimpleFormRuntime(
+            $this->runtimeRegistry($context),
+            $state,
+            $form
+        );
 
-        return $this->card('表单')->append(
+        return $this->sectionCardFactory()->make('表单')->append(
             $this->renderForm($form, $state->model, $state->renderOptions)
         );
     }
 
     private function renderStandaloneTable(Table $table, RenderContext $context): AbstractHtmlElement
     {
-        $rowsName = $table->key() . 'Rows';
-        $this->mergeSimpleState($context, [
-            $rowsName => $table->getDataSource()?->initialRows() ?? [],
-            $table->key() . 'Loading' => false,
-        ]);
-
-        return $this->card()->append(
-            $this->renderTable($table, $rowsName, $table->key() . 'Loading')
+        $state = $this->runtimePreparationCoordinator()->prepareTable(
+            $this->runtimeRegistry($context),
+            $table
         );
+        return $this->tableCardRenderer()->render($table, $state->bindings, true);
     }
 
-    private function renderPageHeader(AbstractPage $page): AbstractHtmlElement
+    private function renderListWidgetComponent(ListWidget $list, RenderContext $context): AbstractHtmlElement
     {
-        $header = El::double('div')->addClass('sc-v2-page__header');
-        $title = El::double('div')->addClass('sc-v2-page__title')
-            ->append(El::double('h1')->append($page->title()));
-
-        if ($page->getDescription()) {
-            $title->append(El::double('p')->append($page->getDescription()));
-        }
-
-        $header->append($title);
-
-        if ($page->getHeaderActions()) {
-            $actions = El::double('div')->addClass('sc-v2-actions');
-            foreach ($page->getHeaderActions() as $action) {
-                $actions->append($this->renderActionButton($action));
-            }
-            $header->append($actions);
-        }
-
-        return $header;
+        return $this->renderPreparedListWidget(
+            $list,
+            $context,
+            $this->runtimePreparationCoordinator()->prepareListWidget(
+                $this->runtimeRegistry($context),
+                $list
+            )
+        );
     }
 
     private function renderForm(Form $form, string $modelName, array|FormRenderOptions $options = []): AbstractHtmlElement
@@ -232,21 +272,6 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $modelName,
             is_array($options) ? FormRenderOptions::fromArray($options) : $options
         );
-    }
-
-    private function renderTableToolbar(Table $table): AbstractHtmlElement
-    {
-        return $this->tableRenderer()->renderToolbar($table);
-    }
-
-    private function renderTable(Table $table, string $rowsName = 'tableRows', string $loadingName = 'tableLoading'): AbstractHtmlElement
-    {
-        return $this->tableRenderer()->renderTable($table, $rowsName, $loadingName);
-    }
-
-    private function renderPagination(Table $table): AbstractHtmlElement
-    {
-        return $this->tableRenderer()->renderPagination($table);
     }
 
     private function renderManagedDialog(Dialog $dialog, RenderContext $context): AbstractHtmlElement
@@ -280,24 +305,36 @@ final class ElementPlusAdminTheme implements ThemeInterface
         );
     }
 
-    private function renderActionButton(Action $action, bool $rowScoped = false, string $size = 'default'): AbstractHtmlElement
+    private function renderStandaloneDialog(Dialog $dialog, RenderContext $context): AbstractHtmlElement
     {
-        return $this->actionButtonRenderer()->render($action, $rowScoped, $size);
+        return $this->renderDialog($dialog, 'dialogForm', 'dialogVisible', $context);
     }
 
-    private function mergeSimpleState(RenderContext $context, array $state): void
+    private function renderActionButton(
+        Action $action,
+        bool $rowScoped = false,
+        string $size = 'default',
+        ?TableRenderBindings $tableBindings = null
+    ): AbstractHtmlElement
     {
-        $context->set('v2.simple.state', array_merge(
-            $context->get('v2.simple.state', []),
-            $state
-        ));
+        return $this->actionButtonRenderer()->render($action, $rowScoped, $size, $tableBindings);
     }
 
-    private function mergeSimpleConfig(RenderContext $context, array $config): void
+    private function renderStandaloneAction(Action $action, RenderContext $context): AbstractHtmlElement
     {
-        $current = $context->get('v2.simple.config', []);
+        return $this->renderActionButton($action);
+    }
 
-        $context->set('v2.simple.config', array_replace_recursive($current, $config));
+    /**
+     * @param Renderable[] $sections
+     * @return AbstractHtmlElement[]
+     */
+    private function renderSections(array $sections, RenderContext $context): array
+    {
+        return array_map(
+            static fn (Renderable $section): AbstractHtmlElement => $section->render($context),
+            $sections
+        );
     }
 
     private function appendSimpleRuntime(RenderContext $context): void
@@ -305,45 +342,30 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $this->simpleRuntimeBuilder()->append($context);
     }
 
-    private function appendManagedDialogs(DoubleLabel $body, AbstractPage $page, RenderContext $context): void
+    private function appendPageRuntime(RenderContext $context): void
     {
-        $dialogs = $page->getDialogs();
-        if ($dialogs === []) {
+        if ($this->runtimeRegistry($context)->requiresListRuntime()) {
+            $this->appendListRuntime($context);
+
             return;
         }
 
-        $this->mergeSimpleConfig($context, [
-            'dialogs' => $this->dialogConfigBuilder()->build($dialogs),
-        ]);
+        $this->appendSimpleRuntime($context);
+    }
 
-        foreach ($dialogs as $dialog) {
-            if ($dialog->getForm() !== null) {
-                $this->mergeSimpleFormConfig(
-                    $context,
-                    $this->formRenderStateFactory()->createManagedDialog($dialog->key()),
-                    $dialog->getForm()
-                );
-            }
+    /**
+     * @param Dialog[] $dialogs
+     */
+    private function appendManagedDialogs(DoubleLabel $body, RenderContext $context, array $dialogs): void
+    {
+        foreach ($this->runtimePreparationCoordinator()->prepareManagedDialogs($this->runtimeRegistry($context), $dialogs) as $dialog) {
             $body->append($this->renderManagedDialog($dialog, $context));
         }
     }
 
-    private function buildListRuntime(ListPage $page): string
+    private function appendListRuntime(RenderContext $context): void
     {
-        return $this->listRuntimeBuilder()->build($page);
-    }
-
-    private function mergeSimpleFormConfig(RenderContext $context, \Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderState $state, Form $form): void
-    {
-        $simpleConfig = $context->get('v2.simple.config', []);
-        $this->mergeSimpleConfig($context, [
-            'forms' => array_merge(
-                $simpleConfig['forms'] ?? [],
-                [
-                    $state->scope->value() => $state->simpleRuntimeConfig($form),
-                ]
-            ),
-        ]);
+        $this->listRuntimeBuilder()->append($context);
     }
 
     private function dialogFormRef(string $dialogKey): string
@@ -351,9 +373,126 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->formRenderStateFactory()->createManagedDialog($dialogKey)->ref ?? 'dialogFormRef';
     }
 
+    private function renderPreparedListWidget(
+        ListWidget $list,
+        RenderContext $context,
+        PreparedListWidget $prepared
+    ): AbstractHtmlElement
+    {
+        $body = El::double('div')->addClass('sc-v2-list');
+
+        $filterForm = $list->getFilterForm();
+        $filterState = $prepared->filterState;
+        if ($filterForm !== null && $filterState !== null) {
+            $filterCard = $this->sectionCardFactory()->make($list->getFilterTitle());
+            $filterCard->append(
+                $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions)
+            );
+            $body->append($filterCard);
+        }
+
+        $table = $list->getTable();
+        $tableState = $prepared->tableState;
+        if ($table !== null && $tableState !== null) {
+            $body->append(
+                $this->tableCardRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary())
+            );
+        }
+
+        foreach ($prepared->dialogs as $dialog) {
+            $body->append($this->renderManagedDialog($dialog, $context));
+        }
+
+        return $body;
+    }
+
+    /**
+     * @param Renderable[] $components
+     */
+    private function validatePageActionTargets(
+        AbstractPage $page,
+        RenderContext $context,
+        array $components,
+        array $dialogs
+    ): void
+    {
+        $this->pageCompositionInspector()->validateActionTargets(
+            $page,
+            $components,
+            $dialogs,
+            $this->runtimeRegistry($context)->tableKeys(),
+            $this->runtimeRegistry($context)->listKeys()
+        );
+    }
+
+    /**
+     * @param Renderable[] $components
+     * @return Dialog[]
+     */
+    private function collectPageManagedDialogs(AbstractPage $page, array $components): array
+    {
+        return $this->pageCompositionInspector()->collectManagedDialogs($page, $components);
+    }
+
+    private function resolveRenderableRendererMethod(Renderable $component): ?string
+    {
+        foreach (self::COMPONENT_RENDERERS as $class => $method) {
+            if ($component instanceof $class) {
+                return $method;
+            }
+        }
+
+        return null;
+    }
+
+    private function pageCompositionInspector(): PageCompositionInspector
+    {
+        return $this->pageCompositionInspector ??= new PageCompositionInspector();
+    }
+
+    private function pageFrameRenderer(): PageFrameRenderer
+    {
+        return $this->pageFrameRenderer ??= new PageFrameRenderer($this->actionButtonRenderer());
+    }
+
+    private function runtimeRegistry(RenderContext $context): PageRuntimeRegistry
+    {
+        return new PageRuntimeRegistry($context);
+    }
+
+    private function runtimePreparationCoordinator(): RuntimePreparationCoordinator
+    {
+        return $this->runtimePreparationCoordinator ??= new RuntimePreparationCoordinator(
+            $this->formRenderStateFactory(),
+            $this->tableRenderStateFactory(),
+            $this->dialogConfigBuilder(),
+            $this->tableRuntimeConfigBuilder()
+        );
+    }
+
+    private function sectionCardFactory(): SectionCardFactory
+    {
+        return $this->sectionCardFactory ??= new SectionCardFactory();
+    }
+
+    private function tableCardRenderer(): TableCardRenderer
+    {
+        return $this->tableCardRenderer ??= new TableCardRenderer(
+            $this->tableRenderer(),
+            $this->sectionCardFactory()
+        );
+    }
+
+    private function lightweightComponentRenderer(): LightweightComponentRenderer
+    {
+        return $this->lightweightComponentRenderer ??= new LightweightComponentRenderer(
+            $this->sectionCardFactory()
+        );
+    }
+
     private function fieldRenderer(): FieldRenderer
     {
-        return $this->fieldRenderer ??= new FieldRenderer();
+        return $this->fieldRenderer ??= new FieldRenderer($this->actionButtonRenderer());
     }
 
     private function columnRenderer(): ColumnRenderer
@@ -397,6 +536,11 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->formRenderStateFactory ??= new FormRenderStateFactory();
     }
 
+    private function tableRenderStateFactory(): TableRenderStateFactory
+    {
+        return $this->tableRenderStateFactory ??= new TableRenderStateFactory();
+    }
+
     private function simpleRuntimeBuilder(): SimpleRuntimeBuilder
     {
         return $this->simpleRuntimeBuilder ??= new SimpleRuntimeBuilder();
@@ -412,18 +556,9 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->dialogConfigBuilder ??= new DialogConfigBuilder();
     }
 
-    private function card(string $title = ''): DoubleLabel
+    private function tableRuntimeConfigBuilder(): TableRuntimeConfigBuilder
     {
-        $card = El::double('el-card')->addClass('sc-v2-section');
-
-        if ($title !== '') {
-            $card->append(
-                El::double('template')->setAttr('#header')->append(
-                    El::double('div')->addClass('sc-v2-section__header')->append($title)
-                )
-            );
-        }
-
-        return $card;
+        return $this->tableRuntimeConfigBuilder ??= new TableRuntimeConfigBuilder();
     }
+
 }

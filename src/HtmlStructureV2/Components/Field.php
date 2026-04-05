@@ -2,16 +2,22 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
-abstract class Field
+abstract class Field implements FormNode
 {
+    use HasSpan;
+
     protected mixed $default = null;
     protected array $props = [];
-    protected int $span = 24;
     protected string $helpText = '';
     protected bool $disabled = false;
+    protected array $suffixActions = [];
+    protected string|AbstractHtmlElement|null $suffixContent = null;
     protected ?JsExpression $visibleWhen = null;
     protected ?JsExpression $disabledWhen = null;
 
@@ -60,6 +66,20 @@ abstract class Field
     public function disabled(bool $disabled = true): static
     {
         $this->disabled = $disabled;
+
+        return $this;
+    }
+
+    public function suffixActions(Action ...$actions): static
+    {
+        $this->suffixActions = array_merge($this->suffixActions, $actions);
+
+        return $this;
+    }
+
+    public function suffixContent(string|AbstractHtmlElement|null $content): static
+    {
+        $this->suffixContent = $content;
 
         return $this;
     }
@@ -120,6 +140,22 @@ abstract class Field
     public function isDisabled(): bool
     {
         return $this->disabled;
+    }
+
+    public function getSuffixActions(): array
+    {
+        return $this->suffixActions;
+    }
+
+    public function getSuffixContent(): string|AbstractHtmlElement|null
+    {
+        return $this->suffixContent;
+    }
+
+    public function hasSuffix(): bool
+    {
+        return $this->suffixActions !== []
+            || ($this->suffixContent !== null && $this->suffixContent !== '');
     }
 
     public function getVisibleWhen(): ?JsExpression

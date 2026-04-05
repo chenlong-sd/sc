@@ -14,10 +14,24 @@
             ensureSuccess,
             extractPayload,
             resolveMessage,
-            getBaseContext: (vm) => ({
-              forms: buildFormsContext(vm),
-              selection: Array.isArray(vm.tableSelection) ? vm.tableSelection : [],
-            }),
+            getBaseContext: (vm, dialogKey, row, activeTableKey) => {
+              const tableKey = activeTableKey
+                || (typeof vm.getActiveDialogTableKey === 'function'
+                  ? vm.getActiveDialogTableKey(dialogKey)
+                  : null);
+
+              return {
+                forms: buildFormsContext(vm),
+                selection: typeof vm.getTableSelection === 'function' ? vm.getTableSelection(tableKey) : [],
+                reloadTable: (target = tableKey) => {
+                  if (!target) {
+                    return undefined;
+                  }
+
+                  return typeof vm.reloadTable === 'function' ? vm.reloadTable(target) : undefined;
+                },
+              };
+            },
             formMethodNames: {
               withDependencyResetSuspended: 'withSimpleDependencyResetSuspended',
               initializeFormOptions: 'initializeSimpleFormOptions',

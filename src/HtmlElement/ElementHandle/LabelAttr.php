@@ -303,7 +303,13 @@ trait LabelAttr
 
         $attrStr = [''];
         foreach ($this->attrs as $attr => $value) {
-            $attrStr[] = $value === "" || $value === null ? $attr : sprintf('%s="%s"', $attr, $value);
+            $attrStr[] = $value === "" || $value === null
+                ? $attr
+                : sprintf(
+                    '%s="%s"',
+                    $attr,
+                    htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                );
         }
         return implode(' ', $attrStr);
     }

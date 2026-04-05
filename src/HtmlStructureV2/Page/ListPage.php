@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Page;
 
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
 
 class ListPage extends AbstractPage
@@ -58,6 +59,21 @@ class ListPage extends AbstractPage
     public function getDeleteKey(): string
     {
         return $this->deleteKey;
+    }
+
+    public function toListWidget(): ListWidget
+    {
+        $widget = ListWidget::make($this->key());
+
+        if ($this->filterForm !== null) {
+            $widget->filters($this->filterForm);
+        }
+
+        if ($this->table !== null) {
+            $widget->table($this->table);
+        }
+
+        return $widget->dialogs(...$this->getDialogs());
     }
 
     protected function resolveDialogs(): array

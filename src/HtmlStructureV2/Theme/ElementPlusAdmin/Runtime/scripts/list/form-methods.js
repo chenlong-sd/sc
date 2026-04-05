@@ -41,9 +41,13 @@
             getOptionLoadingState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionLoadingVar', 'optionLoadingPath', true),
             getOptionLoadedState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionLoadedVar', 'optionLoadedPath', true),
             getUploadFileState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'uploadFilesVar', 'uploadFilesPath', true),
+            getFormEvents: (scope) => getScopedFormConfig(scope)?.events || {},
+            getArrayGroups: (scope) => getScopedFormConfig(scope)?.arrayGroups || [],
             getRemoteOptionsMap: (scope) => getScopedFormConfig(scope)?.remoteOptions || {},
+            getRemoteOptionPaths: (scope) => getScopedFormConfig(scope)?.remoteOptionPaths || [],
             getSelectOptionsMap: (scope) => getScopedFormConfig(scope)?.selectOptions || {},
             getLinkagesMap: (scope) => getScopedFormConfig(scope)?.linkages || {},
-            getUploadsMap: (scope) => getScopedFormConfig(scope)?.uploads || {}
+            getUploadsMap: (scope) => getScopedFormConfig(scope)?.uploads || {},
+            getUploadPaths: (scope) => getScopedFormConfig(scope)?.uploadPaths || []
           });
         };

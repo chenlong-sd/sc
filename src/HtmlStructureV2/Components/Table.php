@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\DataSource\ArrayDataSource;
 use Sc\Util\HtmlStructureV2\DataSource\DataSourceInterface;
 use Sc\Util\HtmlStructureV2\DataSource\UrlDataSource;
@@ -10,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
 final class Table implements Renderable
 {
+    use HasEvents;
     use RendersWithTheme;
 
     private array $columns = [];
@@ -24,6 +26,8 @@ final class Table implements Renderable
     private string $emptyText = '暂无数据';
     private bool $selection = false;
     private array $searchSchema = [];
+    private ?string $deleteUrl = null;
+    private string $deleteKey = 'id';
 
     public function __construct(
         private readonly string $key
@@ -145,6 +149,20 @@ final class Table implements Renderable
         return $this;
     }
 
+    public function deleteUrl(?string $deleteUrl): self
+    {
+        $this->deleteUrl = $deleteUrl;
+
+        return $this;
+    }
+
+    public function deleteKey(string $deleteKey): self
+    {
+        $this->deleteKey = $deleteKey;
+
+        return $this;
+    }
+
     public function key(): string
     {
         return $this->key;
@@ -216,6 +234,16 @@ final class Table implements Renderable
             $this->buildColumnSearchSchema(),
             $this->searchSchema
         );
+    }
+
+    public function getDeleteUrl(): ?string
+    {
+        return $this->deleteUrl;
+    }
+
+    public function getDeleteKey(): string
+    {
+        return $this->deleteKey;
     }
 
     private function buildColumnSearchSchema(): array

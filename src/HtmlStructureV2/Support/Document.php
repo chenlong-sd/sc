@@ -5,8 +5,9 @@ namespace Sc\Util\HtmlStructureV2\Support;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
+use Sc\Util\HtmlStructureV2\Contracts\DocumentRenderable;
 
-final class Document
+final class Document implements DocumentRenderable
 {
     private const BASE_CODE = <<<HTML
     <!DOCTYPE html>

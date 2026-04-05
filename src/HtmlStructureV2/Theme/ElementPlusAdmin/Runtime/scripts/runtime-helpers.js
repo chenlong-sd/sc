@@ -17,6 +17,7 @@
             return value;
           };
           const isBlank = (value) => value === '' || value === null || value === undefined || (Array.isArray(value) && value.length === 0);
+          const isColumnDisplayBlank = (value) => isBlank(value);
           const isRowArray = (value) => {
             if (!Array.isArray(value)) return false;
             if (value.length === 0) return true;
@@ -29,15 +30,22 @@
               .reduce((current, segment) => current == null ? undefined : current[segment], source);
           };
           const setByPath = (source, path, value) => {
-            if (!isObject(source) || !path) return;
+            if ((!isObject(source) && !Array.isArray(source)) || !path) return;
 
             const segments = String(path).split('.').filter(Boolean);
             if (segments.length === 0) return;
 
             let current = source;
-            segments.slice(0, -1).forEach((segment) => {
-              if (!isObject(current[segment])) {
-                current[segment] = {};
+            segments.slice(0, -1).forEach((segment, index) => {
+              const nextSegment = segments[index + 1];
+              const shouldUseArray = /^\d+$/.test(String(nextSegment || ''));
+              const currentValue = current[segment];
+              if (
+                currentValue === null
+                || currentValue === undefined
+                || (typeof currentValue !== 'object')
+              ) {
+                current[segment] = shouldUseArray ? [] : {};
               }
               current = current[segment];
             });
@@ -83,6 +91,27 @@
             } catch (error) {
               return Promise.reject(error);
             }
+          };
+          const callHooks = (hooks, context) => {
+            const queue = Array.isArray(hooks)
+              ? hooks.filter((hook) => typeof hook === 'function')
+              : [];
+
+            return queue.reduce(
+              (promise, hook) => promise.then((results) => {
+                return callHook(hook, context).then((result) => {
+                  results.push(result);
+                  return results;
+                });
+              }),
+              Promise.resolve([])
+            );
+          };
+          const emitConfiguredEvent = (config, eventName, context) => {
+            return callHooks(config?.events?.[eventName] || [], context);
+          };
+          const isEventCanceled = (results) => {
+            return Array.isArray(results) && results.some((result) => result === false);
           };
           const pickRows = (payload, depth = 0) => {
             if (depth > 4) return [];
@@ -133,20 +162,24 @@
               disabled: item.disabled === true
             });
           };
-          const buildOptionState = (configs) => {
+          const buildOptionState = (configs, fieldPaths = []) => {
             const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              const fieldCfg = configs[fieldName] || {};
-              state[fieldName] = Array.isArray(fieldCfg.initialOptions)
-                ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
-                : [];
+            (fieldPaths || []).forEach((fieldName) => {
+              const fieldCfg = getByPath(configs || {}, fieldName) || {};
+              setByPath(
+                state,
+                fieldName,
+                Array.isArray(fieldCfg.initialOptions)
+                  ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
+                  : []
+              );
             });
             return state;
           };
-          const buildFlagState = (configs, initialValue = false) => {
+          const buildFlagState = (fieldPaths = [], initialValue = false) => {
             const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              state[fieldName] = initialValue;
+            (fieldPaths || []).forEach((fieldName) => {
+              setByPath(state, fieldName, initialValue);
             });
             return state;
           };
@@ -298,6 +331,94 @@
 
             return String(left) === String(right);
           };
+          const findColumnOption = (value, options = []) => {
+            if (!Array.isArray(options)) {
+              return null;
+            }
+
+            return options.find((item) => item && isSameValue(item.value, value)) || null;
+          };
+          const resolveColumnDisplayValue = (value, separator = ', ') => {
+            if (!Array.isArray(value)) {
+              return value;
+            }
+
+            return value
+              .map((item) => item === null || item === undefined ? '' : String(item))
+              .filter((item) => item !== '')
+              .join(separator);
+          };
+          const resolveColumnMappingLabel = (value, options = [], separator = ', ') => {
+            if (Array.isArray(value)) {
+              return value
+                .map((item) => findColumnOption(item, options)?.label ?? '')
+                .filter((item) => item !== '')
+                .join(separator);
+            }
+
+            return findColumnOption(value, options)?.label ?? '';
+          };
+          const resolveColumnTagMeta = (value, options = [], defaultType = 'info') => {
+            const option = findColumnOption(value, options);
+            if (!option) {
+              return null;
+            }
+
+            return Object.assign({}, option, {
+              label: option.label ?? '',
+              type: option.type ?? defaultType
+            });
+          };
+          const isColumnTruthy = (value) => {
+            if ([true, 1, '1', 'true', 'yes', 'on'].includes(value)) {
+              return true;
+            }
+
+            if (value === null || value === undefined) {
+              return false;
+            }
+
+            return ['true', 'yes', 'on', '1'].includes(String(value).toLowerCase());
+          };
+          const isColumnFalsy = (value) => {
+            if ([false, 0, '0', 'false', 'no', 'off'].includes(value)) {
+              return true;
+            }
+
+            if (value === null || value === undefined) {
+              return false;
+            }
+
+            return ['false', 'no', 'off', '0'].includes(String(value).toLowerCase());
+          };
+          const formatColumnDatetime = (value, format = 'YYYY-MM-DD HH:mm:ss') => {
+            if (value === '' || value === null || value === undefined) {
+              return '';
+            }
+
+            const raw = String(value).trim();
+            const isNumeric = typeof value === 'number' || /^-?\d+(\.\d+)?$/.test(raw);
+            const normalizedNumber = isNumeric ? Number(value) : NaN;
+            const timestamp = isNumeric
+              ? (String(Math.trunc(Math.abs(normalizedNumber))).length <= 10 ? normalizedNumber * 1000 : normalizedNumber)
+              : NaN;
+            const date = isNumeric
+              ? new Date(timestamp)
+              : new Date(raw.replace('T', ' ').replace(/-/g, '/'));
+
+            if (Number.isNaN(date.getTime())) {
+              return raw;
+            }
+
+            const pad = (num) => String(num).padStart(2, '0');
+            return String(format)
+              .replace(/YYYY/g, String(date.getFullYear()))
+              .replace(/MM/g, pad(date.getMonth() + 1))
+              .replace(/DD/g, pad(date.getDate()))
+              .replace(/HH/g, pad(date.getHours()))
+              .replace(/mm/g, pad(date.getMinutes()))
+              .replace(/ss/g, pad(date.getSeconds()));
+          };
           const resolveLinkageToken = (token, context) => {
             const path = String(token || '').replace(/^@/, '');
             if (path === '') return '';
@@ -414,10 +535,111 @@
 
             return fieldCfg?.multiple ? files : files.slice(0, 1);
           };
-          const buildUploadFileState = (configs, model) => {
+          const buildUploadFileState = (configs, model, fieldPaths = []) => {
             const state = {};
-            Object.keys(configs || {}).forEach((fieldName) => {
-              state[fieldName] = normalizeUploadFiles(getByPath(model, fieldName), configs[fieldName] || {});
+            (fieldPaths || []).forEach((fieldName) => {
+              setByPath(
+                state,
+                fieldName,
+                normalizeUploadFiles(getByPath(model, fieldName), getByPath(configs, fieldName) || {})
+              );
+            });
+            return state;
+          };
+          const buildArrayGroupConfigMap = (arrayGroups = []) => {
+            return (Array.isArray(arrayGroups) ? arrayGroups : []).reduce((map, groupCfg) => {
+              const path = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+              if (path !== '') {
+                map[path] = groupCfg;
+              }
+
+              return map;
+            }, {});
+          };
+          let arrayGroupRowKeySeed = 0;
+          const nextArrayGroupRowKey = () => {
+            arrayGroupRowKeySeed += 1;
+            return 'sc-v2-array-row-' + arrayGroupRowKeySeed;
+          };
+          const normalizeArrayGroupRow = (row, groupCfg = {}) => {
+            const defaultRow = isObject(groupCfg?.defaultRow) ? clone(groupCfg.defaultRow) : {};
+            if (isObject(row)) {
+              const normalizedRow = Object.assign(defaultRow, clone(row));
+              if (
+                normalizedRow.__sc_v2_row_key === undefined
+                || normalizedRow.__sc_v2_row_key === null
+                || normalizedRow.__sc_v2_row_key === ''
+              ) {
+                normalizedRow.__sc_v2_row_key = nextArrayGroupRowKey();
+              }
+
+              return normalizedRow;
+            }
+            if (Array.isArray(row)) {
+              return clone(row);
+            }
+
+            defaultRow.__sc_v2_row_key = nextArrayGroupRowKey();
+
+            return defaultRow;
+          };
+          const normalizeArrayGroupRows = (rows, groupCfg = {}) => {
+            const normalizedRows = (Array.isArray(rows) ? rows : [])
+              .map((row) => normalizeArrayGroupRow(row, groupCfg));
+            const minRows = Math.max(0, Number(groupCfg?.minRows) || 0);
+
+            while (normalizedRows.length < minRows) {
+              normalizedRows.push(normalizeArrayGroupRow({}, groupCfg));
+            }
+
+            return normalizedRows;
+          };
+          const ensureFormArrayGroupState = (model, groupCfg = {}) => {
+            const path = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+            if (path === '') {
+              return [];
+            }
+
+            const normalizedRows = normalizeArrayGroupRows(getByPath(model, path), groupCfg);
+            setByPath(model, path, normalizedRows);
+
+            const childGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
+            if (childGroups.length > 0) {
+              normalizedRows.forEach((_, rowIndex) => {
+                childGroups.forEach((childGroupCfg) => {
+                  const childPath = [path, rowIndex, childGroupCfg?.path]
+                    .filter((segment) => segment !== null && segment !== undefined && segment !== '')
+                    .join('.');
+                  ensureFormArrayGroupState(model, Object.assign({}, childGroupCfg, {
+                    path: childPath
+                  }));
+                });
+              });
+            }
+
+            return normalizedRows;
+          };
+          const buildTableState = (tableConfig = {}) => {
+            const initialRows = Array.isArray(tableConfig?.initialRows) ? clone(tableConfig.initialRows) : [];
+
+            return {
+              rows: clone(initialRows),
+              allRows: clone(initialRows),
+              selection: [],
+              total: initialRows.length,
+              page: 1,
+              pageSize: tableConfig?.pagination?.pageSize || 20,
+              sort: {
+                field: '',
+                order: null
+              },
+              loading: false
+            };
+          };
+          const buildTableStates = (tables = {}) => {
+            const state = {};
+            Object.keys(tables || {}).forEach((tableKey) => {
+              state[tableKey] = buildTableState(tables[tableKey] || {});
             });
             return state;
           };
@@ -455,6 +677,30 @@
 
             return current ?? fallback;
           };
+          const setConfigState = (vm, config, varKey, pathKey, value) => {
+            const varName = config?.[varKey];
+            if (typeof varName === 'string' && varName !== '') {
+              vm[varName] = value;
+              return value;
+            }
+
+            const path = Array.isArray(config?.[pathKey]) ? config[pathKey].filter((segment) => segment !== '') : [];
+            if (path.length === 0) {
+              return value;
+            }
+
+            let current = vm;
+            for (let index = 0; index < path.length - 1; index += 1) {
+              const segment = path[index];
+              if (current[segment] === undefined || current[segment] === null || (typeof current[segment] !== 'object' && !Array.isArray(current[segment]))) {
+                current[segment] = {};
+              }
+              current = current[segment];
+            }
+
+            current[path[path.length - 1]] = value;
+            return value;
+          };
           const buildFormsContext = (vm, forms = {}) => {
             const context = {};
 
@@ -468,6 +714,9 @@
             Object.keys(forms || {}).forEach((scope) => {
               const formCfg = forms[scope] || {};
 
+              if (Array.isArray(formCfg.arrayGroups) && formCfg.arrayGroups.length > 0) {
+                handlers.initializeArrayGroups?.(scope, formCfg);
+              }
               if (formCfg.registerDependenciesOnMount) {
                 handlers.registerDependencies?.(scope, formCfg);
               }
@@ -500,10 +749,21 @@
             dialogForms: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
             dialogInitials: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
             dialogRules: buildDialogState(dialogs, (_, dialogKey) => getDialogFormConfig(dialogKey).rules || {}),
-            dialogOptions: buildDialogState(dialogs, (_, dialogKey) => buildOptionState(getDialogFormConfig(dialogKey).remoteOptions || {})),
-            dialogOptionLoading: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(getDialogFormConfig(dialogKey).remoteOptions || {})),
-            dialogOptionLoaded: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(getDialogFormConfig(dialogKey).remoteOptions || {})),
-            dialogUploadFiles: buildDialogState(dialogs, (_, dialogKey) => buildUploadFileState(getDialogFormConfig(dialogKey).uploads || {}, getDialogFormConfig(dialogKey).defaults || {})),
+            dialogOptions: buildDialogState(dialogs, (_, dialogKey) => buildOptionState(
+              getDialogFormConfig(dialogKey).remoteOptions || {},
+              getDialogFormConfig(dialogKey).remoteOptionPaths || []
+            )),
+            dialogOptionLoading: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(
+              getDialogFormConfig(dialogKey).remoteOptionPaths || []
+            )),
+            dialogOptionLoaded: buildDialogState(dialogs, (_, dialogKey) => buildFlagState(
+              getDialogFormConfig(dialogKey).remoteOptionPaths || []
+            )),
+            dialogUploadFiles: buildDialogState(dialogs, (_, dialogKey) => buildUploadFileState(
+              getDialogFormConfig(dialogKey).uploads || {},
+              getDialogFormConfig(dialogKey).defaults || {},
+              getDialogFormConfig(dialogKey).uploadPaths || []
+            )),
             dialogVisible: buildDialogState(dialogs, () => false),
             dialogMode: buildDialogState(dialogs, () => 'create'),
             dialogRows: buildDialogState(dialogs, () => null),
@@ -513,6 +773,7 @@
             dialogIframeUrls: buildDialogState(dialogs, () => ''),
             dialogComponentProps: buildDialogState(dialogs, () => ({})),
             dialogFullscreen: buildDialogState(dialogs, (dialogCfg) => !!dialogCfg.fullscreen),
+            dialogTableKeys: buildDialogState(dialogs, () => null),
           };
           };
           const syncUploadModelValue = (model, fieldName, fieldCfg, files) => {
@@ -533,26 +794,39 @@
             toDialogScope,
             buildDialogState,
             buildDialogTitleState,
+            buildArrayGroupConfigMap,
             buildFlagState,
             buildFormsContext,
             buildManagedDialogRuntimeState,
             buildOptionState,
+            buildTableState,
+            buildTableStates,
             buildUploadFileState,
             buildUrlWithQuery,
             callHook,
+            callHooks,
             clone,
+            emitConfiguredEvent,
             ensureSuccess,
             extractFileName,
             extractPayload,
+            formatColumnDatetime,
             getConfigState,
             getByPath,
             hasReadyDependencies,
+            ensureFormArrayGroupState,
             initializeConfiguredForms,
             isBlank,
+            isColumnDisplayBlank,
+            isEventCanceled,
+            isColumnFalsy,
+            isColumnTruthy,
             isObject,
             isRowArray,
             isSameValue,
             makeRequest,
+            normalizeArrayGroupRow,
+            normalizeArrayGroupRows,
             normalizeDependencies,
             normalizeOption,
             normalizeUploadFile,
@@ -560,11 +834,15 @@
             pickRows,
             resolveContextToken,
             resolveContextValue,
+            resolveColumnDisplayValue,
+            resolveColumnMappingLabel,
+            resolveColumnTagMeta,
             resolveDynamicParams,
             resolveLinkageTemplate,
             resolveMessage,
             resolveTitleTemplate,
             resolveUploadValue,
+            setConfigState,
             setByPath,
             syncUploadModelValue
           };

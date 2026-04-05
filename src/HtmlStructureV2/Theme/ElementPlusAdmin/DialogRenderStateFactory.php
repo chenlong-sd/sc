@@ -2,8 +2,12 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+
 final class DialogRenderStateFactory
 {
+    use BuildsJsExpressions;
+
     private ?FormRenderStateFactory $formRenderStateFactory = null;
 
     public function createManaged(string $dialogKey, string $dialogFormRef): DialogRenderState
@@ -45,14 +49,5 @@ final class DialogRenderStateFactory
     private function formRenderStateFactory(): FormRenderStateFactory
     {
         return $this->formRenderStateFactory ??= new FormRenderStateFactory();
-    }
-
-    private function jsLiteral(string $value): string
-    {
-        return "'" . str_replace(
-            ['\\', '\''],
-            ['\\\\', '\\\''],
-            $value
-        ) . "'";
     }
 }

@@ -136,14 +136,7 @@ final class DialogRenderer
             $component->setAttr('v-bind', $bindings->componentPropsExpression() ?: $this->jsValue($dialog->getComponentProps()));
 
             foreach ($dialog->getComponentAttrs() as $key => $value) {
-                $component->setAttr(
-                    $key,
-                    $value instanceof \Sc\Util\HtmlStructureV2\Support\JsExpression
-                        ? $value->expression()
-                        : (is_array($value) || is_bool($value) || is_int($value) || is_float($value) || $value === null
-                            ? $this->jsValue($value)
-                            : (string) $value)
-                );
+                $component->setAttr($key, $this->jsAttributeValue($value));
             }
 
             if ($bindings->componentRefExpression() !== null && $bindings->componentRefExpression() !== '') {

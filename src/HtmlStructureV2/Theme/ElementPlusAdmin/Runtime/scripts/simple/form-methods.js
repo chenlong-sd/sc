@@ -40,9 +40,13 @@
             getOptionLoadingState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadingVar', 'optionLoadingPath', true),
             getOptionLoadedState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadedVar', 'optionLoadedPath', true),
             getUploadFileState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'uploadFilesVar', 'uploadFilesPath', true),
+            getFormEvents: (scope) => getFormConfig(scope)?.events || {},
+            getArrayGroups: (scope) => getFormConfig(scope)?.arrayGroups || [],
             getRemoteOptionsMap: (scope) => getFormConfig(scope)?.remoteOptions || {},
+            getRemoteOptionPaths: (scope) => getFormConfig(scope)?.remoteOptionPaths || [],
             getSelectOptionsMap: (scope) => getFormConfig(scope)?.selectOptions || {},
             getLinkagesMap: (scope) => getFormConfig(scope)?.linkages || {},
-            getUploadsMap: (scope) => getFormConfig(scope)?.uploads || {}
+            getUploadsMap: (scope) => getFormConfig(scope)?.uploads || {},
+            getUploadPaths: (scope) => getFormConfig(scope)?.uploadPaths || []
           });
         };

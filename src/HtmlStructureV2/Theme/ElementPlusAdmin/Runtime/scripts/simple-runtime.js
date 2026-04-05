@@ -1,15 +1,19 @@
-        (function(state, cfg){
+        globalThis.__SC_V2_BOOT_SIMPLE__ = (state, cfg) => {
           const {
             buildFormsContext,
             buildManagedDialogRuntimeState,
+            buildTableStates,
             clone,
             extractPayload,
             ensureSuccess,
             initializeConfiguredForms,
+            makeRequest,
+            pickRows,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
 
+          const createColumnDisplayMethods = globalThis.__SC_V2_CREATE_COLUMN_DISPLAY_METHODS__;
           const createRequestActionMethods = globalThis.__SC_V2_CREATE_REQUEST_ACTION_METHODS__;
           const createSimpleFormMethods = globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__;
           const createSimpleDialogMethods = globalThis.__SC_V2_CREATE_SIMPLE_DIALOG_METHODS__;
@@ -18,24 +22,30 @@
             data(){
               return Object.assign({
                 actionLoading: {},
-                tableSelection: [],
+                tableConfigs: cfg.tables || {},
+                tableStates: buildTableStates(cfg.tables),
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
               }, state || {});
             },
             mounted(){
               this.ensureDialogMessageBridge();
               initializeConfiguredForms(forms, {
+                initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
                 registerDependencies: (scope) => this.registerSimpleFormDependencies(scope),
                 initializeOptions: (scope) => this.initializeSimpleFormOptions(scope),
                 initializeUploads: (scope) => this.initializeSimpleUploadFiles(scope),
               });
+              this.initializeTables();
             },
             methods: Object.assign(
               {},
+              createColumnDisplayMethods(),
               createRequestActionMethods({
-                getBaseContext: (vm) => ({
+                getBaseContext: (vm, actionConfig) => ({
                   forms: buildFormsContext(vm, forms),
-                  selection: Array.isArray(vm.tableSelection) ? vm.tableSelection : [],
+                  selection: typeof vm.getTableSelection === 'function'
+                    ? vm.getTableSelection(actionConfig?.tableKey || null)
+                    : [],
                 })
               }),
               createSimpleFormMethods({ cfg }),
@@ -82,9 +92,17 @@
                 extractPayload,
                 resolveMessage
               }),
-              createSimpleTableMethods()
+              createSimpleTableMethods({
+                cfg,
+                clone,
+                ensureSuccess,
+                extractPayload,
+                makeRequest,
+                pickRows,
+                resolveMessage
+              })
             )
           });
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
-        })(__SC_V2_STATE__, __SC_V2_CONFIG__);
+        };

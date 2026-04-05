@@ -8,19 +8,28 @@
           getOptionLoadingState,
           getOptionLoadedState,
           getUploadFileState,
+          getFormEvents,
+          getArrayGroups,
           getRemoteOptionsMap,
+          getRemoteOptionPaths,
           getSelectOptionsMap,
           getLinkagesMap,
-          getUploadsMap
+          getUploadsMap,
+          getUploadPaths
         }) => {
           const {
+            clone,
+            emitConfiguredEvent,
+            ensureFormArrayGroupState,
             extractPayload,
             ensureSuccess,
             getByPath,
             hasReadyDependencies,
+            isEventCanceled,
             isBlank,
             isSameValue,
             makeRequest,
+            normalizeArrayGroupRow,
             normalizeDependencies,
             normalizeOption,
             normalizeUploadFiles,
@@ -38,6 +47,17 @@
             validateForm: 'validateManagedForm',
             clearFormValidate: 'clearManagedFormValidate',
             getFormModel: 'getManagedFormModel',
+            getFormPathStateValue: 'getFormPathStateValue',
+            getFormArrayGroupConfig: 'getFormArrayGroupConfig',
+            ensureFormArrayGroupState: 'ensureFormArrayGroupState',
+            initializeFormArrayGroups: 'initializeFormArrayGroups',
+            syncFormArrayGroupRemoteState: 'syncFormArrayGroupRemoteState',
+            initializeArrayGroupRemoteOptions: 'initializeArrayGroupRemoteOptions',
+            getFormArrayRows: 'getFormArrayRows',
+            joinFormArrayFieldPath: 'joinFormArrayFieldPath',
+            addFormArrayRow: 'addFormArrayRow',
+            removeFormArrayRow: 'removeFormArrayRow',
+            moveFormArrayRow: 'moveFormArrayRow',
             getOptionState: 'getManagedOptionState',
             getOptionLoadingState: 'getManagedOptionLoadingState',
             getOptionLoadedState: 'getManagedOptionLoadedState',
@@ -62,6 +82,376 @@
             handleUploadExceed: 'handleManagedUploadExceed',
             handleUploadPreview: 'handleManagedUploadPreview'
           }, methodNames);
+          const buildFormEventContext = (vm, scope, overrides = {}) => {
+            const model = getFormModel(vm, scope) || {};
+
+            return Object.assign({
+              scope,
+              model,
+              form: model,
+              formConfig: {
+                events: getFormEvents(scope, vm) || {}
+              },
+              vm
+            }, overrides);
+          };
+          const emitFormEvent = (vm, scope, eventName, overrides = {}) => {
+            return emitConfiguredEvent(
+              { events: getFormEvents(scope, vm) || {} },
+              eventName,
+              buildFormEventContext(vm, scope, overrides)
+            );
+          };
+          const syncFormStructureValidation = (vm, scope) => {
+            Vue.nextTick(() => {
+              if (typeof vm[names.clearFormValidate] === 'function') {
+                vm[names.clearFormValidate](scope);
+              }
+            });
+          };
+          const contextualizeArrayRowFieldPath = (arrayPath, rowIndex, fieldPath) => {
+            return [arrayPath, rowIndex, fieldPath]
+              .filter((segment) => segment !== null && segment !== undefined && segment !== '')
+              .join('.');
+          };
+          const joinConcretePath = (basePath, path) => {
+            return [basePath, path]
+              .filter((segment) => segment !== null && segment !== undefined && segment !== '')
+              .join('.');
+          };
+          const resolveConcreteArrayGroupConfig = (groupConfigs, concreteArrayPath, parentRowPath = '') => {
+            const targetPath = String(concreteArrayPath || '').trim();
+            if (targetPath === '') {
+              return null;
+            }
+
+            for (const groupCfg of (Array.isArray(groupConfigs) ? groupConfigs : [])) {
+              const relativePath = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+              if (relativePath === '') {
+                continue;
+              }
+
+              const candidatePath = joinConcretePath(parentRowPath, relativePath);
+              if (candidatePath === targetPath) {
+                return Object.assign({}, groupCfg, {
+                  path: candidatePath
+                });
+              }
+
+              const childGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
+              if (childGroups.length === 0 || !targetPath.startsWith(candidatePath + '.')) {
+                continue;
+              }
+
+              const remainingPath = targetPath.slice(candidatePath.length + 1);
+              const nextSegment = remainingPath.split('.')[0];
+              if (!/^\d+$/.test(nextSegment || '')) {
+                continue;
+              }
+
+              const childMatch = resolveConcreteArrayGroupConfig(
+                childGroups,
+                targetPath,
+                joinConcretePath(candidatePath, nextSegment)
+              );
+              if (childMatch) {
+                return childMatch;
+              }
+            }
+
+            return null;
+          };
+          const resolveArrayGroupFieldContextRecursive = (groupConfigs, fieldName, parentRowPath = '') => {
+            const targetField = String(fieldName || '').trim();
+            if (targetField === '') {
+              return null;
+            }
+
+            for (const groupCfg of (Array.isArray(groupConfigs) ? groupConfigs : [])) {
+              const relativePath = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+              if (relativePath === '') {
+                continue;
+              }
+
+              const arrayPath = joinConcretePath(parentRowPath, relativePath);
+              if (!targetField.startsWith(arrayPath + '.')) {
+                continue;
+              }
+
+              const remainingSegments = targetField.slice(arrayPath.length + 1)
+                .split('.')
+                .filter((segment) => segment !== '');
+              const rowIndexSegment = remainingSegments[0] || '';
+              if (!/^\d+$/.test(rowIndexSegment)) {
+                continue;
+              }
+
+              const rowIndex = Number(rowIndexSegment);
+              const rowFieldPath = remainingSegments.slice(1).join('.');
+              const childGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
+              if (childGroups.length > 0 && rowFieldPath !== '') {
+                const childContext = resolveArrayGroupFieldContextRecursive(
+                  childGroups,
+                  targetField,
+                  joinConcretePath(arrayPath, rowIndexSegment)
+                );
+                if (childContext) {
+                  return childContext;
+                }
+              }
+
+              return {
+                groupConfig: groupCfg,
+                arrayPath,
+                rowIndex,
+                rowFieldPath
+              };
+            }
+
+            return null;
+          };
+          const resolveArrayGroupFieldContext = (vm, scope, fieldName) => {
+            return resolveArrayGroupFieldContextRecursive(getArrayGroups(scope, vm) || [], fieldName);
+          };
+          const visitConcreteArrayGroupInstances = (
+            vm,
+            scope,
+            visitor,
+            groupConfigs = getArrayGroups(scope, vm) || [],
+            parentArrayPath = null,
+            parentRowIndex = null
+          ) => {
+            (Array.isArray(groupConfigs) ? groupConfigs : []).forEach((groupCfg) => {
+              const relativePath = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+              if (relativePath === '') {
+                return;
+              }
+
+              const concreteArrayPath = parentArrayPath === null
+                ? relativePath
+                : contextualizeArrayRowFieldPath(parentArrayPath, parentRowIndex, relativePath);
+              const rows = vm[names.getFormArrayRows](scope, concreteArrayPath);
+
+              visitor(groupCfg, concreteArrayPath, rows);
+
+              const childGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
+              if (childGroups.length === 0) {
+                return;
+              }
+
+              rows.forEach((_, rowIndex) => {
+                visitConcreteArrayGroupInstances(
+                  vm,
+                  scope,
+                  visitor,
+                  childGroups,
+                  concreteArrayPath,
+                  rowIndex
+                );
+              });
+            });
+          };
+          const collectConcreteFieldPathsByGroupConfig = (vm, scope, targetGroupCfg, rowFieldPath) => {
+            const fieldPaths = [];
+            if (!targetGroupCfg || typeof rowFieldPath !== 'string' || rowFieldPath === '') {
+              return fieldPaths;
+            }
+
+            visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
+              if (groupCfg !== targetGroupCfg) {
+                return;
+              }
+
+              rows.forEach((_, rowIndex) => {
+                fieldPaths.push(contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath));
+              });
+            });
+
+            return fieldPaths;
+          };
+          const resolveScopedFieldConfig = (vm, scope, fieldName, directMap, arrayGroupConfigKey) => {
+            const direct = getByPath(directMap || {}, fieldName);
+            if (direct !== undefined) {
+              return direct;
+            }
+
+            const context = resolveArrayGroupFieldContext(vm, scope, fieldName);
+            if (!context?.rowFieldPath) {
+              return undefined;
+            }
+
+            return getByPath(context.groupConfig?.[arrayGroupConfigKey] || {}, context.rowFieldPath);
+          };
+          const contextualizeArrayRowModelTokens = (value, arrayPath, rowIndex) => {
+            if (Array.isArray(value)) {
+              return value.map((item) => contextualizeArrayRowModelTokens(item, arrayPath, rowIndex));
+            }
+            if (value && typeof value === 'object') {
+              return Object.keys(value).reduce((output, key) => {
+                output[key] = contextualizeArrayRowModelTokens(value[key], arrayPath, rowIndex);
+                return output;
+              }, {});
+            }
+            if (typeof value !== 'string' || !value.startsWith('@')) {
+              return value;
+            }
+
+            return '@' + contextualizeArrayRowFieldPath(arrayPath, rowIndex, value.slice(1));
+          };
+          const contextualizeArrayRowDependencies = (dependencies, arrayPath, rowIndex) => {
+            return normalizeDependencies({ dependencies })
+              .map((path) => contextualizeArrayRowFieldPath(arrayPath, rowIndex, path))
+              .filter((path) => path !== '');
+          };
+          const buildArrayRowRemoteFieldConfig = (groupCfg, rowFieldPath, arrayPath, rowIndex) => {
+            const fieldCfg = getByPath(groupCfg?.rowRemoteOptions || {}, rowFieldPath);
+            if (!fieldCfg?.url) {
+              return null;
+            }
+
+            return Object.assign({}, fieldCfg, {
+              dependencies: contextualizeArrayRowDependencies(fieldCfg.dependencies || [], arrayPath, rowIndex),
+              params: contextualizeArrayRowModelTokens(clone(fieldCfg.params || {}), arrayPath, rowIndex)
+            });
+          };
+          const resolveRemoteFieldConfig = (vm, scope, fieldName) => {
+            const direct = getByPath(getRemoteOptionsMap(scope, vm) || {}, fieldName);
+            if (direct?.url) {
+              return direct;
+            }
+
+            const context = resolveArrayGroupFieldContext(vm, scope, fieldName);
+            if (!context?.rowFieldPath) {
+              return null;
+            }
+
+            return buildArrayRowRemoteFieldConfig(
+              context.groupConfig,
+              context.rowFieldPath,
+              context.arrayPath,
+              context.rowIndex
+            );
+          };
+          const contextualizeArrayRowLinkageTemplate = (template, arrayPath, rowIndex) => {
+            if (typeof template !== 'string') {
+              return template;
+            }
+
+            return template.replace(/@model\.([A-Za-z0-9_.$-]+)/g, (_, path) => {
+              return '@model.' + [arrayPath, rowIndex, path]
+                .filter((segment) => segment !== null && segment !== undefined && segment !== '')
+                .join('.');
+            });
+          };
+          const buildResolvedLinkageConfig = (vm, scope, fieldName) => {
+            const direct = getByPath(getLinkagesMap(scope, vm) || {}, fieldName);
+            if (direct !== undefined && direct !== null) {
+              return direct;
+            }
+
+            const context = resolveArrayGroupFieldContext(vm, scope, fieldName);
+            if (!context?.rowFieldPath) {
+              return null;
+            }
+
+            const linkageConfig = getByPath(context.groupConfig?.rowLinkages || {}, context.rowFieldPath);
+            if (!linkageConfig?.updates) {
+              return linkageConfig || null;
+            }
+
+            const updates = {};
+            Object.keys(linkageConfig.updates || {}).forEach((targetField) => {
+              updates[vm[names.joinFormArrayFieldPath](context.arrayPath, context.rowIndex, targetField)] = contextualizeArrayRowLinkageTemplate(
+                linkageConfig.updates[targetField],
+                context.arrayPath,
+                context.rowIndex
+              );
+            });
+
+            return Object.assign({}, linkageConfig, { updates });
+          };
+          const rebuildUploadFileState = (vm, scope) => {
+            const model = vm[names.getFormModel](scope);
+            const nextState = {};
+            const uploadConfigs = getUploadsMap(scope, vm) || {};
+            const uploadPaths = getUploadPaths(scope, vm) || [];
+
+            uploadPaths.forEach((fieldName) => {
+              setByPath(
+                nextState,
+                fieldName,
+                normalizeUploadFiles(getByPath(model, fieldName), getByPath(uploadConfigs, fieldName) || {})
+              );
+            });
+
+            visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
+              const rowUploadPaths = Array.isArray(groupCfg?.rowUploadPaths) ? groupCfg.rowUploadPaths : [];
+              const rowUploads = groupCfg?.rowUploads || {};
+
+              rows.forEach((_, rowIndex) => {
+                rowUploadPaths.forEach((rowFieldPath) => {
+                  const fieldName = contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath);
+                  setByPath(
+                    nextState,
+                    fieldName,
+                    normalizeUploadFiles(getByPath(model, fieldName), getByPath(rowUploads, rowFieldPath) || {})
+                  );
+                });
+              });
+            });
+
+            const state = vm[names.getUploadFileState](scope);
+            Object.keys(state || {}).forEach((key) => {
+              delete state[key];
+            });
+            Object.assign(state, nextState);
+
+            return state;
+          };
+          const rebuildArrayGroupRemoteOptionState = (vm, scope, arrayPath = null) => {
+            const optionState = vm[names.getOptionState](scope);
+            const loadingState = vm[names.getOptionLoadingState](scope);
+            const loadedState = vm[names.getOptionLoadedState](scope);
+
+            const rootGroups = arrayPath === null
+              ? (getArrayGroups(scope, vm) || [])
+              : [vm[names.getFormArrayGroupConfig](scope, arrayPath)].filter(Boolean);
+            if (rootGroups.length === 0) {
+              return;
+            }
+
+            rootGroups.forEach((groupCfg) => {
+              const rootPath = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+              if (rootPath === '') {
+                return;
+              }
+
+              setByPath(optionState, rootPath, []);
+              setByPath(loadingState, rootPath, []);
+              setByPath(loadedState, rootPath, []);
+            });
+
+            visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
+              const rowRemoteOptionPaths = Array.isArray(groupCfg?.rowRemoteOptionPaths) ? groupCfg.rowRemoteOptionPaths : [];
+              if (rowRemoteOptionPaths.length === 0) {
+                return;
+              }
+
+              rows.forEach((_, rowIndex) => {
+                rowRemoteOptionPaths.forEach((rowFieldPath) => {
+                  const fieldName = contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath);
+                  const fieldCfg = buildArrayRowRemoteFieldConfig(groupCfg, rowFieldPath, concreteArrayPath, rowIndex) || {};
+                  const initialOptions = Array.isArray(fieldCfg.initialOptions)
+                    ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
+                    : [];
+
+                  setByPath(optionState, fieldName, initialOptions);
+                  setByPath(loadingState, fieldName, false);
+                  setByPath(loadedState, fieldName, false);
+                });
+              });
+            }, rootGroups);
+          };
 
           return {
             [names.getFormRef](scope){
@@ -74,19 +464,22 @@
             [names.validateForm](scope){
               const formRef = this[names.getFormRef](scope);
               if (!formRef || typeof formRef.validate !== 'function') {
-                return Promise.resolve(true);
+                return emitFormEvent(this, scope, 'validateSuccess', { skipped: true })
+                  .then(() => true);
               }
 
               try {
                 const result = formRef.validate();
                 if (result && typeof result.then === 'function') {
-                  return result.then(() => true).catch(() => false);
+                  return result
+                    .then(() => emitFormEvent(this, scope, 'validateSuccess').then(() => true))
+                    .catch((error) => emitFormEvent(this, scope, 'validateFail', { error }).then(() => false));
                 }
               } catch (error) {
-                return Promise.resolve(false);
+                return emitFormEvent(this, scope, 'validateFail', { error }).then(() => false);
               }
 
-              return Promise.resolve(true);
+              return emitFormEvent(this, scope, 'validateSuccess').then(() => true);
             },
             [names.clearFormValidate](scope){
               const formRef = this[names.getFormRef](scope);
@@ -96,6 +489,150 @@
             },
             [names.getFormModel](scope){
               return getFormModel(this, scope) || {};
+            },
+            [names.getFormPathStateValue](state, fieldName, fallback = null){
+              const value = getByPath(state || {}, fieldName);
+              return value === undefined ? fallback : value;
+            },
+            [names.getFormArrayGroupConfig](scope, arrayPath){
+              return resolveConcreteArrayGroupConfig(getArrayGroups(scope, this) || [], arrayPath);
+            },
+            [names.ensureFormArrayGroupState](scope, arrayPath){
+              const model = this[names.getFormModel](scope);
+              return ensureFormArrayGroupState(model, Object.assign({
+                path: arrayPath
+              }, this[names.getFormArrayGroupConfig](scope, arrayPath) || {}));
+            },
+            [names.initializeFormArrayGroups](scope){
+              const model = this[names.getFormModel](scope);
+              (getArrayGroups(scope, this) || []).forEach((groupCfg) => {
+                ensureFormArrayGroupState(model, groupCfg || {});
+              });
+              rebuildArrayGroupRemoteOptionState(this, scope);
+
+              return model;
+            },
+            [names.syncFormArrayGroupRemoteState](scope, arrayPath){
+              rebuildArrayGroupRemoteOptionState(this, scope, arrayPath ?? null);
+            },
+            [names.initializeArrayGroupRemoteOptions](scope, arrayPath, force = false){
+              const rootGroups = arrayPath === null || arrayPath === undefined
+                ? (getArrayGroups(scope, this) || [])
+                : [this[names.getFormArrayGroupConfig](scope, arrayPath)].filter(Boolean);
+              if (rootGroups.length === 0) {
+                return;
+              }
+
+              visitConcreteArrayGroupInstances(this, scope, (groupCfg, concreteArrayPath, rows) => {
+                const rowRemoteOptionPaths = Array.isArray(groupCfg?.rowRemoteOptionPaths) ? groupCfg.rowRemoteOptionPaths : [];
+                rows.forEach((_, rowIndex) => {
+                  rowRemoteOptionPaths.forEach((rowFieldPath) => {
+                    this[names.loadFormFieldOptions](
+                      scope,
+                      contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath),
+                      force
+                    );
+                  });
+                });
+              }, rootGroups);
+            },
+            [names.getFormArrayRows](scope, arrayPath){
+              return this[names.ensureFormArrayGroupState](scope, arrayPath);
+            },
+            [names.joinFormArrayFieldPath](arrayPath, rowIndex, fieldName){
+              return [arrayPath, rowIndex, fieldName]
+                .filter((segment) => segment !== null && segment !== undefined && segment !== '')
+                .join('.');
+            },
+            [names.addFormArrayRow](scope, arrayPath){
+              const groupCfg = this[names.getFormArrayGroupConfig](scope, arrayPath) || {};
+              const rows = this[names.getFormArrayRows](scope, arrayPath);
+              const maxRows = groupCfg?.maxRows ?? null;
+              if (maxRows !== null && maxRows !== undefined && Number(maxRows) > 0 && rows.length >= Number(maxRows)) {
+                ElementPlus.ElMessage.warning('已达到最大行数限制');
+                return rows;
+              }
+
+              const row = normalizeArrayGroupRow(clone(groupCfg?.defaultRow || {}), groupCfg || {});
+              rows.push(row);
+              rebuildUploadFileState(this, scope);
+              this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
+              this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
+              syncFormStructureValidation(this, scope);
+              emitFormEvent(this, scope, 'arrayRowAdd', {
+                arrayPath,
+                groupConfig: groupCfg,
+                row,
+                rowIndex: rows.length - 1,
+                rows
+              });
+              return rows;
+            },
+            [names.removeFormArrayRow](scope, arrayPath, rowIndex){
+              const groupCfg = this[names.getFormArrayGroupConfig](scope, arrayPath) || {};
+              const rows = this[names.getFormArrayRows](scope, arrayPath);
+              if (!Array.isArray(rows) || rows.length === 0) {
+                return rows;
+              }
+
+              const minRows = groupCfg?.minRows ?? 0;
+              if (Number(minRows) > 0 && rows.length <= Number(minRows)) {
+                ElementPlus.ElMessage.warning('已达到最小行数限制');
+                return rows;
+              }
+
+              const index = Number(rowIndex);
+              if (!Number.isInteger(index) || index < 0 || index >= rows.length) {
+                return rows;
+              }
+
+              const [row] = rows.splice(index, 1);
+              rebuildUploadFileState(this, scope);
+              this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
+              this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
+              syncFormStructureValidation(this, scope);
+              emitFormEvent(this, scope, 'arrayRowRemove', {
+                arrayPath,
+                groupConfig: groupCfg,
+                row: row || null,
+                rowIndex: index,
+                rows
+              });
+              return rows;
+            },
+            [names.moveFormArrayRow](scope, arrayPath, rowIndex, direction = 'up'){
+              const groupCfg = this[names.getFormArrayGroupConfig](scope, arrayPath) || {};
+              const rows = this[names.getFormArrayRows](scope, arrayPath);
+              if (!Array.isArray(rows) || rows.length <= 1) {
+                return rows;
+              }
+
+              const index = Number(rowIndex);
+              if (!Number.isInteger(index) || index < 0 || index >= rows.length) {
+                return rows;
+              }
+
+              const targetIndex = direction === 'down' ? index + 1 : index - 1;
+              if (targetIndex < 0 || targetIndex >= rows.length) {
+                return rows;
+              }
+
+              const [row] = rows.splice(index, 1);
+              rows.splice(targetIndex, 0, row);
+              rebuildUploadFileState(this, scope);
+              this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
+              this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
+              syncFormStructureValidation(this, scope);
+              emitFormEvent(this, scope, 'arrayRowMove', {
+                arrayPath,
+                groupConfig: groupCfg,
+                row,
+                fromIndex: index,
+                toIndex: targetIndex,
+                direction,
+                rows
+              });
+              return rows;
             },
             [names.getOptionState](scope){
               return getOptionState(this, scope) || {};
@@ -110,16 +647,23 @@
               return getUploadFileState(this, scope) || {};
             },
             [names.getFieldOptions](scope, fieldName){
-              const remoteConfig = (getRemoteOptionsMap(scope, this) || {})[fieldName];
+              const remoteConfig = resolveRemoteFieldConfig(this, scope, fieldName);
               if (remoteConfig) {
-                return this[names.getOptionState](scope)[fieldName] || [];
+                return getByPath(this[names.getOptionState](scope), fieldName) || [];
               }
 
-              const optionsMap = getSelectOptionsMap(scope, this) || {};
-              return (optionsMap[fieldName] || []).map((item, index) => normalizeOption(item, {}, index));
+              const options = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getSelectOptionsMap(scope, this) || {},
+                'rowSelectOptions'
+              ) || [];
+
+              return options.map((item, index) => normalizeOption(item, {}, index));
             },
             [names.getLinkageConfig](scope, fieldName){
-              return (getLinkagesMap(scope, this) || {})[fieldName] || null;
+              return buildResolvedLinkageConfig(this, scope, fieldName);
             },
             [names.clearLinkageTargets](scope, fieldName){
               const linkCfg = this[names.getLinkageConfig](scope, fieldName);
@@ -212,9 +756,9 @@
             },
             [names.resetRemoteFieldState](scope, fieldName, clearValue = false){
               this[names.nextRemoteRequestToken](scope, fieldName);
-              this[names.getOptionState](scope)[fieldName] = [];
-              this[names.getOptionLoadingState](scope)[fieldName] = false;
-              this[names.getOptionLoadedState](scope)[fieldName] = false;
+              setByPath(this[names.getOptionState](scope), fieldName, []);
+              setByPath(this[names.getOptionLoadingState](scope), fieldName, false);
+              setByPath(this[names.getOptionLoadedState](scope), fieldName, false);
 
               if (!clearValue) {
                 return;
@@ -226,9 +770,10 @@
             },
             [names.registerFormDependencies](scope){
               const configMap = getRemoteOptionsMap(scope, this) || {};
+              const fieldPaths = getRemoteOptionPaths(scope, this) || [];
 
-              Object.keys(configMap).forEach((fieldName) => {
-                const fieldCfg = configMap[fieldName] || {};
+              fieldPaths.forEach((fieldName) => {
+                const fieldCfg = getByPath(configMap, fieldName) || {};
                 const dependencies = normalizeDependencies(fieldCfg);
                 if (dependencies.length === 0) {
                   return;
@@ -242,6 +787,49 @@
                   }
                 );
               });
+
+              const registerArrayGroupDependencyWatches = (groupConfigs = []) => {
+                (Array.isArray(groupConfigs) ? groupConfigs : []).forEach((groupCfg) => {
+                  const rowRemoteOptionPaths = Array.isArray(groupCfg?.rowRemoteOptionPaths) ? groupCfg.rowRemoteOptionPaths : [];
+
+                  rowRemoteOptionPaths.forEach((rowFieldPath) => {
+                    const fieldCfg = getByPath(groupCfg?.rowRemoteOptions || {}, rowFieldPath) || {};
+                    const dependencies = normalizeDependencies(fieldCfg);
+                    if (dependencies.length === 0) {
+                      return;
+                    }
+
+                    this.$watch(
+                      () => JSON.stringify(
+                        collectConcreteFieldPathsByGroupConfig(this, scope, groupCfg, rowFieldPath)
+                          .map((fieldName) => {
+                            const context = resolveArrayGroupFieldContext(this, scope, fieldName);
+                            if (!context) {
+                              return [];
+                            }
+
+                            return contextualizeArrayRowDependencies(
+                              dependencies,
+                              context.arrayPath,
+                              context.rowIndex
+                            ).map((path) => getByPath(this[names.getFormModel](scope), path));
+                          })
+                      ),
+                      () => {
+                        const shouldClear = fieldCfg.clearOnChange !== false && !this[names.isDependencyResetSuspended](scope);
+                        collectConcreteFieldPathsByGroupConfig(this, scope, groupCfg, rowFieldPath)
+                          .forEach((fieldName) => {
+                            this[names.reloadDependentFieldOptions](scope, fieldName, shouldClear);
+                          });
+                      }
+                    );
+                  });
+
+                  registerArrayGroupDependencyWatches(groupCfg?.rowArrayGroups || []);
+                });
+              };
+
+              registerArrayGroupDependencyWatches(getArrayGroups(scope, this) || []);
             },
             [names.reloadDependentFieldOptions](scope, fieldName, clearValue = true){
               this[names.resetRemoteFieldState](scope, fieldName, clearValue);
@@ -249,14 +837,21 @@
               return this[names.loadFormFieldOptions](scope, fieldName, true);
             },
             [names.initializeFormOptions](scope, force = false){
-              const configMap = getRemoteOptionsMap(scope, this) || {};
-
-              Object.keys(configMap).forEach((fieldName) => {
+              (getRemoteOptionPaths(scope, this) || []).forEach((fieldName) => {
                 this[names.loadFormFieldOptions](scope, fieldName, force);
+              });
+
+              (getArrayGroups(scope, this) || []).forEach((groupCfg) => {
+                const arrayPath = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
+                if (arrayPath === '') {
+                  return;
+                }
+
+                this[names.initializeArrayGroupRemoteOptions](scope, arrayPath, force);
               });
             },
             [names.loadFormFieldOptions](scope, fieldName, force = false){
-              const fieldCfg = (getRemoteOptionsMap(scope, this) || {})[fieldName];
+              const fieldCfg = resolveRemoteFieldConfig(this, scope, fieldName);
               if (!fieldCfg?.url) {
                 return Promise.resolve([]);
               }
@@ -269,15 +864,15 @@
 
               const loadingState = this[names.getOptionLoadingState](scope);
               const loadedState = this[names.getOptionLoadedState](scope);
-              if (loadingState[fieldName]) {
-                return Promise.resolve(this[names.getOptionState](scope)[fieldName] || []);
+              if (getByPath(loadingState, fieldName)) {
+                return Promise.resolve(getByPath(this[names.getOptionState](scope), fieldName) || []);
               }
-              if (!force && loadedState[fieldName]) {
-                return Promise.resolve(this[names.getOptionState](scope)[fieldName] || []);
+              if (!force && getByPath(loadedState, fieldName)) {
+                return Promise.resolve(getByPath(this[names.getOptionState](scope), fieldName) || []);
               }
 
               const requestToken = this[names.nextRemoteRequestToken](scope, fieldName);
-              loadingState[fieldName] = true;
+              setByPath(loadingState, fieldName, true);
 
               return makeRequest({
                 method: fieldCfg.method || 'get',
@@ -286,43 +881,59 @@
               })
                 .then((response) => {
                   if (!this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
-                    return this[names.getOptionState](scope)[fieldName] || [];
+                    return getByPath(this[names.getOptionState](scope), fieldName) || [];
                   }
 
                   const payload = ensureSuccess(extractPayload(response), '选项加载失败');
                   const options = pickRows(payload).map((item, index) => normalizeOption(item, fieldCfg, index));
-                  this[names.getOptionState](scope)[fieldName] = options;
-                  loadedState[fieldName] = true;
+                  setByPath(this[names.getOptionState](scope), fieldName, options);
+                  setByPath(loadedState, fieldName, true);
 
-                  return options;
+                  return emitFormEvent(this, scope, 'optionsLoaded', {
+                    fieldName,
+                    fieldConfig: fieldCfg,
+                    response,
+                    payload,
+                    options
+                  }).then((results) => {
+                    if (isEventCanceled(results)) {
+                      return [];
+                    }
+
+                    return options;
+                  });
                 })
                 .catch((error) => {
                   if (!this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
                     return [];
                   }
 
-                  loadedState[fieldName] = false;
+                  setByPath(loadedState, fieldName, false);
                   const message = error?.message || resolveMessage(error?.response?.data, '选项加载失败');
                   ElementPlus.ElMessage.error(message);
-                  return [];
+                  return emitFormEvent(this, scope, 'optionsLoadFail', {
+                    fieldName,
+                    fieldConfig: fieldCfg,
+                    error
+                  }).then(() => []);
                 })
                 .finally(() => {
                   if (this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
-                    loadingState[fieldName] = false;
+                    setByPath(loadingState, fieldName, false);
                   }
                 });
             },
             [names.initializeUploadFiles](scope){
-              const uploadConfigs = getUploadsMap(scope, this) || {};
-              const model = this[names.getFormModel](scope);
-              const state = this[names.getUploadFileState](scope);
-
-              Object.keys(uploadConfigs).forEach((fieldName) => {
-                state[fieldName] = normalizeUploadFiles(getByPath(model, fieldName), uploadConfigs[fieldName] || {});
-              });
+              rebuildUploadFileState(this, scope);
             },
             [names.handleUploadSuccess](scope, fieldName, response, uploadFile, uploadFiles){
-              const fieldCfg = (getUploadsMap(scope, this) || {})[fieldName] || {};
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
 
               try {
                 const payload = ensureSuccess(response, '上传失败');
@@ -345,27 +956,55 @@
                   fieldCfg
                 );
 
-                this[names.getUploadFileState](scope)[fieldName] = nextFiles;
+                setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
                 syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
                 ElementPlus.ElMessage.success(resolveMessage(payload, '上传成功'));
+                emitFormEvent(this, scope, 'uploadSuccess', {
+                  fieldName,
+                  fieldConfig: fieldCfg,
+                  response,
+                  payload,
+                  uploadFile,
+                  uploadFiles: nextFiles
+                });
               } catch (error) {
                 const nextFiles = normalizeUploadFiles(
                   (uploadFiles || []).filter((file) => file.uid !== uploadFile.uid),
                   fieldCfg
                 );
-                this[names.getUploadFileState](scope)[fieldName] = nextFiles;
+                setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
                 syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
                 ElementPlus.ElMessage.error(error?.message || '上传失败');
+                emitFormEvent(this, scope, 'uploadFail', {
+                  fieldName,
+                  fieldConfig: fieldCfg,
+                  error,
+                  response,
+                  uploadFile,
+                  uploadFiles: nextFiles
+                });
               }
             },
             [names.handleUploadRemove](scope, fieldName, uploadFile, uploadFiles){
-              const fieldCfg = (getUploadsMap(scope, this) || {})[fieldName] || {};
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
               const nextFiles = normalizeUploadFiles(uploadFiles || [], fieldCfg);
-              this[names.getUploadFileState](scope)[fieldName] = nextFiles;
+              setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
               syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
             },
             [names.handleUploadExceed](scope, fieldName, files, uploadFiles){
-              const fieldCfg = (getUploadsMap(scope, this) || {})[fieldName] || {};
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
               const limit = fieldCfg.limit || 1;
               ElementPlus.ElMessage.error('最多只能上传 ' + limit + ' 个文件');
             },

@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Page;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\DialogAction;
+use Sc\Util\HtmlStructureV2\Contracts\DocumentRenderable;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
 use Sc\Util\HtmlStructureV2\RenderContext;
@@ -12,7 +13,7 @@ use Sc\Util\HtmlStructureV2\Support\Document;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdminTheme;
 
-abstract class AbstractPage implements Renderable
+abstract class AbstractPage implements DocumentRenderable, Renderable
 {
     use RendersWithTheme;
 
@@ -113,8 +114,9 @@ abstract class AbstractPage implements Renderable
     {
         $key = strtolower($title);
         $key = preg_replace('/[^a-z0-9]+/', '-', $key);
+        $key = trim($key ?: 'page', '-');
 
-        return trim($key ?: 'page', '-');
+        return $key !== '' ? $key : 'page';
     }
 
     protected function resolveDialogs(): array

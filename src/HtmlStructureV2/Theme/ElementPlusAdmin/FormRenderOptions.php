@@ -2,8 +2,12 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+
 final class FormRenderOptions
 {
+    use BuildsJsExpressions;
+
     public function __construct(
         public readonly string $mode = 'default',
         public readonly ?string $ref = null,
@@ -73,12 +77,22 @@ final class FormRenderOptions
 
     public function remoteOptionsExpression(string $fieldName): string
     {
-        return sprintf("(%s['%s'] || [])", $this->remoteOptionsState, $fieldName);
+        return $this->pathStateExpression($this->remoteOptionsState, $fieldName, '[]');
+    }
+
+    public function remoteOptionsExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return $this->dynamicPathStateExpression($this->remoteOptionsState, $fieldPathExpression, '[]');
     }
 
     public function remoteLoadingExpression(string $fieldName): string
     {
-        return sprintf("%s['%s'] || false", $this->remoteLoadingState, $fieldName);
+        return $this->pathStateExpression($this->remoteLoadingState, $fieldName, 'false');
+    }
+
+    public function remoteLoadingExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return $this->dynamicPathStateExpression($this->remoteLoadingState, $fieldPathExpression, 'false');
     }
 
     public function remoteVisibleChangeHandler(string $fieldName): string
@@ -88,6 +102,16 @@ final class FormRenderOptions
             $this->remoteLoadMethod,
             $this->remoteScope,
             $fieldName
+        );
+    }
+
+    public function remoteVisibleChangeHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(visible) => visible && %s('%s', %s)",
+            $this->remoteLoadMethod,
+            $this->remoteScope,
+            $fieldPathExpression
         );
     }
 
@@ -101,9 +125,24 @@ final class FormRenderOptions
         );
     }
 
+    public function linkageChangeHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(value) => %s('%s', %s, value)",
+            $this->linkageMethod,
+            $this->remoteScope,
+            $fieldPathExpression
+        );
+    }
+
     public function uploadFileListExpression(string $fieldName): string
     {
-        return sprintf("%s['%s']", $this->uploadFilesState, $fieldName);
+        return $this->pathStateExpression($this->uploadFilesState, $fieldName, '[]');
+    }
+
+    public function uploadFileListExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return $this->dynamicPathStateExpression($this->uploadFilesState, $fieldPathExpression, '[]');
     }
 
     public function uploadSuccessHandler(string $fieldName): string
@@ -113,6 +152,16 @@ final class FormRenderOptions
             $this->uploadSuccessMethod,
             $this->uploadScope,
             $fieldName
+        );
+    }
+
+    public function uploadSuccessHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(response, uploadFile, uploadFiles) => %s('%s', %s, response, uploadFile, uploadFiles)",
+            $this->uploadSuccessMethod,
+            $this->uploadScope,
+            $fieldPathExpression
         );
     }
 
@@ -126,6 +175,16 @@ final class FormRenderOptions
         );
     }
 
+    public function uploadRemoveHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(uploadFile, uploadFiles) => %s('%s', %s, uploadFile, uploadFiles)",
+            $this->uploadRemoveMethod,
+            $this->uploadScope,
+            $fieldPathExpression
+        );
+    }
+
     public function uploadExceedHandler(string $fieldName): string
     {
         return sprintf(
@@ -133,6 +192,16 @@ final class FormRenderOptions
             $this->uploadExceedMethod,
             $this->uploadScope,
             $fieldName
+        );
+    }
+
+    public function uploadExceedHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(files, uploadFiles) => %s('%s', %s, files, uploadFiles)",
+            $this->uploadExceedMethod,
+            $this->uploadScope,
+            $fieldPathExpression
         );
     }
 
@@ -149,5 +218,23 @@ final class FormRenderOptions
     private static function stringOrDefault(array $options, string $key, string $default): string
     {
         return self::stringOrNull($options, $key) ?? $default;
+    }
+
+    private function pathStateExpression(?string $root, string $path, string $fallback): string
+    {
+        if ($root === null) {
+            return $fallback;
+        }
+
+        return sprintf('(%s ?? %s)', $this->jsReadableAccessor($root, $path), $fallback);
+    }
+
+    private function dynamicPathStateExpression(?string $root, string $pathExpression, string $fallback): string
+    {
+        if ($root === null) {
+            return $fallback;
+        }
+
+        return sprintf('getFormPathStateValue(%s, %s, %s)', $root, $pathExpression, $fallback);
     }
 }

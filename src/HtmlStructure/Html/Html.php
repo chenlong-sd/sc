@@ -146,6 +146,25 @@ class Html
         return trim(h([t('<!DOCTYPE html>'), $html])->toHtml());
     }
 
+    public static function hasActivePage(): bool
+    {
+        return self::getGlobalHtml() instanceof self;
+    }
+
+    public static function reset(): void
+    {
+        if (self::isRunSwoole()) {
+            $context = Coroutine::getContext();
+            unset($context[self::SwooleEnvKey]);
+
+            return;
+        }
+
+        global $globalHtml;
+
+        $globalHtml = null;
+    }
+
     public static function addDeviceAdaptation(): void
     {
         self::html()->find('head')->append(

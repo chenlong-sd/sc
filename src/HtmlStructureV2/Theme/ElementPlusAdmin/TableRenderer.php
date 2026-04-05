@@ -15,13 +15,13 @@ final class TableRenderer
     ) {
     }
 
-    public function renderToolbar(Table $table): AbstractHtmlElement
+    public function renderToolbar(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
         $toolbar = El::double('div')->addClass('sc-v2-toolbar');
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
 
         foreach ($table->getToolbarActions() as $action) {
-            $left->append($this->actionButtonRenderer->render($action));
+            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings));
         }
 
         $toolbar->append($left);
@@ -29,17 +29,17 @@ final class TableRenderer
         return $toolbar;
     }
 
-    public function renderTable(Table $table, string $rowsName = 'tableRows', string $loadingName = 'tableLoading'): AbstractHtmlElement
+    public function renderTable(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
         $element = El::double('el-table')->setAttrs([
-            ':data' => $rowsName,
-            'v-loading' => $loadingName,
+            ':data' => $bindings->rowsExpression(),
+            'v-loading' => $bindings->loadingExpression(),
             ':stripe' => $table->useStripe() ? 'true' : 'false',
             ':border' => $table->useBorder() ? 'true' : 'false',
             'empty-text' => $table->getEmptyText(),
             'style' => 'width: 100%',
-            '@selection-change' => 'handleSelectionChange',
-            '@sort-change' => 'handleSortChange',
+            '@selection-change' => $bindings->selectionChangeExpression(),
+            '@sort-change' => $bindings->sortChangeExpression(),
         ]);
 
         if ($table->hasSelection()) {
@@ -57,30 +57,30 @@ final class TableRenderer
         }
 
         if ($table->getRowActions()) {
-            $element->append($this->renderRowActionColumn($table));
+            $element->append($this->renderRowActionColumn($table, $bindings));
         }
 
         return $element;
     }
 
-    public function renderPagination(Table $table): AbstractHtmlElement
+    public function renderPagination(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
         return El::double('div')->setAttr('style', 'display:flex;justify-content:flex-end')
             ->append(
                 El::double('el-pagination')->setAttrs([
                     'background' => '',
                     'layout' => 'total, sizes, prev, pager, next, jumper',
-                    ':current-page' => 'tablePage',
-                    ':page-size' => 'tablePageSize',
+                    ':current-page' => $bindings->pageExpression(),
+                    ':page-size' => $bindings->pageSizeExpression(),
                     ':page-sizes' => JsonExpressionEncoder::encode($table->getPageSizes()),
-                    ':total' => 'tableTotal',
-                    '@size-change' => 'handlePageSizeChange',
-                    '@current-change' => 'handlePageChange',
+                    ':total' => $bindings->totalExpression(),
+                    '@size-change' => $bindings->pageSizeChangeExpression(),
+                    '@current-change' => $bindings->pageChangeExpression(),
                 ])
             );
     }
 
-    private function renderRowActionColumn(Table $table): AbstractHtmlElement
+    private function renderRowActionColumn(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
         $actionColumn = El::double('el-table-column')->setAttrs([
             'label' => '操作',
@@ -91,7 +91,7 @@ final class TableRenderer
         $template = El::double('template')->setAttr('#default', 'scope');
         $actions = El::double('div')->addClass('sc-v2-row-actions');
         foreach ($table->getRowActions() as $action) {
-            $actions->append($this->actionButtonRenderer->render($action, true, 'small'));
+            $actions->append($this->actionButtonRenderer->render($action, true, 'small', $bindings));
         }
         $template->append($actions);
         $actionColumn->append($template);

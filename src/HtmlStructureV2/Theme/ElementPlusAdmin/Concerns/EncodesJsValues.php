@@ -49,6 +49,19 @@ trait EncodesJsValues
         };
     }
 
+    protected function jsAttributeValue(mixed $value): string
+    {
+        if ($value instanceof JsExpression) {
+            return $value->expression();
+        }
+
+        if (is_array($value) || is_bool($value) || is_int($value) || is_float($value) || $value === null) {
+            return $this->jsValue($value);
+        }
+
+        return (string) $value;
+    }
+
     private function isJsList(array $value): bool
     {
         if (function_exists('array_is_list')) {

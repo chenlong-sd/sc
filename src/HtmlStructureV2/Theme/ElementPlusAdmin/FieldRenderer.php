@@ -18,8 +18,73 @@ final class FieldRenderer
 {
     use BuildsJsExpressions;
 
-    public function render(Field $field, string $modelName, bool $inline, FormRenderOptions $options): AbstractHtmlElement
+    public function __construct(
+        private readonly ActionButtonRenderer $actionButtonRenderer,
+    ) {
+    }
+
+    public function render(
+        Field $field,
+        string $modelName,
+        string $fieldPath,
+        bool $inline,
+        FormRenderOptions $options
+    ): AbstractHtmlElement
     {
+        return $this->renderField(
+            field: $field,
+            modelName: $modelName,
+            fieldPath: $fieldPath,
+            inline: $inline,
+            options: $options,
+        );
+    }
+
+    public function renderScoped(
+        Field $field,
+        string $modelName,
+        string $propExpression,
+        string $fieldPath,
+        bool $inline,
+        FormRenderOptions $options
+    ): AbstractHtmlElement {
+        return $this->renderField(
+            field: $field,
+            modelName: $modelName,
+            fieldPath: $fieldPath,
+            inline: $inline,
+            options: $options,
+            propExpression: $propExpression,
+        );
+    }
+
+    public function renderTableCell(
+        Field $field,
+        string $fieldModelName,
+        string $fieldPath,
+        string $propExpression,
+        FormRenderOptions $options
+    ): AbstractHtmlElement {
+        return $this->renderField(
+            field: $field,
+            modelName: $fieldModelName,
+            fieldPath: $fieldPath,
+            inline: false,
+            options: $options,
+            propExpression: $propExpression,
+            tableCell: true,
+        );
+    }
+
+    private function renderField(
+        Field $field,
+        string $modelName,
+        string $fieldPath,
+        bool $inline,
+        FormRenderOptions $options,
+        ?string $propExpression = null,
+        bool $tableCell = false
+    ): AbstractHtmlElement {
         if ($field->type() === FieldType::HIDDEN) {
             return El::fictitious();
         }
@@ -33,7 +98,7 @@ final class FieldRenderer
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
         $hasRemoteOptions = $optionField?->hasRemoteOptions() && $options->hasRemoteOptionsContext();
 
-        $item = $this->buildFieldItem($field, $validatableField);
+        $item = $this->buildRenderItem($field, $fieldPath, $validatableField, $propExpression, $tableCell);
         $component = $this->buildFieldComponent(
             $field,
             $modelAccessor,
@@ -44,31 +109,74 @@ final class FieldRenderer
 
         $this->applyFieldProps($component, $field);
         $this->applyDisabledState($component, $field, $disabledWhen);
-        $this->applyOptionFieldBehavior($component, $field, $optionField, $hasRemoteOptions, $options);
-        $this->applyUploadFieldBehavior($component, $field, $uploadField, $options);
+        $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
+        $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
 
-        $item->append($component);
+        $item->append($this->wrapFieldControl($field, $component));
+        $this->appendHelpText($item, $field);
 
-        if ($field->getHelpText()) {
-            $item->append(
-                El::double('div')->addClass('sc-v2-form__help')->append($field->getHelpText())
-            );
+        if ($tableCell) {
+            if ($visibleWhen !== null) {
+                $item->setAttr('v-if', $visibleWhen);
+            }
+
+            return $item;
         }
 
         return $this->wrapFieldRoot($field, $item, $inline, $visibleWhen);
     }
 
-    private function buildFieldItem(Field $field, ?ValidatableFieldInterface $validatableField): DoubleLabel
+    private function buildFieldItem(
+        Field $field,
+        string $fieldPath,
+        ?ValidatableFieldInterface $validatableField
+    ): DoubleLabel
     {
         $item = El::double('el-form-item')
             ->setAttr('label', $field->label())
-            ->setAttr('prop', $field->name());
+            ->setAttr('prop', $fieldPath);
 
         if ($validatableField?->isRequired()) {
             $item->setAttr('required');
         }
 
         return $item;
+    }
+
+    private function buildRenderItem(
+        Field $field,
+        string $fieldPath,
+        ?ValidatableFieldInterface $validatableField,
+        ?string $propExpression,
+        bool $tableCell
+    ): DoubleLabel {
+        if ($tableCell) {
+            $item = El::double('el-form-item')->setAttrs([
+                ':prop' => $propExpression ?? $fieldPath,
+                'label-width' => '0',
+                'class' => 'sc-v2-form-table__item',
+            ]);
+
+            if ($validatableField?->isRequired()) {
+                $item->setAttr('required');
+            }
+
+            return $item;
+        }
+
+        if ($propExpression !== null) {
+            $item = El::double('el-form-item')
+                ->setAttr('label', $field->label())
+                ->setAttr(':prop', $propExpression);
+
+            if ($validatableField?->isRequired()) {
+                $item->setAttr('required');
+            }
+
+            return $item;
+        }
+
+        return $this->buildFieldItem($field, $fieldPath, $validatableField);
     }
 
     private function buildFieldComponent(
@@ -193,9 +301,11 @@ final class FieldRenderer
     private function applyOptionFieldBehavior(
         AbstractHtmlElement $component,
         Field $field,
+        string $fieldPath,
         ?OptionField $optionField,
         bool $hasRemoteOptions,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?string $fieldPathExpression = null
     ): void {
         if ($optionField === null) {
             return;
@@ -206,16 +316,35 @@ final class FieldRenderer
             && $optionField->hasLinkageUpdates()
             && $options->hasLinkageContext()
         ) {
-            $component->setAttr('@change', $options->linkageChangeHandler($field->name()));
+            $component->setAttr(
+                '@change',
+                $fieldPathExpression === null
+                    ? $options->linkageChangeHandler($fieldPath)
+                    : $options->linkageChangeHandlerByPathExpression($fieldPathExpression)
+            );
         }
 
-        $optionsExpression = $hasRemoteOptions ? $options->remoteOptionsExpression($field->name()) : null;
+        $optionsExpression = $hasRemoteOptions
+            ? ($fieldPathExpression === null
+                ? $options->remoteOptionsExpression($fieldPath)
+                : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
+            : null;
 
         if ($field->type() === FieldType::SELECT) {
             if ($hasRemoteOptions) {
                 $component->setAttr('filterable');
-                $component->setAttr(':loading', $options->remoteLoadingExpression($field->name()));
-                $component->setAttr('@visible-change', $options->remoteVisibleChangeHandler($field->name()));
+                $component->setAttr(
+                    ':loading',
+                    $fieldPathExpression === null
+                        ? $options->remoteLoadingExpression($fieldPath)
+                        : $options->remoteLoadingExpressionByPathExpression($fieldPathExpression)
+                );
+                $component->setAttr(
+                    '@visible-change',
+                    $fieldPathExpression === null
+                        ? $options->remoteVisibleChangeHandler($fieldPath)
+                        : $options->remoteVisibleChangeHandlerByPathExpression($fieldPathExpression)
+                );
             }
 
             $this->appendOptionChildren($component, $optionField, $optionsExpression, 'el-option');
@@ -238,7 +367,9 @@ final class FieldRenderer
             $component->setAttr(
                 ':options',
                 $hasRemoteOptions
-                    ? $options->remoteOptionsExpression($field->name())
+                    ? ($fieldPathExpression === null
+                        ? $options->remoteOptionsExpression($fieldPath)
+                        : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
                     : JsonExpressionEncoder::encode($optionField->getOptions())
             );
         }
@@ -246,9 +377,11 @@ final class FieldRenderer
 
     private function applyUploadFieldBehavior(
         AbstractHtmlElement $component,
+        string $fieldPath,
         Field $field,
         ?UploadField $uploadField,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?string $fieldPathExpression = null
     ): void {
         if ($field->type() !== FieldType::UPLOAD || $uploadField === null) {
             return;
@@ -257,10 +390,30 @@ final class FieldRenderer
         $upload = $uploadField->getUpload();
 
         if ($options->hasUploadContext()) {
-            $component->setAttr('v-model:file-list', $options->uploadFileListExpression($field->name()));
-            $component->setAttr(':on-success', $options->uploadSuccessHandler($field->name()));
-            $component->setAttr(':on-remove', $options->uploadRemoveHandler($field->name()));
-            $component->setAttr(':on-exceed', $options->uploadExceedHandler($field->name()));
+            $component->setAttr(
+                'v-model:file-list',
+                $fieldPathExpression === null
+                    ? $options->uploadFileListExpression($fieldPath)
+                    : $options->uploadFileListExpressionByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
+                ':on-success',
+                $fieldPathExpression === null
+                    ? $options->uploadSuccessHandler($fieldPath)
+                    : $options->uploadSuccessHandlerByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
+                ':on-remove',
+                $fieldPathExpression === null
+                    ? $options->uploadRemoveHandler($fieldPath)
+                    : $options->uploadRemoveHandlerByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
+                ':on-exceed',
+                $fieldPathExpression === null
+                    ? $options->uploadExceedHandler($fieldPath)
+                    : $options->uploadExceedHandlerByPathExpression($fieldPathExpression)
+            );
             $component->setAttr(':on-preview', $options->uploadPreviewMethod);
         }
 
@@ -298,6 +451,17 @@ final class FieldRenderer
         }
 
         return $root;
+    }
+
+    private function appendHelpText(DoubleLabel $item, Field $field): void
+    {
+        if (!$field->getHelpText()) {
+            return;
+        }
+
+        $item->append(
+            El::double('div')->addClass('sc-v2-form__help')->append($field->getHelpText())
+        );
     }
 
     private function appendOptionChildren(
@@ -369,5 +533,33 @@ final class FieldRenderer
         ])->append($label);
 
         return $element;
+    }
+
+    private function wrapFieldControl(Field $field, AbstractHtmlElement $component): AbstractHtmlElement
+    {
+        $control = El::double('div')->addClass('sc-v2-form__control')->append($component);
+
+        if (!$field->hasSuffix()) {
+            return $control;
+        }
+
+        $suffix = El::double('div')->addClass('sc-v2-form__suffix');
+
+        $suffixContent = $field->getSuffixContent();
+        if ($suffixContent instanceof AbstractHtmlElement) {
+            $suffix->append($suffixContent);
+        } elseif (is_string($suffixContent) && $suffixContent !== '') {
+            $suffix->append(
+                El::double('span')->addClass('sc-v2-form__suffix-text')->append($suffixContent)
+            );
+        }
+
+        foreach ($field->getSuffixActions() as $action) {
+            $suffix->append($this->actionButtonRenderer->render($action, false, 'small'));
+        }
+
+        $control->append($suffix);
+
+        return $control;
     }
 }

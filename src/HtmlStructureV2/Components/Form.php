@@ -2,17 +2,20 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
-use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
-use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
-use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
+use Sc\Util\HtmlStructureV2\Contracts\FormNode;
+use Sc\Util\HtmlStructureV2\Support\FormSchema;
+use Sc\Util\HtmlStructureV2\Support\FormSchemaWalker;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
 final class Form implements Renderable
 {
+    use HasEvents;
     use RendersWithTheme;
 
-    private array $fields = [];
+    /** @var FormNode[] */
+    private array $children = [];
     private bool $inline = false;
     private string $labelWidth = '100px';
     private string $submitLabel = '查询';
@@ -30,7 +33,12 @@ final class Form implements Renderable
 
     public function addFields(Field ...$fields): self
     {
-        $this->fields = array_merge($this->fields, $fields);
+        return $this->addNodes(...$fields);
+    }
+
+    public function addNodes(FormNode ...$nodes): self
+    {
+        $this->children = array_merge($this->children, $nodes);
 
         return $this;
     }
@@ -68,9 +76,25 @@ final class Form implements Renderable
         return $this->key;
     }
 
+    public function schema(): FormSchema
+    {
+        return (new FormSchemaWalker())->build($this->children);
+    }
+
     public function fields(): array
     {
-        return $this->fields;
+        return array_map(
+            static fn($fieldSchema) => $fieldSchema->field(),
+            $this->schema()->fields()
+        );
+    }
+
+    /**
+     * @return FormNode[]
+     */
+    public function children(): array
+    {
+        return $this->children;
     }
 
     public function isInline(): bool
@@ -95,84 +119,31 @@ final class Form implements Renderable
 
     public function defaults(): array
     {
-        $defaults = [];
-        foreach ($this->fields as $field) {
-            $defaults[$field->name()] = $field->getDefault();
-        }
-
-        return $defaults;
+        return $this->schema()->defaults();
     }
 
     public function rules(): array
     {
-        $rules = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof ValidatableFieldInterface || !$field->hasRules()) {
-                continue;
-            }
-
-            $rules[$field->name()] = $field->getRules();
-        }
-
-        return $rules;
+        return $this->schema()->rules();
     }
 
     public function remoteOptions(): array
     {
-        $schema = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof OptionField || !$field->hasRemoteOptions()) {
-                continue;
-            }
-
-            $schema[$field->name()] = array_merge(
-                $field->getRemoteOptions() ?? [],
-                ['initialOptions' => $field->getOptions()]
-            );
-        }
-
-        return $schema;
+        return $this->schema()->remoteOptions();
     }
 
     public function uploads(): array
     {
-        $schema = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof UploadField || !$field->hasUpload()) {
-                continue;
-            }
-
-            $schema[$field->name()] = $field->getUpload();
-        }
-
-        return $schema;
+        return $this->schema()->uploads();
     }
 
     public function selectOptions(): array
     {
-        $schema = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof OptionField) {
-                continue;
-            }
-
-            $schema[$field->name()] = $field->getOptions();
-        }
-
-        return $schema;
+        return $this->schema()->selectOptions();
     }
 
     public function linkages(): array
     {
-        $schema = [];
-        foreach ($this->fields as $field) {
-            if (!$field instanceof OptionField || !$field->hasLinkageUpdates()) {
-                continue;
-            }
-
-            $schema[$field->name()] = $field->getLinkageConfig() ?? [];
-        }
-
-        return $schema;
+        return $this->schema()->linkages();
     }
 }

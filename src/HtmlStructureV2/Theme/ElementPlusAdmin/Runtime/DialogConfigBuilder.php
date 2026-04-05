@@ -44,10 +44,7 @@ final class DialogConfigBuilder
                     'host' => $dialog->isIframeHostEnabled(),
                     'fullscreenToggle' => $dialog->hasIframeFullscreenToggle(),
                 ] : null,
-                'beforeOpen' => $dialog->getBeforeOpenHook(),
-                'afterOpen' => $dialog->getAfterOpenHook(),
-                'beforeClose' => $dialog->getBeforeCloseHook(),
-                'afterClose' => $dialog->getAfterCloseHook(),
+                'events' => $dialog->getEventHandlers(),
             ];
         }
 

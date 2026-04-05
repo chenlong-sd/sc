@@ -3,33 +3,31 @@
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime;
 
 use Sc\Util\HtmlStructureV2\RenderContext;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 
-final class SimpleRuntimeBuilder
+final class SimpleRuntimeBuilder extends AbstractRuntimeBuilder
 {
-    public function append(RenderContext $context): void
+    protected function runtimeFlagKey(): string
     {
-        if ($context->get('v2.simple.runtime')) {
-            return;
-        }
+        return 'v2.simple.runtime';
+    }
 
-        $state = JsonExpressionEncoder::encode($context->get('v2.simple.state', []));
-        $config = JsonExpressionEncoder::encode($context->get('v2.simple.config', []));
-        $context->document()->assets()->addInlineScript(
-            RuntimeScriptLoader::loadMany([
-                'runtime-helpers.js',
-                'request-action-factory.js',
-                'form-runtime-factory.js',
-                'managed-dialog-factory.js',
-                'simple/form-methods.js',
-                'simple/dialog-methods.js',
-                'simple/table-methods.js',
-                'simple-runtime.js',
-            ], [
-                '__SC_V2_STATE__' => $state,
-                '__SC_V2_CONFIG__' => $config,
-            ])
+    protected function bootFunctionName(): string
+    {
+        return '__SC_V2_BOOT_SIMPLE__';
+    }
+
+    protected function runtimeFiles(): array
+    {
+        return RuntimeBundleCatalog::simple();
+    }
+
+    protected function buildConfig(RenderContext $context): array
+    {
+        return array_replace_recursive(
+            $context->get('v2.simple.config', []),
+            [
+                'tables' => $context->get('v2.table.configs', []),
+            ]
         );
-        $context->set('v2.simple.runtime', true);
     }
 }

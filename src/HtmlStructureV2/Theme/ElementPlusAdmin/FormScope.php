@@ -14,6 +14,13 @@ final class FormScope
         return new self('filter');
     }
 
+    public static function named(string $scope): self
+    {
+        $scope = trim($scope);
+
+        return new self($scope === '' ? 'form' : $scope);
+    }
+
     public static function standalone(string $key): self
     {
         return new self($key);

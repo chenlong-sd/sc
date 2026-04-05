@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -9,12 +10,15 @@ use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
 class Action implements Renderable
 {
+    use HasEvents;
     use RendersWithTheme;
 
     private string $type = 'default';
     private ?string $icon = null;
     private ?string $key = null;
     private ?string $target = null;
+    private ?string $tableTarget = null;
+    private ?string $listTarget = null;
     private string|JsExpression|null $handler = null;
     private ?string $confirmText = null;
     private array $props = [];
@@ -133,6 +137,22 @@ class Action implements Renderable
         return $this->target($dialog);
     }
 
+    public function forTable(string|Table $table): static
+    {
+        $this->tableTarget = $table instanceof Table ? $table->key() : $table;
+        $this->listTarget = null;
+
+        return $this;
+    }
+
+    public function forList(string|ListWidget $list): static
+    {
+        $this->listTarget = $list instanceof ListWidget ? $list->key() : $list;
+        $this->tableTarget = null;
+
+        return $this;
+    }
+
     public function onClick(string|JsExpression $handler): static
     {
         $this->handler = $handler;
@@ -187,6 +207,16 @@ class Action implements Renderable
     public function handler(): string|JsExpression|null
     {
         return $this->handler;
+    }
+
+    public function tableTarget(): ?string
+    {
+        return $this->tableTarget;
+    }
+
+    public function listTarget(): ?string
+    {
+        return $this->listTarget;
     }
 
     public function confirmText(): ?string

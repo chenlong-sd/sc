@@ -82,19 +82,16 @@ final class ColumnRenderer
     {
         $template = El::double('template')->setAttr('#default', 'scope');
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $displayExpression = sprintf(
-            "Array.isArray(%s) ? %s.join(', ') : %s",
-            $valueExpression,
-            $valueExpression,
-            $valueExpression
-        );
+        $displayExpression = $this->runtimeMethodCall('resolveColumnDisplayValue', $valueExpression);
 
-        $template->append(
+        $template->append($this->aliasTemplate(
+            'displayValue',
+            $displayExpression,
             El::double('span')
-                ->setAttr('v-if', '!(' . $this->jsBlankCheck($displayExpression) . ')')
-                ->append('{{ ' . $displayExpression . ' }}'),
+                ->setAttr('v-if', '!isColumnDisplayBlank(displayValue)')
+                ->append('{{ displayValue }}'),
             $this->placeholderSpan($column, 'v-else')
-        );
+        ));
 
         return $template;
     }
@@ -102,24 +99,18 @@ final class ColumnRenderer
     private function renderMappingColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $options = JsonExpressionEncoder::encode(array_values($display['options'] ?? []));
+        $options = JsonExpressionEncoder::encodeCompact(array_values($display['options'] ?? []));
         $separator = $this->jsLiteral($display['separator'] ?? ', ');
-        $labelExpression = sprintf(
-            "Array.isArray(%s) ? %s.map((value) => ((%s).find((item) => item.value == value)?.label ?? '')).filter((value) => value !== '').join(%s) : (((%s).find((item) => item.value == %s)?.label) ?? '')",
-            $valueExpression,
-            $valueExpression,
-            $options,
-            $separator,
-            $options,
-            $valueExpression
-        );
+        $labelExpression = $this->runtimeMethodCall('resolveColumnMappingLabel', $valueExpression, $options, $separator);
 
-        $template->append(
+        $template->append($this->aliasTemplate(
+            'displayLabel',
+            $labelExpression,
             El::double('span')
-                ->setAttr('v-if', '!(' . $this->jsBlankCheck($labelExpression) . ')')
-                ->append('{{ ' . $labelExpression . ' }}'),
+                ->setAttr('v-if', '!isColumnDisplayBlank(displayLabel)')
+                ->append('{{ displayLabel }}'),
             $this->placeholderSpan($column, 'v-else')
-        );
+        ));
 
         return $template;
     }
@@ -127,26 +118,25 @@ final class ColumnRenderer
     private function renderTagColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $options = JsonExpressionEncoder::encode(array_values($display['options'] ?? []));
-        $labelExpression = sprintf(
-            "((%s).find((item) => item.value == %s)?.label) ?? ''",
-            $options,
-            $valueExpression
-        );
-        $typeExpression = sprintf(
-            "((%s).find((item) => item.value == %s)?.type) ?? %s",
-            $options,
+        $options = JsonExpressionEncoder::encodeCompact(array_values($display['options'] ?? []));
+        $metaExpression = $this->runtimeMethodCall(
+            'resolveColumnTagMeta',
             $valueExpression,
+            $options,
             $this->jsLiteral($display['defaultType'] ?? 'info')
         );
+        $labelExpression = "(displayMeta?.label ?? '')";
+        $typeExpression = "(displayMeta?.type ?? 'info')";
 
-        $template->append(
+        $template->append($this->aliasTemplate(
+            'displayMeta',
+            $metaExpression,
             El::double('el-tag')
-                ->setAttr('v-if', '!(' . $this->jsBlankCheck($labelExpression) . ')')
+                ->setAttr('v-if', '!isColumnDisplayBlank(' . $labelExpression . ')')
                 ->setAttr(':type', $typeExpression)
                 ->append('{{ ' . $labelExpression . ' }}'),
             $this->placeholderSpan($column, 'v-else')
-        );
+        ));
 
         return $template;
     }
@@ -162,7 +152,7 @@ final class ColumnRenderer
 
         $template->append(
             El::double('el-image')->setAttrs([
-                'v-if' => '!(' . $this->jsBlankCheck($valueExpression) . ')',
+                'v-if' => '!isColumnDisplayBlank(' . $valueExpression . ')',
                 ':src' => $valueExpression,
                 ':preview-src-list' => '[' . $valueExpression . ']',
                 ':preview-teleported' => 'true',
@@ -219,8 +209,8 @@ final class ColumnRenderer
     private function renderBooleanColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $truthyCheck = $this->jsTruthyValueCheck($valueExpression);
-        $falsyCheck = $this->jsFalsyValueCheck($valueExpression);
+        $truthyCheck = $this->runtimeMethodCall('isColumnTruthy', $valueExpression);
+        $falsyCheck = $this->runtimeMethodCall('isColumnFalsy', $valueExpression);
 
         $template->append(
             El::double('span')
@@ -238,8 +228,8 @@ final class ColumnRenderer
     private function renderBooleanTagColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $truthyCheck = $this->jsTruthyValueCheck($valueExpression);
-        $falsyCheck = $this->jsFalsyValueCheck($valueExpression);
+        $truthyCheck = $this->runtimeMethodCall('isColumnTruthy', $valueExpression);
+        $falsyCheck = $this->runtimeMethodCall('isColumnFalsy', $valueExpression);
 
         $template->append(
             El::double('el-tag')
@@ -259,17 +249,20 @@ final class ColumnRenderer
     private function renderDatetimeColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $formatExpression = $this->jsDateFormatExpression(
+        $displayExpression = $this->runtimeMethodCall(
+            'formatColumnDatetime',
             $valueExpression,
-            (string)($display['format'] ?? 'YYYY-MM-DD HH:mm:ss')
+            $this->jsLiteral((string)($display['format'] ?? 'YYYY-MM-DD HH:mm:ss'))
         );
 
-        $template->append(
+        $template->append($this->aliasTemplate(
+            'displayValue',
+            $displayExpression,
             El::double('span')
-                ->setAttr('v-if', '!(' . $this->jsBlankCheck($valueExpression) . ')')
-                ->append('{{ ' . $formatExpression . ' }}'),
+                ->setAttr('v-if', '!isColumnDisplayBlank(displayValue)')
+                ->append('{{ displayValue }}'),
             $this->placeholderSpan($column, 'v-else')
-        );
+        ));
 
         return $template;
     }
@@ -279,5 +272,17 @@ final class ColumnRenderer
         return El::double('span')
             ->setAttr($conditionAttr)
             ->append($column->getPlaceholder());
+    }
+
+    private function aliasTemplate(string $alias, string $expression, AbstractHtmlElement ...$children): AbstractHtmlElement
+    {
+        return El::double('template')
+            ->setAttr('v-for', sprintf('%s in [%s]', $alias, $expression))
+            ->append(...$children);
+    }
+
+    private function runtimeMethodCall(string $method, string ...$arguments): string
+    {
+        return sprintf('%s(%s)', $method, implode(', ', $arguments));
     }
 }

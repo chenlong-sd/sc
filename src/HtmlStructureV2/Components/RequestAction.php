@@ -116,6 +116,7 @@ final class RequestAction extends Action
     public function before(JsExpression $beforeHook): static
     {
         $this->beforeHook = $beforeHook;
+        $this->on('before', $beforeHook);
 
         return $this;
     }
@@ -123,6 +124,7 @@ final class RequestAction extends Action
     public function afterSuccess(JsExpression $afterSuccessHook): static
     {
         $this->afterSuccessHook = $afterSuccessHook;
+        $this->on('success', $afterSuccessHook);
 
         return $this;
     }
@@ -130,6 +132,7 @@ final class RequestAction extends Action
     public function afterFail(JsExpression $afterFailHook): static
     {
         $this->afterFailHook = $afterFailHook;
+        $this->on('fail', $afterFailHook);
 
         return $this;
     }
@@ -137,6 +140,7 @@ final class RequestAction extends Action
     public function afterFinally(JsExpression $afterFinallyHook): static
     {
         $this->afterFinallyHook = $afterFinallyHook;
+        $this->on('finally', $afterFinallyHook);
 
         return $this;
     }

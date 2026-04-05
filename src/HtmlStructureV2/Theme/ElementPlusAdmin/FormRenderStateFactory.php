@@ -2,8 +2,12 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+
 final class FormRenderStateFactory
 {
+    use BuildsJsExpressions;
+
     public function createFilter(): FormRenderState
     {
         return $this->createNamedState(
@@ -24,6 +28,32 @@ final class FormRenderStateFactory
             mode: 'filters',
             submitMethod: 'submitFilters',
             resetMethod: 'resetFilters',
+        );
+    }
+
+    public function createListFilter(string $listKey): FormRenderState
+    {
+        $prefix = $this->jsStateVariable($listKey, '_filter');
+        $listLiteral = $this->jsLiteral($listKey);
+
+        return $this->createNamedState(
+            scope: FormScope::named('list:' . $listKey . ':filter'),
+            model: $prefix . 'Model',
+            ref: $prefix . 'FormRef',
+            rules: $prefix . 'Rules',
+            optionState: $prefix . 'Options',
+            optionLoading: $prefix . 'OptionLoading',
+            optionLoaded: $prefix . 'OptionLoaded',
+            uploadFiles: $prefix . 'UploadFiles',
+            remoteLoadMethod: 'loadFormFieldOptions',
+            uploadSuccessMethod: 'handleUploadSuccess',
+            uploadRemoveMethod: 'handleUploadRemove',
+            uploadExceedMethod: 'handleUploadExceed',
+            uploadPreviewMethod: 'handleUploadPreview',
+            linkageMethod: 'applyFormLinkage',
+            mode: 'filters',
+            submitMethod: sprintf('submitFilters(%s)', $listLiteral),
+            resetMethod: sprintf('resetFilters(%s)', $listLiteral),
         );
     }
 
@@ -180,14 +210,5 @@ final class FormRenderStateFactory
         }
 
         return $normalized . $suffix;
-    }
-
-    private function jsLiteral(string $value): string
-    {
-        return "'" . str_replace(
-            ['\\', '\''],
-            ['\\\\', '\\\''],
-            $value
-        ) . "'";
     }
 }

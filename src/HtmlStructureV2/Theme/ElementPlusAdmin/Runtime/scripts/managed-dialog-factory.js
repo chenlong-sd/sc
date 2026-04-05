@@ -10,7 +10,9 @@
           const {
             buildUrlWithQuery,
             callHook,
+            emitConfiguredEvent,
             getByPath,
+            isEventCanceled,
             isObject,
             makeRequest,
             toDialogScope,
@@ -20,6 +22,7 @@
 
           const names = Object.assign({
             withDependencyResetSuspended: 'withDependencyResetSuspended',
+            initializeFormArrayGroups: 'initializeFormArrayGroups',
             initializeFormOptions: 'initializeFormOptions',
             initializeUploadFiles: 'initializeUploadFiles',
             clearFormValidate: 'clearFormValidate',
@@ -33,6 +36,13 @@
               }
 
               return this.__dialogBodyRefs;
+            },
+            ensureDialogTableKeyStore(){
+              if (!isObject(this.dialogTableKeys)) {
+                this.dialogTableKeys = {};
+              }
+
+              return this.dialogTableKeys;
             },
             ensureDialogIframeWindowStore(){
               if (!(this.__dialogIframeWindows instanceof WeakMap)) {
@@ -65,6 +75,24 @@
             },
             getDialogBodyRefs(dialogKey){
               return this.ensureDialogBodyRefStore()[dialogKey] || {};
+            },
+            getActiveDialogTableKey(dialogKey){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return null;
+              }
+
+              return this.ensureDialogTableKeyStore()[dialogKey] || null;
+            },
+            setActiveDialogTableKey(dialogKey, tableKey = null){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return null;
+              }
+
+              this.ensureDialogTableKeyStore()[dialogKey] = typeof tableKey === 'string' && tableKey !== ''
+                ? tableKey
+                : null;
+
+              return this.ensureDialogTableKeyStore()[dialogKey];
             },
             setDialogComponentRef(dialogKey, instance){
               const store = this.ensureDialogBodyRefStore();
@@ -166,11 +194,11 @@
                   break;
                 case 'reloadTable':
                   if (typeof context.reloadTable === 'function') {
-                    context.reloadTable();
+                    context.reloadTable(payload.tableKey || undefined);
                   }
                   break;
                 case 'openDialog':
-                  this.openDialog(payload.target, payload.row || null);
+                  this.openDialog(payload.target, payload.row || null, payload.tableKey || context.tableKey || null);
                   break;
                 case 'setTitle':
                   this.setDialogTitle(dialogKey, payload.title || '');
@@ -251,11 +279,15 @@
               const activeRow = row === undefined
                 ? (this.dialogRows?.[dialogKey] || null)
                 : (row || null);
-              const baseContext = getBaseContext(this, dialogKey, activeRow) || {};
+              const activeTableKey = overrides.tableKey !== undefined
+                ? (overrides.tableKey || null)
+                : this.getActiveDialogTableKey(dialogKey);
+              const baseContext = getBaseContext(this, dialogKey, activeRow, activeTableKey) || {};
               const defaults = {
                 row: activeRow,
                 mode: this.dialogMode?.[dialogKey] || (activeRow ? 'edit' : 'create'),
                 dialogKey,
+                tableKey: activeTableKey,
                 dialogConfig: dialogCfg,
                 dialog: this.dialogForms?.[dialogKey] || {},
                 dialogs: this.dialogForms || {},
@@ -268,9 +300,22 @@
                 dialogComponentRef: this.getDialogBodyRefs(dialogKey)?.component || null,
                 dialogIframeRef: this.getDialogBodyRefs(dialogKey)?.iframe || null,
                 vm: this,
-                reloadTable: () => undefined,
+                reloadTable: (target = activeTableKey) => {
+                  if (!target) {
+                    return undefined;
+                  }
+
+                  if (typeof this.reloadTable === 'function') {
+                    return this.reloadTable(target);
+                  }
+                  if (typeof this.loadTableData === 'function') {
+                    return this.loadTableData(target);
+                  }
+
+                  return undefined;
+                },
                 closeDialog: (target = dialogKey) => this.closeDialog(target),
-                openDialog: (target, data = null) => this.openDialog(target, data),
+                openDialog: (target, data = null, targetTableKey = activeTableKey) => this.openDialog(target, data, targetTableKey),
                 setDialogTitle: (title) => this.setDialogTitle(dialogKey, title),
                 setDialogFullscreen: (value = true) => this.setDialogFullscreen(dialogKey, value),
                 toggleDialogFullscreen: () => this.toggleDialogFullscreen(dialogKey),
@@ -330,6 +375,9 @@
               }
 
               if (dialogCfg.type === 'form') {
+                if (typeof this[names.initializeFormArrayGroups] === 'function') {
+                  this[names.initializeFormArrayGroups](scope);
+                }
                 if (typeof this[names.initializeFormOptions] === 'function') {
                   this[names.initializeFormOptions](scope, true);
                 }
@@ -456,7 +504,7 @@
 
               return typeof resolved === 'string' ? resolved : '';
             },
-            openDialog(dialogKey, row){
+            openDialog(dialogKey, row, tableKey = null){
               const dialogCfg = cfg.dialogs?.[dialogKey];
               if (!dialogCfg) {
                 return Promise.resolve(null);
@@ -464,15 +512,17 @@
 
               const scope = toDialogScope(dialogKey);
               const sourceRow = row || null;
+              const sourceTableKey = typeof tableKey === 'string' && tableKey !== '' ? tableKey : null;
               const mode = sourceRow ? 'edit' : 'create';
               const initialContext = this.buildDialogContext(dialogKey, sourceRow, {
                 mode,
                 row: sourceRow,
+                tableKey: sourceTableKey,
               });
 
-              return callHook(dialogCfg.beforeOpen, initialContext)
-                .then((result) => {
-                  if (result === false) {
+              return emitConfiguredEvent(dialogCfg, 'beforeOpen', initialContext)
+                .then((results) => {
+                  if (isEventCanceled(results)) {
                     return null;
                   }
 
@@ -480,6 +530,7 @@
                   this.consumeDialogCloseContext(dialogKey);
                   this.ensureDialogClosingStore()[dialogKey] = false;
                   this.dialogMode[dialogKey] = mode;
+                  this.setActiveDialogTableKey(dialogKey, sourceTableKey);
                   this.dialogRows[dialogKey] = sourceRow ? clone(sourceRow) : null;
                   this.dialogSubmitting[dialogKey] = false;
                   this.dialogLoading[dialogKey] = false;
@@ -504,7 +555,7 @@
 
                     const finalContext = context || this.buildDialogContext(dialogKey);
                     return this.invokeDialogComponentMethod(dialogKey, dialogCfg.component?.openMethod, finalContext)
-                      .then(() => callHook(dialogCfg.afterOpen, finalContext));
+                      .then(() => emitConfiguredEvent(dialogCfg, 'afterOpen', finalContext));
                   }));
                 })
                 .catch((error) => {
@@ -532,9 +583,9 @@
                 dialog: closingDialog
               });
 
-              return callHook(dialogCfg.beforeClose, closingContext)
-                .then((result) => {
-                  if (result === false) {
+              return emitConfiguredEvent(dialogCfg, 'beforeClose', closingContext)
+                .then((results) => {
+                  if (isEventCanceled(results)) {
                     closingStore[dialogKey] = false;
                     return null;
                   }
@@ -580,6 +631,7 @@
               this.dialogIframeUrls[dialogKey] = '';
               this.dialogFullscreen[dialogKey] = !!dialogCfg.fullscreen;
               this.dialogComponentProps[dialogKey] = {};
+              this.setActiveDialogTableKey(dialogKey, null);
               this.dialogRows[dialogKey] = null;
               this.setDialogComponentRef(dialogKey, null);
               this.setDialogIframeRef(dialogKey, null);
@@ -599,7 +651,7 @@
               }
 
               return Vue.nextTick(() => this.invokeDialogComponentMethod(dialogKey, dialogCfg.component?.closeMethod, closingContext)
-                .then(() => callHook(dialogCfg.afterClose, closingContext)))
+                .then(() => emitConfiguredEvent(dialogCfg, 'afterClose', closingContext)))
                 .catch((error) => {
                   const message = error?.message || '弹窗关闭回调执行失败';
                   ElementPlus.ElMessage.error(message);
@@ -643,15 +695,34 @@
                   .then((response) => {
                     const payload = ensureSuccess(extractPayload(response), '保存失败');
                     ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
-                    this.closeDialog(dialogKey);
-                    const context = this.buildDialogContext(dialogKey);
-                    if (typeof context.reloadTable === 'function') {
-                      context.reloadTable();
-                    }
+                    const context = this.buildDialogContext(dialogKey, undefined, {
+                      response,
+                      payload,
+                      dialog: this.dialogForms?.[dialogKey] || {}
+                    });
+
+                    return emitConfiguredEvent(dialogCfg, 'submitSuccess', context)
+                      .then((results) => {
+                        if (isEventCanceled(results)) {
+                          return payload;
+                        }
+
+                        this.closeDialog(dialogKey);
+                        if (typeof context.reloadTable === 'function') {
+                          context.reloadTable();
+                        }
+
+                        return payload;
+                      });
                   })
                   .catch((error) => {
                     const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
                     ElementPlus.ElMessage.error(message);
+
+                    return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogContext(dialogKey, undefined, {
+                      error,
+                      dialog: this.dialogForms?.[dialogKey] || {}
+                    }));
                   })
                   .finally(() => {
                     this.dialogSubmitting[dialogKey] = false;

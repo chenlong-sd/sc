@@ -3,12 +3,14 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
 final class Dialog implements Renderable
 {
+    use HasEvents;
     use RendersWithTheme;
 
     private string $width = '760px';
@@ -274,6 +276,7 @@ final class Dialog implements Renderable
     public function beforeOpen(JsExpression $beforeOpenHook): self
     {
         $this->beforeOpenHook = $beforeOpenHook;
+        $this->on('beforeOpen', $beforeOpenHook);
 
         return $this;
     }
@@ -281,6 +284,7 @@ final class Dialog implements Renderable
     public function afterOpen(JsExpression $afterOpenHook): self
     {
         $this->afterOpenHook = $afterOpenHook;
+        $this->on('afterOpen', $afterOpenHook);
 
         return $this;
     }
@@ -288,6 +292,7 @@ final class Dialog implements Renderable
     public function beforeClose(JsExpression $beforeCloseHook): self
     {
         $this->beforeCloseHook = $beforeCloseHook;
+        $this->on('beforeClose', $beforeCloseHook);
 
         return $this;
     }
@@ -295,6 +300,7 @@ final class Dialog implements Renderable
     public function afterClose(JsExpression $afterCloseHook): self
     {
         $this->afterCloseHook = $afterCloseHook;
+        $this->on('afterClose', $afterCloseHook);
 
         return $this;
     }

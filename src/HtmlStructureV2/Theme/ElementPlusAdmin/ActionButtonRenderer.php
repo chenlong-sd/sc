@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
@@ -13,19 +14,26 @@ final class ActionButtonRenderer
 {
     use EncodesJsValues;
 
-    public function render(Action $action, bool $rowScoped = false, string $size = 'default'): AbstractHtmlElement
+    public function render(
+        Action $action,
+        bool $rowScoped = false,
+        string $size = 'default',
+        ?TableRenderBindings $tableBindings = null
+    ): AbstractHtmlElement
     {
+        $target = ActionRenderTarget::resolve($action, $tableBindings);
+        $this->assertActionHasRequiredRenderTarget($action, $rowScoped, $target);
         $attrs = array_merge([
             'type' => $action->buttonType(),
             'size' => $size,
         ], $action->attrs());
 
         if ($action->intent() === ActionIntent::REFRESH) {
-            $attrs[':loading'] = 'tableLoading';
+            $attrs[':loading'] = $target->loadingExpression();
         }
 
         if ($action instanceof RequestAction) {
-            $attrs[':loading'] = $this->requestActionLoadingExpression($action);
+            $attrs[':loading'] = $this->requestActionLoadingExpression($action, $target);
         }
 
         if ($action->intent() === ActionIntent::SUBMIT) {
@@ -37,7 +45,7 @@ final class ActionButtonRenderer
             $attrs[':disabled'] = $this->dialogStateExpression('dialogSubmitting', $action);
         }
 
-        $click = $this->resolveClick($action, $rowScoped);
+        $click = $this->resolveClick($action, $rowScoped, $target);
         if ($click !== null) {
             $attrs['@click'] = $click;
         }
@@ -57,33 +65,90 @@ final class ActionButtonRenderer
         return $button;
     }
 
-    private function resolveClick(Action $action, bool $rowScoped): ?string
+    private function assertActionHasRequiredRenderTarget(
+        Action $action,
+        bool $rowScoped,
+        ActionRenderTarget $target
+    ): void {
+        if ($action->intent() === ActionIntent::REFRESH && !$target->hasDataTarget()) {
+            throw new InvalidArgumentException(sprintf(
+                'Action [%s] requires explicit forTable()/forList() or a local table/list render context.',
+                $action->label()
+            ));
+        }
+
+        if (
+            $action instanceof RequestAction
+            && $action->shouldReloadTable()
+            && !$target->hasDataTarget()
+        ) {
+            throw new InvalidArgumentException(sprintf(
+                'Request action [%s] enables reloadTable() but has no explicit forTable()/forList() target or local table/list render context.',
+                $action->label()
+            ));
+        }
+
+        if ($action->intent() === ActionIntent::DELETE && !$target->hasDataTarget()) {
+            throw new InvalidArgumentException(sprintf(
+                'Action [%s] requires explicit forTable()/forList() or a local table/list render context.',
+                $action->label()
+            ));
+        }
+    }
+
+    private function resolveClick(Action $action, bool $rowScoped, ActionRenderTarget $target): ?string
     {
+        $actionConfig = $this->actionConfig($action, $target);
+
         if ($action instanceof RequestAction) {
             return sprintf(
                 'runRequestAction(%s, %s)',
-                $this->requestActionConfig($action),
+                $this->requestActionConfig($action, $target),
                 $rowScoped ? 'scope.row' : 'null'
             );
         }
 
         return match ($action->intent()) {
-            ActionIntent::CREATE => sprintf('openDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
-            ActionIntent::EDIT => sprintf('openDialog(%s, %s)', $this->jsString($action->targetName() ?: 'editor'), $rowScoped ? 'scope.row' : 'null'),
-            ActionIntent::DELETE => sprintf(
-                'deleteRow(%s, %s)',
-                $rowScoped ? 'scope.row' : 'null',
-                $this->jsString($action->confirmText() ?: '确认删除当前记录？')
+            ActionIntent::CREATE => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                $this->openDialogExpression($action, null, $target)
             ),
-            ActionIntent::SUBMIT => sprintf('submitDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
-            ActionIntent::CLOSE => sprintf('closeDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
-            ActionIntent::REFRESH => 'loadTableData()',
+            ActionIntent::EDIT => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target)
+            ),
+            ActionIntent::DELETE => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                $target->deleteRowExpression($rowScoped ? 'scope.row' : 'null', 'null')
+            ),
+            ActionIntent::SUBMIT => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                sprintf('submitDialog(%s)', $this->jsString($action->targetName() ?: 'editor'))
+            ),
+            ActionIntent::CLOSE => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                sprintf('closeDialog(%s)', $this->jsString($action->targetName() ?: 'editor'))
+            ),
+            ActionIntent::REFRESH => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                $target->reloadExpression()
+            ),
             ActionIntent::REQUEST => null,
-            ActionIntent::CUSTOM => $this->resolveCustomClick($action),
+            ActionIntent::CUSTOM => $this->wrapActionExecution(
+                $actionConfig,
+                $rowScoped,
+                $this->resolveCustomExecutor($action)
+            ),
         };
     }
 
-    private function resolveCustomClick(Action $action): ?string
+    private function resolveCustomExecutor(Action $action): ?string
     {
         $handler = $action->handler();
         if ($handler === null) {
@@ -95,31 +160,25 @@ final class ActionButtonRenderer
             return null;
         }
 
-        $confirmText = $action->confirmText();
-        if ($confirmText === null || $confirmText === '') {
-            return $expression;
-        }
-
-        return sprintf(
-            '(() => ElementPlus.ElMessageBox.confirm(%s, "提示", { type: "warning" }).then(() => { %s }).catch((error) => { if (error !== "cancel" && error !== "close") { ElementPlus.ElMessage.error(error?.message || "操作失败"); } }))()',
-            $this->jsString($confirmText),
-            $expression
-        );
+        return $expression;
     }
 
-    private function requestActionLoadingExpression(RequestAction $action): string
+    private function requestActionLoadingExpression(RequestAction $action, ActionRenderTarget $target): string
     {
         return sprintf(
             'actionLoading[%s] || false',
-            $this->jsString($this->actionKey($action))
+            $this->jsString($this->actionLoadingKey($action, $target))
         );
     }
 
-    private function requestActionConfig(RequestAction $action): string
+    private function requestActionConfig(RequestAction $action, ActionRenderTarget $target): string
     {
         return $this->jsValue([
-            'key' => $this->actionKey($action),
+            'key' => $this->actionLoadingKey($action, $target),
+            'tableKey' => $target->tableKey(),
+            'listKey' => $target->listKey(),
             'confirmText' => $action->confirmText(),
+            'events' => $action->getEventHandlers(),
             'successMessage' => $action->getSuccessMessage(),
             'errorMessage' => $action->getErrorMessage(),
             'loadingText' => $action->getLoadingText(),
@@ -131,17 +190,61 @@ final class ActionButtonRenderer
                 'method' => $action->getRequestMethod(),
                 'url' => $action->getRequestUrl(),
                 'query' => $action->getPayload(),
-                'before' => $action->getBeforeHook(),
-                'afterSuccess' => $action->getAfterSuccessHook(),
-                'afterFail' => $action->getAfterFailHook(),
-                'afterFinally' => $action->getAfterFinallyHook(),
             ],
         ]);
+    }
+
+    private function openDialogExpression(
+        Action $action,
+        ?string $rowExpression,
+        ActionRenderTarget $renderTarget
+    ): string {
+        $dialogTarget = $action->targetName() ?: 'editor';
+
+        return $renderTarget->openDialogExpression($dialogTarget, $rowExpression);
     }
 
     private function actionKey(Action $action): string
     {
         return $action->getKey() ?: 'sc_action_' . spl_object_id($action);
+    }
+
+    private function actionLoadingKey(Action $action, ActionRenderTarget $target): string
+    {
+        $key = $this->actionKey($action);
+        $suffix = $target->loadingKeySuffix();
+        if ($suffix === null) {
+            return $key;
+        }
+
+        return $key . '@' . $suffix;
+    }
+
+    private function actionConfig(Action $action, ActionRenderTarget $target): string
+    {
+        return $this->jsValue([
+            'key' => $this->actionLoadingKey($action, $target),
+            'tableKey' => $target->tableKey(),
+            'listKey' => $target->listKey(),
+            'dialogTarget' => $action->targetName(),
+            'confirmText' => $action->confirmText(),
+            'events' => $action->getEventHandlers(),
+        ]);
+    }
+
+    private function wrapActionExecution(string $config, bool $rowScoped, ?string $executor = null): string
+    {
+        $rowExpression = $rowScoped ? 'scope.row' : 'null';
+        if ($executor === null || trim($executor) === '') {
+            return sprintf('runAction(%s, %s)', $config, $rowExpression);
+        }
+
+        return sprintf(
+            'runAction(%s, %s, () => { %s })',
+            $config,
+            $rowExpression,
+            $executor
+        );
     }
 
     private function dialogStateExpression(string $stateName, Action $action): string

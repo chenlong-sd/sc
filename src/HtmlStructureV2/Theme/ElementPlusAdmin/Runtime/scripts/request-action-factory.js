@@ -1,24 +1,14 @@
         globalThis.__SC_V2_CREATE_REQUEST_ACTION_METHODS__ = ({ getBaseContext = () => ({}) } = {}) => {
           const {
+            emitConfiguredEvent,
             ensureSuccess,
             extractPayload,
             getByPath,
+            isEventCanceled,
             isObject,
             makeRequest,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
-
-          const callHook = (hook, context) => {
-            if (typeof hook !== 'function') {
-              return Promise.resolve(undefined);
-            }
-
-            try {
-              return Promise.resolve(hook(context));
-            } catch (error) {
-              return Promise.reject(error);
-            }
-          };
 
           const resolveToken = (token, context) => {
             const path = String(token || '').replace(/^@/, '');
@@ -63,6 +53,28 @@
 
             return value;
           };
+          const confirmAction = (confirmText, executor) => {
+            if (!confirmText) {
+              return Promise.resolve().then(() => executor());
+            }
+
+            return ElementPlus.ElMessageBox.confirm(confirmText, '提示', {
+              type: 'warning'
+            })
+              .then(() => executor())
+              .catch((error) => {
+                if (error === 'cancel' || error === 'close') {
+                  return null;
+                }
+
+                const message = error?.message || '操作失败';
+                if (message) {
+                  ElementPlus.ElMessage.error(message);
+                }
+
+                return null;
+              });
+          };
 
           return {
             ensureActionLoadingStore(){
@@ -72,22 +84,67 @@
 
               return this.actionLoading;
             },
-            runRequestAction(actionConfig, row = null){
-              if (!actionConfig?.request?.url || !actionConfig?.key) {
-                return Promise.resolve(null);
-              }
+            buildActionContext(actionConfig, row = null){
+              const resolveActionTableKey = () => {
+                if (actionConfig.tableKey) {
+                  return actionConfig.tableKey;
+                }
 
-              const actionLoading = this.ensureActionLoadingStore();
+                if (actionConfig.listKey && typeof this.resolveListTableKey === 'function') {
+                  return this.resolveListTableKey(actionConfig.listKey);
+                }
+
+                return null;
+              };
+
+              const resolvedTableKey = resolveActionTableKey();
               const baseContext = getBaseContext(this, actionConfig, row) || {};
               const context = Object.assign({
                 action: actionConfig,
+                tableKey: resolvedTableKey,
+                listKey: actionConfig.listKey || null,
                 row: row || null,
                 filters: {},
                 forms: {},
                 dialogs: {},
                 selection: [],
                 vm: this,
-                reloadTable: () => typeof this.loadTableData === 'function' ? this.loadTableData() : undefined,
+                reloadTable: (tableKey = resolvedTableKey) => {
+                  if (!tableKey) {
+                    return undefined;
+                  }
+
+                  if (typeof this.reloadTable === 'function') {
+                    return this.reloadTable(tableKey);
+                  }
+                  if (typeof this.loadTableData === 'function') {
+                    return this.loadTableData(tableKey);
+                  }
+
+                  return undefined;
+                },
+                reloadList: (listKey = actionConfig.listKey || null) => {
+                  if (typeof this.reloadList === 'function') {
+                    return this.reloadList(listKey);
+                  }
+
+                  const tableKey = listKey && typeof this.resolveListTableKey === 'function'
+                    ? this.resolveListTableKey(listKey)
+                    : resolvedTableKey;
+
+                  if (!tableKey) {
+                    return undefined;
+                  }
+
+                  if (typeof this.reloadTable === 'function') {
+                    return this.reloadTable(tableKey);
+                  }
+                  if (typeof this.loadTableData === 'function') {
+                    return this.loadTableData(tableKey);
+                  }
+
+                  return undefined;
+                },
                 closeDialog: (dialogKey) => typeof this.closeDialog === 'function' ? this.closeDialog(dialogKey) : undefined,
                 reloadPage: () => window.location.reload(),
               }, baseContext);
@@ -97,22 +154,62 @@
                 context.dialog = context.dialogs[actionConfig.dialogTarget];
               }
 
-              const perform = () => {
-                let loadingInstance = null;
+              return context;
+            },
+            runAction(actionConfig, row = null, executor = null){
+              if (!actionConfig?.key) {
+                return Promise.resolve(null);
+              }
 
-                return callHook(actionConfig.request.before, context)
-                  .then((result) => {
-                    if (result === false) {
+              const context = this.buildActionContext(actionConfig, row);
+
+              return emitConfiguredEvent(actionConfig, 'click', context)
+                .then((results) => {
+                  if (isEventCanceled(results)) {
+                    return null;
+                  }
+
+                  return confirmAction(actionConfig.confirmText, () => {
+                    if (typeof executor !== 'function') {
                       return null;
                     }
 
-                    const request = {
-                      method: actionConfig.request.method || 'post',
-                      url: resolveActionValue(actionConfig.request.url, context),
-                      query: resolveActionValue(actionConfig.request.query || {}, context),
-                    };
+                    return executor(context);
+                  });
+                })
+                .catch((error) => {
+                  const message = error?.message || '操作失败';
+                  if (message) {
+                    ElementPlus.ElMessage.error(message);
+                  }
 
-                    context.request = request;
+                  return null;
+                });
+            },
+            runRequestAction(actionConfig, row = null){
+              if (!actionConfig?.request?.url || !actionConfig?.key) {
+                return Promise.resolve(null);
+              }
+
+              const actionLoading = this.ensureActionLoadingStore();
+              const context = this.buildActionContext(actionConfig, row);
+
+              const perform = () => {
+                let loadingInstance = null;
+                const request = {
+                  method: actionConfig.request.method || 'post',
+                  url: resolveActionValue(actionConfig.request.url, context),
+                  query: resolveActionValue(actionConfig.request.query || {}, context),
+                };
+
+                context.request = request;
+
+                return emitConfiguredEvent(actionConfig, 'before', context)
+                  .then((results) => {
+                    if (isEventCanceled(results)) {
+                      return null;
+                    }
+
                     actionLoading[actionConfig.key] = true;
 
                     if (actionConfig.loadingText) {
@@ -138,13 +235,17 @@
                           ElementPlus.ElMessage.success(successMessage);
                         }
 
-                        return callHook(actionConfig.request.afterSuccess, context)
+                        return emitConfiguredEvent(actionConfig, 'success', context)
                           .then(() => {
                             if (actionConfig.closeDialog && actionConfig.dialogTarget) {
                               context.closeDialog(actionConfig.dialogTarget);
                             }
                             if (actionConfig.reloadTable) {
-                              context.reloadTable();
+                              if (actionConfig.listKey && !actionConfig.tableKey) {
+                                context.reloadList();
+                              } else {
+                                context.reloadTable();
+                              }
                             }
                             if (actionConfig.reloadPage) {
                               context.reloadPage();
@@ -164,7 +265,7 @@
                           ElementPlus.ElMessage.error(message);
                         }
 
-                        return callHook(actionConfig.request.afterFail, context)
+                        return emitConfiguredEvent(actionConfig, 'fail', context)
                           .then(() => null);
                       })
                       .finally(() => {
@@ -173,24 +274,20 @@
                           loadingInstance.close();
                         }
 
-                        return callHook(actionConfig.request.afterFinally, context);
+                        return emitConfiguredEvent(actionConfig, 'finally', context);
                       });
                   });
               };
 
-              if (!actionConfig.confirmText) {
-                return perform();
-              }
-
-              return ElementPlus.ElMessageBox.confirm(actionConfig.confirmText, '提示', {
-                type: 'warning'
-              })
-                .then(() => perform())
-                .catch((error) => {
-                  if (error === 'cancel' || error === 'close') {
+              return emitConfiguredEvent(actionConfig, 'click', context)
+                .then((results) => {
+                  if (isEventCanceled(results)) {
                     return null;
                   }
 
+                  return confirmAction(actionConfig.confirmText, perform);
+                })
+                .catch((error) => {
                   const message = error?.message || '操作失败';
                   if (message) {
                     ElementPlus.ElMessage.error(message);
