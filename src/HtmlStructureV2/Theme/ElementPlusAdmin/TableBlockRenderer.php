@@ -23,7 +23,7 @@ final class TableBlockRenderer
     {
         $block = El::double('div')->addClass('sc-v2-table-block');
 
-        if ($table->getToolbarActions()) {
+        if ($table->getToolbarActions() || $table->useSettings()) {
             $block->append($this->tableRenderer->renderToolbar($table, $bindings, $renderContext));
         }
 
@@ -39,6 +39,10 @@ final class TableBlockRenderer
                     El::double('span')->append(sprintf('共 {{ %s }} 条数据', $bindings->totalExpression()))
                 )
             );
+        }
+
+        if ($table->useSettings()) {
+            $block->append($this->tableRenderer->renderSettingsDialog($table, $bindings));
         }
 
         return $block;

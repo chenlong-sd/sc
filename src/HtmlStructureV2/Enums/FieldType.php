@@ -17,5 +17,6 @@ enum FieldType: string
     case DATE_RANGE = 'date_range';
     case UPLOAD = 'upload';
     case SWITCH = 'switch';
+    case PICKER = 'picker';
     case HIDDEN = 'hidden';
 }

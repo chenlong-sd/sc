@@ -14,9 +14,10 @@ final class Column
     private const DISPLAY_TYPE_BOOLEAN_TAG = 'boolean_tag';
     private const DISPLAY_TYPE_DATETIME = 'datetime';
 
-    private ?int $width = null;
-    private ?int $minWidth = null;
+    private int|string|null $width = null;
+    private int|string|null $minWidth = null;
     private ?string $align = null;
+    private ?string $fixed = null;
     private bool $sortable = false;
     private ?string $sortField = null;
     private ?string $format = null;
@@ -41,7 +42,7 @@ final class Column
     /**
      * 设置列固定宽度。
      */
-    public function width(int $width): self
+    public function width(int|string $width): self
     {
         $this->width = $width;
 
@@ -51,7 +52,7 @@ final class Column
     /**
      * 设置列最小宽度。
      */
-    public function minWidth(int $minWidth): self
+    public function minWidth(int|string $minWidth): self
     {
         $this->minWidth = $minWidth;
 
@@ -64,6 +65,16 @@ final class Column
     public function align(string $align): self
     {
         $this->align = $align;
+
+        return $this;
+    }
+
+    /**
+     * 设置列固定位置，例如 left / right。
+     */
+    public function fixed(string $position = 'right'): self
+    {
+        $this->fixed = $position;
 
         return $this;
     }
@@ -306,12 +317,12 @@ final class Column
         return $this->prop;
     }
 
-    public function getWidth(): ?int
+    public function getWidth(): int|string|null
     {
         return $this->width;
     }
 
-    public function getMinWidth(): ?int
+    public function getMinWidth(): int|string|null
     {
         return $this->minWidth;
     }
@@ -319,6 +330,11 @@ final class Column
     public function getAlign(): ?string
     {
         return $this->align;
+    }
+
+    public function getFixed(): ?string
+    {
+        return $this->fixed;
     }
 
     public function isSortable(): bool

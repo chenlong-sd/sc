@@ -8,16 +8,20 @@
           getOptionLoadingState,
           getOptionLoadedState,
           getUploadFileState,
+          getPickerState,
           getFormEvents,
           getArrayGroups,
           getRemoteOptionsMap,
           getRemoteOptionPaths,
           getSelectOptionsMap,
+          getPickersMap,
+          getPickerPaths,
           getLinkagesMap,
           getUploadsMap,
           getUploadPaths
         }) => {
           const {
+            buildPickerState,
             clone,
             emitConfiguredEvent,
             ensureFormArrayGroupState,
@@ -32,10 +36,13 @@
             normalizeArrayGroupRow,
             normalizeDependencies,
             normalizeOption,
+            normalizePickerItems,
             normalizeUploadFiles,
             pickRows,
+            resolveDialogKeyFromScope,
             resolveDynamicParams,
             resolveLinkageTemplate,
+            resolvePickerDisplayTemplate,
             resolveMessage,
             resolveUploadValue,
             setByPath,
@@ -63,11 +70,19 @@
             getOptionLoadingState: 'getManagedOptionLoadingState',
             getOptionLoadedState: 'getManagedOptionLoadedState',
             getUploadFileState: 'getManagedUploadFileState',
+            getPickerState: 'getManagedPickerState',
+            initializePickerState: 'initializeManagedPickerState',
             setUploadFileList: 'setManagedUploadFileList',
             getFieldOptions: 'getManagedFieldOptions',
             getLinkageConfig: 'getManagedLinkageConfig',
             clearLinkageTargets: 'clearManagedLinkageTargets',
             applyFormLinkage: 'applyManagedFormLinkage',
+            getPickerItems: 'getPickerItems',
+            openPickerDialog: 'openPickerDialog',
+            applyPickerDialogSelection: 'applyPickerDialogSelection',
+            removePickerItem: 'removePickerItem',
+            clearPickerField: 'clearPickerField',
+            resolvePickerItemDisplay: 'resolvePickerItemDisplay',
             nextRemoteRequestToken: 'nextManagedRemoteRequestToken',
             isLatestRemoteRequestToken: 'isLatestManagedRemoteRequestToken',
             setDependencyResetSuspended: 'setManagedDependencyResetSuspended',
@@ -288,6 +303,39 @@
 
             return getByPath(context.groupConfig?.[arrayGroupConfigKey] || {}, context.rowFieldPath);
           };
+          const resolvePickerFieldConfig = (vm, scope, fieldName) => {
+            return resolveScopedFieldConfig(
+              vm,
+              scope,
+              fieldName,
+              getPickersMap(scope, vm) || {},
+              'rowPickers'
+            ) || null;
+          };
+          const ensurePickerBindingStore = (vm) => {
+            if (!vm || typeof vm !== 'object') {
+              return {};
+            }
+
+            if (!vm.__pickerDialogBindings || typeof vm.__pickerDialogBindings !== 'object') {
+              vm.__pickerDialogBindings = {};
+            }
+
+            return vm.__pickerDialogBindings;
+          };
+          const syncPickerModelValue = (model, fieldName, fieldCfg, items) => {
+            const normalized = normalizePickerItems(items, fieldCfg || {});
+            const values = normalized.map((item) => item?.__pickerValue);
+            setByPath(
+              model,
+              fieldName,
+              fieldCfg?.multiple === false
+                ? (values[0] ?? null)
+                : values
+            );
+
+            return normalized;
+          };
           const contextualizeArrayRowModelTokens = (value, arrayPath, rowIndex) => {
             if (Array.isArray(value)) {
               return value.map((item) => contextualizeArrayRowModelTokens(item, arrayPath, rowIndex));
@@ -414,6 +462,38 @@
 
             return state;
           };
+          const rebuildPickerState = (vm, scope) => {
+            const nextState = buildPickerState(
+              getPickersMap(scope, vm) || {},
+              getPickerPaths(scope, vm) || []
+            );
+
+            visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
+              setByPath(
+                nextState,
+                concreteArrayPath,
+                (Array.isArray(rows) ? rows : []).map(() => clone(groupCfg?.defaultPickerRow || {}))
+              );
+            });
+
+            const state = vm[names.getPickerState](scope);
+            Object.keys(state || {}).forEach((key) => {
+              delete state[key];
+            });
+            Object.assign(state, nextState);
+
+            return state;
+          };
+          const syncArrayGroupPickerRows = (vm, scope, arrayPath, callback) => {
+            const pickerState = vm[names.getPickerState](scope);
+            const pickerRows = getByPath(pickerState, arrayPath);
+            const nextRows = Array.isArray(pickerRows) ? pickerRows : [];
+
+            callback(nextRows);
+            setByPath(pickerState, arrayPath, nextRows);
+
+            return nextRows;
+          };
           const rebuildArrayGroupRemoteOptionState = (vm, scope, arrayPath = null) => {
             const optionState = vm[names.getOptionState](scope);
             const loadingState = vm[names.getOptionLoadingState](scope);
@@ -521,6 +601,7 @@
                 ensureFormArrayGroupState(model, groupCfg || {});
               });
               rebuildArrayGroupRemoteOptionState(this, scope);
+              rebuildPickerState(this, scope);
 
               return model;
             },
@@ -568,6 +649,9 @@
 
               const row = normalizeArrayGroupRow(clone(groupCfg?.defaultRow || {}), groupCfg || {});
               rows.push(row);
+              syncArrayGroupPickerRows(this, scope, arrayPath, (pickerRows) => {
+                pickerRows.push(clone(groupCfg?.defaultPickerRow || {}));
+              });
               rebuildUploadFileState(this, scope);
               this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
               this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
@@ -600,6 +684,11 @@
               }
 
               const [row] = rows.splice(index, 1);
+              syncArrayGroupPickerRows(this, scope, arrayPath, (pickerRows) => {
+                if (index >= 0 && index < pickerRows.length) {
+                  pickerRows.splice(index, 1);
+                }
+              });
               rebuildUploadFileState(this, scope);
               this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
               this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
@@ -632,6 +721,14 @@
 
               const [row] = rows.splice(index, 1);
               rows.splice(targetIndex, 0, row);
+              syncArrayGroupPickerRows(this, scope, arrayPath, (pickerRows) => {
+                if (index < 0 || index >= pickerRows.length) {
+                  return;
+                }
+
+                const [pickerRow] = pickerRows.splice(index, 1);
+                pickerRows.splice(targetIndex, 0, pickerRow);
+              });
               rebuildUploadFileState(this, scope);
               this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
               this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
@@ -658,6 +755,12 @@
             },
             [names.getUploadFileState](scope){
               return getUploadFileState(this, scope) || {};
+            },
+            [names.getPickerState](scope){
+              return getPickerState(this, scope) || {};
+            },
+            [names.initializePickerState](scope){
+              return rebuildPickerState(this, scope);
             },
             [names.setUploadFileList](scope, fieldName, uploadFiles){
               const fieldCfg = resolveScopedFieldConfig(
@@ -735,6 +838,145 @@
               Object.keys(linkCfg.updates).forEach((targetField) => {
                 setByPath(model, targetField, resolveLinkageTemplate(linkCfg.updates[targetField], context));
               });
+            },
+            [names.getPickerItems](scope, fieldName){
+              const fieldCfg = resolvePickerFieldConfig(this, scope, fieldName);
+              if (!fieldCfg) {
+                return [];
+              }
+
+              return normalizePickerItems(
+                getByPath(this[names.getPickerState](scope), fieldName) || [],
+                fieldCfg
+              );
+            },
+            [names.openPickerDialog](scope, fieldName, dialogKey = null){
+              const fieldCfg = resolvePickerFieldConfig(this, scope, fieldName);
+              if (!fieldCfg) {
+                ElementPlus.ElMessage.error('选择器字段配置不存在');
+                return false;
+              }
+
+              const resolvedDialogKey = typeof dialogKey === 'string' && dialogKey !== ''
+                ? dialogKey
+                : (fieldCfg.dialogKey || '');
+              if (resolvedDialogKey === '') {
+                ElementPlus.ElMessage.error('未配置选择弹窗');
+                return false;
+              }
+
+              if (typeof this.openDialog !== 'function') {
+                ElementPlus.ElMessage.error('当前页面未启用弹窗运行时');
+                return false;
+              }
+
+              ensurePickerBindingStore(this)[resolvedDialogKey] = {
+                scope,
+                fieldName,
+              };
+
+              const parentDialogKey = resolveDialogKeyFromScope(scope);
+              const activeTableKey = parentDialogKey && typeof this.getActiveDialogTableKey === 'function'
+                ? this.getActiveDialogTableKey(parentDialogKey)
+                : null;
+
+              this.openDialog(resolvedDialogKey, null, activeTableKey || null);
+
+              return true;
+            },
+            [names.applyPickerDialogSelection](dialogKey){
+              const resolvedDialogKey = String(dialogKey || '').trim();
+              if (resolvedDialogKey === '') {
+                ElementPlus.ElMessage.error('选择器弹窗标识无效');
+                return false;
+              }
+
+              const binding = ensurePickerBindingStore(this)[resolvedDialogKey] || null;
+              if (!binding?.scope || !binding?.fieldName) {
+                ElementPlus.ElMessage.error('未找到选择器回填目标');
+                return false;
+              }
+
+              const fieldCfg = resolvePickerFieldConfig(this, binding.scope, binding.fieldName);
+              if (!fieldCfg) {
+                ElementPlus.ElMessage.error('选择器字段配置不存在');
+                return false;
+              }
+
+              const dialogIframeRef = this.getDialogBodyRefs?.(resolvedDialogKey)?.iframe || null;
+              const iframeWindow = dialogIframeRef?.contentWindow || null;
+              if (!iframeWindow) {
+                ElementPlus.ElMessage.error('选择页面尚未加载完成');
+                return false;
+              }
+
+              const selectionPath = String(fieldCfg.selectionPath || '__scV2Selection').trim() || '__scV2Selection';
+              let rawSelection = getByPath(iframeWindow, selectionPath);
+              if (rawSelection === undefined && selectionPath === '__scV2Selection') {
+                rawSelection = getByPath(iframeWindow, 'selection');
+              }
+              const items = normalizePickerItems(rawSelection, fieldCfg);
+              if (items.length <= 0) {
+                ElementPlus.ElMessage.error('请选择数据');
+                return false;
+              }
+
+              setByPath(this[names.getPickerState](binding.scope), binding.fieldName, items);
+              syncPickerModelValue(
+                this[names.getFormModel](binding.scope),
+                binding.fieldName,
+                fieldCfg,
+                items
+              );
+
+              delete ensurePickerBindingStore(this)[resolvedDialogKey];
+              if (typeof this.closeDialog === 'function') {
+                this.closeDialog(resolvedDialogKey);
+              }
+
+              return true;
+            },
+            [names.removePickerItem](scope, fieldName, value){
+              const fieldCfg = resolvePickerFieldConfig(this, scope, fieldName);
+              if (!fieldCfg) {
+                return [];
+              }
+
+              const items = normalizePickerItems(
+                getByPath(this[names.getPickerState](scope), fieldName) || [],
+                fieldCfg
+              ).filter((item) => !isSameValue(item?.__pickerValue, value));
+
+              setByPath(this[names.getPickerState](scope), fieldName, items);
+              syncPickerModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, items);
+
+              return items;
+            },
+            [names.clearPickerField](scope, fieldName){
+              const fieldCfg = resolvePickerFieldConfig(this, scope, fieldName);
+              if (!fieldCfg) {
+                return [];
+              }
+
+              setByPath(this[names.getPickerState](scope), fieldName, []);
+              syncPickerModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, []);
+
+              return [];
+            },
+            [names.resolvePickerItemDisplay](scope, fieldName, item){
+              const fieldCfg = resolvePickerFieldConfig(this, scope, fieldName) || {};
+              const normalizedItem = normalizePickerItems([item], fieldCfg)[0] || null;
+              if (!normalizedItem) {
+                return '';
+              }
+
+              return normalizedItem.__pickerDisplay
+                || resolvePickerDisplayTemplate(
+                  fieldCfg.displayTemplate || '@label',
+                  normalizedItem,
+                  normalizedItem.__pickerLabel,
+                  normalizedItem.__pickerValue
+                );
             },
             [names.nextRemoteRequestToken](scope, fieldName){
               this[tokenStoreKey] ??= {};

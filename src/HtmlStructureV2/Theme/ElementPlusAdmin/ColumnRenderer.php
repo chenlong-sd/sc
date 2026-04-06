@@ -12,7 +12,11 @@ final class ColumnRenderer
 {
     use BuildsJsExpressions;
 
-    public function render(Column $column): AbstractHtmlElement
+    public function render(
+        Column $column,
+        ?TableRenderBindings $bindings = null,
+        bool $settingsEnabled = false
+    ): AbstractHtmlElement
     {
         $attrs = [
             'label' => $column->label(),
@@ -20,14 +24,25 @@ final class ColumnRenderer
             ':show-overflow-tooltip' => 'true',
         ];
 
-        if ($column->getWidth()) {
-            $attrs['width'] = $column->getWidth();
+        if ($settingsEnabled && $bindings !== null) {
+            $attrs['v-if'] = $bindings->columnVisibleExpression($column->prop());
+            $attrs[':width'] = $bindings->columnWidthExpression($column->prop(), $column->getWidth());
+            $attrs[':align'] = $bindings->columnAlignExpression($column->prop(), $column->getAlign());
+            $attrs[':fixed'] = $bindings->columnFixedExpression($column->prop(), $column->getFixed());
+        } else {
+            if ($column->getWidth() !== null) {
+                $attrs['width'] = $column->getWidth();
+            }
+            if ($column->getAlign()) {
+                $attrs['align'] = $column->getAlign();
+            }
+            if ($column->getFixed()) {
+                $attrs['fixed'] = $column->getFixed();
+            }
         }
-        if ($column->getMinWidth()) {
+
+        if ($column->getMinWidth() !== null) {
             $attrs['min-width'] = $column->getMinWidth();
-        }
-        if ($column->getAlign()) {
-            $attrs['align'] = $column->getAlign();
         }
         if ($column->isSortable()) {
             $attrs['sortable'] = 'custom';

@@ -2,11 +2,13 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
+use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
@@ -101,6 +103,7 @@ final class FieldRenderer
         $visibleWhen = $this->normalizeFieldExpression($field->getVisibleWhen(), $modelName);
         $disabledWhen = $this->normalizeFieldExpression($field->getDisabledWhen(), $modelName);
         $optionField = $field instanceof OptionField ? $field : null;
+        $pickerField = $field instanceof PickerField ? $field : null;
         $uploadField = $field instanceof UploadField ? $field : null;
         $placeholderField = $field instanceof PlaceholderFieldInterface ? $field : null;
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
@@ -114,24 +117,28 @@ final class FieldRenderer
             $tableCell,
             $options->showLabels && $field->hasLabel()
         );
-        $usesExplicitModelBinding = $propExpression !== null;
-        $component = $this->buildFieldComponent(
-            $field,
-            $modelAccessor,
-            $inline,
-            $placeholderField,
-            $uploadField,
-            $usesExplicitModelBinding
-                ? ($propExpression === null
-                    ? $options->fieldValueUpdateHandler($fieldPath)
-                    : $options->fieldValueUpdateHandlerByPathExpression($propExpression))
-                : null
-        );
+        if ($pickerField !== null) {
+            $component = $this->buildPickerComponent($pickerField, $fieldPath, $options, $propExpression, $disabledWhen);
+        } else {
+            $usesExplicitModelBinding = $propExpression !== null;
+            $component = $this->buildFieldComponent(
+                $field,
+                $modelAccessor,
+                $inline,
+                $placeholderField,
+                $uploadField,
+                $usesExplicitModelBinding
+                    ? ($propExpression === null
+                        ? $options->fieldValueUpdateHandler($fieldPath)
+                        : $options->fieldValueUpdateHandlerByPathExpression($propExpression))
+                    : null
+            );
 
-        $this->applyFieldProps($component, $field);
-        $this->applyDisabledState($component, $field, $disabledWhen);
-        $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
-        $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
+            $this->applyFieldProps($component, $field);
+            $this->applyDisabledState($component, $field, $disabledWhen);
+            $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
+            $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
+        }
 
         $item->append($this->wrapFieldControl($field, $component, $renderContext));
         $this->appendHelpText($item, $field);
@@ -408,6 +415,113 @@ final class FieldRenderer
                     : JsonExpressionEncoder::encodeCompact($optionField->getOptions())
             );
         }
+    }
+
+    private function buildPickerComponent(
+        PickerField $field,
+        string $fieldPath,
+        FormRenderOptions $options,
+        ?string $fieldPathExpression = null,
+        ?string $disabledWhen = null
+    ): AbstractHtmlElement {
+        if (!$options->hasPickerContext()) {
+            throw new InvalidArgumentException(sprintf(
+                'Picker field [%s] requires picker runtime context.',
+                $field->name()
+            ));
+        }
+
+        $dialogKey = $field->dialogKey();
+        if ($dialogKey === null || $dialogKey === '') {
+            throw new InvalidArgumentException(sprintf(
+                'Picker field [%s] requires dialog().',
+                $field->name()
+            ));
+        }
+
+        $itemsExpression = $fieldPathExpression === null
+            ? $options->pickerItemsExpression($fieldPath)
+            : $options->pickerItemsExpressionByPathExpression($fieldPathExpression);
+        $hasItemsExpression = sprintf('(%s).length > 0', $itemsExpression);
+        $countExpression = sprintf('(%s).length', $itemsExpression);
+        $openExpression = $fieldPathExpression === null
+            ? $options->pickerOpenExpression($fieldPath, $dialogKey)
+            : $options->pickerOpenExpressionByPathExpression($fieldPathExpression, $dialogKey);
+        $removeExpression = $fieldPathExpression === null
+            ? $options->pickerRemoveExpression($fieldPath, 'pickerItem.__pickerValue')
+            : $options->pickerRemoveExpressionByPathExpression($fieldPathExpression, 'pickerItem.__pickerValue');
+        $clearExpression = $fieldPathExpression === null
+            ? $options->pickerClearExpression($fieldPath)
+            : $options->pickerClearExpressionByPathExpression($fieldPathExpression);
+        $displayExpression = $fieldPathExpression === null
+            ? $options->pickerDisplayExpression($fieldPath, 'pickerItem')
+            : $options->pickerDisplayExpressionByPathExpression($fieldPathExpression, 'pickerItem');
+        $disabledExpression = $disabledWhen ?? ($field->isDisabled() ? 'true' : 'false');
+
+        $root = El::double('div')->addClass('sc-v2-picker');
+        $panel = El::double('div')
+            ->addClass('sc-v2-picker__panel')
+            ->setAttr('v-if', $hasItemsExpression);
+        $panel->append(
+            El::double('div')
+                ->addClass('sc-v2-picker__summary')
+                ->append(sprintf('已选 {{ %s }} 项', $countExpression))
+        );
+
+        $list = El::double('div')->addClass('sc-v2-picker__list');
+        $item = El::double('div')->addClass('sc-v2-picker__item')->setAttrs([
+            'v-for' => sprintf('(pickerItem, pickerIndex) in %s', $itemsExpression),
+            ':key' => 'pickerItem.__pickerValue ?? pickerIndex',
+        ]);
+        $item->append(
+            El::double('div')
+                ->addClass('sc-v2-picker__item-text')
+                ->setAttr(':title', $displayExpression)
+                ->append(sprintf('{{ %s }}', $displayExpression))
+        );
+        $item->append(
+            El::double('el-button')->setAttrs([
+                'link' => '',
+                'type' => 'danger',
+                'icon' => 'CloseBold',
+                ':disabled' => $disabledExpression,
+                '@click' => $removeExpression,
+            ])
+        );
+        $list->append($item);
+        $panel->append($list);
+        $root->append($panel);
+        $root->append(
+            El::double('div')
+                ->addClass('sc-v2-picker__empty')
+                ->setAttr('v-else', '')
+                ->append($field->getEmptyText())
+        );
+
+        $actions = El::double('div')->addClass('sc-v2-picker__actions');
+        $actions->append(
+            El::double('el-button')->setAttrs([
+                'type' => 'primary',
+                'icon' => 'Plus',
+                ':disabled' => $disabledExpression,
+                '@click' => $openExpression,
+            ])->append($field->getButtonLabel())
+        );
+
+        if ($field->isClearable()) {
+            $actions->append(
+                El::double('el-button')->setAttrs([
+                    'icon' => 'Delete',
+                    'v-if' => $hasItemsExpression,
+                    ':disabled' => $disabledExpression,
+                    '@click' => $clearExpression,
+                ])->append('清空')
+            );
+        }
+
+        $root->append($actions);
+
+        return $root;
     }
 
     private function applyUploadFieldBehavior(

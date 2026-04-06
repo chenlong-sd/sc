@@ -40,6 +40,7 @@ final class Actions
     /**
      * 创建“删除”动作，默认带批量删除确认提示。
      * 该快捷语义用于表格/列表工具栏里的 selection 批量删除，不用于 rowActions() 单条删除。
+     * 如需就近覆盖默认删除配置，可继续链式调用 deleteUrl()/deleteKey()。
      */
     public static function delete(string $label = '删除'): Action
     {
@@ -66,7 +67,10 @@ final class Actions
     }
 
     /**
-     * 创建“保存并提交弹窗表单”动作，默认目标 dialog key 为 editor。
+     * 创建“提交弹窗数据”动作，默认目标 dialog key 为 editor。
+     * 目标为 form 弹窗时直接提交表单；
+     * 目标为 iframe 弹窗时，会先调用子页面提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
+     * 如需就近覆盖默认提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
      */
     public static function submit(string $label = '保存', string $dialog = 'editor'): Action
     {

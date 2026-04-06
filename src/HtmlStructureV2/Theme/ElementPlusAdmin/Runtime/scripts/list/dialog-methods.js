@@ -40,6 +40,7 @@
                 withDependencyResetSuspended: 'withDependencyResetSuspended',
                 initializeFormOptions: 'initializeFormOptions',
                 initializeUploadFiles: 'initializeUploadFiles',
+                initializePickerState: 'initializePickerState',
                 clearFormValidate: 'clearFormValidate',
                 validateForm: 'validateForm',
               }

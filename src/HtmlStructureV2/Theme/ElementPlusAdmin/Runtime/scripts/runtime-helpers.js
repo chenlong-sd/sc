@@ -369,6 +369,70 @@
               disabled: item.disabled === true
             });
           };
+          const resolvePickerDisplayTemplate = (template, item, label, value) => {
+            const rawTemplate = typeof template === 'string' && template !== ''
+              ? template
+              : '@label';
+            const replaced = rawTemplate
+              .replace(/@item\.([A-Za-z0-9_.$-]+)/g, (_, path) => {
+                const resolved = getByPath(item || {}, String(path || '').trim());
+                return resolved === null || resolved === undefined ? '' : String(resolved);
+              })
+              .replace(/@label/g, label === null || label === undefined ? '' : String(label))
+              .replace(/@value/g, value === null || value === undefined ? '' : String(value));
+
+            return replaced.trim();
+          };
+          const normalizePickerItem = (item, fieldCfg, index = 0) => {
+            const valueField = fieldCfg?.valueField || 'id';
+            const labelField = fieldCfg?.labelField || 'name';
+            const row = isObject(item)
+              ? clone(item)
+              : {
+                  [valueField]: item,
+                  [labelField]: item === null || item === undefined ? '' : String(item),
+                };
+            const value = getByPath(row, valueField);
+            const label = getByPath(row, labelField) ?? (value === null || value === undefined ? '' : String(value));
+
+            return Object.assign({}, row, {
+              __pickerValue: value ?? index,
+              __pickerLabel: label === null || label === undefined ? '' : String(label),
+              __pickerDisplay: resolvePickerDisplayTemplate(
+                fieldCfg?.displayTemplate || '@label',
+                row,
+                label,
+                value
+              )
+            });
+          };
+          const normalizePickerItems = (items, fieldCfg = {}) => {
+            const rows = Array.isArray(items)
+              ? items
+              : (isObject(items) ? [items] : []);
+            const normalized = [];
+            const seen = new Set();
+
+            for (let index = 0; index < rows.length; index += 1) {
+              const normalizedItem = normalizePickerItem(rows[index], fieldCfg, index);
+              const rawValue = normalizedItem?.__pickerValue;
+              const dedupeKey = rawValue !== null && typeof rawValue === 'object'
+                ? JSON.stringify(rawValue)
+                : String(rawValue);
+              if (seen.has(dedupeKey)) {
+                continue;
+              }
+
+              seen.add(dedupeKey);
+              normalized.push(normalizedItem);
+
+              if (fieldCfg?.multiple === false) {
+                break;
+              }
+            }
+
+            return normalized;
+          };
           const buildOptionState = (configs, fieldPaths = []) => {
             const state = {};
             (fieldPaths || []).forEach((fieldName) => {
@@ -381,6 +445,19 @@
                   : []
               );
             });
+            return state;
+          };
+          const buildPickerState = (configs, fieldPaths = []) => {
+            const state = {};
+            (fieldPaths || []).forEach((fieldName) => {
+              const fieldCfg = getByPath(configs || {}, fieldName) || {};
+              setByPath(
+                state,
+                fieldName,
+                normalizePickerItems(fieldCfg.initialItems || [], fieldCfg)
+              );
+            });
+
             return state;
           };
           const buildFlagState = (fieldPaths = [], initialValue = false) => {
@@ -860,8 +937,31 @@
 
             return normalizedRows;
           };
+          const buildTableSettingsState = (tableConfig = {}) => {
+            const settingsConfig = isObject(tableConfig?.settings) ? tableConfig.settings : {};
+            const columns = Array.isArray(settingsConfig?.columns)
+              ? settingsConfig.columns
+                .filter((item) => isObject(item) && typeof item.key === 'string' && item.key !== '')
+                .map((item) => ({
+                  key: String(item.key),
+                  label: typeof item.label === 'string' && item.label !== '' ? item.label : String(item.key),
+                  show: item.show !== false,
+                  width: item.width ?? null,
+                  fixed: typeof item.fixed === 'string' && item.fixed !== '' ? item.fixed : null,
+                  align: typeof item.align === 'string' && item.align !== '' ? item.align : null
+                }))
+              : [];
+
+            return {
+              enabled: settingsConfig.enabled === true,
+              stripe: settingsConfig.stripe !== false,
+              border: settingsConfig.border !== false,
+              columns
+            };
+          };
           const buildTableState = (tableConfig = {}) => {
             const initialRows = Array.isArray(tableConfig?.initialRows) ? clone(tableConfig.initialRows) : [];
+            const settingsDefault = buildTableSettingsState(tableConfig);
 
             return {
               rows: clone(initialRows),
@@ -874,7 +974,12 @@
                 field: '',
                 order: null
               },
-              loading: false
+              loading: false,
+              settings: clone(settingsDefault),
+              settingsDefault: clone(settingsDefault),
+              settingsDraft: clone(settingsDefault),
+              settingsVisible: false,
+              settingsLoaded: false
             };
           };
           const buildTableStates = (tables = {}) => {
@@ -1005,6 +1110,14 @@
               getDialogFormConfig(dialogKey).defaults || {},
               getDialogFormConfig(dialogKey).uploadPaths || []
             )),
+            dialogPickerItems: buildDialogState(dialogs, (_, dialogKey) => buildPickerState(
+              getDialogFormConfig(dialogKey).pickers || {},
+              getDialogFormConfig(dialogKey).pickerPaths || []
+            )),
+            dialogPickerInitials: buildDialogState(dialogs, (_, dialogKey) => buildPickerState(
+              getDialogFormConfig(dialogKey).pickers || {},
+              getDialogFormConfig(dialogKey).pickerPaths || []
+            )),
             dialogVisible: buildDialogState(dialogs, () => false),
             dialogMode: buildDialogState(dialogs, () => 'create'),
             dialogRows: buildDialogState(dialogs, () => null),
@@ -1037,6 +1150,7 @@
             buildDialogTitleState,
             buildArrayGroupConfigMap,
             buildFlagState,
+            buildPickerState,
             buildFormsContext,
             buildManagedDialogRuntimeState,
             buildOptionState,
@@ -1071,6 +1185,8 @@
             normalizeArrayGroupRows,
             normalizeDependencies,
             normalizeOption,
+            normalizePickerItem,
+            normalizePickerItems,
             registerElementPlusIcons,
             normalizeUploadFile,
             normalizeUploadFiles,
@@ -1082,6 +1198,7 @@
             resolveColumnTagMeta,
             resolveDynamicParams,
             resolveLinkageTemplate,
+            resolvePickerDisplayTemplate,
             resolveMessage,
             resolveTitleTemplate,
             resolveUploadValue,

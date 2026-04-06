@@ -92,15 +92,29 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-section__header{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
     .sc-v2-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     .sc-v2-toolbar__actions{display:flex;gap:10px;flex-wrap:wrap}
+    .sc-v2-toolbar__tools{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
     .sc-v2-form__control{display:flex;align-items:flex-start;gap:12px;width:100%}
     .sc-v2-form__control>:first-child{flex:1 1 auto;min-width:0}
     .sc-v2-form__suffix{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
     .sc-v2-form__suffix-text{font-size:13px;line-height:1.5;color:#6b7280}
     .sc-v2-form__help{margin-top:6px;font-size:12px;line-height:1.5;color:#909399}
+    .sc-v2-picker{display:flex;flex-direction:column;gap:10px;width:100%}
+    .sc-v2-picker__panel{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fcfcfd}
+    .sc-v2-picker__summary{font-size:12px;line-height:18px;color:#6b7280}
+    .sc-v2-picker__empty{padding:10px 12px;border:1px dashed #dcdfe6;border-radius:6px;background:#fafafa;font-size:13px;line-height:20px;color:#909399}
+    .sc-v2-picker__list{display:flex;flex-direction:column;gap:8px;max-height:180px;overflow:auto}
+    .sc-v2-picker__item{display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border:1px solid #ebeef5;border-radius:6px;background:#ffffff}
+    .sc-v2-picker__item-text{flex:1 1 auto;min-width:0;font-size:13px;line-height:20px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sc-v2-picker__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
     .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
     .sc-v2-filters__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__images{display:flex;gap:8px;flex-wrap:wrap}
+    .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-table-settings__switches{display:flex;gap:12px;flex-wrap:wrap}
+    .sc-v2-table-settings__switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--el-border-color-light);border-radius:8px;min-width:180px}
+    .sc-v2-table-settings__footer{display:flex;justify-content:flex-end}
+    .sc-v2-table-settings__footer-actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-stack{display:flex;flex-direction:column}
     .sc-v2-grid{display:grid}
     .sc-v2-block-title{display:flex;flex-direction:column;gap:6px}

@@ -4,6 +4,7 @@ namespace Sc\Util\HtmlStructureV2\Support;
 
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
+use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\CustomNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\FormArrayGroup;
@@ -20,11 +21,14 @@ final class FormSchemaWalker
     /** @var FormFieldSchema[] */
     private array $fields = [];
     private array $defaults = [];
+    private array $pickerDefaults = [];
     private array $rules = [];
     private array $remoteOptions = [];
     private array $selectOptions = [];
+    private array $pickers = [];
     private array $linkages = [];
     private array $uploads = [];
+    private array $pickerPaths = [];
     private array $remoteOptionPaths = [];
     private array $uploadPaths = [];
     /** @var FormArrayGroupSchema[] */
@@ -60,11 +64,14 @@ final class FormSchemaWalker
         return new FormSchema(
             fields: $this->fields,
             defaults: $this->defaults,
+            pickerDefaults: $this->pickerDefaults,
             rules: $this->rules,
             remoteOptions: $this->remoteOptions,
             selectOptions: $this->selectOptions,
+            pickers: $this->pickers,
             linkages: $this->linkages,
             uploads: $this->uploads,
+            pickerPaths: array_values(array_unique($this->pickerPaths)),
             remoteOptionPaths: array_values(array_unique($this->remoteOptionPaths)),
             uploadPaths: array_values(array_unique($this->uploadPaths)),
             arrayGroups: $this->arrayGroups,
@@ -75,11 +82,14 @@ final class FormSchemaWalker
     {
         $this->fields = [];
         $this->defaults = [];
+        $this->pickerDefaults = [];
         $this->rules = [];
         $this->remoteOptions = [];
         $this->selectOptions = [];
+        $this->pickers = [];
         $this->linkages = [];
         $this->uploads = [];
+        $this->pickerPaths = [];
         $this->remoteOptionPaths = [];
         $this->uploadPaths = [];
         $this->arrayGroups = [];
@@ -90,6 +100,12 @@ final class FormSchemaWalker
         $path = $context->fieldPath($field->name());
         $this->fields[] = new FormFieldSchema($field, $path);
         FormPath::set($this->defaults, $path, $field->getDefault());
+
+        if ($field instanceof PickerField) {
+            $this->pickerPaths[] = $path;
+            FormPath::set($this->pickers, $path, $field->getPickerConfig());
+            FormPath::set($this->pickerDefaults, $path, $field->getPickerItemsDefault());
+        }
 
         if ($field instanceof ValidatableFieldInterface && $field->hasRules()) {
             FormPath::set($this->rules, $path, $field->getRules());
@@ -127,6 +143,7 @@ final class FormSchemaWalker
         $path = $context->fieldPath($group->name());
         $rowSchema = (new self($this->formNodePathWalker))->build($group->getChildren());
         FormPath::set($this->defaults, $path, $group->buildInitialRows($rowSchema->defaults()));
+        FormPath::set($this->pickerDefaults, $path, $group->buildInitialRows($rowSchema->pickerDefaults()));
         $this->arrayGroups[] = new FormArrayGroupSchema($path, $group, $rowSchema);
     }
 

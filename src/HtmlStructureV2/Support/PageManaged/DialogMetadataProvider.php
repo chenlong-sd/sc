@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Support\PageManaged;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\FormActionCollector;
+use Sc\Util\HtmlStructureV2\Support\FormDialogCollector;
 
 final class DialogMetadataProvider implements MetadataProviderInterface
 {
@@ -12,6 +13,7 @@ final class DialogMetadataProvider implements MetadataProviderInterface
 
     public function __construct(
         private readonly FormActionCollector $formActionCollector = new FormActionCollector(),
+        private readonly FormDialogCollector $formDialogCollector = new FormDialogCollector(),
     ) {
     }
 
@@ -80,6 +82,10 @@ final class DialogMetadataProvider implements MetadataProviderInterface
         }
 
         foreach ($this->dialogsFromActions($this->formActionCollector->collect($dialog->getForm())) as $nestedDialog) {
+            $this->collectDialogTree($nestedDialog, $dialogs, $visited);
+        }
+
+        foreach ($this->formDialogCollector->collect($dialog->getForm()) as $nestedDialog) {
             $this->collectDialogTree($nestedDialog, $dialogs, $visited);
         }
     }

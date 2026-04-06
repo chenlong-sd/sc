@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
 use Sc\Util\HtmlStructureV2\Components\Fields\NumberField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PasswordField;
+use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\TextField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
@@ -144,6 +145,22 @@ final class Fields
     public static function toggle(string $name, ?string $label = null): BasicField
     {
         return new BasicField($name, $label ?? '', FieldType::SWITCH);
+    }
+
+    /**
+     * 创建一个选择器字段，适合“打开 dialog 选择数据后回填当前表单”场景。
+     * 常见链式配置：
+     * - dialog(): 绑定选择弹窗，通常传 Dialogs::make(...)->iframe(...)
+     * - selectionPath(): 指定 iframe 页里保存选中结果的变量路径；V2 列表页通常可省略，默认读取 "__scV2Selection"
+     * - selectionPath("__scV2Selections.userTable"): 指定 V2 多表页里的某个表格选中结果
+     * - selectionPath("VueApp.userSelection"): 指向旧页面里自行维护的选中结果变量
+     * - valueField()/labelField(): 指定提交值和主文案字段
+     * - displayTemplate(): 自定义已选项展示文本
+     * 当前主字段默认值：多选为 `[]`，单选为 `null`。
+     */
+    public static function picker(string $name, ?string $label = null): PickerField
+    {
+        return new PickerField($name, $label ?? '');
     }
 
     /**

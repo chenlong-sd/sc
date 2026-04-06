@@ -75,6 +75,12 @@
                 initializeUploadFiles(scope){
                   return this.initializeSimpleUploadFiles(scope);
                 },
+                getPickerState(...args){
+                  return this.getSimplePickerState(...args);
+                },
+                initializePickerState(...args){
+                  return this.initializeSimplePickerState(...args);
+                },
                 setUploadFileList(...args){
                   return this.setSimpleUploadFileList(...args);
                 },

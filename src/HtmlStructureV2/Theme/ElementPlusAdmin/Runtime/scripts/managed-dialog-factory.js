@@ -25,6 +25,7 @@
             initializeFormArrayGroups: 'initializeFormArrayGroups',
             initializeFormOptions: 'initializeFormOptions',
             initializeUploadFiles: 'initializeUploadFiles',
+            initializePickerState: 'initializePickerState',
             clearFormValidate: 'clearFormValidate',
             validateForm: 'validateForm',
           }, formMethodNames || {});
@@ -154,6 +155,64 @@
                   iframe.src = iframe.src;
                 }
               }
+            },
+            resolveDialogIframeSubmitHandler(dialogKey, iframeWindow){
+              const dialogCfg = cfg.dialogs?.[dialogKey];
+              const handlerPath = String(dialogCfg?.iframe?.submitHandler || 'VueApp.submit').trim();
+              if (handlerPath === '') {
+                return {
+                  handler: null,
+                  owner: iframeWindow || null,
+                  path: '',
+                };
+              }
+
+              const segments = handlerPath.split('.').filter(Boolean);
+              let owner = iframeWindow || null;
+              for (let index = 0; index < Math.max(segments.length - 1, 0); index += 1) {
+                owner = owner?.[segments[index]];
+              }
+
+              const methodName = segments[segments.length - 1] || '';
+              return {
+                handler: methodName ? owner?.[methodName] : null,
+                owner: owner || iframeWindow || null,
+                path: handlerPath,
+              };
+            },
+            invokeDialogIframeSubmit(dialogKey, context){
+              const dialogIframeRef = this.getDialogBodyRefs(dialogKey)?.iframe || null;
+              const iframeWindow = dialogIframeRef?.contentWindow || null;
+              if (!iframeWindow) {
+                return Promise.reject(new Error('子页面尚未加载完成'));
+              }
+
+              try {
+                const submitHandler = this.resolveDialogIframeSubmitHandler(dialogKey, iframeWindow);
+                if (typeof submitHandler?.handler !== 'function') {
+                  return Promise.reject(new Error(
+                    submitHandler?.path
+                      ? `子页面未暴露提交方法：${submitHandler.path}`
+                      : '未配置子页面提交方法'
+                  ));
+                }
+
+                return Promise.resolve(submitHandler.handler.call(
+                  submitHandler.owner || iframeWindow,
+                  context
+                ));
+              } catch (error) {
+                return Promise.reject(new Error(
+                  error?.message || '当前子页面不支持宿主直接提交'
+                ));
+              }
+            },
+            buildDialogSubmitContext(dialogKey, submitData, overrides = {}){
+              const normalizedSubmitData = submitData === undefined ? null : submitData;
+              return this.buildDialogContext(dialogKey, undefined, Object.assign({
+                dialog: isObject(normalizedSubmitData) ? normalizedSubmitData : (normalizedSubmitData ?? {}),
+                submitData: normalizedSubmitData,
+              }, overrides));
             },
             invokeDialogComponentMethod(dialogKey, methodName, context){
               if (typeof methodName !== 'string' || methodName === '') {
@@ -369,9 +428,11 @@
               if (typeof this[names.withDependencyResetSuspended] === 'function') {
                 this[names.withDependencyResetSuspended](scope, () => {
                   this.dialogForms[dialogKey] = formData;
+                  this.dialogPickerItems[dialogKey] = clone(this.dialogPickerInitials?.[dialogKey] || {});
                 });
               } else {
                 this.dialogForms[dialogKey] = formData;
+                this.dialogPickerItems[dialogKey] = clone(this.dialogPickerInitials?.[dialogKey] || {});
               }
 
               if (dialogCfg.type === 'form') {
@@ -489,18 +550,23 @@
                   }
                 });
             },
-            resolveDialogSubmitUrl(dialogKey){
+            resolveDialogSubmitUrl(dialogKey, actionConfig = null, actionContext = null){
               const dialogCfg = cfg.dialogs?.[dialogKey];
               if (!dialogCfg) {
                 return '';
               }
 
               const mode = this.dialogMode?.[dialogKey] || 'create';
+              const submitActionCfg = isObject(actionConfig?.submit) ? actionConfig.submit : {};
               const url = mode === 'edit'
-                ? (dialogCfg.updateUrl || dialogCfg.saveUrl || '')
-                : (dialogCfg.createUrl || dialogCfg.saveUrl || '');
-
-              const resolved = resolveContextValue(url, this.buildDialogContext(dialogKey));
+                ? (submitActionCfg.updateUrl || submitActionCfg.saveUrl || dialogCfg.updateUrl || dialogCfg.saveUrl || '')
+                : (submitActionCfg.createUrl || submitActionCfg.saveUrl || dialogCfg.createUrl || dialogCfg.saveUrl || '');
+              const context = this.buildDialogContext(
+                dialogKey,
+                undefined,
+                isObject(actionContext) ? actionContext : {}
+              );
+              const resolved = resolveContextValue(url, context);
 
               return typeof resolved === 'string' ? resolved : '';
             },
@@ -635,16 +701,27 @@
               this.dialogRows[dialogKey] = null;
               this.setDialogComponentRef(dialogKey, null);
               this.setDialogIframeRef(dialogKey, null);
+              if (this.__pickerDialogBindings && typeof this.__pickerDialogBindings === 'object') {
+                delete this.__pickerDialogBindings[dialogKey];
+              }
 
               if (typeof this[names.withDependencyResetSuspended] === 'function') {
                 this[names.withDependencyResetSuspended](scope, () => {
                   this.dialogForms[dialogKey] = clone(this.dialogInitials?.[dialogKey] || {});
+                  this.dialogPickerItems[dialogKey] = clone(this.dialogPickerInitials?.[dialogKey] || {});
+                  if (dialogCfg.type === 'form' && typeof this[names.initializePickerState] === 'function') {
+                    this[names.initializePickerState](scope);
+                  }
                   if (dialogCfg.type === 'form' && typeof this[names.initializeUploadFiles] === 'function') {
                     this[names.initializeUploadFiles](scope);
                   }
                 });
               } else {
                 this.dialogForms[dialogKey] = clone(this.dialogInitials?.[dialogKey] || {});
+                this.dialogPickerItems[dialogKey] = clone(this.dialogPickerInitials?.[dialogKey] || {});
+                if (dialogCfg.type === 'form' && typeof this[names.initializePickerState] === 'function') {
+                  this[names.initializePickerState](scope);
+                }
                 if (dialogCfg.type === 'form' && typeof this[names.initializeUploadFiles] === 'function') {
                   this[names.initializeUploadFiles](scope);
                 }
@@ -662,72 +739,128 @@
             closeDialog(dialogKey){
               return this.requestDialogClose(dialogKey);
             },
-            submitDialog(dialogKey){
+            submitDialog(dialogKey, actionConfig = null, actionContext = null){
               const dialogCfg = cfg.dialogs?.[dialogKey];
-              if (!dialogCfg || dialogCfg.type !== 'form') {
+              if (!dialogCfg || !['form', 'iframe'].includes(dialogCfg.type)) {
                 return;
               }
 
-              if (this.dialogLoading?.[dialogKey]) {
+              if (this.dialogLoading?.[dialogKey] || this.dialogSubmitting?.[dialogKey]) {
                 return;
               }
 
-              const scope = toDialogScope(dialogKey);
-              const validate = typeof this[names.validateForm] === 'function'
-                ? this[names.validateForm](scope)
-                : Promise.resolve(true);
+              if (dialogCfg.type === 'form') {
+                const scope = toDialogScope(dialogKey);
+                const validate = typeof this[names.validateForm] === 'function'
+                  ? this[names.validateForm](scope)
+                  : Promise.resolve(true);
 
-              validate.then((valid) => {
-                if (!valid) return;
+                validate.then((valid) => {
+                  if (!valid) return;
 
-                const submitUrl = this.resolveDialogSubmitUrl(dialogKey);
-                if (!submitUrl) {
-                  this.closeDialog(dialogKey);
-                  return;
-                }
+                  const submitUrl = this.resolveDialogSubmitUrl(dialogKey, actionConfig, actionContext);
+                  if (!submitUrl) {
+                    this.closeDialog(dialogKey);
+                    return;
+                  }
 
-                this.dialogSubmitting[dialogKey] = true;
-                makeRequest({
-                  method: 'post',
-                  url: submitUrl,
-                  query: this.dialogForms[dialogKey] || {}
-                })
-                  .then((response) => {
-                    const payload = ensureSuccess(extractPayload(response), '保存失败');
-                    ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
-                    const context = this.buildDialogContext(dialogKey, undefined, {
-                      response,
-                      payload,
-                      dialog: this.dialogForms?.[dialogKey] || {}
-                    });
-
-                    return emitConfiguredEvent(dialogCfg, 'submitSuccess', context)
-                      .then((results) => {
-                        if (isEventCanceled(results)) {
-                          return payload;
-                        }
-
-                        this.closeDialog(dialogKey);
-                        if (typeof context.reloadTable === 'function') {
-                          context.reloadTable();
-                        }
-
-                        return payload;
+                  const submitData = this.dialogForms?.[dialogKey] || {};
+                  this.dialogSubmitting[dialogKey] = true;
+                  makeRequest({
+                    method: 'post',
+                    url: submitUrl,
+                    query: submitData
+                  })
+                    .then((response) => {
+                      const payload = ensureSuccess(extractPayload(response), '保存失败');
+                      ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
+                      const context = this.buildDialogSubmitContext(dialogKey, submitData, {
+                        response,
+                        payload,
                       });
-                  })
-                  .catch((error) => {
-                    const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
-                    ElementPlus.ElMessage.error(message);
 
-                    return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogContext(dialogKey, undefined, {
-                      error,
-                      dialog: this.dialogForms?.[dialogKey] || {}
-                    }));
-                  })
-                  .finally(() => {
-                    this.dialogSubmitting[dialogKey] = false;
+                      return emitConfiguredEvent(dialogCfg, 'submitSuccess', context)
+                        .then((results) => {
+                          if (isEventCanceled(results)) {
+                            return payload;
+                          }
+
+                          this.closeDialog(dialogKey);
+                          if (typeof context.reloadTable === 'function') {
+                            context.reloadTable();
+                          }
+
+                          return payload;
+                        });
+                    })
+                    .catch((error) => {
+                      const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
+                      ElementPlus.ElMessage.error(message);
+
+                      return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogSubmitContext(dialogKey, submitData, {
+                        error,
+                      }));
+                    })
+                    .finally(() => {
+                      this.dialogSubmitting[dialogKey] = false;
+                    });
+                });
+
+                return;
+              }
+
+              const submitUrl = this.resolveDialogSubmitUrl(dialogKey, actionConfig, actionContext);
+              if (!submitUrl) {
+                ElementPlus.ElMessage.error('请先为 iframe 弹窗配置 saveUrl()/createUrl()/updateUrl()');
+                return;
+              }
+
+              this.dialogSubmitting[dialogKey] = true;
+              const submitContext = this.buildDialogContext(dialogKey);
+              let submitData = null;
+
+              this.invokeDialogIframeSubmit(dialogKey, submitContext)
+                .then((data) => {
+                  submitData = data ?? {};
+                  return makeRequest({
+                    method: 'post',
+                    url: submitUrl,
+                    query: submitData
                   });
-              });
+                })
+                .then((response) => {
+                  const payload = ensureSuccess(extractPayload(response), '保存失败');
+                  ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
+                  const context = this.buildDialogSubmitContext(dialogKey, submitData, {
+                    response,
+                    payload,
+                  });
+
+                  return emitConfiguredEvent(dialogCfg, 'submitSuccess', context)
+                    .then((results) => {
+                      if (isEventCanceled(results)) {
+                        return payload;
+                      }
+
+                      this.closeDialog(dialogKey);
+                      if (typeof context.reloadTable === 'function') {
+                        context.reloadTable();
+                      }
+
+                      return payload;
+                    });
+                })
+                .catch((error) => {
+                  const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
+                  ElementPlus.ElMessage.error(message);
+
+                  return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogSubmitContext(dialogKey, submitData, {
+                    error,
+                  }));
+                })
+                .finally(() => {
+                  this.dialogSubmitting[dialogKey] = false;
+                });
             }
           };
         };

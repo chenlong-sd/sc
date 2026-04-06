@@ -303,13 +303,13 @@
                     return this.reloadTable(tableKey);
                   });
                 },
-                deleteListSelection(listKey = null, confirmText = '确认删除当前选中数据？'){
+                deleteListSelection(listKey = null, confirmText = '确认删除当前选中数据？', actionConfig = null, actionContext = null){
                   const tableKey = resolveListTableKey(listKey);
                   if (!tableKey) {
                     return Promise.resolve(null);
                   }
 
-                  return this.deleteTableSelection(tableKey, confirmText);
+                  return this.deleteTableSelection(tableKey, confirmText, actionConfig, actionContext);
                 }
               },
               createListFilterMethods({

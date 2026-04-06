@@ -21,6 +21,12 @@ final class TableRuntimeConfigBuilder
             'sortFieldMap' => $this->buildSortFieldMap($table),
             'deleteUrl' => $table->getDeleteUrl(),
             'deleteKey' => $table->getDeleteKey(),
+            'settings' => [
+                'enabled' => $table->useSettings(),
+                'stripe' => $table->useStripe(),
+                'border' => $table->useBorder(),
+                'columns' => $this->buildSettingsColumns($table),
+            ],
             'events' => $table->getEventHandlers(),
         ], $overrides);
     }
@@ -38,5 +44,23 @@ final class TableRuntimeConfigBuilder
         }
 
         return $map;
+    }
+
+    private function buildSettingsColumns(Table $table): array
+    {
+        $columns = [];
+
+        foreach ($table->columns() as $column) {
+            $columns[] = [
+                'key' => $column->prop(),
+                'label' => $column->label() !== '' ? $column->label() : $column->prop(),
+                'show' => true,
+                'width' => $column->getWidth(),
+                'fixed' => $column->getFixed(),
+                'align' => $column->getAlign(),
+            ];
+        }
+
+        return $columns;
     }
 }

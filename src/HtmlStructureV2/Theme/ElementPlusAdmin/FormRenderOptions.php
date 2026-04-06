@@ -27,6 +27,12 @@ final class FormRenderOptions
         public readonly string $uploadRemoveMethod = 'handleUploadRemove',
         public readonly string $uploadExceedMethod = 'handleUploadExceed',
         public readonly string $uploadPreviewMethod = 'handleUploadPreview',
+        public readonly ?string $pickerScope = null,
+        public readonly string $pickerItemsMethod = 'getPickerItems',
+        public readonly string $pickerOpenMethod = 'openPickerDialog',
+        public readonly string $pickerRemoveMethod = 'removePickerItem',
+        public readonly string $pickerClearMethod = 'clearPickerField',
+        public readonly string $pickerDisplayMethod = 'resolvePickerItemDisplay',
         public readonly ?string $linkageMethod = null,
     ) {
     }
@@ -52,6 +58,12 @@ final class FormRenderOptions
             uploadRemoveMethod: self::stringOrDefault($options, 'uploadRemoveMethod', 'handleUploadRemove'),
             uploadExceedMethod: self::stringOrDefault($options, 'uploadExceedMethod', 'handleUploadExceed'),
             uploadPreviewMethod: self::stringOrDefault($options, 'uploadPreviewMethod', 'handleUploadPreview'),
+            pickerScope: self::stringOrNull($options, 'pickerScope'),
+            pickerItemsMethod: self::stringOrDefault($options, 'pickerItemsMethod', 'getPickerItems'),
+            pickerOpenMethod: self::stringOrDefault($options, 'pickerOpenMethod', 'openPickerDialog'),
+            pickerRemoveMethod: self::stringOrDefault($options, 'pickerRemoveMethod', 'removePickerItem'),
+            pickerClearMethod: self::stringOrDefault($options, 'pickerClearMethod', 'clearPickerField'),
+            pickerDisplayMethod: self::stringOrDefault($options, 'pickerDisplayMethod', 'resolvePickerItemDisplay'),
             linkageMethod: self::stringOrNull($options, 'linkageMethod'),
         );
     }
@@ -73,6 +85,16 @@ final class FormRenderOptions
     {
         return $this->uploadFilesState !== null
             && $this->uploadScope !== null;
+    }
+
+    public function hasPickerContext(): bool
+    {
+        return $this->pickerScope !== null
+            && $this->pickerItemsMethod !== ''
+            && $this->pickerOpenMethod !== ''
+            && $this->pickerRemoveMethod !== ''
+            && $this->pickerClearMethod !== ''
+            && $this->pickerDisplayMethod !== '';
     }
 
     public function hasLinkageContext(): bool
@@ -132,6 +154,12 @@ final class FormRenderOptions
             uploadRemoveMethod: $this->uploadRemoveMethod,
             uploadExceedMethod: $this->uploadExceedMethod,
             uploadPreviewMethod: $this->uploadPreviewMethod,
+            pickerScope: $this->pickerScope,
+            pickerItemsMethod: $this->pickerItemsMethod,
+            pickerOpenMethod: $this->pickerOpenMethod,
+            pickerRemoveMethod: $this->pickerRemoveMethod,
+            pickerClearMethod: $this->pickerClearMethod,
+            pickerDisplayMethod: $this->pickerDisplayMethod,
             linkageMethod: $this->linkageMethod,
         );
     }
@@ -273,6 +301,112 @@ final class FormRenderOptions
             $this->uploadExceedMethod,
             $this->uploadScope,
             $fieldPathExpression
+        );
+    }
+
+    public function pickerItemsExpression(string $fieldName): string
+    {
+        return sprintf(
+            "%s(%s, %s)",
+            $this->pickerItemsMethod,
+            $this->jsLiteral($this->pickerScope),
+            $this->jsLiteral($fieldName)
+        );
+    }
+
+    public function pickerItemsExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "%s(%s, %s)",
+            $this->pickerItemsMethod,
+            $this->jsLiteral($this->pickerScope),
+            $fieldPathExpression
+        );
+    }
+
+    public function pickerOpenExpression(string $fieldName, ?string $dialogKey = null): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerOpenMethod,
+            $this->jsLiteral($this->pickerScope),
+            $this->jsLiteral($fieldName),
+            $dialogKey === null ? 'null' : $this->jsLiteral($dialogKey)
+        );
+    }
+
+    public function pickerOpenExpressionByPathExpression(string $fieldPathExpression, ?string $dialogKey = null): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerOpenMethod,
+            $this->jsLiteral($this->pickerScope),
+            $fieldPathExpression,
+            $dialogKey === null ? 'null' : $this->jsLiteral($dialogKey)
+        );
+    }
+
+    public function pickerRemoveExpression(string $fieldName, string $valueExpression): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerRemoveMethod,
+            $this->jsLiteral($this->pickerScope),
+            $this->jsLiteral($fieldName),
+            $valueExpression
+        );
+    }
+
+    public function pickerRemoveExpressionByPathExpression(string $fieldPathExpression, string $valueExpression): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerRemoveMethod,
+            $this->jsLiteral($this->pickerScope),
+            $fieldPathExpression,
+            $valueExpression
+        );
+    }
+
+    public function pickerClearExpression(string $fieldName): string
+    {
+        return sprintf(
+            "%s(%s, %s)",
+            $this->pickerClearMethod,
+            $this->jsLiteral($this->pickerScope),
+            $this->jsLiteral($fieldName)
+        );
+    }
+
+    public function pickerClearExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "%s(%s, %s)",
+            $this->pickerClearMethod,
+            $this->jsLiteral($this->pickerScope),
+            $fieldPathExpression
+        );
+    }
+
+    public function pickerDisplayExpression(string $fieldName, string $itemExpression = 'item'): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerDisplayMethod,
+            $this->jsLiteral($this->pickerScope),
+            $this->jsLiteral($fieldName),
+            $itemExpression
+        );
+    }
+
+    public function pickerDisplayExpressionByPathExpression(string $fieldPathExpression, string $itemExpression = 'item'): string
+    {
+        return sprintf(
+            "%s(%s, %s, %s)",
+            $this->pickerDisplayMethod,
+            $this->jsLiteral($this->pickerScope),
+            $fieldPathExpression,
+            $itemExpression
         );
     }
 

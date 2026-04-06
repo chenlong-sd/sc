@@ -27,11 +27,18 @@ final class Dialog implements Renderable, EventAware
         'submitFail',
     ];
 
-    private string $width = '760px';
+    private const DEFAULT_WIDTH = '760px';
+    private const DEFAULT_IFRAME_HEIGHT = '70vh';
+    private const DEFAULT_COMPONENT_OPEN_METHOD = 'onShow';
+    private const DEFAULT_LOAD_METHOD = 'get';
+    private const DEFAULT_LOAD_WHEN = 'edit';
+
+    private string $width = self::DEFAULT_WIDTH;
     private ?string $height = null;
+    private bool $heightConfigured = false;
     private bool $draggable = false;
     private bool $fullscreen = false;
-    private bool $alignCenter = false;
+    private ?bool $alignCenter = null;
     private bool $closeOnClickModal = false;
     private bool $destroyOnClose = true;
     private ?string $saveUrl = null;
@@ -44,17 +51,18 @@ final class Dialog implements Renderable, EventAware
     private ?string $componentName = null;
     private array|JsExpression $componentProps = [];
     private array $componentAttrs = [];
-    private ?string $componentOpenMethod = 'onShow';
+    private ?string $componentOpenMethod = self::DEFAULT_COMPONENT_OPEN_METHOD;
     private ?string $componentCloseMethod = null;
     private array|JsExpression|null $iframeQuery = null;
     private ?string $iframeUrl = null;
     private bool $iframeHostEnabled = false;
     private bool $iframeFullscreenToggle = false;
+    private ?string $iframeSubmitHandler = 'VueApp.submit';
     private ?string $loadUrl = null;
-    private string $loadMethod = 'get';
+    private string $loadMethod = self::DEFAULT_LOAD_METHOD;
     private array|JsExpression $loadPayload = [];
     private ?string $loadDataPath = null;
-    private string $loadWhen = 'edit';
+    private string $loadWhen = self::DEFAULT_LOAD_WHEN;
     private ?JsExpression $beforeOpenHook = null;
     private ?JsExpression $afterOpenHook = null;
     private ?JsExpression $beforeCloseHook = null;
@@ -78,6 +86,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 设置弹窗宽度，例如 760px / 80vw。
+     * 默认值为 760px。
      */
     public function width(string $width): self
     {
@@ -88,16 +97,22 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 设置弹窗高度，例如 70vh；传 null 表示自动高度。
+     * 未显式设置时，iframe 弹窗默认高度为 70vh，其它类型默认自动高度。
      */
     public function height(?string $height): self
     {
-        $this->height = $height;
+        $this->heightConfigured = true;
+        $this->height = is_string($height) ? trim($height) : null;
+        if ($this->height === '') {
+            $this->height = null;
+        }
 
         return $this;
     }
 
     /**
      * 控制弹窗是否可拖拽。
+     * 默认值为 false。
      */
     public function draggable(bool $draggable = true): self
     {
@@ -108,6 +123,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制弹窗是否全屏显示。
+     * 默认值为 false。
      */
     public function fullscreen(bool $fullscreen = true): self
     {
@@ -118,6 +134,8 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制弹窗内容是否垂直居中。
+     * 对 iframe 页面弹窗，如果未显式设置，默认会按原版行为自动开启；
+     * 其它类型默认关闭。
      */
     public function alignCenter(bool $alignCenter = true): self
     {
@@ -128,6 +146,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制点击遮罩层时是否关闭弹窗。
+     * 默认值为 false。
      */
     public function closeOnClickModal(bool $closeOnClickModal = true): self
     {
@@ -138,6 +157,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制关闭后是否销毁内部内容。
+     * 默认值为 true。
      */
     public function destroyOnClose(bool $destroyOnClose = true): self
     {
@@ -149,6 +169,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置统一保存接口，适合新建/编辑共用提交地址。
      * URL 会在前端提交时按当前 dialog context 解析。
+     * 未被 `Actions::submit()->saveUrl()/createUrl()/updateUrl()` 显式覆盖时使用。
      * 常用可用字段：
      * - mode / row / dialogKey / tableKey
      * - dialogContext / data: 由 context() 解析出的附加上下文
@@ -166,6 +187,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置新建提交接口。
      * 仅在 create 模式下使用；若未设置会回退到 saveUrl()。
+     * 未被 `Actions::submit()->createUrl()/saveUrl()` 显式覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
      */
     public function createUrl(?string $createUrl): self
@@ -178,6 +200,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置编辑提交接口。
      * 仅在 edit 模式下使用；若未设置会回退到 saveUrl()。
+     * 未被 `Actions::submit()->updateUrl()/saveUrl()` 显式覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
      */
     public function updateUrl(?string $updateUrl): self
@@ -224,8 +247,8 @@ final class Dialog implements Renderable, EventAware
      * - setDialogTitle() / setDialogFullscreen() / toggleDialogFullscreen() / refreshDialogIframe()
      *
      * 事件额外字段：
-     * - submitSuccess: response / payload
-     * - submitFail: error
+     * - submitSuccess: response / payload / submitData
+     * - submitFail: error / submitData
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -245,10 +268,11 @@ final class Dialog implements Renderable, EventAware
         $this->componentName = null;
         $this->componentProps = [];
         $this->componentAttrs = [];
-        $this->componentOpenMethod = 'onShow';
+        $this->componentOpenMethod = self::DEFAULT_COMPONENT_OPEN_METHOD;
         $this->componentCloseMethod = null;
         $this->iframeUrl = null;
         $this->iframeQuery = null;
+        $this->iframeSubmitHandler = null;
 
         return $this;
     }
@@ -263,10 +287,11 @@ final class Dialog implements Renderable, EventAware
         $this->componentName = null;
         $this->componentProps = [];
         $this->componentAttrs = [];
-        $this->componentOpenMethod = 'onShow';
+        $this->componentOpenMethod = self::DEFAULT_COMPONENT_OPEN_METHOD;
         $this->componentCloseMethod = null;
         $this->iframeUrl = null;
         $this->iframeQuery = null;
+        $this->iframeSubmitHandler = null;
 
         return $this;
     }
@@ -296,6 +321,7 @@ final class Dialog implements Renderable, EventAware
         $this->content = null;
         $this->iframeUrl = null;
         $this->iframeQuery = null;
+        $this->iframeSubmitHandler = null;
 
         return $this;
     }
@@ -329,6 +355,7 @@ final class Dialog implements Renderable, EventAware
      * 该方法会在组件挂载完成后被调用，并接收一个 dialog context 对象作为唯一参数。
      * 常用字段与 beforeOpen/afterOpen hook 一致，例如 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm。
+     * 默认值为 onShow。
      */
     public function componentOpenMethod(?string $method): self
     {
@@ -354,7 +381,11 @@ final class Dialog implements Renderable, EventAware
      * 把弹窗主体切换为 iframe 页面。
      * `query` 会在每次打开弹窗时按当前 dialog context 解析；
      * 传字符串时会自动包装成 JsExpression；
-     * 默认同时开启宿主桥接和头部全屏切换。
+     * 默认同时开启宿主桥接和头部全屏切换；
+     * 若底部动作使用 `Actions::submit()` 且配置了 saveUrl()/createUrl()/updateUrl()，
+     * runtime 默认会先调用子页面的 `"VueApp.submit"` 取提交数据；
+     * 可再用 iframeSubmitHandler() 改成别的方法路径；
+     * 若未显式设置 height()，默认高度为 70vh。
      * 可用字段与 component() 的 props 解析上下文一致。
      */
     public function iframe(string $url, array|string|JsExpression $query = []): self
@@ -368,8 +399,9 @@ final class Dialog implements Renderable, EventAware
         $this->componentName = null;
         $this->componentProps = [];
         $this->componentAttrs = [];
-        $this->componentOpenMethod = 'onShow';
+        $this->componentOpenMethod = self::DEFAULT_COMPONENT_OPEN_METHOD;
         $this->componentCloseMethod = null;
+        $this->iframeSubmitHandler = 'VueApp.submit';
 
         return $this;
     }
@@ -377,6 +409,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制 iframe 弹窗是否启用宿主桥接。
      * 开启后，iframe 子页面可通过宿主桥接请求关闭弹窗、刷新表格、再次打开弹窗、改标题等。
+     * iframe() 默认值为 true。
      */
     public function iframeHost(bool $enabled = true): self
     {
@@ -387,6 +420,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制 iframe 弹窗是否显示头部全屏切换。
+     * iframe() 默认值为 true。
      */
     public function iframeFullscreenToggle(bool $enabled = true): self
     {
@@ -396,9 +430,25 @@ final class Dialog implements Renderable, EventAware
     }
 
     /**
+     * 设置 iframe 弹窗点击 `Actions::submit()` 时在子页面调用的提交方法路径。
+     * 路径从 `iframe.contentWindow` 开始解析，默认值为 `"VueApp.submit"`。
+     * 例如可写 `"VueApp.submit"`、`"submit"`、`"pageApi.submitForm"`。
+     * 该方法应返回最终提交到 saveUrl()/createUrl()/updateUrl() 的数据，也可以直接返回 Promise。
+     * 该能力依赖宿主页直接访问 iframe 子页面对象，通常要求子页面与宿主页同源。
+     */
+    public function iframeSubmitHandler(?string $handlerPath = 'VueApp.submit'): self
+    {
+        $handlerPath = is_string($handlerPath) ? trim($handlerPath) : null;
+        $this->iframeSubmitHandler = $handlerPath !== '' ? $handlerPath : null;
+
+        return $this;
+    }
+
+    /**
      * 配置弹窗打开时的详情加载接口。
      * 当 loadWhen() 条件命中时，会在弹窗打开流程中请求该接口，再把结果回填到表单。
      * `url` 同样支持运行时 token。
+     * method 默认值为 get。
      * 常用可用字段：
      * - row / mode / dialogKey / tableKey
      * - dialogContext / data / forms / filters / selection
@@ -589,8 +639,8 @@ final class Dialog implements Renderable, EventAware
             'afterOpen' => '弹窗完成打开后触发，适合补充联动或通知子组件。',
             'beforeClose' => '弹窗关闭前触发，返回 false 可取消关闭。',
             'afterClose' => '弹窗关闭完成后触发，适合清理上下文。',
-            'submitSuccess' => '表单弹窗提交成功后触发，可读取 response / payload / dialog。',
-            'submitFail' => '表单弹窗提交失败后触发，可读取 error / dialog。',
+            'submitSuccess' => '表单弹窗或 iframe 弹窗提交成功后触发，可读取 response / payload / dialog / submitData。',
+            'submitFail' => '表单弹窗或 iframe 弹窗提交失败后触发，可读取 error / dialog / submitData。',
         ];
     }
 
@@ -601,7 +651,15 @@ final class Dialog implements Renderable, EventAware
 
     public function getHeight(): ?string
     {
-        return $this->height;
+        if ($this->heightConfigured) {
+            return $this->height;
+        }
+
+        if ($this->bodyType() === 'iframe') {
+            return self::DEFAULT_IFRAME_HEIGHT;
+        }
+
+        return null;
     }
 
     public function isDraggable(): bool
@@ -616,7 +674,11 @@ final class Dialog implements Renderable, EventAware
 
     public function isAlignCenter(): bool
     {
-        return $this->alignCenter;
+        if ($this->alignCenter !== null) {
+            return $this->alignCenter;
+        }
+
+        return $this->bodyType() === 'iframe';
     }
 
     public function shouldCloseOnClickModal(): bool
@@ -702,6 +764,11 @@ final class Dialog implements Renderable, EventAware
     public function hasIframeFullscreenToggle(): bool
     {
         return $this->iframeFullscreenToggle;
+    }
+
+    public function getIframeSubmitHandler(): ?string
+    {
+        return $this->iframeSubmitHandler;
     }
 
     public function getLoadUrl(): ?string

@@ -177,13 +177,16 @@ final class ActionButtonRenderer
             ActionIntent::DELETE => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $target->deleteSelectionExpression('null'),
+                $target->deleteSelectionExpression('null', 'context.action', 'context'),
                 $actionKey !== null
             ),
             ActionIntent::SUBMIT => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                sprintf('submitDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
+                sprintf(
+                    'submitDialog(%s, context.action, context)',
+                    $this->jsString($action->targetName() ?: 'editor')
+                ),
                 $actionKey !== null
             ),
             ActionIntent::CLOSE => $this->wrapActionExecution(
@@ -289,6 +292,15 @@ final class ActionButtonRenderer
             'dialogTarget' => $action->targetName(),
             'confirmText' => $action->confirmText(),
             'events' => $action->getEventHandlers(),
+            'submit' => [
+                'saveUrl' => $action->getSaveUrl(),
+                'createUrl' => $action->getCreateUrl(),
+                'updateUrl' => $action->getUpdateUrl(),
+            ],
+            'delete' => [
+                'deleteUrl' => $action->getDeleteUrl(),
+                'deleteKey' => $action->getDeleteKey(),
+            ],
         ];
     }
 
@@ -306,7 +318,7 @@ final class ActionButtonRenderer
         }
 
         return sprintf(
-            '%s(%s, %s, () => { %s })',
+            '%s(%s, %s, (context) => { %s })',
             $method,
             $configExpression,
             $rowExpression,

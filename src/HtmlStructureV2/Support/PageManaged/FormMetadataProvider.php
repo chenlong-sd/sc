@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Support\PageManaged;
 use Sc\Util\HtmlStructureV2\Components\Form;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\FormActionCollector;
+use Sc\Util\HtmlStructureV2\Support\FormDialogCollector;
 
 final class FormMetadataProvider implements MetadataProviderInterface
 {
@@ -12,6 +13,7 @@ final class FormMetadataProvider implements MetadataProviderInterface
 
     public function __construct(
         private readonly FormActionCollector $formActionCollector = new FormActionCollector(),
+        private readonly FormDialogCollector $formDialogCollector = new FormDialogCollector(),
     ) {
     }
 
@@ -26,7 +28,17 @@ final class FormMetadataProvider implements MetadataProviderInterface
             return [];
         }
 
-        return $this->dialogsFromActions($this->formActionCollector->collect($component));
+        $dialogs = [];
+
+        foreach ($this->dialogsFromActions($this->formActionCollector->collect($component)) as $dialog) {
+            $dialogs[$dialog->key()] = $dialog;
+        }
+
+        foreach ($this->formDialogCollector->collect($component) as $dialog) {
+            $dialogs[$dialog->key()] = $dialog;
+        }
+
+        return array_values($dialogs);
     }
 
     public function actionCollections(Renderable $component): array

@@ -24,6 +24,8 @@ final class FormRenderState
         public readonly ?array $optionLoadedPath,
         public readonly ?string $uploadFiles,
         public readonly ?array $uploadFilesPath,
+        public readonly ?string $pickerState,
+        public readonly ?array $pickerStatePath,
         public readonly bool $registerDependenciesOnMount,
         public readonly bool $initializeOptionsOnMount,
         public readonly bool $initializeUploadsOnMount,
@@ -42,6 +44,7 @@ final class FormRenderState
             $this->optionLoading => $this->buildFlagState($schema->remoteOptionPaths()),
             $this->optionLoaded => $this->buildFlagState($schema->remoteOptionPaths()),
             $this->uploadFiles => $this->buildInitialUploadState($schema->uploadPaths()),
+            $this->pickerState => $schema->pickerDefaults(),
         ], static fn(mixed $value, mixed $key) => is_string($key) && $key !== '', ARRAY_FILTER_USE_BOTH);
     }
 
@@ -65,6 +68,8 @@ final class FormRenderState
             'optionLoadedPath' => $this->optionLoadedPath,
             'uploadFilesVar' => $this->uploadFilesPath === null ? $this->uploadFiles : null,
             'uploadFilesPath' => $this->uploadFilesPath,
+            'pickerStateVar' => $this->pickerStatePath === null ? $this->pickerState : null,
+            'pickerStatePath' => $this->pickerStatePath,
             'registerDependenciesOnMount' => $this->registerDependenciesOnMount,
             'initializeOptionsOnMount' => $this->initializeOptionsOnMount,
             'initializeUploadsOnMount' => $this->initializeUploadsOnMount,
@@ -72,6 +77,8 @@ final class FormRenderState
             'remoteOptions' => $schema->remoteOptions(),
             'remoteOptionPaths' => $schema->remoteOptionPaths(),
             'selectOptions' => $schema->selectOptions(),
+            'pickers' => $schema->pickers(),
+            'pickerPaths' => $schema->pickerPaths(),
             'linkages' => $schema->linkages(),
             'uploads' => $schema->uploads(),
             'uploadPaths' => $schema->uploadPaths(),

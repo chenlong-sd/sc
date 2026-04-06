@@ -93,6 +93,90 @@ final class TableRenderBindings
         );
     }
 
+    public function settingsVisibleExpression(): string
+    {
+        return sprintf('(%s?.settingsVisible || false)', $this->stateExpression());
+    }
+
+    public function settingsDraftColumnsExpression(): string
+    {
+        return sprintf('(%s?.settingsDraft?.columns || [])', $this->stateExpression());
+    }
+
+    public function stripeExpression(bool $fallback): string
+    {
+        return sprintf('getTableStripe(%s, %s)', $this->tableKeyLiteral(), $this->jsValue($fallback));
+    }
+
+    public function borderExpression(bool $fallback): string
+    {
+        return sprintf('getTableBorder(%s, %s)', $this->tableKeyLiteral(), $this->jsValue($fallback));
+    }
+
+    public function columnVisibleExpression(string $columnKey): string
+    {
+        return sprintf(
+            'getTableColumnVisible(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($columnKey)
+        );
+    }
+
+    public function columnWidthExpression(string $columnKey, mixed $fallback = null): string
+    {
+        return sprintf(
+            'getTableColumnWidth(%s, %s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($columnKey),
+            $this->jsValue($fallback)
+        );
+    }
+
+    public function columnAlignExpression(string $columnKey, mixed $fallback = null): string
+    {
+        return sprintf(
+            'getTableColumnAlign(%s, %s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($columnKey),
+            $this->jsValue($fallback)
+        );
+    }
+
+    public function columnFixedExpression(string $columnKey, mixed $fallback = null): string
+    {
+        return sprintf(
+            'getTableColumnFixed(%s, %s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($columnKey),
+            $this->jsValue($fallback)
+        );
+    }
+
+    public function openSettingsExpression(): string
+    {
+        return sprintf('openTableSettings(%s)', $this->tableKeyLiteral());
+    }
+
+    public function closeSettingsExpression(): string
+    {
+        return sprintf('closeTableSettings(%s)', $this->tableKeyLiteral());
+    }
+
+    public function updateSettingsVisibleExpression(): string
+    {
+        return sprintf('setTableSettingsDialogVisible(%s, $event)', $this->tableKeyLiteral());
+    }
+
+    public function saveSettingsExpression(): string
+    {
+        return sprintf('saveTableSettings(%s)', $this->tableKeyLiteral());
+    }
+
+    public function resetSettingsDraftExpression(): string
+    {
+        return sprintf('resetTableSettingsDraft(%s)', $this->tableKeyLiteral());
+    }
+
     public function openDialogExpression(string $dialogKey, ?string $rowExpression = null): string
     {
         return sprintf(

@@ -308,7 +308,7 @@ trait LabelAttr
                 : sprintf(
                     '%s="%s"',
                     $attr,
-                    htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                    htmlspecialchars((string)$value, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8')
                 );
         }
         return implode(' ', $attrStr);

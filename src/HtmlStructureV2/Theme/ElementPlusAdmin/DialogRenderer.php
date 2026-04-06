@@ -153,7 +153,7 @@ final class DialogRenderer
                 ':src' => $bindings->iframeUrlExpression() ?: $this->jsString($dialog->getIframeUrl() ?? ''),
                 'style' => sprintf(
                     'width:100%%;height:%s;border:none;display:block',
-                    $dialog->getHeight() ?: '70vh'
+                    $dialog->getHeight() ?: 'auto'
                 ),
             ]);
 

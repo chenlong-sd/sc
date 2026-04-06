@@ -43,6 +43,7 @@ final class DialogConfigBuilder
                     'query' => $dialog->getIframeQuery() ?? [],
                     'host' => $dialog->isIframeHostEnabled(),
                     'fullscreenToggle' => $dialog->hasIframeFullscreenToggle(),
+                    'submitHandler' => $dialog->getIframeSubmitHandler(),
                 ] : null,
                 'events' => $dialog->getEventHandlers(),
             ];

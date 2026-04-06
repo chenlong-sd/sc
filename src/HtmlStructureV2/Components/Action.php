@@ -28,6 +28,11 @@ class Action implements Renderable, EventAware
     private ?string $listTarget = null;
     private string|JsExpression|null $handler = null;
     private ?string $confirmText = null;
+    private ?string $saveUrl = null;
+    private ?string $createUrl = null;
+    private ?string $updateUrl = null;
+    private ?string $deleteUrl = null;
+    private ?string $deleteKey = null;
     private array $props = [];
 
     public function __construct(
@@ -92,6 +97,7 @@ class Action implements Renderable, EventAware
     /**
      * 创建“删除”动作，语义上用于表格/列表工具栏里的批量删除快捷。
      * 默认会基于当前 selection 走删除接口；不用于 rowActions() 单条删除。
+     * 如需就近覆盖删除接口或主键字段，可继续链式调用 deleteUrl()/deleteKey()。
      */
     public static function delete(string $label = '删除'): self
     {
@@ -111,7 +117,10 @@ class Action implements Renderable, EventAware
     }
 
     /**
-     * 创建“提交弹窗表单”动作。
+     * 创建“提交弹窗数据”动作。
+     * 目标为 form 弹窗时会直接提交表单；
+     * 目标为 iframe 弹窗时，会先调用子页面的提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
+     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
      */
     public static function submit(string $label = '保存', string $dialog = 'editor'): self
     {
@@ -173,6 +182,7 @@ class Action implements Renderable, EventAware
     /**
      * 指定动作目标，通常用于绑定 dialog key。
      * 对 submit/close/create/edit 这类依赖弹窗目标的动作，最终会基于这个 target 运行。
+     * 其中 submit 若命中 iframe 弹窗，还会继续读取该 dialog 配置的 iframe 提交入口。
      */
     public function target(?string $target): static
     {
@@ -266,6 +276,62 @@ class Action implements Renderable, EventAware
     }
 
     /**
+     * 为 `Actions::submit()` 就近设置统一提交地址。
+     * 优先级高于目标 dialog 上的 saveUrl()/createUrl()/updateUrl()；
+     * 适合当前按钮想临时覆盖默认提交地址时使用。
+     */
+    public function saveUrl(?string $saveUrl): static
+    {
+        $this->saveUrl = $this->normalizeNullableString($saveUrl);
+
+        return $this;
+    }
+
+    /**
+     * 为 `Actions::submit()` 就近设置 create 模式提交地址。
+     * 优先级高于目标 dialog 上的 createUrl()/saveUrl()。
+     */
+    public function createUrl(?string $createUrl): static
+    {
+        $this->createUrl = $this->normalizeNullableString($createUrl);
+
+        return $this;
+    }
+
+    /**
+     * 为 `Actions::submit()` 就近设置 edit 模式提交地址。
+     * 优先级高于目标 dialog 上的 updateUrl()/saveUrl()。
+     */
+    public function updateUrl(?string $updateUrl): static
+    {
+        $this->updateUrl = $this->normalizeNullableString($updateUrl);
+
+        return $this;
+    }
+
+    /**
+     * 为 `Actions::delete()` 就近设置删除接口地址。
+     * 优先级高于目标 table/list 默认的 deleteUrl()。
+     */
+    public function deleteUrl(?string $deleteUrl): static
+    {
+        $this->deleteUrl = $this->normalizeNullableString($deleteUrl);
+
+        return $this;
+    }
+
+    /**
+     * 为 `Actions::delete()` 就近设置从 selection 中提取主键时使用的字段名。
+     * 优先级高于目标 table/list 默认的 deleteKey()。
+     */
+    public function deleteKey(?string $deleteKey): static
+    {
+        $this->deleteKey = $this->normalizeNullableString($deleteKey);
+
+        return $this;
+    }
+
+    /**
      * 透传额外按钮属性。
      */
     public function props(array $props): static
@@ -335,9 +401,41 @@ class Action implements Renderable, EventAware
         return $this->confirmText;
     }
 
+    public function getSaveUrl(): ?string
+    {
+        return $this->saveUrl;
+    }
+
+    public function getCreateUrl(): ?string
+    {
+        return $this->createUrl;
+    }
+
+    public function getUpdateUrl(): ?string
+    {
+        return $this->updateUrl;
+    }
+
+    public function getDeleteUrl(): ?string
+    {
+        return $this->deleteUrl;
+    }
+
+    public function getDeleteKey(): ?string
+    {
+        return $this->deleteKey;
+    }
+
     public function attrs(): array
     {
         return $this->props;
+    }
+
+    private function normalizeNullableString(?string $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : null;
+
+        return $value !== '' ? $value : null;
     }
 
     private static function resolveDialogActionArguments(

@@ -13,11 +13,14 @@ final class FormSchema
     public function __construct(
         private readonly array $fields = [],
         private readonly array $defaults = [],
+        private readonly array $pickerDefaults = [],
         private readonly array $rules = [],
         private readonly array $remoteOptions = [],
         private readonly array $selectOptions = [],
+        private readonly array $pickers = [],
         private readonly array $linkages = [],
         private readonly array $uploads = [],
+        private readonly array $pickerPaths = [],
         private readonly array $remoteOptionPaths = [],
         private readonly array $uploadPaths = [],
         private readonly array $arrayGroups = [],
@@ -42,6 +45,11 @@ final class FormSchema
         return $this->defaults;
     }
 
+    public function pickerDefaults(): array
+    {
+        return $this->pickerDefaults;
+    }
+
     public function rules(): array
     {
         return $this->rules;
@@ -57,6 +65,11 @@ final class FormSchema
         return $this->selectOptions;
     }
 
+    public function pickers(): array
+    {
+        return $this->pickers;
+    }
+
     public function linkages(): array
     {
         return $this->linkages;
@@ -70,6 +83,11 @@ final class FormSchema
     public function remoteOptionPaths(): array
     {
         return $this->remoteOptionPaths;
+    }
+
+    public function pickerPaths(): array
+    {
+        return $this->pickerPaths;
     }
 
     public function uploadPaths(): array

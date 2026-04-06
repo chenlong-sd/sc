@@ -36,6 +36,7 @@
               withDependencyResetSuspended: 'withSimpleDependencyResetSuspended',
               initializeFormOptions: 'initializeSimpleFormOptions',
               initializeUploadFiles: 'initializeSimpleUploadFiles',
+              initializePickerState: 'initializeSimplePickerState',
               clearFormValidate: 'clearSimpleFormValidate',
               validateForm: 'validateSimpleForm',
             }

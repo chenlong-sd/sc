@@ -39,8 +39,9 @@ final class Table implements Renderable, EventAware
     private bool $pagination = true;
     private int $pageSize = 20;
     private array $pageSizes = [10, 20, 50, 100];
-    private bool $stripe = true;
-    private bool $border = true;
+    private bool $stripe = false;
+    private bool $border = false;
+    private bool $settings = true;
     private string $emptyText = '暂无数据';
     private bool $selection = false;
     private array $searchSchema = [];
@@ -215,6 +216,25 @@ final class Table implements Renderable, EventAware
     }
 
     /**
+     * 控制是否启用原版风格的表格设置。
+     * 启用后会在工具栏右侧提供“列设置”，支持调整斑马纹、边框、列显示、宽度、固定和对齐，并持久化到本地。
+     */
+    public function settings(bool $settings = true): self
+    {
+        $this->settings = $settings;
+
+        return $this;
+    }
+
+    /**
+     * settings() 的兼容别名。
+     */
+    public function openSetting(bool $settings = true): self
+    {
+        return $this->settings($settings);
+    }
+
+    /**
      * 设置空数据提示文案。
      */
     public function emptyText(string $emptyText): self
@@ -226,6 +246,10 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制是否开启勾选列。
+     * 开启后动作上下文里的 `selection` 会持续可用；如果当前页面是 V2 列表页，还会额外挂到全局：
+     * - `window.__scV2Selection`: 主表或默认表的选中结果
+     * - `window.__scV2Selections[tableKey]`: 指定表格 key 的选中结果
+     * 这样 iframe picker 指向 V2 列表页时，通常不需要再手写 `selectionPath()`。
      */
     public function selection(bool $selection = true): self
     {
@@ -237,6 +261,7 @@ final class Table implements Renderable, EventAware
     /**
      * 设置删除接口地址。
      * 内置 `Actions::delete()` 会向这里发起 POST，默认请求体形如 `{"ids": [selection[*][deleteKey]]}`。
+     * 未被 `Actions::delete()->deleteUrl()` 显式覆盖时使用。
      * 若需要单条行删除，建议显式使用 `Actions::request()` 自行组织 payload。
      */
     public function deleteUrl(?string $deleteUrl): self
@@ -249,6 +274,7 @@ final class Table implements Renderable, EventAware
     /**
      * 设置删除接口中主键字段名。
      * 仅影响内置批量删除快捷从 selection 中提取主键时使用的字段名。
+     * 未被 `Actions::delete()->deleteKey()` 显式覆盖时使用。
      */
     public function deleteKey(string $deleteKey): self
     {
@@ -342,6 +368,11 @@ final class Table implements Renderable, EventAware
     public function useBorder(): bool
     {
         return $this->border;
+    }
+
+    public function useSettings(): bool
+    {
+        return $this->settings;
     }
 
     public function getEmptyText(): string
