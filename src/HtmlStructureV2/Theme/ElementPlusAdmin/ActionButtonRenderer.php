@@ -20,7 +20,8 @@ final class ActionButtonRenderer
         bool $rowScoped = false,
         string $size = 'default',
         ?TableRenderBindings $tableBindings = null,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        string $visualVariant = 'default'
     ): AbstractHtmlElement
     {
         $target = ActionRenderTarget::resolve($action, $tableBindings);
@@ -29,6 +30,35 @@ final class ActionButtonRenderer
             'type' => $action->buttonType(),
             'size' => $size,
         ], $action->attrs());
+
+        if (
+            $rowScoped
+            && !array_key_exists('link', $attrs)
+            && !array_key_exists('text', $attrs)
+            && !array_key_exists('bg', $attrs)
+            && !array_key_exists('plain', $attrs)
+        ) {
+            $attrs['link'] = '';
+        }
+
+        if ($visualVariant === 'page-header') {
+            if (
+                !array_key_exists('bg', $attrs)
+                && !array_key_exists('link', $attrs)
+                && !array_key_exists('plain', $attrs)
+            ) {
+                $attrs['bg'] = '';
+            }
+
+            if (
+                !array_key_exists('text', $attrs)
+                && !array_key_exists('link', $attrs)
+                && !array_key_exists('plain', $attrs)
+                && !array_key_exists('default', $attrs)
+            ) {
+                $attrs['text'] = '';
+            }
+        }
 
         if ($action->intent() === ActionIntent::REFRESH) {
             $attrs[':loading'] = $target->loadingExpression();
@@ -52,15 +82,15 @@ final class ActionButtonRenderer
             $attrs['@click'] = $click;
         }
 
-        $button = El::double('el-button')->setAttrs($attrs);
-
-        if ($action->iconName()) {
-            $button->append(
-                El::double('el-icon')->append(
-                    El::double($action->iconName())
-                )
-            );
+        if (
+            $action->iconName() !== null
+            && !array_key_exists('icon', $attrs)
+            && !array_key_exists(':icon', $attrs)
+        ) {
+            $attrs['icon'] = $action->iconName();
         }
+
+        $button = El::double('el-button')->setAttrs($attrs);
 
         $button->append($action->label());
 
@@ -93,6 +123,13 @@ final class ActionButtonRenderer
         if ($action->intent() === ActionIntent::DELETE && !$target->hasDataTarget()) {
             throw new InvalidArgumentException(sprintf(
                 'Action [%s] requires explicit forTable()/forList() or a local table/list render context.',
+                $action->label()
+            ));
+        }
+
+        if ($action->intent() === ActionIntent::DELETE && $rowScoped) {
+            throw new InvalidArgumentException(sprintf(
+                'Action [%s] is a toolbar batch-delete shortcut and cannot be used in rowActions(); use Actions::request() for single-row delete.',
                 $action->label()
             ));
         }
@@ -140,7 +177,7 @@ final class ActionButtonRenderer
             ActionIntent::DELETE => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $target->deleteRowExpression($rowScoped ? 'scope.row' : 'null', 'null'),
+                $target->deleteSelectionExpression('null'),
                 $actionKey !== null
             ),
             ActionIntent::SUBMIT => $this->wrapActionExecution(

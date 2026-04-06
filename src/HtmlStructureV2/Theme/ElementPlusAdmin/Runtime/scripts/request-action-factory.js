@@ -15,7 +15,8 @@
             }
 
             return ElementPlus.ElMessageBox.confirm(confirmText, '提示', {
-              type: 'warning'
+              type: 'warning',
+              lockScroll: false
             })
               .then(() => executor())
               .catch((error) => {

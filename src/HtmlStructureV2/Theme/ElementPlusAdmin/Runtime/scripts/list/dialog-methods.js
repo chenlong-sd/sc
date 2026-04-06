@@ -45,11 +45,9 @@
               }
             }),
             {
-              deleteRow(row, confirmText = '确认删除当前记录？'){
+              deleteSelection(confirmText = '确认删除当前选中数据？'){
                 const primaryListKey = cfg.primaryList || Object.keys(cfg.lists || {})[0] || '';
-                const tableKey = cfg.lists?.[primaryListKey]?.tableKey || null;
-
-                return this.deleteTableRow(tableKey, row, confirmText);
+                return this.deleteListSelection(primaryListKey, confirmText);
               }
             }
           );

@@ -12,11 +12,8 @@ use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
-use Sc\Util\HtmlStructureV2\Page\CrudPage;
 use Sc\Util\HtmlStructureV2\Page\AbstractPage;
-use Sc\Util\HtmlStructureV2\Page\CustomPage;
-use Sc\Util\HtmlStructureV2\Page\FormPage;
-use Sc\Util\HtmlStructureV2\Page\ListPage;
+use Sc\Util\HtmlStructureV2\Page\Page;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\PageCompositionInspector;
 use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
@@ -49,10 +46,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
     use ResolvesClassMappedMethod;
 
     private const COMPONENT_RENDERERS = [
-        CrudPage::class => 'renderListPage',
-        ListPage::class => 'renderListPage',
-        FormPage::class => 'renderFormPage',
-        CustomPage::class => 'renderCustomPage',
+        Page::class => 'renderPage',
         ListWidget::class => 'renderListWidgetComponent',
         Form::class => 'renderStandaloneForm',
         Table::class => 'renderStandaloneTable',
@@ -83,29 +77,29 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private const BASE_CSS = <<<CSS
     [v-cloak]{display:none}
     html,body{height:100%}
-    body{margin:0;background:#f5f7fa;color:#1f2937;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif}
-    #app{min-height:100%;box-sizing:border-box;padding:24px}
-    .sc-v2-page{display:flex;flex-direction:column;gap:18px}
-    .sc-v2-list{display:flex;flex-direction:column;gap:18px}
-    .sc-v2-table-block{display:flex;flex-direction:column;gap:16px}
-    .sc-v2-list__filters{display:flex;flex-direction:column;gap:12px}
-    .sc-v2-page__header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+    body{margin:0;background:#ffffff;color:#1f2937;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif}
+    #app{min-height:100%;box-sizing:border-box;padding:10px 10px 8px}
+    .sc-v2-page{display:flex;flex-direction:column;gap:15px}
+    .sc-v2-list{display:flex;flex-direction:column;gap:0}
+    .sc-v2-table-block{display:flex;flex-direction:column;gap:10px}
+    .sc-v2-list__filters{display:flex;flex-direction:column;gap:10px}
+    .sc-v2-page__header{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;flex-wrap:wrap;margin-bottom:3px}
     .sc-v2-page__title{display:flex;flex-direction:column;gap:6px}
     .sc-v2-page__title h1{margin:0;font-size:28px;line-height:1.2;color:#111827}
     .sc-v2-page__title p{margin:0;color:#6b7280;font-size:14px}
-    .sc-v2-actions{display:flex;gap:12px;flex-wrap:wrap}
+    .sc-v2-actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-section .el-card__body{display:flex;flex-direction:column;gap:16px}
     .sc-v2-section__header{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
-    .sc-v2-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .sc-v2-toolbar__actions{display:flex;gap:12px;flex-wrap:wrap}
+    .sc-v2-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .sc-v2-toolbar__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-form__control{display:flex;align-items:flex-start;gap:12px;width:100%}
     .sc-v2-form__control>:first-child{flex:1 1 auto;min-width:0}
     .sc-v2-form__suffix{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
     .sc-v2-form__suffix-text{font-size:13px;line-height:1.5;color:#6b7280}
     .sc-v2-form__help{margin-top:6px;font-size:12px;line-height:1.5;color:#909399}
     .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
-    .sc-v2-row-actions{display:flex;gap:8px;flex-wrap:wrap}
-    .sc-v2-filters__actions{display:flex;gap:12px;flex-wrap:wrap}
+    .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .sc-v2-filters__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__images{display:flex;gap:8px;flex-wrap:wrap}
     .sc-v2-stack{display:flex;flex-direction:column}
     .sc-v2-grid{display:grid}
@@ -144,7 +138,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-form-table__actions{display:flex;gap:8px;flex-wrap:wrap}
     .sc-v2-form-table__item{margin-bottom:0}
     @media (max-width: 768px){
-      #app{padding:16px}
+      #app{padding:8px 8px 6px}
       .sc-v2-page__header{flex-direction:column;align-items:stretch}
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
@@ -181,59 +175,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         return $this->{$method}($component, $context);
     }
 
-    private function renderListPage(ListPage $page, RenderContext $context): AbstractHtmlElement
-    {
-        $list = $page->toListWidget();
-        $prepared = $this->runtimePreparationCoordinator()->prepareListWidget(
-            $this->runtimeRegistry($context),
-            $list,
-            [
-            'deleteUrl' => $page->getDeleteUrl() ?? $page->getTable()?->getDeleteUrl(),
-            'deleteKey' => $page->getDeleteUrl() !== null
-                ? $page->getDeleteKey()
-                : $page->getTable()?->getDeleteKey(),
-            ],
-            true
-        );
-        $renderedSections = $this->renderSections($page->getSections(), $context);
-        $managedDialogs = $this->collectPageManagedDialogs($page, array_merge([$list], $page->getSections()));
-        $this->validatePageActionTargets($page, $context, array_merge([$list], $page->getSections()), $managedDialogs);
-
-        $body = $this->pageFrameRenderer()->render(
-            $page,
-            $renderedSections,
-            $this->renderPreparedListWidget($list, $context, $prepared, true),
-            $prepared->tableState?->bindings,
-            $context
-        );
-
-        $this->appendManagedDialogs($body, $context, $managedDialogs);
-        $this->appendListRuntime($context);
-
-        return $body;
-    }
-
-    private function renderFormPage(FormPage $page, RenderContext $context): AbstractHtmlElement
-    {
-        $renderedSections = $this->renderSections($page->getSections(), $context);
-        $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
-        $this->validatePageActionTargets($page, $context, $page->getSections(), $managedDialogs);
-
-        $body = $this->pageFrameRenderer()->render(
-            $page,
-            $renderedSections,
-            $page->getForm() ? $this->wrapInSectionCard($this->renderStandaloneForm($page->getForm(), $context)) : null,
-            null,
-            $context
-        );
-
-        $this->appendManagedDialogs($body, $context, $managedDialogs);
-        $this->appendPageRuntime($context);
-
-        return $body;
-    }
-
-    private function renderCustomPage(CustomPage $page, RenderContext $context): AbstractHtmlElement
+    private function renderPage(Page $page, RenderContext $context): AbstractHtmlElement
     {
         $renderedSections = $this->renderSections($page->getSections(), $context);
         $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
@@ -405,7 +347,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
     {
         $body = El::double('div')->addClass('sc-v2-list');
 
-        $filterForm = $list->getFilterForm();
+        $filterForm = $prepared->filterForm;
         $filterState = $prepared->filterState;
         if ($filterForm !== null && $filterState !== null) {
             $filterContent = $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions, $context);
@@ -479,7 +421,10 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function pageFrameRenderer(): PageFrameRenderer
     {
-        return $this->pageFrameRenderer ??= new PageFrameRenderer($this->actionButtonRenderer());
+        return $this->pageFrameRenderer ??= new PageFrameRenderer(
+            $this->actionButtonRenderer(),
+            $this->lightweightComponentRenderer()
+        );
     }
 
     private function runtimeRegistry(RenderContext $context): PageRuntimeRegistry

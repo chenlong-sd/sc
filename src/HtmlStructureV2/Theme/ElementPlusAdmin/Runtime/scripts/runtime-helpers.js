@@ -81,6 +81,24 @@
             }
             throw new Error(resolveMessage(payload, fallback));
           };
+          const registerElementPlusIcons = (app) => {
+            if (!app || typeof app.component !== 'function') {
+              return;
+            }
+
+            const icons = globalThis.ElementPlusIconsVue;
+            if (!icons || typeof icons !== 'object') {
+              return;
+            }
+
+            Object.entries(icons).forEach(([name, component]) => {
+              if (!name || !component) {
+                return;
+              }
+
+              app.component(name, component);
+            });
+          };
           const isStructuredEventHandler = (handler) => {
             return isObject(handler) && typeof handler.type === 'string' && handler.type !== '';
           };
@@ -1053,6 +1071,7 @@
             normalizeArrayGroupRows,
             normalizeDependencies,
             normalizeOption,
+            registerElementPlusIcons,
             normalizeUploadFile,
             normalizeUploadFiles,
             pickRows,

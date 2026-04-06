@@ -46,6 +46,7 @@ final class Table implements Renderable, EventAware
     private array $searchSchema = [];
     private ?string $deleteUrl = null;
     private string $deleteKey = 'id';
+    private ?int $rowActionColumnWidth = null;
 
     public function __construct(
         private readonly string $key
@@ -91,6 +92,17 @@ final class Table implements Renderable, EventAware
     }
 
     /**
+     * 设置行操作列固定宽度。
+     * 仅影响右侧“操作”列本身；设置后会覆盖默认的自动宽度估算逻辑。
+     */
+    public function rowActionColumnWidth(int $width): self
+    {
+        $this->rowActionColumnWidth = $width;
+
+        return $this;
+    }
+
+    /**
      * 直接指定数据源对象。
      */
     public function dataSource(DataSourceInterface $dataSource): self
@@ -121,6 +133,8 @@ final class Table implements Renderable, EventAware
      * 追加一条搜索协议定义。
      * `name` 是筛选表单里的字段名，`field` 是最终发给后端的真实字段名；
      * 例如 `search('keyword', 'LIKE', 'user_name')`。
+     * 若当前表格被放进 `List` 且未显式提供 filters()，这类搜索协议也会参与默认筛选表单推导；
+     * 但没有列展示信息时，只能按字段名做通用输入框/范围输入推断。
      */
     public function search(string $name, string $type = '=', ?string $field = null): self
     {
@@ -135,6 +149,7 @@ final class Table implements Renderable, EventAware
     /**
      * 批量设置搜索协议定义。
      * 常用于需要和外部 filters/form 显式对齐时一次性声明整张表的搜索协议。
+     * 在 `List` 自动筛选模式下，未被列 searchable() 覆盖的字段也会尝试按这里的 name/type 推导默认输入控件。
      */
     public function searchSchema(array $schema): self
     {
@@ -220,8 +235,9 @@ final class Table implements Renderable, EventAware
     }
 
     /**
-     * 设置行删除接口地址。
-     * 内置删除动作最终会向这里发起 POST，请求体默认形如 `{deleteKey: row[deleteKey]}`。
+     * 设置删除接口地址。
+     * 内置 `Actions::delete()` 会向这里发起 POST，默认请求体形如 `{"ids": [selection[*][deleteKey]]}`。
+     * 若需要单条行删除，建议显式使用 `Actions::request()` 自行组织 payload。
      */
     public function deleteUrl(?string $deleteUrl): self
     {
@@ -232,7 +248,7 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置删除接口中主键字段名。
-     * 仅影响内置删除动作提交给 deleteUrl() 的请求体字段名。
+     * 仅影响内置批量删除快捷从 selection 中提取主键时使用的字段名。
      */
     public function deleteKey(string $deleteKey): self
     {
@@ -246,7 +262,7 @@ final class Table implements Renderable, EventAware
      * 可用事件：loadBefore / loadSuccess / loadFail / pageChange / pageSizeChange / sortChange / selectionChange / deleteSuccess / deleteFail。
      *
      * handler 签名：`(context) => mixed`
-     * 推荐写法：`({ tableKey, rows, allRows, selection, filters, page, pageSize, sort, row, payload, error, vm }) => {}`
+     * 推荐写法：`({ tableKey, rows, allRows, selection, filters, page, pageSize, sort, ids, payload, error, vm }) => {}`
      * 不按位置参数传值。
      *
      * 公共上下文：
@@ -262,8 +278,8 @@ final class Table implements Renderable, EventAware
      * - pageChange: page
      * - pageSizeChange: pageSize
      * - sortChange: sort / payload
-     * - deleteSuccess: row / payload / response
-     * - deleteFail: row / error
+     * - deleteSuccess: selection / ids / payload / response
+     * - deleteFail: selection / ids / error
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -356,6 +372,11 @@ final class Table implements Renderable, EventAware
         return $this->deleteKey;
     }
 
+    public function getRowActionColumnWidth(): ?int
+    {
+        return $this->rowActionColumnWidth;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -369,8 +390,8 @@ final class Table implements Renderable, EventAware
             'pageSizeChange' => '分页每页条数变更后触发，可读取 pageSize。',
             'sortChange' => '排序变化后触发，可读取 sort / payload。',
             'selectionChange' => '勾选项变化后触发，可读取 selection。',
-            'deleteSuccess' => '行删除成功后触发，可读取 row / payload / response。',
-            'deleteFail' => '行删除失败后触发，可读取 row / error。',
+            'deleteSuccess' => '批量删除成功后触发，可读取 selection / ids / payload / response。',
+            'deleteFail' => '批量删除失败后触发，可读取 selection / ids / error。',
         ];
     }
 

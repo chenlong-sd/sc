@@ -64,23 +64,24 @@ final class FormRenderer
         ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
+        $renderOptions = $options->withShowLabels($form->shouldShowLabels());
         $attrs = [
             ':model' => $modelName,
-            'label-width' => $form->getLabelWidth(),
+            'label-width' => $form->shouldShowLabels() ? $form->getLabelWidth() : '0',
         ];
 
-        if ($options->ref !== null) {
-            $attrs['ref'] = $options->ref;
+        if ($renderOptions->ref !== null) {
+            $attrs['ref'] = $renderOptions->ref;
         }
-        if ($options->rules !== null) {
-            $attrs[':rules'] = $options->rules;
+        if ($renderOptions->rules !== null) {
+            $attrs[':rules'] = $renderOptions->rules;
         }
 
         $element = El::double('el-form')->setAttrs($attrs);
         $context = new FormNodeRenderContext(
             modelName: $modelName,
             inline: $form->isInline(),
-            options: $options,
+            options: $renderOptions,
             renderContext: $renderContext,
         );
 
@@ -93,8 +94,8 @@ final class FormRenderer
             $element->append($row);
         }
 
-        if ($options->isFilterMode()) {
-            $element->append($this->renderFilterActions($form, $options));
+        if ($renderOptions->isFilterMode()) {
+            $element->append($this->renderFilterActions($form, $renderOptions));
         }
 
         return $element;
@@ -715,7 +716,7 @@ final class FormRenderer
         if ($section->getHeaderActions() !== []) {
             $actions = El::double('div')->addClass('sc-v2-form-section__actions');
             foreach ($section->getHeaderActions() as $action) {
-                $actions->append($this->actionButtonRenderer->render($action, false, 'small', null, $renderContext));
+                $actions->append($this->actionButtonRenderer->render($action, false, 'small', null, $renderContext, 'page-header'));
             }
             $heading->append($actions);
         }

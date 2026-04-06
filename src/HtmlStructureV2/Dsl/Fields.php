@@ -16,10 +16,11 @@ final class Fields
 {
     /**
      * 创建单行文本输入框。
+     * label 不传时默认隐藏字段标签；若仍需可读提示，建议显式补 placeholder()。
      */
     public static function text(string $name, ?string $label = null): TextField
     {
-        return new TextField($name, $label ?: $name, FieldType::TEXT);
+        return new TextField($name, $label ?? '', FieldType::TEXT);
     }
 
     /**
@@ -27,7 +28,7 @@ final class Fields
      */
     public static function password(string $name, ?string $label = null): PasswordField
     {
-        return (new PasswordField($name, $label ?: $name))
+        return (new PasswordField($name, $label ?? ''))
             ->showPassword();
     }
 
@@ -36,7 +37,7 @@ final class Fields
      */
     public static function textarea(string $name, ?string $label = null): TextField
     {
-        return (new TextField($name, $label ?: $name, FieldType::TEXTAREA))
+        return (new TextField($name, $label ?? '', FieldType::TEXTAREA))
             ->prop('rows', 4);
     }
 
@@ -45,7 +46,7 @@ final class Fields
      */
     public static function number(string $name, ?string $label = null): NumberField
     {
-        return new NumberField($name, $label ?: $name);
+        return new NumberField($name, $label ?? '');
     }
 
     /**
@@ -54,7 +55,7 @@ final class Fields
      */
     public static function select(string $name, ?string $label = null): OptionField
     {
-        return new OptionField($name, $label ?: $name, FieldType::SELECT);
+        return new OptionField($name, $label ?? '', FieldType::SELECT);
     }
 
     /**
@@ -63,7 +64,7 @@ final class Fields
      */
     public static function radio(string $name, ?string $label = null): OptionField
     {
-        return new OptionField($name, $label ?: $name, FieldType::RADIO);
+        return new OptionField($name, $label ?? '', FieldType::RADIO);
     }
 
     /**
@@ -72,7 +73,7 @@ final class Fields
      */
     public static function checkbox(string $name, ?string $label = null): OptionField
     {
-        return (new OptionField($name, $label ?: $name, FieldType::CHECKBOX))
+        return (new OptionField($name, $label ?? '', FieldType::CHECKBOX))
             ->default([]);
     }
 
@@ -81,7 +82,7 @@ final class Fields
      */
     public static function cascader(string $name, ?string $label = null): CascaderField
     {
-        return new CascaderField($name, $label ?: $name);
+        return new CascaderField($name, $label ?? '');
     }
 
     /**
@@ -90,7 +91,7 @@ final class Fields
      */
     public static function upload(string $name, ?string $label = null): UploadField
     {
-        return new UploadField($name, $label ?: $name);
+        return new UploadField($name, $label ?? '');
     }
 
     /**
@@ -99,7 +100,7 @@ final class Fields
      */
     public static function image(string $name, ?string $label = null, bool $multiple = false): UploadField
     {
-        return (new UploadField($name, $label ?: $name))
+        return (new UploadField($name, $label ?? ''))
             ->asImage($multiple);
     }
 
@@ -108,7 +109,7 @@ final class Fields
      */
     public static function date(string $name, ?string $label = null): DateField
     {
-        return (new DateField($name, $label ?: $name, FieldType::DATE))
+        return (new DateField($name, $label ?? '', FieldType::DATE))
             ->format('YYYY-MM-DD')
             ->valueFormat('YYYY-MM-DD');
     }
@@ -118,7 +119,7 @@ final class Fields
      */
     public static function datetime(string $name, ?string $label = null): DateField
     {
-        return (new DateField($name, $label ?: $name, FieldType::DATETIME))
+        return (new DateField($name, $label ?? '', FieldType::DATETIME))
             ->format('YYYY-MM-DD HH:mm:ss')
             ->valueFormat('YYYY-MM-DD HH:mm:ss');
     }
@@ -129,7 +130,7 @@ final class Fields
      */
     public static function daterange(string $name, ?string $label = null): DateField
     {
-        return (new DateField($name, $label ?: $name, FieldType::DATE_RANGE))
+        return (new DateField($name, $label ?? '', FieldType::DATE_RANGE))
             ->format('YYYY-MM-DD')
             ->valueFormat('YYYY-MM-DD')
             ->prop('range-separator', '至')
@@ -142,7 +143,7 @@ final class Fields
      */
     public static function toggle(string $name, ?string $label = null): BasicField
     {
-        return new BasicField($name, $label ?: $name, FieldType::SWITCH);
+        return new BasicField($name, $label ?? '', FieldType::SWITCH);
     }
 
     /**

@@ -81,22 +81,20 @@ final class ActionRenderTarget
         throw new InvalidArgumentException('Action render target requires explicit table/list target for reload expression.');
     }
 
-    public function deleteRowExpression(string $rowExpression, string $confirmTextExpression): string
+    public function deleteSelectionExpression(string $confirmTextExpression): string
     {
         if ($this->tableKey !== null) {
             return sprintf(
-                'deleteTableRow(%s, %s, %s)',
+                'deleteTableSelection(%s, %s)',
                 $this->jsString($this->tableKey),
-                $rowExpression,
                 $confirmTextExpression
             );
         }
 
         if ($this->listKey !== null) {
             return sprintf(
-                'deleteListRow(%s, %s, %s)',
+                'deleteListSelection(%s, %s)',
                 $this->jsString($this->listKey),
-                $rowExpression,
                 $confirmTextExpression
             );
         }

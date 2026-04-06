@@ -35,7 +35,7 @@ final class RuntimePreparationCoordinator
         bool $primary = false
     ): PreparedListWidget {
         $filterState = null;
-        $filterForm = $list->getFilterForm();
+        $filterForm = $list->resolveFilterForm();
         if ($filterForm !== null) {
             $filterState = $this->formRenderStateFactory->createListFilter($list->key());
             $this->registerSimpleFormRuntime($registry, $filterState, $filterForm);
@@ -60,6 +60,7 @@ final class RuntimePreparationCoordinator
         $registry->requireListRuntime($primary ? $list->key() : null);
 
         return new PreparedListWidget(
+            filterForm: $filterForm,
             filterState: $filterState,
             tableState: $tableState,
             dialogs: $this->prepareManagedDialogs($registry, $list->getDialogs()),

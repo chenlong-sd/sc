@@ -106,7 +106,14 @@ final class FieldRenderer
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
         $hasRemoteOptions = $optionField?->hasRemoteOptions() && $options->hasRemoteOptionsContext();
 
-        $item = $this->buildRenderItem($field, $fieldPath, $validatableField, $propExpression, $tableCell);
+        $item = $this->buildRenderItem(
+            $field,
+            $fieldPath,
+            $validatableField,
+            $propExpression,
+            $tableCell,
+            $options->showLabels && $field->hasLabel()
+        );
         $usesExplicitModelBinding = $propExpression !== null;
         $component = $this->buildFieldComponent(
             $field,
@@ -143,12 +150,18 @@ final class FieldRenderer
     private function buildFieldItem(
         Field $field,
         string $fieldPath,
-        ?ValidatableFieldInterface $validatableField
+        ?ValidatableFieldInterface $validatableField,
+        bool $showLabels
     ): DoubleLabel
     {
         $item = El::double('el-form-item')
-            ->setAttr('label', $field->label())
             ->setAttr('prop', $fieldPath);
+
+        if ($showLabels) {
+            $item->setAttr('label', $field->label());
+        } else {
+            $item->setAttr('label-width', '0');
+        }
 
         if ($validatableField?->isRequired()) {
             $item->setAttr('required');
@@ -162,7 +175,8 @@ final class FieldRenderer
         string $fieldPath,
         ?ValidatableFieldInterface $validatableField,
         ?string $propExpression,
-        bool $tableCell
+        bool $tableCell,
+        bool $showLabels
     ): DoubleLabel {
         if ($tableCell) {
             $item = El::double('el-form-item')->setAttrs([
@@ -180,8 +194,13 @@ final class FieldRenderer
 
         if ($propExpression !== null) {
             $item = El::double('el-form-item')
-                ->setAttr('label', $field->label())
                 ->setAttr(':prop', $propExpression);
+
+            if ($showLabels) {
+                $item->setAttr('label', $field->label());
+            } else {
+                $item->setAttr('label-width', '0');
+            }
 
             if ($validatableField?->isRequired()) {
                 $item->setAttr('required');
@@ -190,7 +209,7 @@ final class FieldRenderer
             return $item;
         }
 
-        return $this->buildFieldItem($field, $fieldPath, $validatableField);
+        return $this->buildFieldItem($field, $fieldPath, $validatableField, $showLabels);
     }
 
     private function buildFieldComponent(
@@ -222,11 +241,13 @@ final class FieldRenderer
             FieldType::TEXT => El::double('el-input')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
+                'style' => $inline ? 'width: 180px' : 'width: 100%',
             ])),
             FieldType::PASSWORD => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'password',
                 'placeholder' => $placeholder,
                 'clearable' => '',
+                'style' => $inline ? 'width: 180px' : 'width: 100%',
             ])),
             FieldType::TEXTAREA => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'textarea',
@@ -239,7 +260,7 @@ final class FieldRenderer
             FieldType::SELECT => El::double('el-select')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
-                'style' => $inline ? 'min-width: 180px' : 'width: 100%',
+                'style' => $inline ? 'width: 180px' : 'width: 100%',
             ])),
             FieldType::RADIO => El::double('el-radio-group')->setAttrs($bindModelValue([])),
             FieldType::CHECKBOX => El::double('el-checkbox-group')->setAttrs($bindModelValue([])),

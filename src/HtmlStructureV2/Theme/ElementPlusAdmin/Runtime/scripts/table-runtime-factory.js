@@ -297,20 +297,27 @@
                 selection: state.selection
               });
             },
-            deleteTableRow(tableKey, row, confirmText = '确认删除当前记录？'){
+            deleteTableSelection(tableKey, confirmText = '确认删除当前选中数据？'){
               const resolvedKey = this.resolveTableKey(tableKey);
               const tableCfg = this.getTableConfig(resolvedKey);
               const state = this.getTableState(resolvedKey);
+              const selection = Array.isArray(state?.selection) ? state.selection : [];
+              const ids = selection
+                .map((item) => tableCfg?.deleteKey ? item?.[tableCfg.deleteKey] : undefined)
+                .filter((value) => value !== undefined && value !== null && value !== '');
 
-              if (!resolvedKey || !tableCfg?.deleteUrl || !row) {
+              if (!resolvedKey || !tableCfg?.deleteUrl) {
+                return Promise.resolve(null);
+              }
+
+              if (ids.length <= 0) {
+                ElementPlus.ElMessage.error('请选择要删除的数据');
                 return Promise.resolve(null);
               }
 
               const performDelete = () => {
                 return Promise.resolve().then(() => {
-                  const payload = (tableCfg.deleteKey && row[tableCfg.deleteKey] !== undefined)
-                    ? { [tableCfg.deleteKey]: row[tableCfg.deleteKey] }
-                    : row;
+                  const payload = { ids };
 
                   return axios.post(tableCfg.deleteUrl, payload);
                 })
@@ -322,7 +329,8 @@
                   ElementPlus.ElMessage.success(resolveMessage(payload, '删除成功'));
 
                   return emitTableEvent(this, resolvedKey, tableCfg, state, 'deleteSuccess', {
-                    row,
+                    selection,
+                    ids,
                     response,
                     payload
                   }).then(() => this.loadTableData(resolvedKey));
@@ -336,7 +344,8 @@
                   ElementPlus.ElMessage.error(message);
 
                   return emitTableEvent(this, resolvedKey, tableCfg, state, 'deleteFail', {
-                    row,
+                    selection,
+                    ids,
                     error
                   }).then(() => null);
                 });
@@ -346,7 +355,10 @@
                 return performDelete();
               }
 
-              return ElementPlus.ElMessageBox.confirm(confirmText, '提示', { type: 'warning' })
+              return ElementPlus.ElMessageBox.confirm(confirmText, '提示', {
+                type: 'warning',
+                lockScroll: false
+              })
                 .then(() => performDelete());
             }
           };

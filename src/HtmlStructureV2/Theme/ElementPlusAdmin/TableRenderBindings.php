@@ -84,12 +84,11 @@ final class TableRenderBindings
         return sprintf('handleTablePageSizeChange(%s, $event)', $this->tableKeyLiteral());
     }
 
-    public function deleteRowExpression(string $rowExpression, string $confirmTextExpression): string
+    public function deleteSelectionExpression(string $confirmTextExpression): string
     {
         return sprintf(
-            'deleteTableRow(%s, %s, %s)',
+            'deleteTableSelection(%s, %s)',
             $this->tableKeyLiteral(),
-            $rowExpression,
             $confirmTextExpression
         );
     }

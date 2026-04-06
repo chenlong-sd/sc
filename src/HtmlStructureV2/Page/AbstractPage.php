@@ -2,6 +2,8 @@
 
 namespace Sc\Util\HtmlStructureV2\Page;
 
+use InvalidArgumentException;
+use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\DialogAction;
@@ -17,20 +19,28 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 {
     use RendersWithTheme;
 
-    private string $description = '';
+    private const BACKGROUND_PRESETS = [
+        'white' => '#ffffff',
+        'muted' => '#f5f7fa',
+        'transparent' => 'transparent',
+    ];
+
     private array $headerActions = [];
+    private array $headerContent = [];
     private array $sections = [];
     private array $dialogs = [];
+    private ?string $background = null;
     private ?ThemeInterface $renderTheme = null;
 
     public function __construct(
-        private readonly string $title,
+        private string $title,
         private readonly string $key
     ) {
     }
 
     /**
-     * 直接创建一个页面实例，未传 key 时会按标题自动生成。
+     * 直接创建一个页面实例。
+     * "$title" 用于 HTML "<title>"；页面头部展示建议通过 "->header(...)" 自定义。
      */
     public static function make(string $title, ?string $key = null): static
     {
@@ -38,11 +48,55 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     }
 
     /**
-     * 设置页面副标题/说明文案。
+     * 设置 HTML "<title>"。
+     * 只影响浏览器标签标题和文档标题，不直接决定页面头部怎么展示。
      */
-    public function description(string $description): static
+    public function htmlTitle(string $title): static
     {
-        $this->description = $description;
+        $this->title = $title;
+
+        return $this;
+    }
+
+    /**
+     * 设置页面头部展示内容。
+     * 支持轻组件树、原始字符串或 "AbstractHtmlElement"，推荐组合 "Blocks::title()"、"Blocks::text()"、"Layouts::stack()"。
+     * 页面标题、说明文案等可见头部内容都应通过这里显式组合。
+     */
+    public function header(string|AbstractHtmlElement|Renderable ...$content): static
+    {
+        $this->headerContent = $content;
+
+        return $this;
+    }
+
+    /**
+     * 设置页面根容器背景。
+     * 支持任意 CSS "background" 值，例如颜色、渐变或图片。
+     */
+    public function background(string $background): static
+    {
+        $background = trim($background);
+        $this->background = $background !== '' ? $background : self::BACKGROUND_PRESETS['white'];
+
+        return $this;
+    }
+
+    /**
+     * 设置页面背景预设。
+     * 当前支持："white"、"muted"、"transparent"。
+     */
+    public function backgroundPreset(string $preset): static
+    {
+        if (!array_key_exists($preset, self::BACKGROUND_PRESETS)) {
+            throw new InvalidArgumentException(sprintf(
+                'Unsupported V2 page background preset [%s], supported presets: %s',
+                $preset,
+                implode(', ', array_keys(self::BACKGROUND_PRESETS))
+            ));
+        }
+
+        $this->background = self::BACKGROUND_PRESETS[$preset];
 
         return $this;
     }
@@ -99,14 +153,17 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this->key;
     }
 
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
     public function getHeaderActions(): array
     {
         return $this->headerActions;
+    }
+
+    /**
+     * @return array<int, string|AbstractHtmlElement|Renderable>
+     */
+    public function getHeaderContent(): array
+    {
+        return $this->headerContent;
     }
 
     public function getSections(): array
@@ -129,12 +186,25 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this->renderTheme;
     }
 
+    public function getBackground(): string
+    {
+        return $this->background ?? self::BACKGROUND_PRESETS['white'];
+    }
+
+    public function hasCustomBackground(): bool
+    {
+        return $this->background !== null;
+    }
+
     public function toHtml(?ThemeInterface $theme = null): string
     {
         $theme ??= $this->renderTheme ?? new ElementPlusAdminTheme();
 
         $context = new RenderContext($theme, new Document($this->title));
         $context->bootTheme();
+        if ($this->hasCustomBackground()) {
+            $context->document()->body()->setAttr('style', 'background:' . rtrim($this->getBackground(), ';') . ';');
+        }
 
         $context->document()->mount($this->render($context));
 

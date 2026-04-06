@@ -12,6 +12,7 @@ final class Actions
 {
     /**
      * 创建一个通用动作按钮，后续可继续配置 intent、目标和点击行为。
+     * 默认按钮类型为 primary。
      */
     public static function make(string $label): Action
     {
@@ -37,7 +38,8 @@ final class Actions
     }
 
     /**
-     * 创建“删除”动作，默认带删除确认提示。
+     * 创建“删除”动作，默认带批量删除确认提示。
+     * 该快捷语义用于表格/列表工具栏里的 selection 批量删除，不用于 rowActions() 单条删除。
      */
     public static function delete(string $label = '删除'): Action
     {
@@ -56,6 +58,7 @@ final class Actions
     /**
      * 创建一个请求动作，适合直接发起接口调用并处理成功/失败反馈。
      * 后续可继续链式配置 request()/payload()/on()/before()/afterSuccess() 等运行时行为。
+     * 默认按钮类型为 primary。
      */
     public static function request(string $label): RequestAction
     {
@@ -84,6 +87,7 @@ final class Actions
      * 常用可读字段与 Action::on('click', ...) 一致，例如 row / tableKey / listKey /
      * filters / forms / dialogs / selection / vm，以及目标弹窗上下文下的 dialog / dialogKey。
      * 若传 Events::* 返回值，则按结构化事件执行。
+     * 默认按钮类型为 primary。
      */
     public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): Action
     {

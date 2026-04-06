@@ -151,6 +151,11 @@ abstract class Field implements FormNode
         return $this->label;
     }
 
+    public function hasLabel(): bool
+    {
+        return trim($this->label) !== '';
+    }
+
     public function getDefault(): mixed
     {
         return $this->default;

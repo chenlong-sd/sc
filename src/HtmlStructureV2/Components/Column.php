@@ -100,6 +100,9 @@ final class Column
      * 开启列搜索，也可直接传搜索操作符。
      * 开启后会按当前列 prop 自动生成一条搜索协议；若有独立筛选表单，
      * 对应字段名通常应与列 prop 保持一致。
+     * 当当前列放在 `List` 里且未显式调用 `filters()` 时，V2 会尝试基于 searchable()
+     * 自动生成默认筛选 UI；这些自动生成的筛选项默认隐藏 label，只保留 placeholder，
+     * `displayMapping()` / `displayTag()` / `displayBoolean*()` 会优先推成 select。
      */
     public function searchable(string|bool $searchable = true, ?string $field = null): self
     {

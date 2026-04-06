@@ -10,6 +10,7 @@ final class FormRenderOptions
 
     public function __construct(
         public readonly string $mode = 'default',
+        public readonly bool $showLabels = true,
         public readonly ?string $ref = null,
         public readonly ?string $rules = null,
         public readonly ?string $submitMethod = null,
@@ -34,6 +35,7 @@ final class FormRenderOptions
     {
         return new self(
             mode: self::stringOrDefault($options, 'mode', 'default'),
+            showLabels: self::boolOrDefault($options, 'showLabels', true),
             ref: self::stringOrNull($options, 'ref'),
             rules: self::stringOrNull($options, 'rules'),
             submitMethod: self::stringOrNull($options, 'submitMethod'),
@@ -106,6 +108,31 @@ final class FormRenderOptions
             $this->remoteLoadMethod,
             $this->remoteScope,
             $fieldName
+        );
+    }
+
+    public function withShowLabels(bool $showLabels): self
+    {
+        return new self(
+            mode: $this->mode,
+            showLabels: $showLabels,
+            ref: $this->ref,
+            rules: $this->rules,
+            submitMethod: $this->submitMethod,
+            resetMethod: $this->resetMethod,
+            remoteOptionsState: $this->remoteOptionsState,
+            remoteLoadingState: $this->remoteLoadingState,
+            remoteLoadMethod: $this->remoteLoadMethod,
+            remoteScope: $this->remoteScope,
+            fieldValueUpdateMethod: $this->fieldValueUpdateMethod,
+            uploadFilesState: $this->uploadFilesState,
+            uploadScope: $this->uploadScope,
+            uploadFileListUpdateMethod: $this->uploadFileListUpdateMethod,
+            uploadSuccessMethod: $this->uploadSuccessMethod,
+            uploadRemoveMethod: $this->uploadRemoveMethod,
+            uploadExceedMethod: $this->uploadExceedMethod,
+            uploadPreviewMethod: $this->uploadPreviewMethod,
+            linkageMethod: $this->linkageMethod,
         );
     }
 
@@ -262,6 +289,16 @@ final class FormRenderOptions
     private static function stringOrDefault(array $options, string $key, string $default): string
     {
         return self::stringOrNull($options, $key) ?? $default;
+    }
+
+    private static function boolOrDefault(array $options, string $key, bool $default): bool
+    {
+        $value = $options[$key] ?? null;
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return $default;
     }
 
     private function pathStateExpression(?string $root, string $path, string $fallback): string

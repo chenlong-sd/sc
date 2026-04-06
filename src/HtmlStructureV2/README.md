@@ -2,7 +2,7 @@
 
 `HtmlStructureV2` 是一套独立于旧 `HtmlStructure` 的后台页面 DSL。它把后台开发拆成三层：
 
-- 页面场景：`custom / form / list / crud`
+- 页面入口：`Pages::make()`
 - 重交互组件：`Forms / Fields / Tables / Dialogs / Actions / Lists`
 - 轻布局展示组件：`Layouts / Blocks / Displays`
 
@@ -10,17 +10,17 @@
 
 ## 页面入口
 
-- `Pages::custom()` 自由拼装页
-- `Pages::form()` 纯表单页
-- `Pages::list()` 列表主导页，支持 `filters + table + inline dialogs`
-- `Pages::crud()` 标准 CRUD 页，是 `list` 场景的快捷入口
+- `Pages::make()` 页面容器
 
-## 页面选型建议
+## 页面组织建议
 
-- “列表 + 搜索 + 工具栏 + 多个新增/编辑弹窗” 用 `Pages::list()`
-- “标准列表 + 一个 editor 弹窗” 用 `Pages::crud()`
-- “纯配置表单 / 设置页 / 详情编辑页” 用 `Pages::form()`
-- “看板、混合布局、非标准后台页” 用 `Pages::custom()`
+- 所有页面统一从 `Pages::make()` 开始
+- `Pages::make('...')` 的第一个参数用于 HTML `<title>`
+- 页面可视页头统一通过 `->header(...)` 自定义组合
+- 页面根背景默认白色，可通过 `->backgroundPreset('white'|'muted'|'transparent')` 或 `->background('linear-gradient(...)')` 覆盖
+- 表单页直接在 `addSection()` 里放 `Forms::make()`
+- 列表页直接在 `addSection()` 里放 `Lists::make()` 或 `Tables::make()`
+- 需要混合布局时继续组合 `Forms / Lists / Tables / Layouts / Blocks`
 
 ## 组件入口
 
@@ -38,9 +38,9 @@
 
 `Table` 在运行时按组件 `key` 隔离状态和事件，同一个页面里可以组合多个独立 table / list-like 区块；同页 `table key / list key` 都必须唯一。和表格本身强相关的行为配置优先收口到 `Table`，例如 `deleteUrl()` / `deleteKey()`。
 
-`List` 现在是复合组件，不再只属于 `Pages::list()`。`Pages::list()` / `Pages::crud()` 更接近“页面壳 + 一个主 list”的快捷入口；需要混合布局时，直接在 `Pages::custom()` 里组合 `Lists::make()`、`Tables::make()`、`Forms::make()` 即可。
+`List` 是复合组件，需要混合布局时，直接在 `Pages::make()` 里组合 `Lists::make()`、`Tables::make()`、`Forms::make()` 即可。
 
-`Pages::custom()` 下直接放置的 `Form / Table / ListWidget` 现在默认按“组件本体”渲染，不再自动补一层 card 壳；如果需要卡片、标题、分组说明，显式用 `Layouts::card()` / `Blocks::title()` 组合。`Pages::form()` / `Pages::list()` / `Pages::crud()` 这类快捷页仍保留默认页面级 section/card 壳，用来覆盖常见后台页场景。
+`Pages::make()` 下直接放置的 `Form / Table / ListWidget` 默认按“组件本体”渲染，不自动补一层 card 壳；如果需要卡片、标题、分组说明，显式用 `Layouts::card()` / `Blocks::title()` 组合。
 
 混合布局里如果页面头部动作需要显式指向某个 list / table，统一使用 `->forList('orders')` / `->forTable('audit-table')`，不要再依赖“当前主表”这类隐式约定。显式 key 写错时不会再回退到主 list，而是会在构建期直接抛错，避免误绑到别的组件。
 
@@ -56,7 +56,7 @@
 - `Layouts / Blocks / Displays` 属于轻组件，优先做到零注册、零运行时、自由组合
 - `Form` 不再长期限定为“字段数组”；后续以表单节点树为基础，字段只是叶子节点
 - `List` 负责 `filters + table + managed dialogs` 这一组复合交互，可以和其他独立组件任意组合
-- 筛选协议归 `Table/Column` 定义，`filters()` 只负责筛选 UI
+- 筛选协议归 `Table/Column` 定义；`filters()` 用于显式自定义筛选 UI，不写时会尝试按 searchable/searchSchema 自动生成默认筛选表单，写了时也会自动补齐缺失筛选项
 - `Dialog` 自己持有保存地址，推荐直接内联到 `Actions::create/edit()`，`dialogs()` 只保留给高级场景
 - 常见动作优先走结构化 DSL，`JsExpression` 只保留为兜底 escape hatch
 - 字段能力按类型收口，不再所有字段都暴露同一批方法
@@ -93,9 +93,12 @@ use Sc\Util\HtmlStructureV2\Dsl\Displays;
 use Sc\Util\HtmlStructureV2\Dsl\Layouts;
 use Sc\Util\HtmlStructureV2\Dsl\Pages;
 
-$page = Pages::custom('概览页')->addSection(
-    Layouts::stack(
-        Blocks::title('运营概览')->description('轻组件之间可以自由组合'),
+$page = Pages::make('概览页')
+    ->header(
+        Blocks::title('运营概览')->description('轻组件之间可以自由组合')
+    )
+    ->backgroundPreset('white')
+    ->addSection(
         Layouts::grid(
             Blocks::alert('提示', '这是一个提示块'),
             Displays::descriptions()
@@ -105,8 +108,7 @@ $page = Pages::custom('概览页')->addSection(
                     '作者' => 'system',
                 ])
         )->columns(2)
-    )
-);
+    );
 ```
 
 ## 表单结构
@@ -231,7 +233,7 @@ V2 的 `Dialog` 不再只是“一个表单弹窗”，现在支持三类弹窗�
 
 列表页工具栏和请求动作可以通过 `Table::selection()` 开启勾选列，之后请求动作和弹窗上下文里都能拿到 `selection`。
 
-`dialogs()` 现在不只属于 `ListPage`，`Pages::form()` 和 `Pages::custom()` 也可以直接挂 managed dialogs。头部 `Actions::create/edit($dialog)` 会自动收集对应弹窗；如果弹窗是从自定义按钮、独立表格行按钮或自定义 JS 打开的，推荐显式写 `->dialogs($dialog)`。
+`dialogs()` 可以直接挂在 `Pages::make()` 上。头部 `Actions::create/edit($dialog)` 会自动收集对应弹窗；如果弹窗是从自定义按钮、独立表格行按钮或自定义 JS 打开的，推荐显式写 `->dialogs($dialog)`。
 
 如果动作直接绑定的是 `Dialog` 对象，V2 会在页面构建时自动把它收集进当前页面，包括独立 `Table` 区块和 dialog footer 里的二级弹窗；如果只写字符串 key，例如 `Actions::create('打开', 'editor')`、`Actions::submit('保存', 'editor')`、`Actions::request(...)->dialog('editor')`，对应 key 必须能在当前页面解析到，否则会在构建期直接抛错。
 
@@ -243,7 +245,7 @@ V2 的 `Dialog` 不再只是“一个表单弹窗”，现在支持三类弹窗�
 - `Components/Display/`: 轻量展示组件
 - `Components/Fields/`: 各字段类型实现
 - `Dsl/`: 推荐使用的 DSL 入口
-- `Page/`: 页面模型，当前提供 `CustomPage`、`FormPage`、`ListPage`、`CrudPage`
+- `Page/`: 页面模型，当前只保留 `Page`
 - `Theme/`: 主题适配层，目前提供 `ElementPlusAdminTheme`
 - `Theme/ElementPlusAdmin/`: 具体 renderer
 - `Theme/ElementPlusAdmin/Runtime/`: runtime builder 与脚本加载器
@@ -323,8 +325,10 @@ $tipsDialog = Dialogs::make('sync-tips', '同步说明')
 </div>
 HTML);
 
-$page = Pages::list('商品列表')
-    ->description('完整示例：筛选、表格、多弹窗、结构化请求动作、自定义 JS 兜底')
+$page = Pages::make('商品列表')
+    ->header(
+        Blocks::title('商品列表')->description('完整示例：筛选、表格、多弹窗、结构化请求动作、自定义 JS 兜底')
+    )
     ->actions(
         Actions::create('新建商品', $normalDialog),
         Actions::create($batchDialog),
@@ -347,63 +351,66 @@ $page = Pages::list('商品列表')
                 JsExpression::make('(ctx) => console.log("sync ok", ctx.payload)')
             )
     )
-    ->filters(
-        Forms::make('product-filters')->inline()->addFields(
-            Fields::text('keyword', '关键词')->placeholder('商品名 / 编码'),
-            Fields::select('status', '状态')->options([
-                '' => '全部',
-                1 => '上架',
-                0 => '下架',
-            ]),
-            Fields::daterange('created_at', '创建时间')
-        )
-    )
-    ->table(
-        Tables::make('product-table')
-            ->selection()
-            ->dataUrl('/admin/product/list')
-            ->search('keyword', 'LIKE', 'name&code')
-            ->addColumns(
-                Tables::column('ID', 'id')->width(80),
-                Tables::column('商品名', 'name')->minWidth(200)->searchable('LIKE'),
-                Tables::column('状态', 'status')->displayTag([
-                    1 => ['label' => '上架', 'type' => 'success'],
-                    0 => ['label' => '下架', 'type' => 'danger'],
-                ])->searchable(),
-                Tables::column('创建时间', 'created_at')->displayDatetime()->searchable('BETWEEN')
+    ->addSection(
+        Lists::make('product-list')
+            ->filters(
+                Forms::make('product-filters')->inline()->addFields(
+                    Fields::text('keyword', '关键词')->placeholder('商品名 / 编码'),
+                    Fields::select('status', '状态')->options([
+                        '' => '全部',
+                        1 => '上架',
+                        0 => '下架',
+                    ]),
+                    Fields::daterange('created_at', '创建时间')
+                )
             )
-            ->toolbar(
-                Actions::refresh(),
-                Actions::request('重建索引')
-                    ->post('/admin/product/rebuild-index')
-                    ->payload([
-                        'status' => '@filters.status',
-                    ])
-                    ->confirm('确认重建当前筛选结果的索引？')
-                    ->successMessage('索引重建任务已提交'),
-                Actions::create('普通新增', $normalDialog)
-            )
-            ->rowActions(
-                Actions::request('上架')
-                    ->post('/admin/product/publish')
-                    ->payload([
-                        'id' => '@row.id',
-                        'status' => 1,
-                    ])
-                    ->confirm('确认上架当前商品？')
-                    ->successMessage('上架成功')
-                    ->reloadTable()
-                    ->afterSuccess(
-                        JsExpression::make('(ctx) => console.log("publish ok", ctx.row, ctx.payload)')
-                    ),
-                Actions::edit('编辑', $normalDialog),
-                Actions::custom(
-                    '预览',
-                    JsExpression::make("openDialog('preview-product', scope.row)")
-                ),
-                Actions::custom(
-                    '复制链接',
-                    JsExpression::make(<<<'JS'
+            ->table(
+                Tables::make('product-table')
+                    ->selection()
+                    ->dataUrl('/admin/product/list')
+                    ->search('keyword', 'LIKE', 'name&code')
+                    ->addColumns(
+                        Tables::column('ID', 'id')->width(80),
+                        Tables::column('商品名', 'name')->minWidth(200)->searchable('LIKE'),
+                        Tables::column('状态', 'status')->displayTag([
+                            1 => ['label' => '上架', 'type' => 'success'],
+                            0 => ['label' => '下架', 'type' => 'danger'],
+                        ])->searchable(),
+                        Tables::column('创建时间', 'created_at')->displayDatetime()->searchable('BETWEEN')
+                    )
+                    ->toolbar(
+                        Actions::refresh(),
+                        Actions::request('重建索引')
+                            ->post('/admin/product/rebuild-index')
+                            ->payload([
+                                'status' => '@filters.status',
+                            ])
+                            ->confirm('确认重建当前筛选结果的索引？')
+                            ->successMessage('索引重建任务已提交'),
+                        Actions::create('普通新增', $normalDialog),
+                        Actions::delete()->confirm('确认删除当前选中商品？')
+                    )
+                    ->rowActions(
+                        Actions::request('上架')
+                            ->post('/admin/product/publish')
+                            ->payload([
+                                'id' => '@row.id',
+                                'status' => 1,
+                            ])
+                            ->confirm('确认上架当前商品？')
+                            ->successMessage('上架成功')
+                            ->reloadTable()
+                            ->afterSuccess(
+                                JsExpression::make('(ctx) => console.log("publish ok", ctx.row, ctx.payload)')
+                            ),
+                        Actions::edit('编辑', $normalDialog),
+                        Actions::custom(
+                            '预览',
+                            JsExpression::make("openDialog('preview-product', scope.row)")
+                        ),
+                        Actions::custom(
+                            '复制链接',
+                            JsExpression::make(<<<'JS'
 (async () => {
   if (!scope.row.share_url) {
     ElementPlus.ElMessage.error('当前记录没有分享链接');
@@ -414,10 +421,19 @@ $page = Pages::list('商品列表')
   ElementPlus.ElMessage.success('链接已复制');
 })()
 JS)
-                ),
-                Actions::delete()->confirm('确认删除当前商品？')
+                        ),
+                        Actions::request('删除')
+                            ->post('/admin/product/delete')
+                            ->payload([
+                                'id' => '@row.id',
+                            ])
+                            ->type('danger')
+                            ->icon('Delete')
+                            ->confirm('确认删除当前商品？')
+                            ->reloadTable()
+                    )
+                    ->deleteUrl('/admin/product/delete')
             )
-            ->deleteUrl('/admin/product/delete')
     )
     ->dialogs($previewDialog, $tipsDialog);
 
@@ -542,7 +558,7 @@ window.parent.postMessage({
 
 如果不显式传 `dialogKey`，宿主会按消息来源窗口自动反查所属 iframe 弹窗。
 
-## 表单页 / 自定义页弹窗
+## 表单页 / 页面弹窗
 
 ```php
 <?php
@@ -566,17 +582,17 @@ $editorDialog = Dialogs::make('editor', '编辑记录')
         )
     );
 
-$formPage = Pages::form('系统设置')
+$formPage = Pages::make('系统设置')
     ->actions(
         Actions::create($helpDialog)
     )
-    ->form(
+    ->addSection(
         Forms::make('settings')->addFields(
             Fields::text('site_name', '站点名称')
         )
     );
 
-$customPage = Pages::custom('自定义页')
+$mixedPage = Pages::make('组合页面')
     ->addSection(
         Tables::make('demo-table')
             ->selection()
@@ -593,9 +609,9 @@ $customPage = Pages::custom('自定义页')
     ->dialogs($editorDialog);
 ```
 
-## 标准 CRUD 页示例
+## 常见列表页示例
 
-适合“一个列表 + 一个编辑弹窗”的标准后台页。
+适合“列表 + 筛选 + 一个编辑弹窗”的常见后台页。
 
 ```php
 <?php
@@ -617,34 +633,44 @@ $editorDialog = Dialogs::make('editor', '编辑用户')
         )
     );
 
-$page = Pages::crud('用户管理')
+$page = Pages::make('用户管理')
     ->actions(
         Actions::create('新建用户', $editorDialog)
     )
-    ->filters(
-        Forms::make('user-filters')->inline()->addFields(
-            Fields::text('keyword', '关键词')->placeholder('用户名 / 手机号')
-        )
-    )
-    ->table(
-        Tables::make('user-table')
-            ->dataUrl('/admin/user/list')
-            ->search('keyword', 'LIKE', 'username&mobile')
-            ->addColumns(
-                Tables::column('用户名', 'username')->minWidth(180),
-                Tables::column('状态', 'status')->displayBooleanTag('启用', '禁用')->searchable()
+    ->addSection(
+        Lists::make('user-list')
+            ->filters(
+                Forms::make('user-filters')->inline()->addFields(
+                    Fields::text('keyword', '关键词')->placeholder('用户名 / 手机号')
+                )
             )
-            ->rowActions(
-                Actions::edit($editorDialog),
-                Actions::delete()
+            ->table(
+                Tables::make('user-table')
+                    ->dataUrl('/admin/user/list')
+                    ->search('keyword', 'LIKE', 'username&mobile')
+                    ->addColumns(
+                        Tables::column('用户名', 'username')->minWidth(180),
+                        Tables::column('状态', 'status')->displayBooleanTag('启用', '禁用')->searchable()
+                    )
+                    ->rowActions(
+                        Actions::edit($editorDialog),
+                        Actions::request('删除')
+                            ->post('/admin/user/delete')
+                            ->payload([
+                                'id' => '@row.id',
+                            ])
+                            ->type('danger')
+                            ->icon('Delete')
+                            ->confirm('确认删除当前用户？')
+                            ->reloadTable()
+                    )
             )
-            ->deleteUrl('/admin/user/delete')
     );
 
 echo $page->toHtml();
 ```
 
-## 纯表单页示例
+## 常见表单页示例
 
 适合系统设置、配置页、详情编辑页。页面头部请求动作同样可用。
 
@@ -656,14 +682,14 @@ use Sc\Util\HtmlStructureV2\Dsl\Fields;
 use Sc\Util\HtmlStructureV2\Dsl\Forms;
 use Sc\Util\HtmlStructureV2\Dsl\Pages;
 
-$page = Pages::form('系统设置')
+$page = Pages::make('系统设置')
     ->actions(
         Actions::request('清理缓存')
             ->post('/admin/system/clear-cache')
             ->confirm('确认清理系统缓存？')
             ->successMessage('缓存已清理')
     )
-    ->form(
+    ->addSection(
         Forms::make('setting-form')->addFields(
             Fields::text('site_name', '站点名称')->required(),
             Fields::select('role_id', '默认角色')
@@ -677,9 +703,9 @@ $page = Pages::form('系统设置')
 echo $page->toHtml();
 ```
 
-## 自定义页面示例
+## 组合页面示例
 
-适合需要手工拼多个区块，但又不属于标准 `form/list/crud` 的页面。
+适合需要手工拼多个区块的页面。
 
 ```php
 <?php
@@ -691,7 +717,7 @@ use Sc\Util\HtmlStructureV2\Dsl\Lists;
 use Sc\Util\HtmlStructureV2\Dsl\Pages;
 use Sc\Util\HtmlStructureV2\Dsl\Tables;
 
-$page = Pages::custom('运营看板')
+$page = Pages::make('运营看板')
     ->actions(
         Actions::refresh('刷新订单列表')->forList('orders'),
         Actions::request('同步汇总')
@@ -781,12 +807,12 @@ Actions::request('重算汇总')->post('/admin/dashboard/rebuild')->forTable('su
 ```php
 $editorDialog = Dialogs::make('editor', '编辑用户')->saveUrl('/admin/user/save')->form(...);
 
-$page = Pages::list('用户列表')
+$page = Pages::make('用户列表')
     ->dialogs($editorDialog)
     ->actions(
         Actions::create('新建用户', 'editor')
     )
-    ->table(
+    ->addSection(
         Tables::make('user-table')->rowActions(
             Actions::edit('编辑', 'editor')
         )
@@ -927,11 +953,15 @@ JS)
 
 ## 筛选和排序
 
-- `filters(Form)` 只描述筛选输入 UI
+- `filters(Form)` 只描述筛选输入 UI；也支持直接写成 `filters(Fields::text(...), Fields::select(...))`
+- 省略 `filters()` 时，`List` 会尝试按 `searchable()/search()/searchSchema()` 自动生成默认筛选项；这些自动项默认隐藏 label，只保留 placeholder；已显式声明的字段会保留，其余缺失项继续自动补齐
+- `Fields::*()` 的 label 参数现在可省略；省略时默认隐藏该字段标签，想保留说明可显式传第二参，或单独调用 `placeholder()`
+- 想在筛选条里放更多条件时，可对显式表单使用 `->hideLabels()` 隐藏字段标签，只保留 placeholder
 - `Table::searchSchema()` 适合显式定义完整筛选协议
 - `Table::search($name, $type, $field)` 适合逐项追加筛选定义
-- `Column::searchable()` 适合同名字段的快捷声明
+- `Column::searchable()` 适合同名字段的快捷声明；用于 `List` 自动筛选时，会优先继承当前列的 label 和 display 信息
 - `Column::searchable('LIKE', 'table.field')` 可以映射后端真实字段
+- `displayMapping()` / `displayTag()` / `displayBoolean*()` + `searchable()` 会优先自动推导成 select
 - `Column::sortable()` 开启远程排序
 - `Column::sortable('table.field')` 可以映射后端真实排序字段
 

@@ -26,7 +26,7 @@ final class TableRenderer
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
 
         foreach ($table->getToolbarActions() as $action) {
-            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings, $renderContext));
+            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings, $renderContext, 'page-header'));
         }
 
         $toolbar->append($left);
@@ -98,13 +98,14 @@ final class TableRenderer
         $actionColumn = El::double('el-table-column')->setAttrs([
             'label' => '操作',
             'fixed' => 'right',
-            'width' => max(120, count($table->getRowActions()) * 76),
+            'align' => 'center',
+            'width' => $table->getRowActionColumnWidth() ?? max(120, count($table->getRowActions()) * 76),
         ]);
 
         $template = El::double('template')->setAttr('#default', 'scope');
         $actions = El::double('div')->addClass('sc-v2-row-actions');
         foreach ($table->getRowActions() as $action) {
-            $actions->append($this->actionButtonRenderer->render($action, true, 'small', $bindings, $renderContext));
+            $actions->append($this->actionButtonRenderer->render($action, true, 'default', $bindings, $renderContext));
         }
         $template->append($actions);
         $actionColumn->append($template);

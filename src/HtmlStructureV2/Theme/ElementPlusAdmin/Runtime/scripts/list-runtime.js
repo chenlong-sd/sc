@@ -13,6 +13,7 @@
             isBlank,
             makeRequest,
             pickRows,
+            registerElementPlusIcons,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
@@ -302,13 +303,13 @@
                     return this.reloadTable(tableKey);
                   });
                 },
-                deleteListRow(listKey = null, row = null, confirmText = '确认删除当前记录？'){
+                deleteListSelection(listKey = null, confirmText = '确认删除当前选中数据？'){
                   const tableKey = resolveListTableKey(listKey);
                   if (!tableKey) {
                     return Promise.resolve(null);
                   }
 
-                  return this.deleteTableRow(tableKey, row, confirmText);
+                  return this.deleteTableSelection(tableKey, confirmText);
                 }
               },
               createListFilterMethods({
@@ -343,6 +344,7 @@
               })
             )
           });
+          registerElementPlusIcons(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
         };

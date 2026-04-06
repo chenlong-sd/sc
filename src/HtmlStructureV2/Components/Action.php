@@ -20,7 +20,7 @@ class Action implements Renderable, EventAware
 
     private const SUPPORTED_ON_EVENTS = ['click'];
 
-    private string $type = 'default';
+    private string $type = 'primary';
     private ?string $icon = null;
     private ?string $key = null;
     private ?string $target = null;
@@ -38,6 +38,7 @@ class Action implements Renderable, EventAware
 
     /**
      * 直接创建一个动作组件实例。
+     * 默认按钮类型为 primary，适合页头、工具栏这类主操作入口。
      */
     public static function make(string $label): static
     {
@@ -89,14 +90,15 @@ class Action implements Renderable, EventAware
     }
 
     /**
-     * 创建“删除”动作，默认附带删除确认提示。
+     * 创建“删除”动作，语义上用于表格/列表工具栏里的批量删除快捷。
+     * 默认会基于当前 selection 走删除接口；不用于 rowActions() 单条删除。
      */
     public static function delete(string $label = '删除'): self
     {
         return (new self($label, ActionIntent::DELETE))
             ->type('danger')
             ->icon('Delete')
-            ->confirm('确认删除当前记录？');
+            ->confirm('确认删除当前选中数据？');
     }
 
     /**
@@ -124,6 +126,7 @@ class Action implements Renderable, EventAware
     public static function close(string $label = '取消', string $dialog = 'editor'): self
     {
         return (new self($label, ActionIntent::CLOSE))
+            ->type('default')
             ->target($dialog);
     }
 

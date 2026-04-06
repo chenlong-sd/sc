@@ -9,6 +9,7 @@
             initializeConfiguredForms,
             makeRequest,
             pickRows,
+            registerElementPlusIcons,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
@@ -112,6 +113,7 @@
               })
             )
           });
+          registerElementPlusIcons(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
         };

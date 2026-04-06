@@ -35,6 +35,7 @@ final class Form implements Renderable, EventAware
     /** @var FormNode[] */
     private array $children = [];
     private bool $inline = false;
+    private bool $showLabels = true;
     private string $labelWidth = '100px';
     private string $submitLabel = '查询';
     private string $resetLabel = '重置';
@@ -88,6 +89,25 @@ final class Form implements Renderable, EventAware
         $this->labelWidth = $labelWidth;
 
         return $this;
+    }
+
+    /**
+     * 控制是否显示字段标签。
+     * 适合紧凑型筛选条；关闭后会真正移除字段 label 输出，而不是只把宽度压成 0。
+     */
+    public function showLabels(bool $showLabels = true): self
+    {
+        $this->showLabels = $showLabels;
+
+        return $this;
+    }
+
+    /**
+     * 隐藏字段标签，常用于想在一行里放更多筛选项的表单。
+     */
+    public function hideLabels(bool $hideLabels = true): self
+    {
+        return $this->showLabels(!$hideLabels);
     }
 
     /**
@@ -176,6 +196,11 @@ final class Form implements Renderable, EventAware
     public function getLabelWidth(): string
     {
         return $this->labelWidth;
+    }
+
+    public function shouldShowLabels(): bool
+    {
+        return $this->showLabels;
     }
 
     public function getSubmitLabel(): string
