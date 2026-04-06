@@ -11,6 +11,9 @@ final class PasswordField extends TextField
         parent::__construct($name, $label, FieldType::PASSWORD);
     }
 
+    /**
+     * 控制是否显示密码可见性切换按钮。
+     */
     public function showPassword(bool $showPassword = true): static
     {
         if ($showPassword) {

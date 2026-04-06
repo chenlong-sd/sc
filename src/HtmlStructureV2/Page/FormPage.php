@@ -8,6 +8,9 @@ final class FormPage extends AbstractPage
 {
     private ?Form $form = null;
 
+    /**
+     * 设置页面主表单。
+     */
     public function form(Form $form): self
     {
         $this->form = $form;

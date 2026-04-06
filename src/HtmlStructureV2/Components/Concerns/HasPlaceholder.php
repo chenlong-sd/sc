@@ -6,6 +6,9 @@ trait HasPlaceholder
 {
     protected string $placeholder = '';
 
+    /**
+     * 设置字段占位提示文案。
+     */
     public function placeholder(string $placeholder): static
     {
         $this->placeholder = $placeholder;

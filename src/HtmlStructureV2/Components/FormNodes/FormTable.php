@@ -17,6 +17,10 @@ final class FormTable extends FormArrayGroup
         $this->addButtonText('新增一行');
     }
 
+    /**
+     * 设置表格至少保留的行数。
+     * 数据路径语义与 arrayGroup() 相同，只是 UI 改为表格化编辑。
+     */
     public function minRows(int $minRows): static
     {
         $this->minRows = max(0, $minRows);
@@ -24,6 +28,9 @@ final class FormTable extends FormArrayGroup
         return $this;
     }
 
+    /**
+     * 设置表格最大行数，传 null 表示不限制。
+     */
     public function maxRows(?int $maxRows): static
     {
         $this->maxRows = $maxRows === null ? null : max(0, $maxRows);
@@ -31,6 +38,9 @@ final class FormTable extends FormArrayGroup
         return $this;
     }
 
+    /**
+     * 设置表格空数据时的占位文案。
+     */
     public function emptyText(string $emptyText): static
     {
         $this->emptyText = $emptyText;
@@ -38,6 +48,9 @@ final class FormTable extends FormArrayGroup
         return $this;
     }
 
+    /**
+     * 控制是否显示表格边框。
+     */
     public function border(bool $border = true): static
     {
         $this->border = $border;

@@ -6,6 +6,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Page\AbstractPage;
+use Sc\Util\HtmlStructureV2\RenderContext;
 
 final class PageFrameRenderer
 {
@@ -21,10 +22,11 @@ final class PageFrameRenderer
         AbstractPage $page,
         array $sections,
         ?AbstractHtmlElement $primaryContent = null,
-        ?TableRenderBindings $tableBindings = null
+        ?TableRenderBindings $tableBindings = null,
+        ?RenderContext $renderContext = null
     ): DoubleLabel {
         $body = El::double('div')->addClass('sc-v2-page');
-        $body->append($this->renderHeader($page, $tableBindings));
+        $body->append($this->renderHeader($page, $tableBindings, $renderContext));
 
         if ($primaryContent !== null) {
             $body->append($primaryContent);
@@ -37,7 +39,11 @@ final class PageFrameRenderer
         return $body;
     }
 
-    private function renderHeader(AbstractPage $page, ?TableRenderBindings $tableBindings = null): AbstractHtmlElement
+    private function renderHeader(
+        AbstractPage $page,
+        ?TableRenderBindings $tableBindings = null,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $header = El::double('div')->addClass('sc-v2-page__header');
         $title = El::double('div')->addClass('sc-v2-page__title')
@@ -53,7 +59,7 @@ final class PageFrameRenderer
             $actions = El::double('div')->addClass('sc-v2-actions');
 
             foreach ($page->getHeaderActions() as $action) {
-                $actions->append($this->actionButtonRenderer->render($action, false, 'default', $tableBindings));
+                $actions->append($this->actionButtonRenderer->render($action, false, 'default', $tableBindings, $renderContext));
             }
 
             $header->append($actions);

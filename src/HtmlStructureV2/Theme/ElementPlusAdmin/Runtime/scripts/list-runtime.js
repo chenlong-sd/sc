@@ -204,10 +204,14 @@
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
               }, state || {});
             },
+            created(){
+              initializeConfiguredForms(forms, {
+                initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
+              });
+            },
             mounted(){
               this.ensureDialogMessageBridge();
               initializeConfiguredForms(forms, {
-                initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
                 registerDependencies: (scope) => this.registerFormDependencies(scope),
                 initializeOptions: (scope) => this.initializeFormOptions(scope),
                 initializeUploads: (scope) => this.initializeUploadFiles(scope),
@@ -218,6 +222,7 @@
               {},
               createColumnDisplayMethods(),
               createRequestActionMethods({
+                cfg,
                 getBaseContext: (vm, actionConfig) => ({
                   forms: buildFormsContext(vm, forms),
                   filters: resolveFiltersForTable(vm, resolveActionTableKey(actionConfig)),
@@ -235,6 +240,9 @@
                 clearSimpleFormValidate(scope){
                   return this.clearFormValidate(scope);
                 },
+                setSimpleFormPathValue(scope, fieldName, value){
+                  return this.setFormPathValue(scope, fieldName, value);
+                },
                 withSimpleDependencyResetSuspended(scope, callback){
                   return this.withDependencyResetSuspended(scope, callback);
                 },
@@ -246,6 +254,9 @@
                 },
                 initializeSimpleUploadFiles(scope){
                   return this.initializeUploadFiles(scope);
+                },
+                setSimpleUploadFileList(...args){
+                  return this.setUploadFileList(...args);
                 },
                 handleSimpleUploadSuccess(...args){
                   return this.handleUploadSuccess(...args);

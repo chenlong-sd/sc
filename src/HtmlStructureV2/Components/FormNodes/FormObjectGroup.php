@@ -26,11 +26,17 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个对象作用域节点。
+     */
     public static function make(string $name, FormNode ...$children): self
     {
         return new self($name, ...$children);
     }
 
+    /**
+     * 继续向当前对象作用域追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);

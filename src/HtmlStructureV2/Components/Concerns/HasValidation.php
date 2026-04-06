@@ -8,6 +8,9 @@ trait HasValidation
     protected ?array $requiredRule = null;
     protected array $rules = [];
 
+    /**
+     * 设置字段为必填，并可自定义提示文案和触发时机。
+     */
     public function required(bool $required = true, ?string $message = null, string|array|null $trigger = null): static
     {
         $this->required = $required;
@@ -20,6 +23,9 @@ trait HasValidation
         return $this;
     }
 
+    /**
+     * 追加一条原始校验规则，会自动补默认 trigger。
+     */
     public function rule(array $rule): static
     {
         if (!array_key_exists('trigger', $rule)) {
@@ -31,6 +37,9 @@ trait HasValidation
         return $this;
     }
 
+    /**
+     * 批量追加多条校验规则。
+     */
     public function rules(array $rules): static
     {
         foreach ($rules as $rule) {

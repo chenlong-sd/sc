@@ -20,16 +20,25 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个栅格布局节点。
+     */
     public static function make(FormNode ...$children): self
     {
         return new self(...$children);
     }
 
+    /**
+     * 继续向当前栅格容器追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
     }
 
+    /**
+     * 设置栅格列间距，单位与 Element Plus 的 gutter 一致。
+     */
     public function gutter(int $gutter): self
     {
         $this->gutter = max(0, $gutter);

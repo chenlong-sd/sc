@@ -48,6 +48,7 @@
             clearFormValidate: 'clearManagedFormValidate',
             getFormModel: 'getManagedFormModel',
             getFormPathStateValue: 'getFormPathStateValue',
+            setFormPathValue: 'setManagedFormPathValue',
             getFormArrayGroupConfig: 'getFormArrayGroupConfig',
             ensureFormArrayGroupState: 'ensureFormArrayGroupState',
             initializeFormArrayGroups: 'initializeFormArrayGroups',
@@ -62,6 +63,7 @@
             getOptionLoadingState: 'getManagedOptionLoadingState',
             getOptionLoadedState: 'getManagedOptionLoadedState',
             getUploadFileState: 'getManagedUploadFileState',
+            setUploadFileList: 'setManagedUploadFileList',
             getFieldOptions: 'getManagedFieldOptions',
             getLinkageConfig: 'getManagedLinkageConfig',
             clearLinkageTargets: 'clearManagedLinkageTargets',
@@ -212,6 +214,10 @@
           };
           const resolveArrayGroupFieldContext = (vm, scope, fieldName) => {
             return resolveArrayGroupFieldContextRecursive(getArrayGroups(scope, vm) || [], fieldName);
+          };
+          const readFormArrayRows = (model, arrayPath) => {
+            const rows = getByPath(model, arrayPath);
+            return Array.isArray(rows) ? rows : [];
           };
           const visitConcreteArrayGroupInstances = (
             vm,
@@ -490,6 +496,12 @@
             [names.getFormModel](scope){
               return getFormModel(this, scope) || {};
             },
+            [names.setFormPathValue](scope, fieldName, value){
+              const model = this[names.getFormModel](scope);
+              setByPath(model, fieldName, value);
+
+              return value;
+            },
             [names.getFormPathStateValue](state, fieldName, fallback = null){
               const value = getByPath(state || {}, fieldName);
               return value === undefined ? fallback : value;
@@ -537,7 +549,8 @@
               }, rootGroups);
             },
             [names.getFormArrayRows](scope, arrayPath){
-              return this[names.ensureFormArrayGroupState](scope, arrayPath);
+              const model = this[names.getFormModel](scope);
+              return readFormArrayRows(model, arrayPath);
             },
             [names.joinFormArrayFieldPath](arrayPath, rowIndex, fieldName){
               return [arrayPath, rowIndex, fieldName]
@@ -645,6 +658,19 @@
             },
             [names.getUploadFileState](scope){
               return getUploadFileState(this, scope) || {};
+            },
+            [names.setUploadFileList](scope, fieldName, uploadFiles){
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
+              const nextFiles = normalizeUploadFiles(uploadFiles || [], fieldCfg);
+              setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
+
+              return nextFiles;
             },
             [names.getFieldOptions](scope, fieldName){
               const remoteConfig = resolveRemoteFieldConfig(this, scope, fieldName);

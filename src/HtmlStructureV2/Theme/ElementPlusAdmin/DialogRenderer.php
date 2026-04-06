@@ -101,7 +101,7 @@ final class DialogRenderer
         if ($footerActions) {
             $footer = El::double('template')->setAttr('#footer');
             foreach ($footerActions as $action) {
-                $footer->append($this->actionButtonRenderer->render($action));
+                $footer->append($this->actionButtonRenderer->render($action, false, 'default', null, $context));
             }
             $element->append($footer);
         }

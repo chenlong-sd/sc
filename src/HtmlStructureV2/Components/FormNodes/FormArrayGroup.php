@@ -32,16 +32,26 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个重复分组节点。
+     */
     public static function make(string $name, FormNode ...$children): static
     {
         return new static($name, ...$children);
     }
 
+    /**
+     * 继续向当前重复分组追加子节点。
+     */
     public function addChildren(FormNode ...$children): static
     {
         return $this->appendFormNodeChildren(...$children);
     }
 
+    /**
+     * 设置初始行数据，适合默认预置多组内容。
+     * 每一行最终都会再与子字段默认值合并；若 minRows() 更大，不足的行会继续自动补齐。
+     */
     public function defaultRows(array $rows): static
     {
         $this->defaultRows = array_values($rows);
@@ -49,6 +59,9 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 设置数组分组标题，显示在分组头部。
+     */
     public function title(?string $title): static
     {
         $this->title = $title;
@@ -56,6 +69,9 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 设置“新增一组”按钮文案。
+     */
     public function addButtonText(string $text): static
     {
         $this->addButtonText = $text;
@@ -63,6 +79,10 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 控制是否允许新增分组行。
+     * 新增成功后会触发表单的 `arrayRowAdd` 事件。
+     */
     public function addable(bool $addable = true): static
     {
         $this->addable = $addable;
@@ -70,6 +90,10 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 控制是否允许删除分组行。
+     * 删除成功后会触发表单的 `arrayRowRemove` 事件。
+     */
     public function removable(bool $removable = true): static
     {
         $this->removable = $removable;
@@ -77,6 +101,10 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 控制是否允许上下调整分组顺序。
+     * 调整成功后会触发表单的 `arrayRowMove` 事件。
+     */
     public function reorderable(bool $reorderable = true): static
     {
         $this->reorderable = $reorderable;
@@ -84,6 +112,10 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 设置最少保留的分组行数，不足时会自动补齐默认行。
+     * 子字段路径会落到 `name.0.xxx`、`name.1.xxx` 这类数组作用域下。
+     */
     public function minRows(int $minRows): static
     {
         $this->minRows = max(0, $minRows);
@@ -91,6 +123,9 @@ class FormArrayGroup implements FormNode, FormNodeContainer
         return $this;
     }
 
+    /**
+     * 设置允许的最大分组行数，传 null 表示不限制。
+     */
     public function maxRows(?int $maxRows): static
     {
         $this->maxRows = $maxRows === null ? null : max(0, $maxRows);

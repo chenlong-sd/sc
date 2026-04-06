@@ -14,6 +14,9 @@ final class CascaderField extends OptionField
         parent::__construct($name, $label, FieldType::CASCADER);
     }
 
+    /**
+     * 设置 cascader 的原生 props 配置。
+     */
     public function cascaderProps(array $props): static
     {
         $this->cascaderProps = array_merge($this->cascaderProps, $props);
@@ -26,6 +29,9 @@ final class CascaderField extends OptionField
         return $this;
     }
 
+    /**
+     * 控制值是否返回完整路径。
+     */
     public function emitPath(bool $emitPath = true): static
     {
         return $this->cascaderProps([
@@ -33,6 +39,9 @@ final class CascaderField extends OptionField
         ]);
     }
 
+    /**
+     * 开启严格模式，允许任意层级节点直接选择。
+     */
     public function checkStrictly(bool $strict = true): static
     {
         return $this->cascaderProps([

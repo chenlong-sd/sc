@@ -19,11 +19,17 @@ final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScope
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个行内布局节点。
+     */
     public static function make(FormNode ...$children): self
     {
         return new self(...$children);
     }
 
+    /**
+     * 继续向当前行内容器追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);

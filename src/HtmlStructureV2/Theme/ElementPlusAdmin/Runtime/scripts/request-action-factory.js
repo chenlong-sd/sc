@@ -1,4 +1,4 @@
-        globalThis.__SC_V2_CREATE_REQUEST_ACTION_METHODS__ = ({ getBaseContext = () => ({}) } = {}) => {
+        globalThis.__SC_V2_CREATE_REQUEST_ACTION_METHODS__ = ({ cfg = {}, getBaseContext = () => ({}) } = {}) => {
           const {
             emitConfiguredEvent,
             ensureSuccess,
@@ -33,6 +33,20 @@
           };
 
           return {
+            resolveActionConfig(actionConfig){
+              if (typeof actionConfig === 'string' && actionConfig !== '') {
+                return cfg?.actions?.[actionConfig] || null;
+              }
+
+              return isObject(actionConfig) ? actionConfig : null;
+            },
+            resolvePageEventHandlers(handlers){
+              if (typeof handlers === 'string' && handlers !== '') {
+                return Array.isArray(cfg?.pageEvents?.[handlers]) ? cfg.pageEvents[handlers] : [];
+              }
+
+              return handlers;
+            },
             ensureActionLoadingStore(){
               if (!isObject(this.actionLoading)) {
                 this.actionLoading = {};
@@ -124,9 +138,10 @@
               return Object.assign(context, normalizedOverrides);
             },
             runPageEventHandlers(handlers, overrides = {}){
-              const queue = Array.isArray(handlers)
-                ? handlers.filter(Boolean)
-                : (handlers ? [handlers] : []);
+              const resolvedHandlers = this.resolvePageEventHandlers(handlers);
+              const queue = Array.isArray(resolvedHandlers)
+                ? resolvedHandlers.filter(Boolean)
+                : (resolvedHandlers ? [resolvedHandlers] : []);
               if (queue.length === 0) {
                 return Promise.resolve([]);
               }
@@ -147,19 +162,20 @@
               return this.runPageEventHandlers(handler ? [handler] : [], overrides);
             },
             runAction(actionConfig, row = null, executor = null){
-              if (!actionConfig?.key) {
+              const resolvedActionConfig = this.resolveActionConfig(actionConfig);
+              if (!resolvedActionConfig?.key) {
                 return Promise.resolve(null);
               }
 
-              const context = this.buildActionContext(actionConfig, row);
+              const context = this.buildActionContext(resolvedActionConfig, row);
 
-              return emitConfiguredEvent(actionConfig, 'click', context)
+              return emitConfiguredEvent(resolvedActionConfig, 'click', context)
                 .then((results) => {
                   if (isEventCanceled(results)) {
                     return null;
                   }
 
-                  return confirmAction(actionConfig.confirmText, () => {
+                  return confirmAction(resolvedActionConfig.confirmText, () => {
                     if (typeof executor !== 'function') {
                       return null;
                     }
@@ -177,35 +193,36 @@
                 });
             },
             runRequestAction(actionConfig, row = null){
-              if (!actionConfig?.request?.url || !actionConfig?.key) {
+              const resolvedActionConfig = this.resolveActionConfig(actionConfig);
+              if (!resolvedActionConfig?.request?.url || !resolvedActionConfig?.key) {
                 return Promise.resolve(null);
               }
 
               const actionLoading = this.ensureActionLoadingStore();
-              const context = this.buildActionContext(actionConfig, row);
+              const context = this.buildActionContext(resolvedActionConfig, row);
 
               const perform = () => {
                 let loadingInstance = null;
                 const request = {
-                  method: actionConfig.request.method || 'post',
-                  url: resolveContextValue(actionConfig.request.url, context),
-                  query: resolveContextValue(actionConfig.request.query || {}, context),
+                  method: resolvedActionConfig.request.method || 'post',
+                  url: resolveContextValue(resolvedActionConfig.request.url, context),
+                  query: resolveContextValue(resolvedActionConfig.request.query || {}, context),
                 };
 
                 context.request = request;
 
-                return emitConfiguredEvent(actionConfig, 'before', context)
+                return emitConfiguredEvent(resolvedActionConfig, 'before', context)
                   .then((results) => {
                     if (isEventCanceled(results)) {
                       return null;
                     }
 
-                    actionLoading[actionConfig.key] = true;
+                    actionLoading[resolvedActionConfig.key] = true;
 
-                    if (actionConfig.loadingText) {
+                    if (resolvedActionConfig.loadingText) {
                       loadingInstance = ElementPlus.ElLoading.service({
                         lock: true,
-                        text: actionConfig.loadingText,
+                        text: resolvedActionConfig.loadingText,
                         background: 'rgba(255,255,255,0.35)',
                       });
                     }
@@ -214,30 +231,30 @@
                       .then((response) => {
                         const payload = ensureSuccess(
                           extractPayload(response),
-                          actionConfig.errorMessage || '操作失败'
+                          resolvedActionConfig.errorMessage || '操作失败'
                         );
 
                         context.response = response;
                         context.payload = payload;
 
-                        const successMessage = actionConfig.successMessage ?? resolveMessage(payload, '操作成功');
+                        const successMessage = resolvedActionConfig.successMessage ?? resolveMessage(payload, '操作成功');
                         if (successMessage) {
                           ElementPlus.ElMessage.success(successMessage);
                         }
 
-                        return emitConfiguredEvent(actionConfig, 'success', context)
+                        return emitConfiguredEvent(resolvedActionConfig, 'success', context)
                           .then(() => {
-                            if (actionConfig.closeDialog && actionConfig.dialogTarget) {
-                              context.closeDialog(actionConfig.dialogTarget);
+                            if (resolvedActionConfig.closeDialog && resolvedActionConfig.dialogTarget) {
+                              context.closeDialog(resolvedActionConfig.dialogTarget);
                             }
-                            if (actionConfig.reloadTable) {
-                              if (actionConfig.listKey && !actionConfig.tableKey) {
+                            if (resolvedActionConfig.reloadTable) {
+                              if (resolvedActionConfig.listKey && !resolvedActionConfig.tableKey) {
                                 context.reloadList();
                               } else {
                                 context.reloadTable();
                               }
                             }
-                            if (actionConfig.reloadPage) {
+                            if (resolvedActionConfig.reloadPage) {
                               context.reloadPage();
                             }
 
@@ -248,34 +265,34 @@
                         context.error = error;
                         const message = error?.message || resolveMessage(
                           error?.response?.data,
-                          actionConfig.errorMessage || '操作失败'
+                          resolvedActionConfig.errorMessage || '操作失败'
                         );
 
                         if (message) {
                           ElementPlus.ElMessage.error(message);
                         }
 
-                        return emitConfiguredEvent(actionConfig, 'fail', context)
+                        return emitConfiguredEvent(resolvedActionConfig, 'fail', context)
                           .then(() => null);
                       })
                       .finally(() => {
-                        actionLoading[actionConfig.key] = false;
+                        actionLoading[resolvedActionConfig.key] = false;
                         if (loadingInstance && typeof loadingInstance.close === 'function') {
                           loadingInstance.close();
                         }
 
-                        return emitConfiguredEvent(actionConfig, 'finally', context);
+                        return emitConfiguredEvent(resolvedActionConfig, 'finally', context);
                       });
                   });
               };
 
-              return emitConfiguredEvent(actionConfig, 'click', context)
+              return emitConfiguredEvent(resolvedActionConfig, 'click', context)
                 .then((results) => {
                   if (isEventCanceled(results)) {
                     return null;
                   }
 
-                  return confirmAction(actionConfig.confirmText, perform);
+                  return confirmAction(resolvedActionConfig.confirmText, perform);
                 })
                 .catch((error) => {
                   const message = error?.message || '操作失败';

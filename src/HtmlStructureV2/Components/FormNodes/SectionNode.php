@@ -25,16 +25,25 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
     ) {
     }
 
+    /**
+     * 直接创建一个表单分组节点。
+     */
     public static function make(string $title): self
     {
         return new self($title);
     }
 
+    /**
+     * 继续向当前分组追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
     }
 
+    /**
+     * 设置分组标题下方的说明文字。
+     */
     public function description(?string $description): self
     {
         $this->description = $description;
@@ -42,6 +51,9 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
         return $this;
     }
 
+    /**
+     * 在分组头部右侧追加操作按钮。
+     */
     public function headerActions(Action ...$actions): self
     {
         $this->headerActions = array_merge($this->headerActions, $actions);
@@ -49,6 +61,9 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
         return $this;
     }
 
+    /**
+     * 取消默认卡片外壳，仅保留分组头和内部布局。
+     */
     public function plain(bool $plain = true): self
     {
         $this->plain = $plain;

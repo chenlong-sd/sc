@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 
 final class PageRuntimeRegistry
 {
@@ -19,6 +20,8 @@ final class PageRuntimeRegistry
     private const DIALOG_REGISTRY = 'v2.dialog.registry';
     private const REQUIRES_LIST_RUNTIME = 'v2.requires.list.runtime';
     private const PRIMARY_LIST = 'v2.primary.list';
+    private const ACTION_CONFIGS = 'v2.action.configs';
+    private const PAGE_EVENT_CONFIGS = 'v2.page.event.configs';
 
     public function __construct(
         private readonly RenderContext $context,
@@ -88,6 +91,26 @@ final class PageRuntimeRegistry
         $this->context->set(self::DIALOG_REGISTRY, $registry);
 
         return true;
+    }
+
+    public function registerActionConfig(string $key, array $config): string
+    {
+        $configs = $this->context->get(self::ACTION_CONFIGS, []);
+        $configs[$key] = $config;
+        $this->context->set(self::ACTION_CONFIGS, $configs);
+
+        return $key;
+    }
+
+    public function registerPageEventHandlers(array $handlers): string
+    {
+        $normalizedHandlers = array_values($handlers);
+        $key = 'sc_event_' . substr(sha1(JsonExpressionEncoder::encodeCompact($normalizedHandlers)), 0, 12);
+        $configs = $this->context->get(self::PAGE_EVENT_CONFIGS, []);
+        $configs[$key] = $normalizedHandlers;
+        $this->context->set(self::PAGE_EVENT_CONFIGS, $configs);
+
+        return $key;
     }
 
     public function requireListRuntime(?string $primaryListKey = null): void

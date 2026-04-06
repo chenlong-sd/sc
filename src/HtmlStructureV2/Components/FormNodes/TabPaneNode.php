@@ -22,16 +22,25 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个标签页面板节点。
+     */
     public static function make(string $label, FormNode ...$children): self
     {
         return new self($label, ...$children);
     }
 
+    /**
+     * 继续向当前 tab 面板追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
     }
 
+    /**
+     * 仅在标签被激活时再渲染面板内容。
+     */
     public function lazy(bool $lazy = true): self
     {
         $this->lazy = $lazy;

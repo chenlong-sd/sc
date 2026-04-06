@@ -20,9 +20,11 @@ use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class LightweightComponentRenderer
 {
+    use EncodesJsValues;
     use ResolvesClassMappedMethod;
 
     private const RENDERERS = [
@@ -92,7 +94,8 @@ final class LightweightComponentRenderer
                     ->addClass('sc-v2-stack')
                     ->setAttr('style', sprintf('gap:%s', $stack->getGap())),
                 $stack,
-                $eventContextExpression
+                $eventContextExpression,
+                $context
             ),
             $stack,
             $context,
@@ -119,7 +122,8 @@ final class LightweightComponentRenderer
                         )
                     ),
                 $grid,
-                $eventContextExpression
+                $eventContextExpression,
+                $context
             ),
             $grid,
             $context,
@@ -136,7 +140,8 @@ final class LightweightComponentRenderer
         $element = $this->applyComponentEvents(
             $this->sectionCardFactory->make($card->getTitle() ?? ''),
             $card,
-            $eventContextExpression
+            $eventContextExpression,
+            $context
         );
 
         return $this->appendRenderedChildren($element, $card, $context, $eventContextExpression);
@@ -155,7 +160,7 @@ final class LightweightComponentRenderer
             $element->append(El::double('p')->append($title->getDescription()));
         }
 
-        return $this->applyComponentEvents($element, $title, $eventContextExpression);
+        return $this->applyComponentEvents($element, $title, $eventContextExpression, $context);
     }
 
     private function renderBlockDivider(
@@ -170,7 +175,7 @@ final class LightweightComponentRenderer
             $element->append($divider->text());
         }
 
-        return $this->applyComponentEvents($element, $divider, $eventContextExpression);
+        return $this->applyComponentEvents($element, $divider, $eventContextExpression, $context);
     }
 
     private function renderBlockText(
@@ -186,7 +191,8 @@ final class LightweightComponentRenderer
         return $this->applyComponentEvents(
             El::double('p')->addClass($class)->append($text->content()),
             $text,
-            $eventContextExpression
+            $eventContextExpression,
+            $context
         );
     }
 
@@ -202,7 +208,7 @@ final class LightweightComponentRenderer
             'type' => $alert->getType(),
             'show-icon' => '',
             ':closable' => 'false',
-        ], static fn(mixed $value): bool => $value !== null)), $alert, $eventContextExpression);
+        ], static fn(mixed $value): bool => $value !== null)), $alert, $eventContextExpression, $context);
     }
 
     private function renderBlockButton(
@@ -219,7 +225,7 @@ final class LightweightComponentRenderer
         ], static fn(mixed $value): bool => $value !== null));
         $element->append($button->label());
 
-        return $this->applyComponentEvents($element, $button, $eventContextExpression);
+        return $this->applyComponentEvents($element, $button, $eventContextExpression, $context);
     }
 
     private function renderDescriptions(
@@ -245,7 +251,7 @@ final class LightweightComponentRenderer
             );
         }
 
-        return $this->applyComponentEvents($element, $descriptions, $eventContextExpression);
+        return $this->applyComponentEvents($element, $descriptions, $eventContextExpression, $context);
     }
 
     private function appendRenderedChildren(
@@ -268,7 +274,8 @@ final class LightweightComponentRenderer
     private function applyComponentEvents(
         AbstractHtmlElement $element,
         Renderable $component,
-        ?string $eventContextExpression = null
+        ?string $eventContextExpression = null,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement {
         if (!$component instanceof EventAware || !$component->hasEventHandlers()) {
             return $element;
@@ -285,11 +292,19 @@ final class LightweightComponentRenderer
 
             $element->setAttr(
                 '@' . ltrim(trim($eventName), '@'),
-                sprintf(
-                    'runPageEventHandlers(%s, %s)',
-                    JsonExpressionEncoder::encodeCompact(array_values($handlers)),
-                    $contextExpression
-                )
+                $renderContext !== null
+                    ? sprintf(
+                        'runPageEventHandlers(%s, %s)',
+                        $this->jsString(
+                            (new PageRuntimeRegistry($renderContext))->registerPageEventHandlers(array_values($handlers))
+                        ),
+                        $contextExpression
+                    )
+                    : sprintf(
+                        'runPageEventHandlers(%s, %s)',
+                        JsonExpressionEncoder::encodeCompact(array_values($handlers)),
+                        $contextExpression
+                    )
             );
         }
 

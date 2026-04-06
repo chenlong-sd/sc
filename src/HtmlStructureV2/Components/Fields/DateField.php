@@ -34,11 +34,19 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
         return 'change';
     }
 
+    /**
+     * 设置日期组件显示格式。
+     * 使用 Element Plus / dayjs 风格格式字符串，只影响组件展示，不改变实际提交值。
+     */
     public function format(string $format): static
     {
         return $this->prop('format', $format);
     }
 
+    /**
+     * 设置提交到表单模型中的值格式。
+     * 设置后，表单模型里存的是格式化后的字符串；不设置时通常保留原生 DatePicker 默认值。
+     */
     public function valueFormat(string $format): static
     {
         return $this->prop('value-format', $format);

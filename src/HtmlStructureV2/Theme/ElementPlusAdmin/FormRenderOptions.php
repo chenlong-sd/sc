@@ -18,8 +18,10 @@ final class FormRenderOptions
         public readonly ?string $remoteLoadingState = null,
         public readonly ?string $remoteLoadMethod = null,
         public readonly ?string $remoteScope = null,
+        public readonly string $fieldValueUpdateMethod = 'setFormPathValue',
         public readonly ?string $uploadFilesState = null,
         public readonly ?string $uploadScope = null,
+        public readonly string $uploadFileListUpdateMethod = 'setUploadFileList',
         public readonly string $uploadSuccessMethod = 'handleUploadSuccess',
         public readonly string $uploadRemoveMethod = 'handleUploadRemove',
         public readonly string $uploadExceedMethod = 'handleUploadExceed',
@@ -40,8 +42,10 @@ final class FormRenderOptions
             remoteLoadingState: self::stringOrNull($options, 'remoteLoadingState'),
             remoteLoadMethod: self::stringOrNull($options, 'remoteLoadMethod'),
             remoteScope: self::stringOrNull($options, 'remoteScope'),
+            fieldValueUpdateMethod: self::stringOrDefault($options, 'fieldValueUpdateMethod', 'setFormPathValue'),
             uploadFilesState: self::stringOrNull($options, 'uploadFilesState'),
             uploadScope: self::stringOrNull($options, 'uploadScope'),
+            uploadFileListUpdateMethod: self::stringOrDefault($options, 'uploadFileListUpdateMethod', 'setUploadFileList'),
             uploadSuccessMethod: self::stringOrDefault($options, 'uploadSuccessMethod', 'handleUploadSuccess'),
             uploadRemoveMethod: self::stringOrDefault($options, 'uploadRemoveMethod', 'handleUploadRemove'),
             uploadExceedMethod: self::stringOrDefault($options, 'uploadExceedMethod', 'handleUploadExceed'),
@@ -135,6 +139,26 @@ final class FormRenderOptions
         );
     }
 
+    public function fieldValueUpdateHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(value) => %s('%s', '%s', value)",
+            $this->fieldValueUpdateMethod,
+            $this->remoteScope,
+            $fieldName
+        );
+    }
+
+    public function fieldValueUpdateHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(value) => %s('%s', %s, value)",
+            $this->fieldValueUpdateMethod,
+            $this->remoteScope,
+            $fieldPathExpression
+        );
+    }
+
     public function uploadFileListExpression(string $fieldName): string
     {
         return $this->pathStateExpression($this->uploadFilesState, $fieldName, '[]');
@@ -143,6 +167,26 @@ final class FormRenderOptions
     public function uploadFileListExpressionByPathExpression(string $fieldPathExpression): string
     {
         return $this->dynamicPathStateExpression($this->uploadFilesState, $fieldPathExpression, '[]');
+    }
+
+    public function uploadFileListUpdateHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(uploadFiles) => %s('%s', '%s', uploadFiles)",
+            $this->uploadFileListUpdateMethod,
+            $this->uploadScope,
+            $fieldName
+        );
+    }
+
+    public function uploadFileListUpdateHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(uploadFiles) => %s('%s', %s, uploadFiles)",
+            $this->uploadFileListUpdateMethod,
+            $this->uploadScope,
+            $fieldPathExpression
+        );
     }
 
     public function uploadSuccessHandler(string $fieldName): string

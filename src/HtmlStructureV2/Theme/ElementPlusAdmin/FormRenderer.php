@@ -120,7 +120,8 @@ final class FormRenderer
                 $context->modelName,
                 $fieldPath,
                 $context->inline,
-                $context->options
+                $context->options,
+                $context->renderContext
             );
         }
 
@@ -130,14 +131,15 @@ final class FormRenderer
             $this->arrayFieldPropExpression($context, $fieldPath),
             $fieldPath,
             $context->inline,
-            $context->options
+            $context->options,
+            $context->renderContext
         );
     }
 
     private function renderSectionNode(SectionNode $section, FormNodeRenderContext $context): AbstractHtmlElement
     {
         $body = El::double('div')->addClass('sc-v2-form-section');
-        $header = $this->renderSectionHeader($section);
+        $header = $this->renderSectionHeader($section, $context->renderContext);
         if ($header !== null) {
             $body->append($header);
         }
@@ -256,6 +258,7 @@ final class FormRenderer
         $arrayPath = FormPath::resolve($context->pathPrefix, $group->name());
         $scopeLiteral = $this->jsLiteral($context->options->remoteScope ?? $context->options->uploadScope ?? 'form');
         $arrayPathExpression = $this->resolveArrayPathExpression($context, $arrayPath);
+        $tableScopeVariable = $this->tableLoopVariable($context);
         [$rowVariable, $rowIndexVariable] = $this->arrayLoopVariables($context);
 
         $body = El::double('div')->addClass('sc-v2-form-array');
@@ -316,6 +319,7 @@ final class FormRenderer
         $arrayPath = FormPath::resolve($context->pathPrefix, $table->name());
         $scopeLiteral = $this->jsLiteral($context->options->remoteScope ?? $context->options->uploadScope ?? 'form');
         $arrayPathExpression = $this->resolveArrayPathExpression($context, $arrayPath);
+        $tableScopeVariable = $this->tableLoopVariable($context);
 
         $body = El::double('div')->addClass('sc-v2-form-table');
         $header = $this->renderBlockTitleHeader($table->getTitle(), 'sc-v2-form-table__header');
@@ -337,13 +341,21 @@ final class FormRenderer
                     $columnSchema,
                     $arrayPathExpression,
                     $context->options,
-                    $context->renderContext
+                    $context->renderContext,
+                    $context->arrayDepth,
+                    $tableScopeVariable
                 )
             );
         }
 
         if ($table->isReorderable() || $table->isRemovable()) {
-            $tableElement->append($this->renderFormTableActionColumn($table, $scopeLiteral, $arrayPathExpression));
+            $tableElement->append($this->renderFormTableActionColumn(
+                $table,
+                $scopeLiteral,
+                $arrayPathExpression,
+                $tableScopeVariable,
+                $this->tableRowIndexExpression($tableScopeVariable)
+            ));
         }
 
         $body->append($tableElement);
@@ -367,7 +379,9 @@ final class FormRenderer
         FormTableColumnSchema $columnSchema,
         string $arrayPathExpression,
         FormRenderOptions $options,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        int $tableArrayDepth = 0,
+        string $tableScopeVariable = 'scope'
     ): AbstractHtmlElement {
         $column = El::double('el-table-column');
         if ($columnSchema->label() !== '') {
@@ -380,14 +394,18 @@ final class FormRenderer
                     $childColumn,
                     $arrayPathExpression,
                     $options,
-                    $renderContext
+                    $renderContext,
+                    $tableArrayDepth,
+                    $tableScopeVariable
                 ));
             }
 
             return $column;
         }
 
-        $template = El::double('template')->setAttr('#default', 'scope');
+        $tableRowModelExpression = $this->tableRowModelExpression($tableScopeVariable);
+        $tableRowIndexExpression = $this->tableRowIndexExpression($tableScopeVariable);
+        $template = El::double('template')->setAttr('#default', $tableScopeVariable);
 
         if ($columnSchema->isField()) {
             $field = $columnSchema->field();
@@ -396,12 +414,13 @@ final class FormRenderer
             }
 
             $fieldModelName = $columnSchema->modelPath() === ''
-                ? 'scope.row'
-                : $this->jsModelAccessor('scope.row', $columnSchema->modelPath());
+                ? $tableRowModelExpression
+                : $this->jsModelAccessor($tableRowModelExpression, $columnSchema->modelPath());
 
             $propExpression = sprintf(
-                'joinFormArrayFieldPath(%s, scope.$index, %s)',
+                'joinFormArrayFieldPath(%s, %s, %s)',
                 $arrayPathExpression,
+                $tableRowIndexExpression,
                 $this->jsLiteral($columnSchema->path())
             );
             $template->append(
@@ -410,7 +429,8 @@ final class FormRenderer
                     $fieldModelName,
                     $columnSchema->path(),
                     $propExpression,
-                    $options
+                    $options,
+                    $renderContext
                 )
             );
         } elseif ($columnSchema->arrayGroup() !== null) {
@@ -418,7 +438,9 @@ final class FormRenderer
                 $columnSchema,
                 $arrayPathExpression,
                 $options,
-                $renderContext
+                $renderContext,
+                $tableArrayDepth,
+                $tableScopeVariable
             ));
         } else {
             $customNode = $columnSchema->customNode();
@@ -429,7 +451,7 @@ final class FormRenderer
             $template->append($this->renderCustomNode(
                 $customNode,
                 new FormNodeRenderContext(
-                    modelName: 'scope.row',
+                    modelName: $tableRowModelExpression,
                     inline: true,
                     options: $options,
                     renderContext: $renderContext
@@ -446,22 +468,26 @@ final class FormRenderer
         FormTableColumnSchema $columnSchema,
         string $arrayPathExpression,
         FormRenderOptions $options,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        int $tableArrayDepth = 0,
+        string $tableScopeVariable = 'scope'
     ): AbstractHtmlElement {
         $group = $columnSchema->arrayGroup();
         if ($group === null) {
             return El::fictitious();
         }
 
+        $tableRowModelExpression = $this->tableRowModelExpression($tableScopeVariable);
+        $tableRowIndexExpression = $this->tableRowIndexExpression($tableScopeVariable);
         $rowContext = new FormNodeRenderContext(
-            modelName: 'scope.row',
+            modelName: $tableRowModelExpression,
             inline: true,
             options: $options,
             renderContext: $renderContext,
             arrayPath: '__table_row__',
             arrayPathExpression: $arrayPathExpression,
-            rowIndexExpression: 'scope.$index',
-            arrayDepth: 1,
+            rowIndexExpression: $tableRowIndexExpression,
+            arrayDepth: $tableArrayDepth + 1,
         );
 
         if ($group instanceof FormTable) {
@@ -474,7 +500,9 @@ final class FormRenderer
     private function renderFormTableActionColumn(
         FormTable $table,
         string $scopeLiteral,
-        string $arrayPathExpression
+        string $arrayPathExpression,
+        string $tableScopeVariable,
+        string $rowIndexExpression
     ): AbstractHtmlElement {
         $column = El::double('el-table-column')->setAttrs([
             'label' => '操作',
@@ -482,7 +510,7 @@ final class FormRenderer
             'fixed' => 'right',
         ]);
 
-        $template = El::double('template')->setAttr('#default', 'scope');
+        $template = El::double('template')->setAttr('#default', $tableScopeVariable);
         $actions = El::double('div')->addClass('sc-v2-form-table__actions');
 
         if ($table->isReorderable()) {
@@ -491,11 +519,12 @@ final class FormRenderer
                     'link' => '',
                     'type' => 'primary',
                     'size' => 'small',
-                    ':disabled' => 'scope.$index === 0',
+                    ':disabled' => sprintf('%s === 0', $rowIndexExpression),
                     '@click' => sprintf(
-                        'moveFormArrayRow(%s, %s, scope.$index, "up")',
+                        'moveFormArrayRow(%s, %s, %s, "up")',
                         $scopeLiteral,
-                        $arrayPathExpression
+                        $arrayPathExpression,
+                        $rowIndexExpression
                     ),
                 ])->append('上移'),
                 El::double('el-button')->setAttrs([
@@ -503,14 +532,16 @@ final class FormRenderer
                     'type' => 'primary',
                     'size' => 'small',
                     ':disabled' => sprintf(
-                        'scope.$index >= getFormArrayRows(%s, %s).length - 1',
+                        '%s >= getFormArrayRows(%s, %s).length - 1',
+                        $rowIndexExpression,
                         $scopeLiteral,
                         $arrayPathExpression
                     ),
                     '@click' => sprintf(
-                        'moveFormArrayRow(%s, %s, scope.$index, "down")',
+                        'moveFormArrayRow(%s, %s, %s, "down")',
                         $scopeLiteral,
-                        $arrayPathExpression
+                        $arrayPathExpression,
+                        $rowIndexExpression
                     ),
                 ])->append('下移')
             );
@@ -523,9 +554,10 @@ final class FormRenderer
                     'type' => 'danger',
                     'size' => 'small',
                     '@click' => sprintf(
-                        'removeFormArrayRow(%s, %s, scope.$index)',
+                        'removeFormArrayRow(%s, %s, %s)',
                         $scopeLiteral,
-                        $arrayPathExpression
+                        $arrayPathExpression,
+                        $rowIndexExpression
                     ),
                 ])->append('删除')
             );
@@ -658,7 +690,10 @@ final class FormRenderer
             ->append($this->renderChildrenRow($children, $context, $gutter));
     }
 
-    private function renderSectionHeader(SectionNode $section): ?AbstractHtmlElement
+    private function renderSectionHeader(
+        SectionNode $section,
+        ?RenderContext $renderContext = null
+    ): ?AbstractHtmlElement
     {
         if ($section->title() === '' && $section->descriptionText() === null && $section->getHeaderActions() === []) {
             return null;
@@ -680,7 +715,7 @@ final class FormRenderer
         if ($section->getHeaderActions() !== []) {
             $actions = El::double('div')->addClass('sc-v2-form-section__actions');
             foreach ($section->getHeaderActions() as $action) {
-                $actions->append($this->actionButtonRenderer->render($action, false, 'small'));
+                $actions->append($this->actionButtonRenderer->render($action, false, 'small', null, $renderContext));
             }
             $heading->append($actions);
         }
@@ -767,6 +802,21 @@ final class FormRenderer
             'row' . $context->arrayDepth,
             'rowIndex' . $context->arrayDepth,
         ];
+    }
+
+    private function tableLoopVariable(FormNodeRenderContext $context): string
+    {
+        return 'scope' . $context->arrayDepth;
+    }
+
+    private function tableRowModelExpression(string $tableScopeVariable): string
+    {
+        return $tableScopeVariable . '.row';
+    }
+
+    private function tableRowIndexExpression(string $tableScopeVariable): string
+    {
+        return $tableScopeVariable . '.$index';
     }
 
     private function renderCustomNode(CustomNode $customNode, FormNodeRenderContext $context): AbstractHtmlElement

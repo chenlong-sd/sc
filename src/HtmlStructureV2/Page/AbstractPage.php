@@ -21,6 +21,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     private array $headerActions = [];
     private array $sections = [];
     private array $dialogs = [];
+    private ?ThemeInterface $renderTheme = null;
 
     public function __construct(
         private readonly string $title,
@@ -28,11 +29,17 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     ) {
     }
 
+    /**
+     * 直接创建一个页面实例，未传 key 时会按标题自动生成。
+     */
     public static function make(string $title, ?string $key = null): static
     {
         return new static($title, $key ?: static::normalizeKey($title));
     }
 
+    /**
+     * 设置页面副标题/说明文案。
+     */
     public function description(string $description): static
     {
         $this->description = $description;
@@ -40,6 +47,19 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this;
     }
 
+    /**
+     * 设置页面默认渲染主题，显式传给 toHtml($theme) 时以 toHtml 参数为准。
+     */
+    public function theme(ThemeInterface $theme): static
+    {
+        $this->renderTheme = $theme;
+
+        return $this;
+    }
+
+    /**
+     * 设置页面头部动作按钮。
+     */
     public function actions(Action ...$actions): static
     {
         $this->headerActions = array_merge($this->headerActions, $actions);
@@ -47,6 +67,9 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this;
     }
 
+    /**
+     * 向页面主体追加一个或多个区块。
+     */
     public function addSection(Renderable ...$sections): static
     {
         $this->sections = array_merge($this->sections, $sections);
@@ -54,6 +77,9 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this;
     }
 
+    /**
+     * 显式挂载页面级托管弹窗。
+     */
     public function dialogs(Dialog ...$dialogs): static
     {
         foreach ($dialogs as $dialog) {
@@ -98,9 +124,14 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         return $this->resolveDialogs()[$key] ?? null;
     }
 
+    public function getTheme(): ?ThemeInterface
+    {
+        return $this->renderTheme;
+    }
+
     public function toHtml(?ThemeInterface $theme = null): string
     {
-        $theme ??= new ElementPlusAdminTheme();
+        $theme ??= $this->renderTheme ?? new ElementPlusAdminTheme();
 
         $context = new RenderContext($theme, new Document($this->title));
         $context->bootTheme();

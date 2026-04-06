@@ -13,6 +13,9 @@ class ListPage extends AbstractPage
     private ?string $deleteUrl = null;
     private string $deleteKey = 'id';
 
+    /**
+     * 设置页面筛选表单。
+     */
     public function filters(Form $filterForm): self
     {
         $this->filterForm = $filterForm;
@@ -20,6 +23,9 @@ class ListPage extends AbstractPage
         return $this;
     }
 
+    /**
+     * 设置页面主表格。
+     */
     public function table(Table $table): self
     {
         $this->table = $table;
@@ -27,6 +33,9 @@ class ListPage extends AbstractPage
         return $this;
     }
 
+    /**
+     * 设置页面级删除接口地址。
+     */
     public function deleteUrl(?string $deleteUrl): self
     {
         $this->deleteUrl = $deleteUrl;
@@ -34,6 +43,9 @@ class ListPage extends AbstractPage
         return $this;
     }
 
+    /**
+     * 设置页面级删除主键字段名。
+     */
     public function deleteKey(string $deleteKey): self
     {
         $this->deleteKey = $deleteKey;

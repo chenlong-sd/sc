@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 
@@ -28,7 +29,8 @@ final class FieldRenderer
         string $modelName,
         string $fieldPath,
         bool $inline,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
         return $this->renderField(
@@ -37,6 +39,7 @@ final class FieldRenderer
             fieldPath: $fieldPath,
             inline: $inline,
             options: $options,
+            renderContext: $renderContext,
         );
     }
 
@@ -46,7 +49,8 @@ final class FieldRenderer
         string $propExpression,
         string $fieldPath,
         bool $inline,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -55,6 +59,7 @@ final class FieldRenderer
             inline: $inline,
             options: $options,
             propExpression: $propExpression,
+            renderContext: $renderContext,
         );
     }
 
@@ -63,7 +68,8 @@ final class FieldRenderer
         string $fieldModelName,
         string $fieldPath,
         string $propExpression,
-        FormRenderOptions $options
+        FormRenderOptions $options,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -73,6 +79,7 @@ final class FieldRenderer
             options: $options,
             propExpression: $propExpression,
             tableCell: true,
+            renderContext: $renderContext,
         );
     }
 
@@ -83,7 +90,8 @@ final class FieldRenderer
         bool $inline,
         FormRenderOptions $options,
         ?string $propExpression = null,
-        bool $tableCell = false
+        bool $tableCell = false,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement {
         if ($field->type() === FieldType::HIDDEN) {
             return El::fictitious();
@@ -99,12 +107,18 @@ final class FieldRenderer
         $hasRemoteOptions = $optionField?->hasRemoteOptions() && $options->hasRemoteOptionsContext();
 
         $item = $this->buildRenderItem($field, $fieldPath, $validatableField, $propExpression, $tableCell);
+        $usesExplicitModelBinding = $propExpression !== null;
         $component = $this->buildFieldComponent(
             $field,
             $modelAccessor,
             $inline,
             $placeholderField,
-            $uploadField
+            $uploadField,
+            $usesExplicitModelBinding
+                ? ($propExpression === null
+                    ? $options->fieldValueUpdateHandler($fieldPath)
+                    : $options->fieldValueUpdateHandlerByPathExpression($propExpression))
+                : null
         );
 
         $this->applyFieldProps($component, $field);
@@ -112,7 +126,7 @@ final class FieldRenderer
         $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
         $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
 
-        $item->append($this->wrapFieldControl($field, $component));
+        $item->append($this->wrapFieldControl($field, $component, $renderContext));
         $this->appendHelpText($item, $field);
 
         if ($tableCell) {
@@ -184,74 +198,76 @@ final class FieldRenderer
         string $modelAccessor,
         bool $inline,
         ?PlaceholderFieldInterface $placeholderField,
-        ?UploadField $uploadField
+        ?UploadField $uploadField,
+        ?string $modelUpdateHandler = null
     ): AbstractHtmlElement {
         $placeholder = $placeholderField?->getPlaceholder() ?? '';
         $upload = $uploadField?->getUpload() ?? [];
+        $useExplicitModelBinding = is_string($modelUpdateHandler) && $modelUpdateHandler !== '';
+
+        $bindModelValue = static function (array $attrs) use ($modelAccessor, $modelUpdateHandler, $useExplicitModelBinding): array {
+            if ($useExplicitModelBinding) {
+                $attrs[':model-value'] = $modelAccessor;
+                $attrs['@update:model-value'] = $modelUpdateHandler;
+
+                return $attrs;
+            }
+
+            $attrs['v-model'] = $modelAccessor;
+
+            return $attrs;
+        };
 
         return match ($field->type()) {
-            FieldType::TEXT => El::double('el-input')->setAttrs([
-                'v-model' => $modelAccessor,
+            FieldType::TEXT => El::double('el-input')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
-            ]),
-            FieldType::PASSWORD => El::double('el-input')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::PASSWORD => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'password',
                 'placeholder' => $placeholder,
                 'clearable' => '',
-            ]),
-            FieldType::TEXTAREA => El::double('el-input')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::TEXTAREA => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'textarea',
                 ':rows' => (string)($field->getProps()['rows'] ?? 4),
                 'placeholder' => $placeholder,
-            ]),
-            FieldType::NUMBER => El::double('el-input-number')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::NUMBER => El::double('el-input-number')->setAttrs($bindModelValue([
                 'style' => $inline ? 'width: 180px' : 'width: 100%',
-            ]),
-            FieldType::SELECT => El::double('el-select')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::SELECT => El::double('el-select')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
                 'style' => $inline ? 'min-width: 180px' : 'width: 100%',
-            ]),
-            FieldType::RADIO => El::double('el-radio-group')->setAttrs([
-                'v-model' => $modelAccessor,
-            ]),
-            FieldType::CHECKBOX => El::double('el-checkbox-group')->setAttrs([
-                'v-model' => $modelAccessor,
-            ]),
-            FieldType::CASCADER => El::double('el-cascader')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::RADIO => El::double('el-radio-group')->setAttrs($bindModelValue([])),
+            FieldType::CHECKBOX => El::double('el-checkbox-group')->setAttrs($bindModelValue([])),
+            FieldType::CASCADER => El::double('el-cascader')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
                 'style' => $inline ? 'min-width: 220px' : 'width: 100%',
-            ]),
-            FieldType::DATE => El::double('el-date-picker')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::DATE => El::double('el-date-picker')->setAttrs($bindModelValue([
                 'type' => 'date',
                 'placeholder' => $placeholder,
                 'clearable' => '',
                 'style' => $inline ? 'width: 220px' : 'width: 100%',
-            ]),
-            FieldType::DATETIME => El::double('el-date-picker')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::DATETIME => El::double('el-date-picker')->setAttrs($bindModelValue([
                 'type' => 'datetime',
                 'placeholder' => $placeholder,
                 'clearable' => '',
                 'style' => $inline ? 'width: 240px' : 'width: 100%',
-            ]),
-            FieldType::DATE_RANGE => El::double('el-date-picker')->setAttrs([
-                'v-model' => $modelAccessor,
+            ])),
+            FieldType::DATE_RANGE => El::double('el-date-picker')->setAttrs($bindModelValue([
                 'type' => 'daterange',
                 'range-separator' => (string)($field->getProps()['range-separator'] ?? '至'),
                 'start-placeholder' => (string)($field->getProps()['start-placeholder'] ?? '开始日期'),
                 'end-placeholder' => (string)($field->getProps()['end-placeholder'] ?? '结束日期'),
                 'clearable' => '',
                 'style' => $inline ? 'width: 320px' : 'width: 100%',
-            ]),
+            ])),
             FieldType::UPLOAD => El::double('el-upload')->setAttrs(array_filter([
                 'action' => (string)($upload['action'] ?? ''),
                 'method' => (string)($upload['method'] ?? 'post'),
@@ -264,9 +280,7 @@ final class FieldRenderer
                 'list-type' => (string)($upload['listType'] ?? 'text'),
                 'accept' => $upload['accept'] ?? '',
             ], static fn(mixed $value) => $value !== null && $value !== '')),
-            FieldType::SWITCH => El::double('el-switch')->setAttrs([
-                'v-model' => $modelAccessor,
-            ]),
+            FieldType::SWITCH => El::double('el-switch')->setAttrs($bindModelValue([])),
             default => El::fictitious(),
         };
     }
@@ -391,10 +405,16 @@ final class FieldRenderer
 
         if ($options->hasUploadContext()) {
             $component->setAttr(
-                'v-model:file-list',
+                ':file-list',
                 $fieldPathExpression === null
                     ? $options->uploadFileListExpression($fieldPath)
                     : $options->uploadFileListExpressionByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
+                '@update:file-list',
+                $fieldPathExpression === null
+                    ? $options->uploadFileListUpdateHandler($fieldPath)
+                    : $options->uploadFileListUpdateHandlerByPathExpression($fieldPathExpression)
             );
             $component->setAttr(
                 ':on-success',
@@ -535,7 +555,11 @@ final class FieldRenderer
         return $element;
     }
 
-    private function wrapFieldControl(Field $field, AbstractHtmlElement $component): AbstractHtmlElement
+    private function wrapFieldControl(
+        Field $field,
+        AbstractHtmlElement $component,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $control = El::double('div')->addClass('sc-v2-form__control')->append($component);
 
@@ -555,7 +579,7 @@ final class FieldRenderer
         }
 
         foreach ($field->getSuffixActions() as $action) {
-            $suffix->append($this->actionButtonRenderer->render($action, false, 'small'));
+            $suffix->append($this->actionButtonRenderer->render($action, false, 'small', null, $renderContext));
         }
 
         $control->append($suffix);

@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Table;
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 
 final class TableRenderer
@@ -15,13 +16,17 @@ final class TableRenderer
     ) {
     }
 
-    public function renderToolbar(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
+    public function renderToolbar(
+        Table $table,
+        TableRenderBindings $bindings,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $toolbar = El::double('div')->addClass('sc-v2-toolbar');
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
 
         foreach ($table->getToolbarActions() as $action) {
-            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings));
+            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings, $renderContext));
         }
 
         $toolbar->append($left);
@@ -29,7 +34,11 @@ final class TableRenderer
         return $toolbar;
     }
 
-    public function renderTable(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
+    public function renderTable(
+        Table $table,
+        TableRenderBindings $bindings,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $element = El::double('el-table')->setAttrs([
             ':data' => $bindings->rowsExpression(),
@@ -57,7 +66,7 @@ final class TableRenderer
         }
 
         if ($table->getRowActions()) {
-            $element->append($this->renderRowActionColumn($table, $bindings));
+            $element->append($this->renderRowActionColumn($table, $bindings, $renderContext));
         }
 
         return $element;
@@ -80,7 +89,11 @@ final class TableRenderer
             );
     }
 
-    private function renderRowActionColumn(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
+    private function renderRowActionColumn(
+        Table $table,
+        TableRenderBindings $bindings,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $actionColumn = El::double('el-table-column')->setAttrs([
             'label' => '操作',
@@ -91,7 +104,7 @@ final class TableRenderer
         $template = El::double('template')->setAttr('#default', 'scope');
         $actions = El::double('div')->addClass('sc-v2-row-actions');
         foreach ($table->getRowActions() as $action) {
-            $actions->append($this->actionButtonRenderer->render($action, true, 'small', $bindings));
+            $actions->append($this->actionButtonRenderer->render($action, true, 'small', $bindings, $renderContext));
         }
         $template->append($actions);
         $actionColumn->append($template);

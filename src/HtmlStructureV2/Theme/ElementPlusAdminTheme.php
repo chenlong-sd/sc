@@ -203,7 +203,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $page,
             $renderedSections,
             $this->renderPreparedListWidget($list, $context, $prepared, true),
-            $prepared->tableState?->bindings
+            $prepared->tableState?->bindings,
+            $context
         );
 
         $this->appendManagedDialogs($body, $context, $managedDialogs);
@@ -221,7 +222,9 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $body = $this->pageFrameRenderer()->render(
             $page,
             $renderedSections,
-            $page->getForm() ? $this->wrapInSectionCard($this->renderStandaloneForm($page->getForm(), $context)) : null
+            $page->getForm() ? $this->wrapInSectionCard($this->renderStandaloneForm($page->getForm(), $context)) : null,
+            null,
+            $context
         );
 
         $this->appendManagedDialogs($body, $context, $managedDialogs);
@@ -236,7 +239,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
         $this->validatePageActionTargets($page, $context, $page->getSections(), $managedDialogs);
 
-        $body = $this->pageFrameRenderer()->render($page, $renderedSections);
+        $body = $this->pageFrameRenderer()->render($page, $renderedSections, null, null, $context);
 
         $this->appendManagedDialogs($body, $context, $managedDialogs);
         $this->appendPageRuntime($context);
@@ -263,7 +266,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $this->runtimeRegistry($context),
             $table
         );
-        return $this->tableBlockRenderer()->render($table, $state->bindings, true);
+        return $this->tableBlockRenderer()->render($table, $state->bindings, true, $context);
     }
 
     private function renderListWidgetComponent(ListWidget $list, RenderContext $context): AbstractHtmlElement
@@ -333,15 +336,16 @@ final class ElementPlusAdminTheme implements ThemeInterface
         Action $action,
         bool $rowScoped = false,
         string $size = 'default',
-        ?TableRenderBindings $tableBindings = null
+        ?TableRenderBindings $tableBindings = null,
+        ?RenderContext $context = null
     ): AbstractHtmlElement
     {
-        return $this->actionButtonRenderer()->render($action, $rowScoped, $size, $tableBindings);
+        return $this->actionButtonRenderer()->render($action, $rowScoped, $size, $tableBindings, $context);
     }
 
     private function renderStandaloneAction(Action $action, RenderContext $context): AbstractHtmlElement
     {
-        return $this->renderActionButton($action);
+        return $this->renderActionButton($action, false, 'default', null, $context);
     }
 
     /**
@@ -415,7 +419,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $table = $list->getTable();
         $tableState = $prepared->tableState;
         if ($table !== null && $tableState !== null) {
-            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary());
+            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary(), $context);
             $body->append(
                 $wrapInSectionCards
                     ? $this->wrapInSectionCard($tableContent)

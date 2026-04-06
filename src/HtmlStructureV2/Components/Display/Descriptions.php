@@ -2,14 +2,14 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Display;
 
-use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasElementEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
 final class Descriptions implements Renderable, EventAware
 {
-    use HasEvents;
+    use HasElementEvents;
     use RendersWithTheme;
 
     private ?string $title = null;
@@ -17,11 +17,17 @@ final class Descriptions implements Renderable, EventAware
     /** @var array<int, array{label:string, value:mixed}> */
     private array $items = [];
 
+    /**
+     * 直接创建一个 descriptions 展示块实例。
+     */
     public static function make(): self
     {
         return new self();
     }
 
+    /**
+     * 设置 descriptions 标题。
+     */
     public function title(?string $title): self
     {
         $this->title = $title;
@@ -29,6 +35,9 @@ final class Descriptions implements Renderable, EventAware
         return $this;
     }
 
+    /**
+     * 设置每行展示的列数。
+     */
     public function columns(int $columns): self
     {
         $this->columns = max(1, $columns);
@@ -36,6 +45,9 @@ final class Descriptions implements Renderable, EventAware
         return $this;
     }
 
+    /**
+     * 追加一项详情数据。
+     */
     public function item(string $label, mixed $value): self
     {
         $this->items[] = ['label' => $label, 'value' => $value];
@@ -43,6 +55,9 @@ final class Descriptions implements Renderable, EventAware
         return $this;
     }
 
+    /**
+     * 批量追加多项详情数据。
+     */
     public function items(array $items): self
     {
         foreach ($items as $label => $value) {

@@ -27,10 +27,14 @@
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
               }, state || {});
             },
+            created(){
+              initializeConfiguredForms(forms, {
+                initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
+              });
+            },
             mounted(){
               this.ensureDialogMessageBridge();
               initializeConfiguredForms(forms, {
-                initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
                 registerDependencies: (scope) => this.registerSimpleFormDependencies(scope),
                 initializeOptions: (scope) => this.initializeSimpleFormOptions(scope),
                 initializeUploads: (scope) => this.initializeSimpleUploadFiles(scope),
@@ -41,6 +45,7 @@
               {},
               createColumnDisplayMethods(),
               createRequestActionMethods({
+                cfg,
                 getBaseContext: (vm, actionConfig) => ({
                   forms: buildFormsContext(vm, forms),
                   dialogs: vm.dialogForms || {},
@@ -68,6 +73,9 @@
                 },
                 initializeUploadFiles(scope){
                   return this.initializeSimpleUploadFiles(scope);
+                },
+                setUploadFileList(...args){
+                  return this.setSimpleUploadFileList(...args);
                 },
                 handleUploadSuccess(...args){
                   return this.handleSimpleUploadSuccess(...args);

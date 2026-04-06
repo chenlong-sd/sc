@@ -20,16 +20,25 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
         $this->setFormNodeChildren(...$items);
     }
 
+    /**
+     * 直接创建一个折叠面板节点。
+     */
     public static function make(CollapseItemNode ...$items): self
     {
         return new self(...$items);
     }
 
+    /**
+     * 继续向当前折叠容器追加折叠项。
+     */
     public function addItems(CollapseItemNode ...$items): self
     {
         return $this->appendFormNodeChildren(...$items);
     }
 
+    /**
+     * 开启手风琴模式，同一时间只展开一个折叠项。
+     */
     public function accordion(bool $accordion = true): self
     {
         $this->accordion = $accordion;

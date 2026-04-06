@@ -783,14 +783,48 @@
 
             return normalizedRows;
           };
+          const isArrayGroupRowReady = (row, groupCfg = {}) => {
+            if (!isObject(row)) {
+              return false;
+            }
+
+            if (
+              row.__sc_v2_row_key === undefined
+              || row.__sc_v2_row_key === null
+              || row.__sc_v2_row_key === ''
+            ) {
+              return false;
+            }
+
+            const defaultRow = isObject(groupCfg?.defaultRow) ? groupCfg.defaultRow : {};
+            return Object.keys(defaultRow).every((key) => row[key] !== undefined);
+          };
+          const isFormArrayGroupStateReady = (rows, groupCfg = {}) => {
+            if (!Array.isArray(rows)) {
+              return false;
+            }
+
+            const minRows = Math.max(0, Number(groupCfg?.minRows) || 0);
+            if (rows.length < minRows) {
+              return false;
+            }
+
+            return rows.every((row) => isArrayGroupRowReady(row, groupCfg));
+          };
           const ensureFormArrayGroupState = (model, groupCfg = {}) => {
             const path = typeof groupCfg?.path === 'string' ? groupCfg.path : '';
             if (path === '') {
               return [];
             }
 
-            const normalizedRows = normalizeArrayGroupRows(getByPath(model, path), groupCfg);
-            setByPath(model, path, normalizedRows);
+            const currentRows = getByPath(model, path);
+            const normalizedRows = isFormArrayGroupStateReady(currentRows, groupCfg)
+              ? currentRows
+              : normalizeArrayGroupRows(currentRows, groupCfg);
+
+            if (normalizedRows !== currentRows) {
+              setByPath(model, path, normalizedRows);
+            }
 
             const childGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
             if (childGroups.length > 0) {

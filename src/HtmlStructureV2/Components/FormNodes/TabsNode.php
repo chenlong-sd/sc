@@ -22,16 +22,25 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         $this->setFormNodeChildren(...$tabs);
     }
 
+    /**
+     * 直接创建一个标签页布局节点。
+     */
     public static function make(TabPaneNode ...$tabs): self
     {
         return new self(...$tabs);
     }
 
+    /**
+     * 继续向当前标签页容器追加 tab。
+     */
     public function addTabs(TabPaneNode ...$tabs): self
     {
         return $this->appendFormNodeChildren(...$tabs);
     }
 
+    /**
+     * 设置标签页样式类型，例如 border-card / card。
+     */
     public function type(string $type): self
     {
         $this->type = trim($type);
@@ -39,6 +48,9 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         return $this;
     }
 
+    /**
+     * 设置标签位置，例如 top / right / bottom / left。
+     */
     public function tabPosition(string $tabPosition): self
     {
         $tabPosition = trim($tabPosition);
@@ -47,6 +59,9 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
         return $this;
     }
 
+    /**
+     * 让各个标签平均拉伸占满整行。
+     */
     public function stretch(bool $stretch = true): self
     {
         $this->stretch = $stretch;

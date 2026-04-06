@@ -8,6 +8,9 @@ final class CrudPage extends ListPage
 {
     private ?string $editorDialogKey = null;
 
+    /**
+     * 设置当前 CRUD 页默认使用的 editor 弹窗。
+     */
     public function editor(Dialog $editorDialog): self
     {
         $this->dialogs($editorDialog);

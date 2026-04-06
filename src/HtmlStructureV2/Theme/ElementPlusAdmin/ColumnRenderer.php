@@ -127,6 +127,7 @@ final class ColumnRenderer
         );
         $labelExpression = "(displayMeta?.label ?? '')";
         $typeExpression = "(displayMeta?.type ?? 'info')";
+        $effectExpression = "(displayMeta?.effect ?? displayMeta?.theme ?? null)";
 
         $template->append($this->aliasTemplate(
             'displayMeta',
@@ -134,6 +135,7 @@ final class ColumnRenderer
             El::double('el-tag')
                 ->setAttr('v-if', '!isColumnDisplayBlank(' . $labelExpression . ')')
                 ->setAttr(':type', $typeExpression)
+                ->setAttr(':effect', $effectExpression)
                 ->append('{{ ' . $labelExpression . ' }}'),
             $this->placeholderSpan($column, 'v-else')
         ));

@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class ActionButtonRenderer
@@ -18,7 +19,8 @@ final class ActionButtonRenderer
         Action $action,
         bool $rowScoped = false,
         string $size = 'default',
-        ?TableRenderBindings $tableBindings = null
+        ?TableRenderBindings $tableBindings = null,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
         $target = ActionRenderTarget::resolve($action, $tableBindings);
@@ -45,7 +47,7 @@ final class ActionButtonRenderer
             $attrs[':disabled'] = $this->dialogStateExpression('dialogSubmitting', $action);
         }
 
-        $click = $this->resolveClick($action, $rowScoped, $target);
+        $click = $this->resolveClick($action, $rowScoped, $target, $renderContext);
         if ($click !== null) {
             $attrs['@click'] = $click;
         }
@@ -96,54 +98,75 @@ final class ActionButtonRenderer
         }
     }
 
-    private function resolveClick(Action $action, bool $rowScoped, ActionRenderTarget $target): ?string
+    private function resolveClick(
+        Action $action,
+        bool $rowScoped,
+        ActionRenderTarget $target,
+        ?RenderContext $renderContext = null
+    ): ?string
     {
+        $actionKey = $this->registerRuntimeActionConfig($action, $target, $renderContext);
         $actionConfig = $this->actionConfig($action, $target);
 
         if ($action instanceof RequestAction) {
+            if ($actionKey !== null) {
+                return sprintf(
+                    'runRequestAction(%s, %s)',
+                    $this->jsString($actionKey),
+                    $rowScoped ? 'scope.row' : 'null'
+                );
+            }
+
             return sprintf(
                 'runRequestAction(%s, %s)',
-                $this->requestActionConfig($action, $target),
+                $this->jsValue($this->requestActionConfig($action, $target)),
                 $rowScoped ? 'scope.row' : 'null'
             );
         }
 
         return match ($action->intent()) {
             ActionIntent::CREATE => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->openDialogExpression($action, null, $target)
+                $this->openDialogExpression($action, null, $target),
+                $actionKey !== null
             ),
             ActionIntent::EDIT => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target)
+                $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target),
+                $actionKey !== null
             ),
             ActionIntent::DELETE => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $target->deleteRowExpression($rowScoped ? 'scope.row' : 'null', 'null')
+                $target->deleteRowExpression($rowScoped ? 'scope.row' : 'null', 'null'),
+                $actionKey !== null
             ),
             ActionIntent::SUBMIT => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                sprintf('submitDialog(%s)', $this->jsString($action->targetName() ?: 'editor'))
+                sprintf('submitDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
+                $actionKey !== null
             ),
             ActionIntent::CLOSE => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                sprintf('closeDialog(%s)', $this->jsString($action->targetName() ?: 'editor'))
+                sprintf('closeDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
+                $actionKey !== null
             ),
             ActionIntent::REFRESH => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $target->reloadExpression()
+                $target->reloadExpression(),
+                $actionKey !== null
             ),
             ActionIntent::REQUEST => null,
             ActionIntent::CUSTOM => $this->wrapActionExecution(
-                $actionConfig,
+                $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->resolveCustomExecutor($action)
+                $this->resolveCustomExecutor($action),
+                $actionKey !== null
             ),
         };
     }
@@ -171,9 +194,9 @@ final class ActionButtonRenderer
         );
     }
 
-    private function requestActionConfig(RequestAction $action, ActionRenderTarget $target): string
+    private function requestActionConfig(RequestAction $action, ActionRenderTarget $target): array
     {
-        return $this->jsValue([
+        return [
             'key' => $this->actionLoadingKey($action, $target),
             'tableKey' => $target->tableKey(),
             'listKey' => $target->listKey(),
@@ -191,7 +214,7 @@ final class ActionButtonRenderer
                 'url' => $action->getRequestUrl(),
                 'query' => $action->getPayload(),
             ],
-        ]);
+        ];
     }
 
     private function openDialogExpression(
@@ -220,31 +243,55 @@ final class ActionButtonRenderer
         return $key . '@' . $suffix;
     }
 
-    private function actionConfig(Action $action, ActionRenderTarget $target): string
+    private function actionConfig(Action $action, ActionRenderTarget $target): array
     {
-        return $this->jsValue([
+        return [
             'key' => $this->actionLoadingKey($action, $target),
             'tableKey' => $target->tableKey(),
             'listKey' => $target->listKey(),
             'dialogTarget' => $action->targetName(),
             'confirmText' => $action->confirmText(),
             'events' => $action->getEventHandlers(),
-        ]);
+        ];
     }
 
-    private function wrapActionExecution(string $config, bool $rowScoped, ?string $executor = null): string
+    private function wrapActionExecution(
+        string $configExpression,
+        bool $rowScoped,
+        ?string $executor = null,
+        bool $registered = false
+    ): string
     {
         $rowExpression = $rowScoped ? 'scope.row' : 'null';
+        $method = $registered ? 'runAction' : 'runAction';
         if ($executor === null || trim($executor) === '') {
-            return sprintf('runAction(%s, %s)', $config, $rowExpression);
+            return sprintf('%s(%s, %s)', $method, $configExpression, $rowExpression);
         }
 
         return sprintf(
-            'runAction(%s, %s, () => { %s })',
-            $config,
+            '%s(%s, %s, () => { %s })',
+            $method,
+            $configExpression,
             $rowExpression,
             $executor
         );
+    }
+
+    private function registerRuntimeActionConfig(
+        Action $action,
+        ActionRenderTarget $target,
+        ?RenderContext $renderContext = null
+    ): ?string {
+        if ($renderContext === null) {
+            return null;
+        }
+
+        $key = $this->actionLoadingKey($action, $target);
+        $config = $action instanceof RequestAction
+            ? $this->requestActionConfig($action, $target)
+            : $this->actionConfig($action, $target);
+
+        return (new PageRuntimeRegistry($renderContext))->registerActionConfig($key, $config);
     }
 
     private function dialogStateExpression(string $stateName, Action $action): string

@@ -51,14 +51,18 @@ class Theme
     public static function getRenderer(mixed $interfaceClass, #[ExpectedValues(self::AVAILABLE_THEME)] ?string $theme = null): mixed
     {
         if (!$theme) {
-            $theme = Html::theme() ?: Theme::DEFAULT_THEME;
+            $theme = Html::hasActivePage()
+                ? (Html::theme() ?: Theme::DEFAULT_THEME)
+                : Theme::DEFAULT_THEME;
         }
 
         if (empty(self::$renderer[$theme][$interfaceClass])) {
             self::$renderer[$theme][$interfaceClass] = self::makeRenderer($theme, $interfaceClass);
         }
 
-        self::themeResourceLoad($theme);
+        if (Html::hasActivePage()) {
+            self::themeResourceLoad($theme);
+        }
 
         return self::$renderer[$theme][$interfaceClass];
     }

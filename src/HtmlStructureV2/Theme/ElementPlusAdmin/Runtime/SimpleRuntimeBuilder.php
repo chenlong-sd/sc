@@ -26,6 +26,8 @@ final class SimpleRuntimeBuilder extends AbstractRuntimeBuilder
         return array_replace_recursive(
             $context->get('v2.simple.config', []),
             [
+                'actions' => $context->get('v2.action.configs', []),
+                'pageEvents' => $context->get('v2.page.event.configs', []),
                 'tables' => $context->get('v2.table.configs', []),
             ]
         );

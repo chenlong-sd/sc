@@ -13,6 +13,9 @@ final class DialogAction extends Action
         parent::__construct($label, $intent);
     }
 
+    /**
+     * 直接绑定一个 Dialog 对象，页面构建时会自动收集。
+     */
     public function bindDialog(Dialog $dialog): static
     {
         $this->dialog = $dialog;
@@ -21,6 +24,9 @@ final class DialogAction extends Action
         return $this;
     }
 
+    /**
+     * 指定 dialog key；如果与已绑定 Dialog 不一致，会解除对象绑定。
+     */
     public function target(?string $target): static
     {
         parent::target($target);

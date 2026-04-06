@@ -27,6 +27,11 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         parent::__construct($name, $label, $type);
     }
 
+    /**
+     * 设置静态选项列表，支持 value => label 或完整选项数组格式。
+     * 完整选项数组至少包含 `value` / `label`，也可附带 `disabled` 或其它扩展字段，
+     * 这些扩展字段可在 linkageUpdate() 中通过 "@option.xxx" 读取。
+     */
     public function options(array $options): static
     {
         $this->options = [];
@@ -46,6 +51,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 配置远端选项加载接口及值/标签字段映射。
+     * `params` 中以 "@" 开头的顶层值会从当前表单 model 读取，
+     * 例如 `['dept_id' => "@dept_id"]`。返回列表会按 valueField/labelField 归一化成标准选项。
+     * 这里默认只有当前作用域下的 form model 可用，不会注入 row / tableKey / listKey / vm。
+     */
     public function remoteOptions(
         string $url,
         string $valueField = 'id',
@@ -63,6 +74,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 设置远端选项加载请求方法。
+     * 默认是 `get`，也可改成 `post` / `put` 等。
+     */
     public function remoteOptionsMethod(string $method): static
     {
         if ($this->remoteOptions === null) {
@@ -74,6 +89,11 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 声明远端选项依赖的表单字段，依赖变更时可重新拉取。
+     * 字段路径相对当前表单作用域解析；在数组行里会自动映射到当前行上下文。
+     * 依赖字段为空时，请求不会触发。
+     */
     public function remoteOptionsDependsOn(string ...$fields): static
     {
         foreach ($fields as $field) {
@@ -88,6 +108,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 控制依赖字段变化时是否清空当前选中值。
+     * 默认开启，避免旧值与新选项集不一致。
+     */
     public function remoteOptionsClearOnChange(bool $clear = true): static
     {
         $this->remoteOptionsClearOnChange = $clear;
@@ -95,6 +119,23 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 配置联动更新，把当前选项的值同步到其它字段。
+     * 常用模板：
+     * - "@value": 当前选中值
+     * - "@label": 当前选中文案
+     * - "@model.xxx": 当前表单其它字段
+     * - "@option.xxx": 当前选项对象上的扩展字段
+     * 也支持把这些 token 混入普通字符串，例如 "部门：@label"。
+     *
+     * 若传 JsExpression，运行时只接收一个 context 对象，包含：
+     * - scope: 当前表单作用域
+     * - fieldName: 当前字段名
+     * - value: 当前选中值
+     * - option: 当前命中的标准化选项对象
+     * - model: 当前作用域下的表单模型
+     * 当前联动主要用于 select/radio 的 change 行为。
+     */
     public function linkageUpdate(string $targetField, string|JsExpression $valueTemplate = '@label'): static
     {
         $this->linkageUpdates[$targetField] = $valueTemplate;
@@ -102,6 +143,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 批量配置联动更新规则。
+     * 每条规则的模板语义与 linkageUpdate() 完全一致。
+     */
     public function linkageUpdates(array $updates): static
     {
         foreach ($updates as $targetField => $valueTemplate) {
@@ -119,6 +164,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 控制选项清空时是否同步清空联动目标字段。
+     * 默认开启，适合“选择上级后自动填充下级字段”的场景。
+     */
     public function linkageClearOnEmpty(bool $clear = true): static
     {
         $this->linkageClearOnEmpty = $clear;

@@ -21,11 +21,17 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
         $this->setFormNodeChildren(...$children);
     }
 
+    /**
+     * 直接创建一个折叠项节点。
+     */
     public static function make(string $title, FormNode ...$children): self
     {
         return new self($title, ...$children);
     }
 
+    /**
+     * 继续向当前折叠项追加子节点。
+     */
     public function addChildren(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
