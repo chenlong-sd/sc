@@ -10,4 +10,5 @@ final class StaticResource
     public const ELEMENT_PLUS_CSS = '/elementUI/index.css';
     public const ELEMENT_PLUS_ICON = '/elementUI/index.iife.min.js';
     public const ELEMENT_PLUS_LANG = '/elementUI/zh-cn.min.js';
+    public const SORTABLE = '/js/Sortable.min.js';
 }

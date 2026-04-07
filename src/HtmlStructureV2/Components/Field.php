@@ -41,7 +41,10 @@ abstract class Field implements FormNode
     /**
      * 设置单个底层组件属性，适合透传 Element Plus 原生属性。
      * 属性名会原样输出到最终组件上；需要动态绑定时请自行带上 ":" / "@" 前缀，
-     * 例如 ":min"、"@change"。该方法不会自动把值包装成 JS 表达式。
+     * 例如 ":min"、"@change"。
+     * 若属性名以 ":" 开头：
+     * - 传字符串时按原样作为前端表达式输出
+     * - 传数组/布尔/数字/null 时会自动转成 JS 字面量
      */
     public function prop(string $name, mixed $value): static
     {
@@ -52,7 +55,8 @@ abstract class Field implements FormNode
 
     /**
      * 批量设置底层组件属性。
-     * 规则与 prop() 一致：键名按原样输出，动态属性请自行写成 ":prop" / "@event"。
+     * 规则与 prop() 一致：键名按原样输出，动态属性请自行写成 ":prop" / "@event"；
+     * 其中 ":" 开头属性的数组/布尔/数字/null 值会自动按 JS 字面量处理。
      */
     public function props(array $props): static
     {

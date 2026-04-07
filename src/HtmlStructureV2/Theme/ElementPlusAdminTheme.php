@@ -106,8 +106,23 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-picker__item{display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border:1px solid #ebeef5;border-radius:6px;background:#ffffff}
     .sc-v2-picker__item-text{flex:1 1 auto;min-width:0;font-size:13px;line-height:20px;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sc-v2-picker__actions{display:flex;gap:10px;flex-wrap:wrap}
+    .sc-v2-icon-selector-panel{display:flex;flex-direction:column;gap:10px}
+    .sc-v2-icon-selector-group{display:flex;flex-direction:column;gap:14px}
+    .sc-v2-icon-selector-group__section{display:flex;flex-direction:column;gap:8px}
+    .sc-v2-icon-selector-group__section.has-divider{padding-top:14px;border-top:1px solid #ebeef5}
+    .sc-v2-icon-selector-group__title{font-size:12px;line-height:1.4;color:#909399}
+    .sc-v2-icon-selector{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px}
+    .sc-v2-icon-selector__item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:68px;padding:8px 6px;border:1px solid #ebeef5;border-radius:6px;background:#fff;cursor:pointer;transition:border-color .2s ease,background-color .2s ease,box-shadow .2s ease,transform .2s ease}
+    .sc-v2-icon-selector__item:hover{border-color:#409eff;background:#f5f9ff;transform:translateY(-1px)}
+    .sc-v2-icon-selector__item.is-active{border-color:#409eff;background:#ecf5ff;box-shadow:0 0 0 1px rgba(64,158,255,.15) inset}
+    .sc-v2-icon-selector__item.is-unmatched{opacity:.78}
+    .sc-v2-icon-selector__preview{font-size:18px;line-height:1;color:#111827}
+    .sc-v2-icon-selector__label{width:100%;font-size:11px;line-height:1.35;color:#6b7280;text-align:center;word-break:break-all}
+    .sc-v2-icon-selector__empty{padding:18px 12px;color:#909399;text-align:center;grid-column:1/-1}
     .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
     .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .sc-v2-row-actions .sc-v2-table-drag-handle{cursor:move;touch-action:none}
+    .sc-v2-row-actions .sc-v2-table-drag-handle .el-icon{cursor:move}
     .sc-v2-event-column .cell{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center}
     .sc-v2-event-column .el-button+.el-button{margin-left:0}
     .sc-v2-filters__actions{display:flex;gap:10px;flex-wrap:wrap}
@@ -174,6 +189,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $assets->addScript(StaticResource::ELEMENT_PLUS_JS);
         $assets->addScript(StaticResource::ELEMENT_PLUS_LANG);
         $assets->addScript(StaticResource::AXIOS);
+        $assets->addScript(StaticResource::SORTABLE);
         $assets->addInlineStyle(self::BASE_CSS);
     }
 

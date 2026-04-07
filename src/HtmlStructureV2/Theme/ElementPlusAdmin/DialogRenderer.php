@@ -61,7 +61,7 @@ final class DialogRenderer
             $attrs['align-center'] = '';
         }
 
-        $element = El::double('el-dialog')->setAttrs($attrs);
+        $element = El::double('el-dialog')->setAttrs($this->normalizeRenderableAttributes($attrs));
         if ($dialog->bodyType() === 'iframe'
             && $bindings->toggleFullscreenExpression() !== null
             && $bindings->toggleFullscreenExpression() !== '') {

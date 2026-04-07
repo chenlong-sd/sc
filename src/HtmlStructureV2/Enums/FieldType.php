@@ -6,6 +6,7 @@ enum FieldType: string
 {
     case TEXT = 'text';
     case PASSWORD = 'password';
+    case ICON = 'icon';
     case TEXTAREA = 'textarea';
     case NUMBER = 'number';
     case SELECT = 'select';

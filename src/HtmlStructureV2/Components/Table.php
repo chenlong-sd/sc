@@ -30,6 +30,7 @@ final class Table implements Renderable, EventAware
         'pageSizeChange',
         'sortChange',
         'selectionChange',
+        'dragSort',
         'deleteSuccess',
         'deleteFail',
     ];
@@ -52,6 +53,17 @@ final class Table implements Renderable, EventAware
     private string $deleteKey = 'id';
     private ?int $rowActionColumnWidth = null;
     private int $maxHeight = 0;
+    private ?string $rowKey = null;
+    private bool $tree = false;
+    private array $treeProps = [
+        'children' => 'children',
+        'checkStrictly' => false,
+    ];
+    private bool $dragSort = false;
+    private string $dragSortLabel = '排序';
+    private string $dragSortType = 'primary';
+    private ?string $dragSortIcon = 'Rank';
+    private array $dragSortConfig = [];
 
     public function __construct(
         private readonly string $key
@@ -116,6 +128,130 @@ final class Table implements Renderable, EventAware
     public function maxHeight(int $maxHeight = -60): self
     {
         $this->maxHeight = $maxHeight;
+
+        return $this;
+    }
+
+    /**
+     * 设置表格行唯一键，对应 Element Plus `row-key`。
+     * 树表和拖拽排序都会依赖这个键来识别当前行；通常传主键字段，如 `rowKey('id')`。
+     * 支持点路径写法，例如 `rowKey('meta.id')`。
+     */
+    public function rowKey(string $rowKey): self
+    {
+        $this->rowKey = trim($rowKey);
+
+        return $this;
+    }
+
+    /**
+     * 将当前表格声明为树表。
+     * 会同时写入 Element Plus 的 `tree-props`，默认按 `children` 字段读取子节点。
+     * 树表推荐配合 rowKey() 一起使用，否则运行时无法稳定识别节点。
+     */
+    public function tree(
+        bool $enabled = true,
+        string $childrenKey = 'children',
+        bool $checkStrictly = false,
+        ?string $hasChildrenKey = null
+    ): self {
+        $this->tree = $enabled;
+
+        if ($enabled) {
+            $this->treeProps($childrenKey, $checkStrictly, $hasChildrenKey);
+        }
+
+        return $this;
+    }
+
+    /**
+     * 细化树表的 `tree-props` 配置。
+     * `childrenKey` 对应子节点字段；`checkStrictly` 会透传给 Element Plus；
+     * `hasChildrenKey` 主要给后续懒加载/占位树节点预留，不传时不会输出。
+     */
+    public function treeProps(
+        string $childrenKey = 'children',
+        bool $checkStrictly = false,
+        ?string $hasChildrenKey = null
+    ): self {
+        $this->tree = true;
+        $this->treeProps = [
+            'children' => $childrenKey,
+            'checkStrictly' => $checkStrictly,
+        ];
+
+        if ($hasChildrenKey !== null && $hasChildrenKey !== '') {
+            $this->treeProps['hasChildren'] = $hasChildrenKey;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 启用表格行拖拽排序。
+     * 启用后会在“操作”列前面自动补一个拖拽手柄按钮，默认文案为“排序”。
+     * 推荐同时设置 rowKey()；树表场景还应调用 tree()/treeProps()。
+     *
+     * 拖拽完成后可通过 `on('dragSort', ...)` 获取：
+     * - movedRow: 被拖动的行
+     * - anchorRow: 本次排序的参考行；向下拖时等于 previousRow，向上拖时等于 nextRow
+     * - previousRow / nextRow: 拖拽完成后，被拖动行前后相邻的可见行
+     * - oldIndex / newIndex: Sortable 的索引信息
+     * - isDown / isMoveDown / isMoveUp: 更直观的拖拽方向标记
+     * - isUp: 为兼容原版 `setDraw()` 语义保留，等价于 isMoveDown
+     * - oldParentRow / newParentRow / sameParent: 树表时可读取的原父级与目标父级
+     * - movedParentRow / anchorParentRow: oldParentRow / newParentRow 的兼容别名
+     * - visibleRows / flatRows / rows / allRows / selection / filters / vm
+     */
+    public function dragSort(bool $enabled = true): self
+    {
+        $this->dragSort = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * 自定义拖拽手柄按钮文案。
+     * 仅影响操作列里内置的拖拽手柄显示，不影响排序事件名和运行时行为。
+     */
+    public function dragSortLabel(string $label = '排序'): self
+    {
+        $this->dragSortLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * 自定义拖拽手柄按钮类型，默认 `primary`。
+     * 这里沿用 Element Plus 按钮 type，可传 `primary` / `success` / `danger` 等。
+     */
+    public function dragSortType(string $type = 'primary'): self
+    {
+        $this->dragSortType = $type;
+
+        return $this;
+    }
+
+    /**
+     * 自定义拖拽手柄按钮图标，默认 `Rank`。
+     * 传 null 或空字符串可移除图标。
+     */
+    public function dragSortIcon(?string $icon = 'Rank'): self
+    {
+        $this->dragSortIcon = $icon !== null && $icon !== '' ? $icon : null;
+
+        return $this;
+    }
+
+    /**
+     * 追加 Sortable 的附加配置。
+     * 适合设置 `group` / `ghostClass` / `fallbackOnBody` 等原生参数；
+     * V2 会保留自己的 `handle` 和 `onEnd` 实现，避免把运行时主流程覆盖掉。
+     */
+    public function dragSortConfig(array $config): self
+    {
+        $this->dragSort = true;
+        $this->dragSortConfig = array_replace($this->dragSortConfig, $config);
 
         return $this;
     }
@@ -321,10 +457,10 @@ final class Table implements Renderable, EventAware
 
     /**
      * 绑定表格运行时事件。
-     * 可用事件：loadBefore / loadSuccess / loadFail / pageChange / pageSizeChange / sortChange / selectionChange / deleteSuccess / deleteFail。
+     * 可用事件：loadBefore / loadSuccess / loadFail / pageChange / pageSizeChange / sortChange / selectionChange / dragSort / deleteSuccess / deleteFail。
      *
      * handler 签名：`(context) => mixed`
-     * 推荐写法：`({ tableKey, rows, allRows, selection, filters, page, pageSize, sort, ids, payload, error, vm }) => {}`
+     * 推荐写法：`({ tableKey, rows, allRows, selection, filters, page, pageSize, sort, movedRow, anchorRow, oldIndex, newIndex, ids, payload, error, vm }) => {}`
      * 不按位置参数传值。
      *
      * 公共上下文：
@@ -340,6 +476,7 @@ final class Table implements Renderable, EventAware
      * - pageChange: page
      * - pageSizeChange: pageSize
      * - sortChange: sort / payload
+     * - dragSort: movedRow / anchorRow / previousRow / nextRow / visibleRows / flatRows / oldIndex / newIndex / isDown / isMoveDown / isMoveUp / isUp / oldParentRow / newParentRow / sameParent / event
      * - deleteSuccess: selection / ids / payload / response
      * - deleteFail: selection / ids / error
      */
@@ -454,6 +591,53 @@ final class Table implements Renderable, EventAware
         return $this->maxHeight;
     }
 
+    public function getRowKey(): ?string
+    {
+        return $this->rowKey;
+    }
+
+    public function isTree(): bool
+    {
+        return $this->tree;
+    }
+
+    public function getTreeProps(): array
+    {
+        return $this->treeProps;
+    }
+
+    public function getTreeChildrenKey(): string
+    {
+        $childrenKey = $this->treeProps['children'] ?? 'children';
+
+        return is_string($childrenKey) && $childrenKey !== '' ? $childrenKey : 'children';
+    }
+
+    public function useDragSort(): bool
+    {
+        return $this->dragSort;
+    }
+
+    public function getDragSortLabel(): string
+    {
+        return $this->dragSortLabel;
+    }
+
+    public function getDragSortType(): string
+    {
+        return $this->dragSortType;
+    }
+
+    public function getDragSortIcon(): ?string
+    {
+        return $this->dragSortIcon;
+    }
+
+    public function getDragSortConfig(): array
+    {
+        return $this->dragSortConfig;
+    }
+
     public function hasExplicitSelectionColumn(): bool
     {
         foreach ($this->columns as $column) {
@@ -478,6 +662,7 @@ final class Table implements Renderable, EventAware
             'pageSizeChange' => '分页每页条数变更后触发，可读取 pageSize。',
             'sortChange' => '排序变化后触发，可读取 sort / payload。',
             'selectionChange' => '勾选项变化后触发，可读取 selection。',
+            'dragSort' => '拖拽排序完成后触发，可读取 movedRow / anchorRow / previousRow / nextRow / oldIndex / newIndex / isDown / isUp / oldParentRow / newParentRow。',
             'deleteSuccess' => '批量删除成功后触发，可读取 selection / ids / payload / response。',
             'deleteFail' => '批量删除失败后触发，可读取 selection / ids / error。',
         ];

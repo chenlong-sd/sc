@@ -99,6 +99,224 @@
               app.component(name, component);
             });
           };
+          const registerScV2Components = (app) => {
+            if (!app || typeof app.component !== 'function') {
+              return;
+            }
+
+            if (app.component('sc-v2-icon-selector')) {
+              return;
+            }
+
+            app.component('sc-v2-icon-selector', {
+              inheritAttrs: false,
+              props: {
+                modelValue: {
+                  type: String,
+                  default: ''
+                }
+              },
+              emits: ['update:modelValue'],
+              data() {
+                return {
+                  visible: false,
+                  searchKeyword: '',
+                };
+              },
+              watch: {
+                visible(newValue) {
+                  if (!newValue) {
+                    this.searchKeyword = '';
+                    return;
+                  }
+
+                  this.searchKeyword = '';
+                  this.scrollResultsToTop();
+                  this.focusSearchInput();
+                },
+                filterKeyword(newValue, oldValue) {
+                  if (newValue === oldValue || !this.visible) {
+                    return;
+                  }
+
+                  this.scrollResultsToTop();
+                }
+              },
+              computed: {
+                availableIcons() {
+                  const icons = globalThis.ElementPlusIconsVue;
+                  if (!icons || typeof icons !== 'object') {
+                    return [];
+                  }
+
+                  return Object.keys(icons).sort((left, right) => String(left).localeCompare(String(right), 'zh-CN'));
+                },
+                previewIcon() {
+                  const current = String(this.modelValue || '');
+                  if (current === '') {
+                    return '';
+                  }
+
+                  return this.availableIcons.includes(current) ? current : '';
+                },
+                filterKeyword() {
+                  return String(this.searchKeyword || '').trim().toLowerCase();
+                },
+                matchedIcons() {
+                  if (this.filterKeyword === '') {
+                    return this.availableIcons;
+                  }
+
+                  return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(this.filterKeyword));
+                },
+                unmatchedIcons() {
+                  if (this.filterKeyword === '') {
+                    return [];
+                  }
+
+                  return this.availableIcons.filter((iconName) => !String(iconName).toLowerCase().includes(this.filterKeyword));
+                },
+                hasMatchedIcons() {
+                  return this.matchedIcons.length > 0;
+                },
+                hasUnmatchedIcons() {
+                  return this.unmatchedIcons.length > 0;
+                },
+                shouldShowGroupedResult() {
+                  return this.filterKeyword !== '';
+                },
+                filteredIcons() {
+                  const keyword = this.filterKeyword;
+                  if (keyword === '') {
+                    return this.availableIcons;
+                  }
+
+                  return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(keyword));
+                }
+              },
+              methods: {
+                normalizeValue(value) {
+                  return value == null ? '' : String(value);
+                },
+                focusSearchInput() {
+                  this.$nextTick(() => {
+                    const input = this.$refs.searchInput;
+                    if (input && typeof input.focus === 'function') {
+                      input.focus();
+                    }
+                  });
+                },
+                scrollResultsToTop() {
+                  this.$nextTick(() => {
+                    const scrollbar = this.$refs.iconScrollbar;
+                    if (!scrollbar) {
+                      return;
+                    }
+
+                    if (typeof scrollbar.setScrollTop === 'function') {
+                      scrollbar.setScrollTop(0);
+                      return;
+                    }
+
+                    const wrap = scrollbar.wrapRef || scrollbar.wrap$ || null;
+                    if (wrap && typeof wrap.scrollTop === 'number') {
+                      wrap.scrollTop = 0;
+                    }
+                  });
+                },
+                updateValue(value) {
+                  this.$emit('update:modelValue', this.normalizeValue(value));
+                },
+                selectIcon(iconName) {
+                  this.updateValue(iconName);
+                  this.visible = false;
+                }
+              },
+              template: `
+                <el-popover
+                  v-model:visible="visible"
+                  :width="540"
+                  trigger="click"
+                  placement="bottom-start"
+                >
+                  <template #reference>
+                    <el-input
+                      v-bind="$attrs"
+                      :model-value="modelValue"
+                      @update:model-value="updateValue"
+                    >
+                      <template #prefix>
+                        <el-icon v-if="previewIcon" class="el-input__icon">
+                          <component :is="previewIcon"></component>
+                        </el-icon>
+                      </template>
+                    </el-input>
+                  </template>
+                  <div class="sc-v2-icon-selector-panel">
+                    <el-input
+                      ref="searchInput"
+                      v-model="searchKeyword"
+                      placeholder="搜索图标"
+                      clearable
+                    ></el-input>
+                    <el-scrollbar ref="iconScrollbar" max-height="350px">
+                      <div v-if="shouldShowGroupedResult" class="sc-v2-icon-selector-group">
+                        <div v-if="hasMatchedIcons" class="sc-v2-icon-selector-group__section">
+                          <div class="sc-v2-icon-selector-group__title">匹配结果</div>
+                          <div class="sc-v2-icon-selector">
+                            <div
+                              v-for="iconName in matchedIcons"
+                              :key="'matched-' + iconName"
+                              :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
+                              @click.stop="selectIcon(iconName)"
+                            >
+                              <div class="sc-v2-icon-selector__preview">
+                                <el-icon><component :is="iconName"></component></el-icon>
+                              </div>
+                              <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          v-if="hasUnmatchedIcons"
+                          :class="['sc-v2-icon-selector-group__section', { 'has-divider': hasMatchedIcons }]"
+                        >
+                          <div class="sc-v2-icon-selector-group__title">其他图标</div>
+                          <div class="sc-v2-icon-selector">
+                            <div
+                              v-for="iconName in unmatchedIcons"
+                              :key="'unmatched-' + iconName"
+                              :class="['sc-v2-icon-selector__item', 'is-unmatched', { 'is-active': iconName === modelValue }]"
+                              @click.stop="selectIcon(iconName)"
+                            >
+                              <div class="sc-v2-icon-selector__preview">
+                                <el-icon><component :is="iconName"></component></el-icon>
+                              </div>
+                              <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="sc-v2-icon-selector">
+                        <div
+                          v-for="iconName in filteredIcons"
+                          :key="iconName"
+                          :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
+                          @click.stop="selectIcon(iconName)"
+                        >
+                          <div class="sc-v2-icon-selector__preview">
+                            <el-icon><component :is="iconName"></component></el-icon>
+                          </div>
+                          <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                        </div>
+                      </div>
+                    </el-scrollbar>
+                  </div>
+                </el-popover>
+              `
+            });
+          };
           const isStructuredEventHandler = (handler) => {
             return isObject(handler) && typeof handler.type === 'string' && handler.type !== '';
           };
@@ -1189,6 +1407,7 @@
             normalizePickerItem,
             normalizePickerItems,
             registerElementPlusIcons,
+            registerScV2Components,
             normalizeUploadFile,
             normalizeUploadFiles,
             pickRows,

@@ -3,7 +3,6 @@
 namespace Sc\Util\HtmlStructureV2\Components\Fields;
 
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 
 final class CascaderField extends OptionField
 {
@@ -15,12 +14,28 @@ final class CascaderField extends OptionField
     }
 
     /**
+     * 设置 cascader 选项。
+     * 当传入树形节点数组时会保留原始结构，结合 cascaderProps() 指定 value/label/children 字段。
+     * 仍兼容简单的 `value => label` 写法。
+     */
+    public function options(array $options): static
+    {
+        if ($this->shouldKeepRawOptions($options)) {
+            $this->options = array_values($options);
+
+            return $this;
+        }
+
+        return parent::options($options);
+    }
+
+    /**
      * 设置 cascader 的原生 props 配置。
      */
     public function cascaderProps(array $props): static
     {
         $this->cascaderProps = array_merge($this->cascaderProps, $props);
-        $this->props[':props'] = JsonExpressionEncoder::encodeCompact($this->cascaderProps);
+        $this->props[':props'] = $this->cascaderProps;
 
         if (($this->cascaderProps['multiple'] ?? false) === true && $this->default === null) {
             $this->default = [];
@@ -56,5 +71,20 @@ final class CascaderField extends OptionField
         }
 
         return ($this->cascaderProps['multiple'] ?? false) ? [] : null;
+    }
+
+    private function shouldKeepRawOptions(array $options): bool
+    {
+        if ($options === [] || !array_is_list($options)) {
+            return false;
+        }
+
+        foreach ($options as $option) {
+            if (!is_array($option)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

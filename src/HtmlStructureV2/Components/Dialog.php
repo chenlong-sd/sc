@@ -602,6 +602,8 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 透传额外弹窗属性。
+     * 若键名以 ":" 开头，数组/布尔/数字/null 会自动转成 JS 字面量；
+     * 字符串值仍按原始前端表达式输出。
      */
     public function props(array $props): self
     {

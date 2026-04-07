@@ -91,7 +91,7 @@ final class ActionButtonRenderer
             $attrs['icon'] = $action->iconName();
         }
 
-        $button = El::double('el-button')->setAttrs($attrs);
+        $button = El::double('el-button')->setAttrs($this->normalizeRenderableAttributes($attrs));
 
         $button->append($action->label());
 

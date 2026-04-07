@@ -5,12 +5,13 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Column;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class ColumnRenderer
 {
     use BuildsJsExpressions;
+    use EncodesJsValues;
 
     public function render(
         Column $column,
@@ -63,7 +64,7 @@ final class ColumnRenderer
             $attrs['sortable'] = 'custom';
         }
 
-        $element = El::double('el-table-column')->setAttrs($attrs);
+        $element = El::double('el-table-column')->setAttrs($this->normalizeRenderableAttributes($attrs));
 
         if ($column->getFormat()) {
             $element->append($this->renderFormatTemplate($column));
@@ -131,7 +132,7 @@ final class ColumnRenderer
     private function renderMappingColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $options = JsonExpressionEncoder::encodeCompact(array_values($display['options'] ?? []));
+        $options = $this->jsValue(array_values($display['options'] ?? []));
         $separator = $this->jsLiteral($display['separator'] ?? ', ');
         $labelExpression = $this->runtimeMethodCall('resolveColumnMappingLabel', $valueExpression, $options, $separator);
 
@@ -150,7 +151,7 @@ final class ColumnRenderer
     private function renderTagColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
-        $options = JsonExpressionEncoder::encodeCompact(array_values($display['options'] ?? []));
+        $options = $this->jsValue(array_values($display['options'] ?? []));
         $metaExpression = $this->runtimeMethodCall(
             'resolveColumnTagMeta',
             $valueExpression,
@@ -294,7 +295,7 @@ final class ColumnRenderer
         }
 
         $modelExpression = $this->jsModelAccessor('scope.row', $column->prop());
-        $switchConfigExpression = JsonExpressionEncoder::encodeCompact([
+        $switchConfigExpression = $this->jsValue([
             'requestUrl' => $display['requestUrl'] ?? '',
             'activeValue' => $display['activeValue'] ?? 1,
             'inactiveValue' => $display['inactiveValue'] ?? 0,
@@ -565,7 +566,7 @@ final class ColumnRenderer
         }
 
         $url = $this->jsLiteral((string)($display['url'] ?? ''));
-        $params = JsonExpressionEncoder::encodeCompact($display['params'] ?? []);
+        $params = $this->jsValue($display['params'] ?? []);
         $features = $this->jsLiteral($this->buildOpenPageFeatures($display['config'] ?? []));
         $openType = $this->jsLiteral((string)($display['openType'] ?? 'dialog'));
         $titleTemplate = $this->jsLiteral($this->buildOpenPageTitleTemplate($column, $display));

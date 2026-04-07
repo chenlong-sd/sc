@@ -12,6 +12,20 @@ final class TableRuntimeConfigBuilder
             'key' => $table->key(),
             'initialRows' => $table->getDataSource()?->initialRows() ?? [],
             'dataSource' => $table->getDataSource()?->toClientConfig(),
+            'rowKey' => $table->getRowKey(),
+            'tree' => [
+                'enabled' => $table->isTree(),
+                'childrenKey' => $table->getTreeChildrenKey(),
+                'props' => $table->getTreeProps(),
+            ],
+            'dragSort' => [
+                'enabled' => $table->useDragSort(),
+                'handleClass' => 'sc-v2-table-drag-handle',
+                'label' => $table->getDragSortLabel(),
+                'type' => $table->getDragSortType(),
+                'icon' => $table->getDragSortIcon(),
+                'options' => $table->getDragSortConfig(),
+            ],
             'searchSchema' => $table->getSearchSchema(),
             'pagination' => [
                 'enabled' => $table->usePagination(),

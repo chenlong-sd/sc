@@ -18,7 +18,6 @@ use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
 use Sc\Util\HtmlStructureV2\RenderContext;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
@@ -302,7 +301,7 @@ final class LightweightComponentRenderer
                     )
                     : sprintf(
                         'runPageEventHandlers(%s, %s)',
-                        JsonExpressionEncoder::encodeCompact(array_values($handlers)),
+                        $this->jsValue(array_values($handlers)),
                         $contextExpression
                     )
             );

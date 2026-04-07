@@ -14,6 +14,7 @@
             makeRequest,
             pickRows,
             registerElementPlusIcons,
+            registerScV2Components,
             resolveMessage,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
@@ -351,6 +352,7 @@
             )
           });
           registerElementPlusIcons(app);
+          registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
         };

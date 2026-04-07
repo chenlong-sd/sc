@@ -2,15 +2,20 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\RenderContext;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class TableRenderer
 {
+    use EncodesJsValues;
+
+    private const DRAG_SORT_HANDLE_CLASS = 'sc-v2-table-drag-handle';
+
     public function __construct(
         private readonly ColumnRenderer $columnRenderer,
         private readonly ActionButtonRenderer $actionButtonRenderer,
@@ -60,6 +65,13 @@ final class TableRenderer
         ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
+        if (($table->isTree() || $table->useDragSort()) && $table->getRowKey() === null) {
+            throw new InvalidArgumentException(sprintf(
+                'Table [%s] uses tree() or dragSort() but rowKey() is not configured.',
+                $table->key()
+            ));
+        }
+
         $element = El::double('el-table')->setAttrs([
             'ref' => $bindings->tableKey(),
             ':data' => $bindings->rowsExpression(),
@@ -71,6 +83,14 @@ final class TableRenderer
             '@selection-change' => $bindings->selectionChangeExpression(),
             '@sort-change' => $bindings->sortChangeExpression(),
         ]);
+
+        if ($table->getRowKey() !== null) {
+            $element->setAttr('row-key', $table->getRowKey());
+        }
+
+        if ($table->isTree()) {
+            $element->setAttr(':tree-props', $this->jsValue($table->getTreeProps()));
+        }
 
         if ($table->getMaxHeight() !== 0) {
             $element->setAttr(':max-height', $bindings->maxHeightExpression());
@@ -97,7 +117,7 @@ final class TableRenderer
             $element->append($this->columnRenderer->render($column, $bindings, $table->useSettings()));
         }
 
-        if ($table->getRowActions()) {
+        if ($table->getRowActions() || $table->useDragSort()) {
             $element->append($this->renderRowActionColumn($table, $bindings, $renderContext));
         }
 
@@ -178,7 +198,7 @@ final class TableRenderer
                     'layout' => 'total, sizes, prev, pager, next, jumper',
                     ':current-page' => $bindings->pageExpression(),
                     ':page-size' => $bindings->pageSizeExpression(),
-                    ':page-sizes' => JsonExpressionEncoder::encodeCompact($table->getPageSizes()),
+                    ':page-sizes' => $this->jsValue($table->getPageSizes()),
                     ':total' => $bindings->totalExpression(),
                     '@size-change' => $bindings->pageSizeChangeExpression(),
                     '@current-change' => $bindings->pageChangeExpression(),
@@ -196,11 +216,17 @@ final class TableRenderer
             'label' => '操作',
             'fixed' => 'right',
             'align' => 'center',
-            'width' => $table->getRowActionColumnWidth() ?? max(120, count($table->getRowActions()) * 76),
+            'width' => $table->getRowActionColumnWidth() ?? max(
+                120,
+                (count($table->getRowActions()) + ($table->useDragSort() ? 1 : 0)) * 76
+            ),
         ]);
 
         $template = El::double('template')->setAttr('#default', 'scope');
         $actions = El::double('div')->addClass('sc-v2-row-actions');
+        if ($table->useDragSort()) {
+            $actions->append($this->renderDragSortHandle($table));
+        }
         foreach ($table->getRowActions() as $action) {
             $actions->append($this->actionButtonRenderer->render($action, true, 'default', $bindings, $renderContext));
         }
@@ -208,6 +234,24 @@ final class TableRenderer
         $actionColumn->append($template);
 
         return $actionColumn;
+    }
+
+    private function renderDragSortHandle(Table $table): AbstractHtmlElement
+    {
+        $attrs = [
+            'type' => $table->getDragSortType(),
+            'size' => 'default',
+            'link' => '',
+            'class' => self::DRAG_SORT_HANDLE_CLASS,
+        ];
+
+        if ($table->getDragSortIcon() !== null) {
+            $attrs['icon'] = $table->getDragSortIcon();
+        }
+
+        return El::double('el-button')
+            ->setAttrs($attrs)
+            ->append($table->getDragSortLabel());
     }
 
     private function renderSettingsShowColumn(): AbstractHtmlElement

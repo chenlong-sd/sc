@@ -196,6 +196,9 @@ final class Column
     /**
      * 透传底层 el-table-column 属性。
      * 动态属性请自行带上 ":" / "@" 前缀。
+     * 若键名以 ":" 开头：
+     * - 字符串值按原始前端表达式输出
+     * - 数组/布尔/数字/null 会自动转成 JS 字面量
      */
     public function setAttr(string|array $attr, mixed $value = ''): self
     {

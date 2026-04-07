@@ -984,7 +984,7 @@ Blocks::button('查看源数据')
 当前已经接入 runtime 的常用事件：
 
 - `Form`: `validateSuccess` / `validateFail` / `optionsLoaded` / `optionsLoadFail` / `uploadSuccess` / `uploadFail` / `arrayRowAdd` / `arrayRowRemove` / `arrayRowMove`
-- `Table`: `loadBefore` / `loadSuccess` / `loadFail`
+- `Table`: `loadBefore` / `loadSuccess` / `loadFail` / `pageChange` / `pageSizeChange` / `sortChange` / `selectionChange` / `dragSort` / `deleteSuccess` / `deleteFail`
 - `List`: `filterSubmit` / `filterReset` / `reload`
 - `Dialog`: `beforeOpen` / `afterOpen` / `beforeClose` / `afterClose` / `submitSuccess` / `submitFail`
 - `RequestAction`: `click` / `before` / `success` / `fail` / `finally`
@@ -1012,6 +1012,7 @@ JS)
 - `filters(Form)` 只描述筛选输入 UI；也支持直接写成 `filters(Fields::text(...), Fields::select(...))`
 - 省略 `filters()` 时，`List` 会尝试按 `searchable()/search()/searchSchema()` 自动生成默认筛选项；这些自动项默认隐藏 label，只保留 placeholder；已显式声明的字段会保留，其余缺失项继续自动补齐
 - `Fields::*()` 的 label 参数现在可省略；省略时默认隐藏该字段标签，想保留说明可显式传第二参，或单独调用 `placeholder()`
+- `Fields::icon()` 用于选择 Element Plus 图标，默认提供“搜索面板 + 手输图标名”组合输入
 - 想在筛选条里放更多条件时，可对显式表单使用 `->hideLabels()` 隐藏字段标签，只保留 placeholder
 - `Table::searchSchema()` 适合显式定义完整筛选协议
 - `Table::search($name, $type, $field)` 适合逐项追加筛选定义
@@ -1021,10 +1022,48 @@ JS)
 - `Column::sortable()` 开启远程排序
 - `Column::sortable('table.field')` 可以映射后端真实排序字段
 
+### 表格拖拽排序
+
+`Table` 现在支持原生 `dragSort()`，平铺表格和树表都可以直接声明：
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+Tables::make('route-table')
+    ->dataUrl('/admin/route/list')
+    ->pagination(false)
+    ->rowKey('id')
+    ->tree()
+    ->dragSort()
+    ->on('dragSort', <<<'JS'
+({ movedRow, anchorRow, isMoveDown, oldParentRow, newParentRow, vm }) => {
+  if (!movedRow || !anchorRow) {
+    return;
+  }
+
+  return axios.post('/admin/route/sort', {
+    oldId: anchorRow.id,
+    newId: movedRow.id,
+    isUp: isMoveDown ? 1 : 0,
+  }).then(() => {
+    ElementPlus.ElMessage.success('排序已更新');
+    return vm.reloadTable('route-table');
+  });
+}
+JS);
+```
+
+- `rowKey()` 是必需项；`tree()` / `treeProps()` 用来声明树表
+- `dragSort()` 会在“操作”列自动补一个“排序”拖拽手柄按钮，默认 `type=primary`、`icon=Rank`
+- 可通过 `dragSortLabel()` / `dragSortType()` / `dragSortIcon()` / `dragSortConfig()` 调整文案、样式和 Sortable 额外参数
+- `dragSort` 事件里最常用的是 `movedRow`、`anchorRow`、`previousRow`、`nextRow`、`visibleRows` / `flatRows`、`oldIndex`、`newIndex`、`isDown` / `isMoveDown`
+- `isUp` 仍然保留，但它是为了兼容原版 `setDraw()` 的旧语义，等价于 `isMoveDown`
+- 树表场景还会补充 `oldParentRow` / `newParentRow` / `sameParent`
+
 ## 字段能力分层
 
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
-- `Fields::text()`、`Fields::textarea()`、`Fields::password()` 才暴露文本校验快捷方法
+- `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
 - `Fields::cascader()` 才暴露 `cascaderProps()`、`emitPath()`、`checkStrictly()`
 - `Fields::upload()`、`Fields::image()` 才暴露上传相关方法

@@ -14,12 +14,13 @@ use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\RenderContext;
-use Sc\Util\HtmlStructureV2\Support\JsonExpressionEncoder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class FieldRenderer
 {
     use BuildsJsExpressions;
+    use EncodesJsValues;
 
     public function __construct(
         private readonly ActionButtonRenderer $actionButtonRenderer,
@@ -256,6 +257,11 @@ final class FieldRenderer
                 'clearable' => '',
                 'style' => $inline ? 'width: 180px' : 'width: 100%',
             ])),
+            FieldType::ICON => El::double('sc-v2-icon-selector')->setAttrs($bindModelValue([
+                'placeholder' => $placeholder,
+                'clearable' => '',
+                'style' => $inline ? 'width: 220px' : 'width: 100%',
+            ])),
             FieldType::TEXTAREA => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'textarea',
                 ':rows' => (string)($field->getProps()['rows'] ?? 4),
@@ -300,8 +306,8 @@ final class FieldRenderer
                 'action' => (string)($upload['action'] ?? ''),
                 'method' => (string)($upload['method'] ?? 'post'),
                 'name' => (string)($upload['name'] ?? 'file'),
-                ':headers' => JsonExpressionEncoder::encodeCompact($upload['headers'] ?? []),
-                ':data' => JsonExpressionEncoder::encodeCompact($upload['data'] ?? []),
+                ':headers' => $this->jsValue($upload['headers'] ?? []),
+                ':data' => $this->jsValue($upload['data'] ?? []),
                 ':multiple' => ($upload['multiple'] ?? false) ? 'true' : 'false',
                 ':limit' => isset($upload['limit']) ? (string)$upload['limit'] : null,
                 ':show-file-list' => 'true',
@@ -323,7 +329,7 @@ final class FieldRenderer
                 continue;
             }
 
-            $component->setAttr($attr, (string)$value);
+            $component->setAttr($attr, $this->normalizeRenderableAttributeValue($attr, $value));
         }
     }
 
@@ -412,7 +418,7 @@ final class FieldRenderer
                     ? ($fieldPathExpression === null
                         ? $options->remoteOptionsExpression($fieldPath)
                         : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
-                    : JsonExpressionEncoder::encodeCompact($optionField->getOptions())
+                    : $this->jsValue($optionField->getOptions())
             );
         }
     }

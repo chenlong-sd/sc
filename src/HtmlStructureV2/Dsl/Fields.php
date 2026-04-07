@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Dsl;
 use Sc\Util\HtmlStructureV2\Components\Fields\BasicField;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
+use Sc\Util\HtmlStructureV2\Components\Fields\IconField;
 use Sc\Util\HtmlStructureV2\Components\Fields\NumberField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PasswordField;
@@ -31,6 +32,16 @@ final class Fields
     {
         return (new PasswordField($name, $label ?? ''))
             ->showPassword();
+    }
+
+    /**
+     * 创建图标选择字段。
+     * 默认渲染为可搜索的 Element Plus 图标选择器，也允许直接手输图标名。
+     */
+    public static function icon(string $name, ?string $label = null): IconField
+    {
+        return (new IconField($name, $label ?? ''))
+            ->placeholder('选择图标');
     }
 
     /**

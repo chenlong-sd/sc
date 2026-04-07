@@ -279,6 +279,175 @@
 
             return host.__scV2Selection;
           };
+          const normalizeTableRowKey = (value) => {
+            if (value === null || value === undefined || value === '') {
+              return '';
+            }
+
+            return String(value);
+          };
+          const getTableRowKeyField = (tableCfg = {}) => {
+            return typeof tableCfg?.rowKey === 'string' && tableCfg.rowKey !== ''
+              ? tableCfg.rowKey
+              : 'id';
+          };
+          const getTableTreeChildrenKey = (tableCfg = {}) => {
+            if (typeof tableCfg?.tree?.childrenKey === 'string' && tableCfg.tree.childrenKey !== '') {
+              return tableCfg.tree.childrenKey;
+            }
+
+            if (typeof tableCfg?.tree?.props?.children === 'string' && tableCfg.tree.props.children !== '') {
+              return tableCfg.tree.props.children;
+            }
+
+            return 'children';
+          };
+          const getTableRowKeyValue = (row, tableCfg = {}) => {
+            return normalizeTableRowKey(getByPath(row || {}, getTableRowKeyField(tableCfg)));
+          };
+          const flattenTableRows = (rows, tableCfg = {}, output = []) => {
+            const list = Array.isArray(rows) ? rows : [];
+            const childrenKey = getTableTreeChildrenKey(tableCfg);
+
+            list.forEach((row) => {
+              output.push(row);
+
+              if (tableCfg?.tree?.enabled === true && Array.isArray(row?.[childrenKey]) && row[childrenKey].length > 0) {
+                flattenTableRows(row[childrenKey], tableCfg, output);
+              }
+            });
+
+            return output;
+          };
+          const buildTableRowEntryMap = (
+            rows,
+            tableCfg = {},
+            parentRow = null,
+            parentKey = null,
+            siblings = null,
+            depth = 0,
+            map = new Map()
+          ) => {
+            const list = Array.isArray(rows) ? rows : [];
+            const childrenKey = getTableTreeChildrenKey(tableCfg);
+            const currentSiblings = Array.isArray(siblings) ? siblings : list;
+
+            list.forEach((row, index) => {
+              const key = getTableRowKeyValue(row, tableCfg);
+              if (key !== '') {
+                map.set(key, {
+                  key,
+                  row,
+                  index,
+                  depth,
+                  parentRow,
+                  parentKey,
+                  siblings: currentSiblings,
+                });
+              }
+
+              if (tableCfg?.tree?.enabled === true && Array.isArray(row?.[childrenKey]) && row[childrenKey].length > 0) {
+                buildTableRowEntryMap(row[childrenKey], tableCfg, row, key || null, row[childrenKey], depth + 1, map);
+              }
+            });
+
+            return map;
+          };
+          const isTableEntryDescendantOf = (entry, ancestorKey, entryMap) => {
+            if (!entry || !ancestorKey || !(entryMap instanceof Map)) {
+              return false;
+            }
+
+            let current = entry;
+            while (current) {
+              if (current.parentKey === ancestorKey) {
+                return true;
+              }
+
+              current = current.parentKey ? (entryMap.get(String(current.parentKey)) || null) : null;
+            }
+
+            return false;
+          };
+          const moveTreeTableRow = (rows, tableCfg = {}, movedKey = '', anchorKey = '', isUp = false) => {
+            const entryMap = buildTableRowEntryMap(rows, tableCfg);
+            const movedEntry = entryMap.get(movedKey);
+            if (!movedEntry) {
+              return null;
+            }
+
+            const anchorEntry = anchorKey ? (entryMap.get(anchorKey) || null) : null;
+            if (anchorEntry && isTableEntryDescendantOf(anchorEntry, movedKey, entryMap)) {
+              return {
+                error: '不能拖动到自身子节点范围内',
+              };
+            }
+
+            const sourceSiblings = Array.isArray(movedEntry.siblings) ? movedEntry.siblings : (Array.isArray(rows) ? rows : []);
+            const sourceIndex = sourceSiblings.findIndex((item) => getTableRowKeyValue(item, tableCfg) === movedKey);
+            if (sourceIndex < 0) {
+              return null;
+            }
+
+            const removed = sourceSiblings.splice(sourceIndex, 1);
+            const movedRow = removed[0] || movedEntry.row;
+            let targetSiblings = anchorEntry?.siblings || (Array.isArray(rows) ? rows : []);
+            let insertIndex = targetSiblings.length;
+
+            if (anchorEntry) {
+              const anchorIndex = targetSiblings.findIndex((item) => getTableRowKeyValue(item, tableCfg) === anchorKey);
+              insertIndex = anchorIndex < 0 ? targetSiblings.length : (isUp ? anchorIndex : anchorIndex + 1);
+            } else if (sourceSiblings === targetSiblings) {
+              insertIndex = Math.min(sourceIndex, targetSiblings.length);
+            }
+
+            targetSiblings.splice(insertIndex, 0, movedRow);
+
+            return {
+              movedRow,
+              oldParentRow: movedEntry.parentRow || null,
+              newParentRow: anchorEntry?.parentRow || null,
+              anchorRow: anchorEntry?.row || null,
+              sameParent: normalizeTableRowKey(movedEntry.parentKey) === normalizeTableRowKey(anchorEntry?.parentKey || null),
+            };
+          };
+          const ensureTableSortableStore = (vm) => {
+            if (!isObject(vm.__scV2TableSortables)) {
+              vm.__scV2TableSortables = {};
+            }
+
+            return vm.__scV2TableSortables;
+          };
+          const destroyTableSortable = (vm, tableKey = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            if (typeof resolvedKey !== 'string' || resolvedKey === '') {
+              return null;
+            }
+
+            const store = ensureTableSortableStore(vm);
+            const sortable = store[resolvedKey];
+            if (sortable && typeof sortable.destroy === 'function') {
+              sortable.destroy();
+            }
+
+            delete store[resolvedKey];
+
+            return null;
+          };
+          const getTableBodyElement = (vm, tableKey = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            const ref = vm?.$refs?.[resolvedKey];
+            const tableRef = Array.isArray(ref) ? ref[0] : ref;
+            const tableEl = tableRef?.$el || tableRef;
+
+            return tableEl?.querySelector?.('.el-table__body-wrapper tbody')
+              || tableEl?.querySelector?.('table > tbody')
+              || null;
+          };
 
           return {
             ensureTableConfigStore(){
@@ -512,6 +681,71 @@
 
               return tableRef || null;
             },
+            destroyTableDragSort(tableKey = null){
+              return destroyTableSortable(this, tableKey);
+            },
+            refreshTableDragSort(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state) {
+                return null;
+              }
+
+              destroyTableSortable(this, resolvedKey);
+
+              if (tableCfg?.dragSort?.enabled !== true || typeof Sortable !== 'function') {
+                return null;
+              }
+
+              const rowKeyField = getTableRowKeyField(tableCfg);
+              if (typeof rowKeyField !== 'string' || rowKeyField === '') {
+                return null;
+              }
+
+              const tbody = getTableBodyElement(this, resolvedKey);
+              if (!tbody) {
+                return null;
+              }
+
+              const rowCount = flattenTableRows(state.rows || [], tableCfg).length;
+              if (rowCount <= 1) {
+                return null;
+              }
+
+              const options = isObject(tableCfg?.dragSort?.options) ? tableCfg.dragSort.options : {};
+              const handleClass = typeof tableCfg?.dragSort?.handleClass === 'string' && tableCfg.dragSort.handleClass !== ''
+                ? tableCfg.dragSort.handleClass.trim()
+                : 'sc-v2-table-drag-handle';
+              const handleSelector = '.' + handleClass.split(/\s+/).filter((item) => item !== '').join('.');
+
+              const sortable = new Sortable(tbody, Object.assign(
+                {
+                  animation: 150,
+                },
+                options,
+                {
+                  handle: handleSelector,
+                  onEnd: (event) => this.handleTableDragSort(resolvedKey, event),
+                }
+              ));
+
+              ensureTableSortableStore(this)[resolvedKey] = sortable;
+
+              return sortable;
+            },
+            syncTableDragSort(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              if (!resolvedKey) {
+                return Promise.resolve(null);
+              }
+
+              if (typeof this.$nextTick === 'function') {
+                return this.$nextTick().then(() => this.refreshTableDragSort(resolvedKey));
+              }
+
+              return Promise.resolve(this.refreshTableDragSort(resolvedKey));
+            },
             initializeTableMaxHeight(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const tableCfg = this.getTableConfig(resolvedKey);
@@ -568,13 +802,113 @@
               if (typeof this.$nextTick === 'function') {
                 return this.$nextTick().then(() => {
                   this.refreshTableLayout(resolvedKey);
-                  return state.settings;
+                  return this.syncTableDragSort(resolvedKey).then(() => state.settings);
                 });
               }
 
               this.refreshTableLayout(resolvedKey);
+              return Promise.resolve(this.refreshTableDragSort(resolvedKey)).then(() => state.settings);
+            },
+            handleTableDragSort(tableKey = null, event = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state || tableCfg?.dragSort?.enabled !== true) {
+                return Promise.resolve(null);
+              }
 
-              return state.settings;
+              const oldIndex = Number(event?.oldIndex ?? -1);
+              const newIndex = Number(event?.newIndex ?? -1);
+              if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+                return this.syncTableDragSort(resolvedKey);
+              }
+
+              const flatBefore = flattenTableRows(state.rows || [], tableCfg);
+              const movedRowBefore = flatBefore[oldIndex] || null;
+              const movedKey = normalizeTableRowKey(
+                event?.item?.getAttribute?.('data-row-key')
+                || event?.item?.dataset?.rowKey
+                || getTableRowKeyValue(movedRowBefore, tableCfg)
+              );
+              const anchorRowBefore = flatBefore[newIndex] || null;
+              const anchorKeyBefore = getTableRowKeyValue(anchorRowBefore, tableCfg);
+              const isMoveDown = oldIndex < newIndex;
+
+              if (movedKey === '') {
+                return this.syncTableDragSort(resolvedKey);
+              }
+
+              let moveMeta = {
+                movedRow: movedRowBefore,
+                oldParentRow: null,
+                newParentRow: null,
+                anchorRow: anchorRowBefore,
+                sameParent: true,
+              };
+
+              if (tableCfg?.tree?.enabled === true) {
+                const treeMove = moveTreeTableRow(state.rows, tableCfg, movedKey, anchorKeyBefore, isMoveDown);
+                if (!treeMove) {
+                  return this.syncTableDragSort(resolvedKey);
+                }
+
+                if (typeof treeMove.error === 'string' && treeMove.error !== '') {
+                  ElementPlus.ElMessage.warning(treeMove.error);
+                  return this.loadTableData(resolvedKey);
+                }
+
+                moveMeta = Object.assign(moveMeta, treeMove);
+              } else {
+                const rows = Array.isArray(state.rows) ? state.rows : [];
+                if (oldIndex >= rows.length || newIndex >= rows.length) {
+                  return this.syncTableDragSort(resolvedKey);
+                }
+
+                const moved = rows.splice(oldIndex, 1)[0] || movedRowBefore;
+                rows.splice(newIndex, 0, moved);
+                moveMeta.movedRow = moved;
+              }
+
+              const flatAfter = flattenTableRows(state.rows || [], tableCfg);
+              const effectiveIndex = flatAfter.findIndex((row) => getTableRowKeyValue(row, tableCfg) === movedKey);
+              const previousRow = effectiveIndex > 0 ? (flatAfter[effectiveIndex - 1] || null) : null;
+              const nextRow = effectiveIndex >= 0 ? (flatAfter[effectiveIndex + 1] || null) : null;
+              const anchorRow = isMoveDown ? previousRow : nextRow;
+
+              state.rows = clone(state.rows || []);
+              state.allRows = clone(state.rows || []);
+              if (tableCfg?.pagination?.enabled === false) {
+                state.total = flatAfter.length;
+              }
+              state.selection = normalizeActiveTableSelection(state, tableCfg);
+
+              if (tableCfg?.dataSource?.type !== 'remote' && tableCfg?.pagination?.enabled === false) {
+                tableCfg.initialRows = clone(state.rows || []);
+              }
+
+              syncGlobalTableSelection(this, resolvedKey);
+
+              return emitTableEvent(this, resolvedKey, tableCfg, state, 'dragSort', {
+                event,
+                row: moveMeta.movedRow || null,
+                movedRow: moveMeta.movedRow || null,
+                anchorRow,
+                previousRow,
+                nextRow,
+                visibleRows: flatAfter,
+                flatRows: flatAfter,
+                oldIndex,
+                newIndex: effectiveIndex >= 0 ? effectiveIndex : newIndex,
+                isUp: isMoveDown,
+                isDown: isMoveDown,
+                isMoveDown,
+                isMoveUp: !isMoveDown,
+                oldParentRow: moveMeta.oldParentRow || null,
+                newParentRow: moveMeta.newParentRow || null,
+                movedParentRow: moveMeta.oldParentRow || null,
+                anchorParentRow: moveMeta.newParentRow || null,
+                sameParent: moveMeta.sameParent !== false,
+              }).then(() => this.syncTableDragSort(resolvedKey));
             },
             initializeTables(tableKeys = null){
               const keys = Array.isArray(tableKeys) && tableKeys.length > 0
@@ -620,7 +954,7 @@
                     return emitTableEvent(this, resolvedKey, tableCfg, state, 'loadSuccess', {
                       rows,
                       payload: rows,
-                    }).then(() => rows);
+                    }).then(() => this.syncTableDragSort(resolvedKey).then(() => rows));
                   }
 
                   state.loading = true;
@@ -665,7 +999,7 @@
                         response,
                         payload,
                         rows,
-                      }).then(() => rows);
+                      }).then(() => this.syncTableDragSort(resolvedKey).then(() => rows));
                     })
                     .catch((error) => {
                       const message = error?.message || resolveMessage(error?.response?.data, '数据加载失败');
