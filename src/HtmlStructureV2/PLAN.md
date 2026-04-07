@@ -36,33 +36,38 @@ So the next phase should focus on missing feature bodies, not on re-creating old
 - Add compatibility aliases only when they can map cleanly onto a real V2-native feature.
 - Keep page authoring direct and readable; avoid building heavy abstraction just to mimic V1.
 
-## Current Priority Order
+## Recently Completed
 
-### P1. V2-native drag sort / tree drag sort
+### Done. V2-native drag sort / tree drag sort
 
-This is the clearest real feature gap.
+This gap is no longer theoretical work.
 
 Evidence:
 
-- Real usage exists in `plugins/AdminBasic/Http/Admin/View/Route/lists.sc.php`
-- V1 provides `Table::setDraw()`
-- V2 currently supports remote column sorting, but not drag sorting runtime behavior
+- `Table::dragSort()` now exists in V2
+- Route-like tree usage has been migrated in `plugins/AdminBasic/Http/Admin/View/Route/lists.sc.php`
+- ElementPlusAdmin runtime already carries the drag sort integration required by the migrated page
 
-Target:
-
-- Provide a V2-native drag sorting model for flat tables
-- Provide a V2-native tree drag sorting model for tree tables where applicable
-- Ensure runtime integration works in ElementPlusAdmin theme
-- Keep room for a later thin alias from old `setDraw()` if needed
-
-Expected outcome:
+Outcome:
 
 - V2 pages can express sortable row drag behavior directly
-- Route-like tree pages can migrate without losing core ordering behavior
+- Route-like tree pages can migrate without falling back to V1 `setDraw()`
 
-### P2. V2-native export capability
+### Done. Route page migration blockers found during real usage
 
-This is the next concrete gap after drag sort.
+Real page migration already exposed and fixed several V2 mismatches.
+
+Confirmed fixes:
+
+- `Fields::cascader()` now keeps raw tree node options when the usage side passes cascader/tree data
+- `cascaderProps()` continues to own the value/label field mapping instead of forcing select-style normalization
+- The V2 route list page no longer relies on debug output during rendering
+
+## Current Priority Order
+
+### P1. V2-native export capability
+
+This is now the clearest remaining real feature gap.
 
 Evidence:
 
@@ -82,7 +87,7 @@ Expected outcome:
 - V2 can export table/list data without depending on V1 rendering behavior
 - Existing V2 column export configuration becomes actually useful
 
-### P3. V2-native status toggle button bar
+### P2. V2-native status toggle button bar
 
 This is a real UI capability gap, even though generic filters already exist.
 
@@ -104,6 +109,21 @@ Expected outcome:
 - V2 has a first-class quick filter bar for list-heavy admin pages
 - QA case style pages can migrate without losing the high-frequency filter UX
 
+### P3. Continue migration-driven gap fixing on representative real pages
+
+After drag sort landed, the next useful validation step is continuing to migrate representative pages and only filling gaps that are proven by real usage.
+
+Target:
+
+- Prefer migrating pages that still depend on V1-only capability or ergonomics
+- When migration exposes a V2 mismatch, fix the native capability instead of adding ad-hoc page-specific workarounds
+- Keep strengthening README and method-level usage notes alongside these fixes
+
+Expected outcome:
+
+- Remaining V2 gaps stay grounded in real business pages
+- Migration cost drops without turning V2 into a thin V1 alias layer
+
 ## Deferred For Now
 
 These items should not be treated as the current next-step priority:
@@ -121,14 +141,16 @@ Reason:
 
 The recommended execution order is:
 
-1. Finish V2-native drag sort / tree drag sort
-2. Finish V2-native export capability
-3. Finish V2-native status toggle button bar
+1. Finish V2-native export capability
+2. Finish V2-native status toggle button bar
+3. Continue representative real-page migration and close newly exposed native gaps
 4. Re-evaluate whether thin V1 entry aliases are still needed for migration
 
 ## Notes
 
 - `openPage(dialog)` and `openPage(tab)` have already been brought to usable V2 behavior in recent work.
+- The route list page is now a concrete proof point for V2 tree list migration.
+- Recent real-page migration also proved that cascader/tree data must not be normalized with select-style `value` / `label` wrapping.
 - Future planning should continue to distinguish between:
   - missing V2 capability
   - existing V2 capability with no migration alias
