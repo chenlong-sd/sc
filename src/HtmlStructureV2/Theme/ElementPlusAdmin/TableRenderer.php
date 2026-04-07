@@ -72,17 +72,28 @@ final class TableRenderer
             '@sort-change' => $bindings->sortChangeExpression(),
         ]);
 
-        if ($table->hasSelection()) {
-            $element->append(
-                El::double('el-table-column')->setAttrs([
-                    'type' => 'selection',
-                    'width' => '48',
-                    'align' => 'center',
-                ])
-            );
+        if ($table->getMaxHeight() !== 0) {
+            $element->setAttr(':max-height', $bindings->maxHeightExpression());
+        }
+
+        if ($table->hasSelection() && !$table->hasExplicitSelectionColumn()) {
+            $selectionColumn = El::double('el-table-column')->setAttrs([
+                'type' => 'selection',
+                'width' => '48',
+                'align' => 'center',
+            ]);
+            if ($table->getSelectionFixed() !== null) {
+                $selectionColumn->setAttr('fixed', $table->getSelectionFixed());
+            }
+
+            $element->append($selectionColumn);
         }
 
         foreach ($table->columns() as $column) {
+            if (!$column->isRenderable()) {
+                continue;
+            }
+
             $element->append($this->columnRenderer->render($column, $bindings, $table->useSettings()));
         }
 

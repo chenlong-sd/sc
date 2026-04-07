@@ -11,12 +11,14 @@ use Sc\Util\HtmlStructureV2\Contracts\DocumentRenderable;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\Document;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdminTheme;
 
 abstract class AbstractPage implements DocumentRenderable, Renderable
 {
+    use Conditionable;
     use RendersWithTheme;
 
     private const BACKGROUND_PRESETS = [

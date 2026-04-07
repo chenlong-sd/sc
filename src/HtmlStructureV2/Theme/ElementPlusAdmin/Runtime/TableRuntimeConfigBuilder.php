@@ -21,6 +21,7 @@ final class TableRuntimeConfigBuilder
             'sortFieldMap' => $this->buildSortFieldMap($table),
             'deleteUrl' => $table->getDeleteUrl(),
             'deleteKey' => $table->getDeleteKey(),
+            'maxHeight' => $table->getMaxHeight(),
             'settings' => [
                 'enabled' => $table->useSettings(),
                 'stripe' => $table->useStripe(),
@@ -36,7 +37,7 @@ final class TableRuntimeConfigBuilder
         $map = [];
 
         foreach ($table->columns() as $column) {
-            if (!$column->isSortable()) {
+            if (!$column->isSortable() || !$column->supportsSettings()) {
                 continue;
             }
 
@@ -51,6 +52,10 @@ final class TableRuntimeConfigBuilder
         $columns = [];
 
         foreach ($table->columns() as $column) {
+            if (!$column->supportsSettings()) {
+                continue;
+            }
+
             $columns[] = [
                 'key' => $column->prop(),
                 'label' => $column->label() !== '' ? $column->label() : $column->prop(),

@@ -54,17 +54,20 @@
           const buildSearchQuery = (model, schema) => {
             const search = {};
             const searchType = {};
-            const searchField = {};
 
             Object.keys(schema || {}).forEach((key) => {
               const value = model[key];
               if (isBlank(value)) return;
 
               const meta = schema[key] || {};
-              search[key] = normalizeSearchValue(value, meta.type || '=');
-              searchType[key] = meta.type || '=';
-              if (meta.field) {
-                searchField[key] = meta.field;
+              const type = String(meta.type || '=').toUpperCase();
+              const targetKey = typeof meta.field === 'string' && meta.field !== ''
+                ? meta.field
+                : key;
+
+              search[targetKey] = normalizeSearchValue(value, type);
+              if (type !== '=') {
+                searchType[targetKey] = type.toLowerCase();
               }
             });
 
@@ -72,12 +75,15 @@
               return {};
             }
 
+            const payload = {
+              s: search,
+            };
+            if (Object.keys(searchType).length > 0) {
+              payload.t = searchType;
+            }
+
             return {
-              search: {
-                search,
-                searchType,
-                searchField,
-              }
+              search: payload
             };
           };
           const compareValues = (left, right, order) => {

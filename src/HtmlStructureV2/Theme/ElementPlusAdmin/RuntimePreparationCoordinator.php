@@ -51,6 +51,16 @@ final class RuntimePreparationCoordinator
             );
         }
 
+        $managedDialogs = $list->getDialogs();
+        if ($table !== null) {
+            foreach ($table->columns() as $column) {
+                $dialog = $column->managedOpenPageDialog($table->key());
+                if ($dialog !== null) {
+                    $managedDialogs[$dialog->key()] = $dialog;
+                }
+            }
+        }
+
         $registry->registerList($list, [
             'key' => $list->key(),
             'filterScope' => $filterState?->scope->value(),
@@ -63,7 +73,7 @@ final class RuntimePreparationCoordinator
             filterForm: $filterForm,
             filterState: $filterState,
             tableState: $tableState,
-            dialogs: $this->prepareManagedDialogs($registry, $list->getDialogs()),
+            dialogs: $this->prepareManagedDialogs($registry, array_values($managedDialogs)),
         );
     }
 

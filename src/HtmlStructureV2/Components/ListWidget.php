@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\ListAutoFilterFormFactory;
 use Sc\Util\HtmlStructureV2\Support\StructuredEventInspector;
@@ -18,6 +19,7 @@ final class ListWidget implements Renderable, EventAware
     use HasEvents {
         on as private bindListEventHandler;
     }
+    use Conditionable;
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = ['reload', 'filterSubmit', 'filterReset'];

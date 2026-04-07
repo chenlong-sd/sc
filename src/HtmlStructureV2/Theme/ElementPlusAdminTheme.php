@@ -108,6 +108,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-picker__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
     .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .sc-v2-event-column .cell{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center}
+    .sc-v2-event-column .el-button+.el-button{margin-left:0}
     .sc-v2-filters__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__images{display:flex;gap:8px;flex-wrap:wrap}
     .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px}

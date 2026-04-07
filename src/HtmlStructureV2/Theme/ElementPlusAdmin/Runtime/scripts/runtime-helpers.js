@@ -975,6 +975,7 @@
                 order: null
               },
               loading: false,
+              maxHeight: Number(tableConfig?.maxHeight) > 0 ? Number(tableConfig.maxHeight) : 0,
               settings: clone(settingsDefault),
               settingsDefault: clone(settingsDefault),
               settingsDraft: clone(settingsDefault),

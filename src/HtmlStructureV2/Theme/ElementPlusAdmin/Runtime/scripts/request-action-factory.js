@@ -68,13 +68,28 @@
                 return null;
               };
 
-              const resolvedTableKey = resolveActionTableKey();
-              const baseContext = getBaseContext(this, actionConfig, row) || {};
+              const resolveActionDialogContext = () => {
+                const dialogKey = actionConfig.contextDialogKey || null;
+                if (!dialogKey || typeof this.buildDialogContext !== 'function') {
+                  return null;
+                }
+
+                const dialogContext = this.buildDialogContext(dialogKey);
+                return isObject(dialogContext) ? dialogContext : null;
+              };
+
+              const sourceDialogContext = resolveActionDialogContext();
+              const resolvedRow = row ?? sourceDialogContext?.row ?? null;
+              const resolvedTableKey = resolveActionTableKey() || sourceDialogContext?.tableKey || null;
+              const effectiveActionConfig = Object.assign({}, actionConfig, {
+                tableKey: resolvedTableKey,
+              });
+              const baseContext = getBaseContext(this, effectiveActionConfig, resolvedRow) || {};
               const context = Object.assign({
-                action: actionConfig,
+                action: effectiveActionConfig,
                 tableKey: resolvedTableKey,
                 listKey: actionConfig.listKey || null,
-                row: row || null,
+                row: resolvedRow,
                 filters: {},
                 forms: {},
                 dialogs: {},
@@ -117,8 +132,15 @@
                   return undefined;
                 },
                 closeDialog: (dialogKey) => typeof this.closeDialog === 'function' ? this.closeDialog(dialogKey) : undefined,
+                openDialog: (dialogKey, data = null, tableKey = resolvedTableKey) => {
+                  if (typeof this.openDialog !== 'function') {
+                    return undefined;
+                  }
+
+                  return this.openDialog(dialogKey, data, tableKey);
+                },
                 reloadPage: () => window.location.reload(),
-              }, baseContext);
+              }, sourceDialogContext || {}, baseContext);
 
               if (actionConfig.dialogTarget && context.dialogs?.[actionConfig.dialogTarget] !== undefined) {
                 context.dialogKey = actionConfig.dialogTarget;

@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructureV2\DataSource\DataSourceInterface;
 use Sc\Util\HtmlStructureV2\DataSource\UrlDataSource;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
@@ -18,6 +19,7 @@ final class Table implements Renderable, EventAware
     use HasEvents {
         on as private bindTableEventHandler;
     }
+    use Conditionable;
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = [
@@ -44,10 +46,12 @@ final class Table implements Renderable, EventAware
     private bool $settings = true;
     private string $emptyText = '暂无数据';
     private bool $selection = false;
+    private ?string $selectionFixed = null;
     private array $searchSchema = [];
     private ?string $deleteUrl = null;
     private string $deleteKey = 'id';
     private ?int $rowActionColumnWidth = null;
+    private int $maxHeight = 0;
 
     public function __construct(
         private readonly string $key
@@ -104,6 +108,19 @@ final class Table implements Renderable, EventAware
     }
 
     /**
+     * 设置表格最大高度。
+     * 传正数时直接作为 el-table 的 max-height；
+     * 传负数时按“窗口高度 - 表格顶部距离 + 该偏移”动态计算，
+     * 用法与原版 Table::setMaxHeight() 保持一致，默认 -60。
+     */
+    public function maxHeight(int $maxHeight = -60): self
+    {
+        $this->maxHeight = $maxHeight;
+
+        return $this;
+    }
+
+    /**
      * 直接指定数据源对象。
      */
     public function dataSource(DataSourceInterface $dataSource): self
@@ -137,7 +154,12 @@ final class Table implements Renderable, EventAware
      * 若当前表格被放进 `List` 且未显式提供 filters()，这类搜索协议也会参与默认筛选表单推导；
      * 但没有列展示信息时，只能按字段名做通用输入框/范围输入推断。
      */
-    public function search(string $name, string $type = '=', ?string $field = null): self
+    public function search(
+        string $name,
+        #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
+        string $type = '=',
+        ?string $field = null
+    ): self
     {
         $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, [
             'type' => $type,
@@ -254,6 +276,20 @@ final class Table implements Renderable, EventAware
     public function selection(bool $selection = true): self
     {
         $this->selection = $selection;
+
+        return $this;
+    }
+
+    /**
+     * 固定勾选列位置，默认固定到左侧。
+     * 调用后会自动开启 selection()。
+     */
+    public function selectionFixed(
+        #[ExpectedValues(['left', 'right'])]
+        string $position = 'left'
+    ): self {
+        $this->selection = true;
+        $this->selectionFixed = $position;
 
         return $this;
     }
@@ -382,7 +418,12 @@ final class Table implements Renderable, EventAware
 
     public function hasSelection(): bool
     {
-        return $this->selection;
+        return $this->selection || $this->hasExplicitSelectionColumn();
+    }
+
+    public function getSelectionFixed(): ?string
+    {
+        return $this->selectionFixed;
     }
 
     public function getSearchSchema(): array
@@ -408,6 +449,22 @@ final class Table implements Renderable, EventAware
         return $this->rowActionColumnWidth;
     }
 
+    public function getMaxHeight(): int
+    {
+        return $this->maxHeight;
+    }
+
+    public function hasExplicitSelectionColumn(): bool
+    {
+        foreach ($this->columns as $column) {
+            if ($column->isRenderable() && $column->isSelectionColumn()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -431,12 +488,16 @@ final class Table implements Renderable, EventAware
         $schema = [];
 
         foreach ($this->columns as $column) {
-            if (!$column->isSearchable()) {
+            if (
+                !$column->isSearchable()
+                || !$column->isRenderable()
+                || $column->isSpecialColumn()
+            ) {
                 continue;
             }
 
-            $schema[$column->prop()] = $this->normalizeSearchSchemaItem(
-                $column->prop(),
+            $schema[$column->getSearchName()] = $this->normalizeSearchSchemaItem(
+                $column->getSearchName(),
                 $column->getSearchConfig() ?? []
             );
         }

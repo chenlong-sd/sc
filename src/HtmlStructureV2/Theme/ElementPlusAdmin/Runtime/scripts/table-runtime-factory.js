@@ -15,9 +15,11 @@
           const {
             buildTableState,
             emitConfiguredEvent,
+            getByPath,
             isEventCanceled,
             isObject,
             resolveContextValue,
+            setByPath,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
 
           const compareTableValues = typeof compareValues === 'function'
@@ -85,6 +87,37 @@
             }
 
             return null;
+          };
+          const getCurrentPageQueryString = () => {
+            try {
+              if (typeof window === 'undefined' || !window?.location?.search) {
+                return '';
+              }
+
+              const params = new URLSearchParams(window.location.search);
+              params.delete('global_search');
+
+              return params.toString();
+            } catch (error) {
+              return '';
+            }
+          };
+          const resolveTablePageQuery = (dataSource = null) => {
+            if (isObject(dataSource?.query) && Object.prototype.hasOwnProperty.call(dataSource.query, 'query')) {
+              return dataSource.query.query;
+            }
+
+            try {
+              if (typeof dataSource?.url === 'string' && dataSource.url !== '') {
+                const parsedUrl = new URL(dataSource.url, window.location.href);
+                if (parsedUrl.searchParams.has('query')) {
+                  return parsedUrl.searchParams.get('query') || '';
+                }
+              }
+            } catch (error) {
+            }
+
+            return getCurrentPageQueryString();
           };
           const normalizeTableWidth = (value, fallback = null) => {
             if (value === '' || value === null || value === undefined) {
@@ -479,6 +512,44 @@
 
               return tableRef || null;
             },
+            initializeTableMaxHeight(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state) {
+                return null;
+              }
+
+              const configured = Number(tableCfg.maxHeight || 0);
+              if (!configured) {
+                state.maxHeight = 0;
+                return state.maxHeight;
+              }
+
+              if (configured > 0) {
+                state.maxHeight = configured;
+                return state.maxHeight;
+              }
+
+              const ref = this.$refs?.[resolvedKey];
+              const tableRef = Array.isArray(ref) ? ref[0] : ref;
+              const tableEl = tableRef?.$el || tableRef;
+              const top = typeof tableEl?.getBoundingClientRect === 'function'
+                ? Number(tableEl.getBoundingClientRect().top || 0)
+                : 0;
+              const windowHeight = typeof window !== 'undefined'
+                ? Number(window.innerHeight || 0)
+                : 0;
+
+              let nextHeight = windowHeight - top + configured;
+              if (nextHeight < windowHeight / 2) {
+                nextHeight = windowHeight;
+              }
+
+              state.maxHeight = Math.max(Math.round(nextHeight), 0);
+
+              return state.maxHeight;
+            },
             saveTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const state = this.getTableState(resolvedKey);
@@ -520,7 +591,13 @@
                 this.ensureTableSettingsLoaded(tableKey);
                 syncGlobalTableSelection(this, tableKey);
 
-                return this.loadTableData(tableKey);
+                const initializeHeight = tableCfg.maxHeight
+                  ? (typeof this.$nextTick === 'function'
+                    ? this.$nextTick(() => this.initializeTableMaxHeight(tableKey))
+                    : Promise.resolve(this.initializeTableMaxHeight(tableKey)))
+                  : Promise.resolve(null);
+
+                return Promise.resolve(initializeHeight).then(() => this.loadTableData(tableKey));
               }));
             },
             loadTableData(tableKey = null){
@@ -548,10 +625,15 @@
 
                   state.loading = true;
                   const searchModel = getSearchModel(this, resolvedKey, tableCfg) || {};
+                  const baseQuery = Object.assign({}, tableCfg.dataSource?.query || {});
+                  const pageQuery = resolveTablePageQuery(tableCfg.dataSource || {});
+                  if (!Object.prototype.hasOwnProperty.call(baseQuery, 'query') && pageQuery !== '') {
+                    baseQuery.query = pageQuery;
+                  }
                   const request = Object.assign({}, tableCfg.dataSource, {
                     query: Object.assign(
                       {},
-                      tableCfg.dataSource?.query || {},
+                      baseQuery,
                       buildSearchQuery(searchModel, tableCfg.searchSchema || {}, resolvedKey, tableCfg),
                       tableCfg.pagination?.enabled === false ? {} : {
                         page: state.page,
@@ -565,6 +647,9 @@
                       } : {}
                     )
                   });
+                  if (request.query?.query === '') {
+                    delete request.query.query;
+                  }
 
                   return makeRequest(request)
                     .then((response) => {
@@ -688,6 +773,57 @@
               emitTableEvent(this, tableKey, tableCfg, state, 'selectionChange', {
                 selection: state.selection
               });
+            },
+            handleTableSwitchChange(tableKey, row, prop, value, switchConfig = {}){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !row || typeof prop !== 'string' || prop === '') {
+                return Promise.resolve(null);
+              }
+
+              const activeValue = switchConfig?.activeValue;
+              const inactiveValue = switchConfig?.inactiveValue;
+              const rollbackValue = value === activeValue ? inactiveValue : activeValue;
+              const requestUrl = resolveContextValue(
+                switchConfig?.requestUrl || '',
+                buildTableEventContext(this, resolvedKey, tableCfg, state, {
+                  row,
+                  value,
+                  prop,
+                })
+              );
+              const id = getByPath(row, 'id');
+
+              if (typeof requestUrl !== 'string' || requestUrl === '') {
+                setByPath(row, prop, rollbackValue);
+                ElementPlus.ElMessage.error('开关请求地址未配置');
+                return Promise.resolve(null);
+              }
+
+              if (id === null || id === undefined || id === '') {
+                setByPath(row, prop, rollbackValue);
+                ElementPlus.ElMessage.error('当前行缺少主键，无法更新');
+                return Promise.resolve(null);
+              }
+
+              return makeRequest({
+                method: 'POST',
+                url: requestUrl,
+                query: {
+                  id,
+                  [prop]: getByPath(row, prop),
+                }
+              })
+                .then((response) => ensureSuccess(extractPayload(response), '操作失败'))
+                .catch((error) => {
+                  setByPath(row, prop, rollbackValue);
+                  ElementPlus.ElMessage.error(
+                    error?.message || resolveMessage(error?.response?.data, '操作失败')
+                  );
+
+                  return null;
+                });
             },
             deleteTableSelection(tableKey, confirmText = '确认删除当前选中数据？', actionConfig = null, actionContext = null){
               const resolvedKey = this.resolveTableKey(tableKey);

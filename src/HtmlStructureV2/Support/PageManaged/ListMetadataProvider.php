@@ -34,6 +34,16 @@ final class ListMetadataProvider implements MetadataProviderInterface
             }
         }
 
+        $table = $component->getTable();
+        if ($table !== null) {
+            foreach ($table->columns() as $column) {
+                $dialog = $column->managedOpenPageDialog($table->key());
+                if ($dialog !== null) {
+                    $dialogs[$dialog->key()] = $dialog;
+                }
+            }
+        }
+
         foreach ($component->getDialogs() as $dialog) {
             $dialogs[$dialog->key()] = $dialog;
         }

@@ -18,13 +18,28 @@ final class ColumnRenderer
         bool $settingsEnabled = false
     ): AbstractHtmlElement
     {
+        if ($column->isSelectionColumn()) {
+            return $this->renderSelectionColumn($column);
+        }
+
+        if ($column->isIndexColumn()) {
+            return $this->renderIndexColumn($column);
+        }
+
+        if ($column->isExpandColumn()) {
+            return $this->renderExpandColumn($column, $bindings);
+        }
+
         $attrs = [
             'label' => $column->label(),
-            'prop' => $column->prop(),
-            ':show-overflow-tooltip' => 'true',
+            ':show-overflow-tooltip' => $column->getShowOverflowTooltip() ? 'true' : 'false',
         ];
+        if ($column->prop() !== '') {
+            $attrs['prop'] = $column->prop();
+        }
+        $attrs = array_merge($attrs, $column->getAttrs());
 
-        if ($settingsEnabled && $bindings !== null) {
+        if ($settingsEnabled && $bindings !== null && $column->supportsSettings()) {
             $attrs['v-if'] = $bindings->columnVisibleExpression($column->prop());
             $attrs[':width'] = $bindings->columnWidthExpression($column->prop(), $column->getWidth());
             $attrs[':align'] = $bindings->columnAlignExpression($column->prop(), $column->getAlign());
@@ -53,18 +68,18 @@ final class ColumnRenderer
         if ($column->getFormat()) {
             $element->append($this->renderFormatTemplate($column));
 
-            return $element;
+            return $this->decorateColumnElement($column, $element);
         }
 
         if ($column->getDisplay()) {
-            $element->append($this->renderDisplayTemplate($column));
+            $element->append($this->renderDisplayTemplate($column, $bindings));
 
-            return $element;
+            return $this->decorateColumnElement($column, $element);
         }
 
         $element->append($this->renderPlainColumnTemplate($column));
 
-        return $element;
+        return $this->decorateColumnElement($column, $element);
     }
 
     private function renderFormatTemplate(Column $column): AbstractHtmlElement
@@ -76,7 +91,7 @@ final class ColumnRenderer
         return $template;
     }
 
-    private function renderDisplayTemplate(Column $column): AbstractHtmlElement
+    private function renderDisplayTemplate(Column $column, ?TableRenderBindings $bindings = null): AbstractHtmlElement
     {
         $display = $column->getDisplay() ?? [];
         $template = El::double('template')->setAttr('#default', 'scope');
@@ -88,7 +103,9 @@ final class ColumnRenderer
             'images' => $this->renderImagesColumnTemplate($template, $column, $display),
             'boolean' => $this->renderBooleanColumnTemplate($template, $column, $display),
             'boolean_tag' => $this->renderBooleanTagColumnTemplate($template, $column, $display),
+            'switch' => $this->renderSwitchColumnTemplate($template, $column, $display, $bindings),
             'datetime' => $this->renderDatetimeColumnTemplate($template, $column, $display),
+            'open_page' => $this->renderOpenPageColumnTemplate($template, $column, $display, $bindings),
             default => $this->renderPlainColumnTemplate($column),
         };
     }
@@ -263,6 +280,41 @@ final class ColumnRenderer
         return $template;
     }
 
+    private function renderSwitchColumnTemplate(
+        AbstractHtmlElement $template,
+        Column $column,
+        array $display,
+        ?TableRenderBindings $bindings = null
+    ): AbstractHtmlElement {
+        if ($bindings === null) {
+            return $this->renderMappingColumnTemplate($template, $column, [
+                'options' => $display['options'] ?? [],
+                'separator' => ', ',
+            ]);
+        }
+
+        $modelExpression = $this->jsModelAccessor('scope.row', $column->prop());
+        $switchConfigExpression = JsonExpressionEncoder::encodeCompact([
+            'requestUrl' => $display['requestUrl'] ?? '',
+            'activeValue' => $display['activeValue'] ?? 1,
+            'inactiveValue' => $display['inactiveValue'] ?? 0,
+        ]);
+
+        $template->append(
+            El::double('el-switch')->setAttrs([
+                'v-model' => $modelExpression,
+                'inline-prompt' => '',
+                'active-text' => (string)($display['activeText'] ?? '开'),
+                'inactive-text' => (string)($display['inactiveText'] ?? '关'),
+                ':active-value' => $this->jsLiteral($display['activeValue'] ?? 1),
+                ':inactive-value' => $this->jsLiteral($display['inactiveValue'] ?? 0),
+                '@change' => $bindings->switchChangeExpression($column->prop(), $switchConfigExpression),
+            ])
+        );
+
+        return $template;
+    }
+
     private function renderDatetimeColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
@@ -278,6 +330,40 @@ final class ColumnRenderer
             El::double('span')
                 ->setAttr('v-if', '!isColumnDisplayBlank(displayValue)')
                 ->append('{{ displayValue }}'),
+            $this->placeholderSpan($column, 'v-else')
+        ));
+
+        return $template;
+    }
+
+    private function renderOpenPageColumnTemplate(
+        AbstractHtmlElement $template,
+        Column $column,
+        array $display,
+        ?TableRenderBindings $bindings = null
+    ): AbstractHtmlElement
+    {
+        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $displayExpression = $this->runtimeMethodCall('resolveColumnDisplayValue', $valueExpression);
+        $clickExpression = $this->buildOpenPageClickExpression($column, $display, $bindings);
+        $customElement = $this->normalizeOpenPageElement($display['element'] ?? null, $clickExpression);
+
+        if ($customElement !== null) {
+            $template->append($customElement);
+
+            return $template;
+        }
+
+        $template->append($this->aliasTemplate(
+            'openPageLabel',
+            $displayExpression,
+            El::double('el-link')
+                ->setAttrs([
+                    'v-if' => '!isColumnDisplayBlank(openPageLabel)',
+                    'type' => 'primary',
+                    '@click' => $clickExpression,
+                ])
+                ->append('{{ openPageLabel }}'),
             $this->placeholderSpan($column, 'v-else')
         ));
 
@@ -301,5 +387,253 @@ final class ColumnRenderer
     private function runtimeMethodCall(string $method, string ...$arguments): string
     {
         return sprintf('%s(%s)', $method, implode(', ', $arguments));
+    }
+
+    private function renderSelectionColumn(Column $column): AbstractHtmlElement
+    {
+        $attrs = array_merge([
+            'type' => 'selection',
+            'width' => $column->getWidth() ?? '48',
+            'align' => $column->getAlign() ?? 'center',
+        ], $column->getAttrs());
+
+        if ($column->getFixed()) {
+            $attrs['fixed'] = $column->getFixed();
+        }
+
+        return El::double('el-table-column')->setAttrs($attrs);
+    }
+
+    private function renderIndexColumn(Column $column): AbstractHtmlElement
+    {
+        $attrs = array_merge([
+            'type' => 'index',
+            'label' => $column->label(),
+            'width' => $column->getWidth() ?? '80',
+            'align' => $column->getAlign() ?? 'center',
+        ], $column->getAttrs());
+
+        if ($column->getFixed()) {
+            $attrs['fixed'] = $column->getFixed();
+        }
+
+        return El::double('el-table-column')->setAttrs($attrs);
+    }
+
+    private function renderExpandColumn(Column $column, ?TableRenderBindings $bindings = null): AbstractHtmlElement
+    {
+        $attrs = array_merge([
+            'type' => 'expand',
+            'label' => $column->label(),
+        ], $column->getAttrs());
+
+        $element = El::double('el-table-column')->setAttrs($attrs);
+
+        if ($column->getFormat()) {
+            $element->append($this->renderFormatTemplate($column));
+
+            return $this->decorateColumnElement($column, $element);
+        }
+
+        if ($column->getDisplay()) {
+            $element->append($this->renderDisplayTemplate($column, $bindings));
+
+            return $this->decorateColumnElement($column, $element);
+        }
+
+        if ($column->prop() !== '') {
+            $element->append($this->renderPlainColumnTemplate($column));
+        }
+
+        return $this->decorateColumnElement($column, $element);
+    }
+
+    private function decorateColumnElement(Column $column, AbstractHtmlElement $element): AbstractHtmlElement
+    {
+        $template = $this->resolveContentTemplate($element);
+        if ($template === null) {
+            return $element;
+        }
+
+        foreach ($column->getAppendContent() as $content) {
+            $template->append($this->normalizeTemplateNode($content));
+        }
+
+        if ($column->getTip() !== []) {
+            $template->append($this->renderTipPopover($column->getTip()));
+        }
+
+        return $element;
+    }
+
+    private function resolveContentTemplate(AbstractHtmlElement $element): ?AbstractHtmlElement
+    {
+        if (!method_exists($element, 'getChildren')) {
+            return null;
+        }
+
+        foreach ($element->getChildren() as $child) {
+            if (method_exists($child, 'hasAttr') && $child->hasAttr('#default')) {
+                return $child;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeTemplateNode(mixed $content): AbstractHtmlElement|string
+    {
+        if ($content instanceof AbstractHtmlElement) {
+            return $content->copy();
+        }
+
+        $string = (string)$content;
+
+        return str_starts_with(trim($string), '<')
+            ? El::fromCode($string)
+            : $string;
+    }
+
+    private function renderTipPopover(array $tip): AbstractHtmlElement
+    {
+        $icon = $this->normalizeTipIcon($tip['icon'] ?? 'WarningFilled');
+        $popover = El::double('el-popover')->setAttrs(array_merge([
+            'trigger' => 'click',
+        ], is_array($tip['attrs'] ?? null) ? $tip['attrs'] : []));
+
+        $popover->append(
+            El::double('template')
+                ->setAttr('#reference', '')
+                ->append($icon),
+            $this->normalizeTemplateNode($tip['tip'] ?? '无')
+        );
+
+        return $popover;
+    }
+
+    private function normalizeTipIcon(mixed $icon): AbstractHtmlElement
+    {
+        if ($icon instanceof AbstractHtmlElement) {
+            return $icon->copy();
+        }
+
+        $string = trim((string)$icon);
+        if ($string !== '' && str_starts_with($string, '<')) {
+            return El::fromCode($string);
+        }
+
+        $component = $string !== '' ? preg_replace('/([a-z])([A-Z])/', '$1-$2', $string) : 'warning-filled';
+
+        return El::double('el-icon')
+            ->append(El::double(strtolower((string)$component)))
+            ->setAttr('style', 'cursor:pointer;margin-left:6px;color:var(--el-color-warning);vertical-align:middle');
+    }
+
+    private function normalizeOpenPageElement(mixed $element, string $clickExpression): ?AbstractHtmlElement
+    {
+        if ($element === null || $element === '') {
+            return null;
+        }
+
+        if ($element instanceof AbstractHtmlElement) {
+            $normalized = $element->copy();
+        } else {
+            $string = trim((string)$element);
+            $normalized = str_starts_with($string, '<')
+                ? El::fromCode($string)
+                : El::double('el-link')->setAttr('type', 'primary')->append($string);
+        }
+
+        if (method_exists($normalized, 'setAttrIfNotExist')) {
+            $normalized->setAttrIfNotExist('@click', $clickExpression);
+        }
+
+        return $normalized;
+    }
+
+    private function buildOpenPageClickExpression(
+        Column $column,
+        array $display,
+        ?TableRenderBindings $bindings = null
+    ): string
+    {
+        if (($display['openType'] ?? 'dialog') === 'dialog' && $bindings !== null) {
+            $dialogKey = $column->managedOpenPageDialogKey($bindings->tableKey());
+            if ($dialogKey !== null) {
+                return $bindings->openDialogExpression($dialogKey, 'scope.row');
+            }
+        }
+
+        $url = $this->jsLiteral((string)($display['url'] ?? ''));
+        $params = JsonExpressionEncoder::encodeCompact($display['params'] ?? []);
+        $features = $this->jsLiteral($this->buildOpenPageFeatures($display['config'] ?? []));
+        $openType = $this->jsLiteral((string)($display['openType'] ?? 'dialog'));
+        $titleTemplate = $this->jsLiteral($this->buildOpenPageTitleTemplate($column, $display));
+
+        return $this->runtimeMethodCall(
+            'openColumnPage',
+            'scope',
+            $url,
+            $params,
+            $features,
+            $openType,
+            $titleTemplate,
+            '$event'
+        );
+    }
+
+    private function buildOpenPageTitleTemplate(Column $column, array $display): string
+    {
+        $config = is_array($display['config'] ?? null) ? $display['config'] : [];
+        $title = trim((string)($config['title'] ?? ''));
+
+        if ($title === '') {
+            if ($column->prop() !== '') {
+                return sprintf('查看【{%s}】详情', $column->prop());
+            }
+
+            return $column->label() !== ''
+                ? sprintf('查看【%s】详情', $column->label())
+                : '查看详情';
+        }
+
+        $normalized = preg_replace_callback(
+            '/{{\s*@?([A-Za-z0-9_.]+)\s*}}/',
+            static fn(array $matches): string => '{' . ($matches[1] ?? '') . '}',
+            $title
+        );
+
+        return is_string($normalized) && $normalized !== ''
+            ? $normalized
+            : $title;
+    }
+
+    private function buildOpenPageFeatures(array $config): string
+    {
+        $width = $this->normalizePopupDimension($config['width'] ?? 1000, 1000);
+        $height = $this->normalizePopupDimension($config['height'] ?? 760, 760);
+
+        return sprintf(
+            'popup=yes,noopener=yes,noreferrer=yes,width=%d,height=%d',
+            $width,
+            $height
+        );
+    }
+
+    private function normalizePopupDimension(mixed $value, int $fallback): int
+    {
+        if (is_int($value) || is_float($value)) {
+            return max(200, (int)$value);
+        }
+
+        if (!is_string($value)) {
+            return $fallback;
+        }
+
+        if (preg_match('/(\d+)/', $value, $matches) === 1) {
+            return max(200, (int)$matches[1]);
+        }
+
+        return $fallback;
     }
 }

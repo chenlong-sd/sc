@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 
@@ -16,6 +17,7 @@ final class Dialog implements Renderable, EventAware
     use HasEvents {
         on as private bindDialogEventHandler;
     }
+    use Conditionable;
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = [

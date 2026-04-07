@@ -308,9 +308,28 @@ trait LabelAttr
                 : sprintf(
                     '%s="%s"',
                     $attr,
-                    htmlspecialchars((string)$value, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8')
+                    $this->encodeAttrValue($attr, $value)
                 );
         }
         return implode(' ', $attrStr);
+    }
+
+    private function encodeAttrValue(string $attr, string|int|null $value): string
+    {
+        $value = (string)$value;
+
+        if ($this->isVueExpressionAttr($attr)) {
+            return str_replace('"', '&quot;', $value);
+        }
+
+        return htmlspecialchars($value, ENT_COMPAT | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function isVueExpressionAttr(string $attr): bool
+    {
+        return str_starts_with($attr, ':')
+            || str_starts_with($attr, '@')
+            || str_starts_with($attr, 'v-')
+            || str_starts_with($attr, '#');
     }
 }

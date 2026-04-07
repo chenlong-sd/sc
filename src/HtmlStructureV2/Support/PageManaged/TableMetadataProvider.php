@@ -22,6 +22,13 @@ final class TableMetadataProvider implements MetadataProviderInterface
 
         $dialogs = [];
 
+        foreach ($component->columns() as $column) {
+            $dialog = $column->managedOpenPageDialog($component->key());
+            if ($dialog !== null) {
+                $dialogs[$dialog->key()] = $dialog;
+            }
+        }
+
         foreach (array_merge(
             $this->dialogsFromActions($component->getToolbarActions()),
             $this->dialogsFromActions($component->getRowActions())

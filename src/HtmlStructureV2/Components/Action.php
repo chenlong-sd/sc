@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
@@ -16,6 +17,7 @@ class Action implements Renderable, EventAware
     use HasEvents {
         on as private bindActionEventHandler;
     }
+    use Conditionable;
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = ['click'];
@@ -142,7 +144,8 @@ class Action implements Renderable, EventAware
     /**
      * 创建一个自定义动作，可绑定 JS 表达式或结构化事件。
      * 若传 JS，handler 使用点击事件上下文，可读取 row / tableKey / listKey / filters /
-     * forms / dialogs / selection / vm；动作运行在目标弹窗上下文时还可读取 dialog / dialogKey。
+     * forms / dialogs / selection / vm；若动作渲染在 dialog footer 等弹窗上下文中，
+     * 还可直接读取当前 dialog 的 dialog / dialogKey / row / tableKey。
      */
     public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): self
     {
@@ -227,7 +230,7 @@ class Action implements Renderable, EventAware
      * 绑定点击行为，可传 JS 表达式或结构化事件。
      * 若传 JS 表达式，handler 签名与 on('click', ...) 一致，统一接收一个 context 对象。
      * 常用可读字段：row / tableKey / listKey / filters / forms / dialogs / selection / vm，
-     * 以及目标弹窗上下文下的 dialog / dialogKey。
+     * 若动作运行在 dialog footer 等弹窗上下文中，还可读取当前 dialog 的 dialog / dialogKey。
      */
     public function onClick(string|JsExpression|StructuredEventInterface $handler): static
     {
@@ -250,12 +253,12 @@ class Action implements Renderable, EventAware
      *
      * click 上下文：
      * - action: 当前动作配置
-     * - row: 当前行数据；表头动作时通常为 null
+     * - row: 当前行数据；表头动作时通常为 null；dialog footer 动作时为当前 dialog row
      * - tableKey / listKey: 当前动作命中的表格或列表 key
      * - filters / forms / dialogs / selection: 当前页面运行时上下文
-     * - dialog / dialogKey: 动作目标指向弹窗且运行时存在对应弹窗时可用
+     * - dialog / dialogKey: 当前 dialog 上下文存在时可用；动作显式指向目标弹窗时也会补齐
      * - vm: 当前 Vue 实例
-     * - reloadTable() / reloadList() / reloadPage() / closeDialog(): 常用运行时辅助方法
+     * - reloadTable() / reloadList() / reloadPage() / closeDialog() / openDialog(): 常用运行时辅助方法
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

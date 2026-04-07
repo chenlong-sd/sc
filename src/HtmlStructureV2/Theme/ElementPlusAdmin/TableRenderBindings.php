@@ -39,6 +39,11 @@ final class TableRenderBindings
         return sprintf('(%s?.loading || false)', $this->stateExpression());
     }
 
+    public function maxHeightExpression(): string
+    {
+        return sprintf('(%s?.maxHeight || null)', $this->stateExpression());
+    }
+
     public function totalExpression(): string
     {
         return sprintf('(%s?.total || 0)', $this->stateExpression());
@@ -72,6 +77,16 @@ final class TableRenderBindings
     public function sortChangeExpression(): string
     {
         return sprintf('handleTableSortChange(%s, $event)', $this->tableKeyLiteral());
+    }
+
+    public function switchChangeExpression(string $columnKey, string $configExpression): string
+    {
+        return sprintf(
+            'handleTableSwitchChange(%s, scope.row, %s, $event, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($columnKey),
+            $configExpression
+        );
     }
 
     public function pageChangeExpression(): string

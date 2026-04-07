@@ -22,10 +22,18 @@ final class ListAutoFilterFormFactory
                 continue;
             }
 
+            $searchName = $column->getSearchName();
+            $customField = $column->getSearchFormField();
+            if ($customField !== null) {
+                $fields[] = $customField;
+                $resolvedNames[$searchName] = true;
+                continue;
+            }
+
             $field = $this->buildField(
-                $column->prop(),
+                $searchName,
                 $column->label(),
-                $searchSchema[$column->prop()] ?? $column->getSearchConfig() ?? [],
+                $searchSchema[$searchName] ?? $column->getSearchConfig() ?? [],
                 $column->getDisplay()
             );
             if ($field === null) {
@@ -33,7 +41,7 @@ final class ListAutoFilterFormFactory
             }
 
             $fields[] = $field;
-            $resolvedNames[$column->prop()] = true;
+            $resolvedNames[$searchName] = true;
         }
 
         foreach ($searchSchema as $name => $config) {
@@ -69,20 +77,23 @@ final class ListAutoFilterFormFactory
         }
 
         $searchType = strtoupper((string)($searchConfig['type'] ?? '='));
+        $searchField = is_string($searchConfig['field'] ?? null) && $searchConfig['field'] !== ''
+            ? (string)$searchConfig['field']
+            : $name;
 
         $optionField = $this->buildOptionField($name, $label, $searchType, $display);
         if ($optionField !== null) {
             return $optionField;
         }
 
-        $rangeField = $this->buildRangeField($name, $label, $searchType, $display);
+        $rangeField = $this->buildRangeField($name, $label, $searchType, $display, $searchField);
         if ($rangeField !== null) {
             return $rangeField;
         }
 
         if ($searchType === 'IN') {
             return Fields::select($name)
-                ->placeholder('请选择' . $label)
+                ->placeholder($label)
                 ->default([])
                 ->prop('multiple', '')
                 ->prop('filterable', '')
@@ -92,7 +103,7 @@ final class ListAutoFilterFormFactory
         }
 
         return Fields::text($name)
-            ->placeholder('请输入' . $label);
+            ->placeholder($label);
     }
 
     private function buildOptionField(
@@ -106,7 +117,7 @@ final class ListAutoFilterFormFactory
         }
 
         $options = match ($display['type'] ?? '') {
-            'mapping', 'tag' => $this->normalizeDisplayOptions($display['options'] ?? []),
+            'mapping', 'tag', 'switch' => $this->normalizeDisplayOptions($display['options'] ?? []),
             'boolean', 'boolean_tag' => [
                 ['value' => 1, 'label' => (string)($display['truthyLabel'] ?? '是')],
                 ['value' => 0, 'label' => (string)($display['falsyLabel'] ?? '否')],
@@ -119,7 +130,7 @@ final class ListAutoFilterFormFactory
         }
 
         $field = Fields::select($name)
-            ->placeholder('请选择' . $label)
+            ->placeholder($label)
             ->options($options);
         if ($searchType !== 'IN') {
             return $field;
@@ -136,13 +147,14 @@ final class ListAutoFilterFormFactory
         string $name,
         string $label,
         string $searchType,
-        ?array $display
+        ?array $display,
+        ?string $searchField = null
     ): ?Field {
         if ($searchType !== 'BETWEEN') {
             return null;
         }
 
-        if ($this->looksLikeDatetime($name, $display)) {
+        if ($this->looksLikeDatetime($name, $display, $searchField)) {
             return Fields::daterange($name)
                 ->prop('type', 'datetimerange')
                 ->format('YYYY-MM-DD HH:mm:ss')
@@ -151,7 +163,7 @@ final class ListAutoFilterFormFactory
                 ->prop('end-placeholder', '结束' . $label);
         }
 
-        if ($this->looksLikeDate($name, $display)) {
+        if ($this->looksLikeDate($name, $display, $searchField)) {
             return Fields::daterange($name)
                 ->prop('start-placeholder', '开始' . $label)
                 ->prop('end-placeholder', '结束' . $label);
@@ -183,9 +195,11 @@ final class ListAutoFilterFormFactory
         return $normalized;
     }
 
-    private function looksLikeDatetime(string $name, ?array $display): bool
+    private function looksLikeDatetime(string $name, ?array $display, ?string $searchField = null): bool
     {
-        if (str_contains(strtolower($name), 'time')) {
+        $candidate = strtolower($searchField ?: $name);
+
+        if (str_contains($candidate, 'time')) {
             return true;
         }
 
@@ -198,9 +212,11 @@ final class ListAutoFilterFormFactory
         return preg_match('/H|h|mm|ss/', $format) === 1;
     }
 
-    private function looksLikeDate(string $name, ?array $display): bool
+    private function looksLikeDate(string $name, ?array $display, ?string $searchField = null): bool
     {
-        if (str_contains(strtolower($name), 'date')) {
+        $candidate = strtolower($searchField ?: $name);
+
+        if (str_contains($candidate, 'date')) {
             return true;
         }
 
