@@ -1180,6 +1180,12 @@
           const buildTableState = (tableConfig = {}) => {
             const initialRows = Array.isArray(tableConfig?.initialRows) ? clone(tableConfig.initialRows) : [];
             const settingsDefault = buildTableSettingsState(tableConfig);
+            const quickFilters = {};
+            (Array.isArray(tableConfig?.statusToggles?.items) ? tableConfig.statusToggles.items : []).forEach((item) => {
+              if (typeof item?.name === 'string' && item.name !== '') {
+                quickFilters[item.name] = null;
+              }
+            });
 
             return {
               rows: clone(initialRows),
@@ -1192,7 +1198,9 @@
                 field: '',
                 order: null
               },
+              quickFilters,
               loading: false,
+              exporting: false,
               maxHeight: Number(tableConfig?.maxHeight) > 0 ? Number(tableConfig.maxHeight) : 0,
               settings: clone(settingsDefault),
               settingsDefault: clone(settingsDefault),

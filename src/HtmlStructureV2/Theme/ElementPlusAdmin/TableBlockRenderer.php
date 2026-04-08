@@ -23,7 +23,11 @@ final class TableBlockRenderer
     {
         $block = El::double('div')->addClass('sc-v2-table-block');
 
-        if ($table->getToolbarActions() || $table->useSettings()) {
+        if ($table->getStatusToggles() !== []) {
+            $block->append($this->tableRenderer->renderStatusToggleBar($table, $bindings));
+        }
+
+        if ($table->getToolbarActions() || $table->useExport() || $table->useSettings()) {
             $block->append($this->tableRenderer->renderToolbar($table, $bindings, $renderContext));
         }
 

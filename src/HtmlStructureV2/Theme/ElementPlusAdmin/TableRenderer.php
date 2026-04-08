@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class TableRenderer
@@ -28,6 +29,10 @@ final class TableRenderer
         ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
+        if ($table->useExport()) {
+            $renderContext?->document()->assets()->addScript(StaticResource::XLSX);
+        }
+
         $toolbar = El::double('div')->addClass('sc-v2-toolbar');
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
         $right = El::double('div')->addClass('sc-v2-toolbar__tools');
@@ -38,6 +43,24 @@ final class TableRenderer
 
         if ($left->getChildren()) {
             $toolbar->append($left);
+        }
+
+        if ($table->useExport()) {
+            $attrs = [
+                'type' => $table->getExportType(),
+                'bg' => '',
+                'text' => '',
+                ':loading' => $bindings->exportLoadingExpression(),
+                '@click' => $bindings->exportExpression(),
+            ];
+
+            if ($table->getExportIcon() !== null) {
+                $attrs['icon'] = $table->getExportIcon();
+            }
+
+            $right->append(
+                El::double('el-button')->setAttrs($attrs)->append($table->getExportLabel())
+            );
         }
 
         if ($table->useSettings()) {
@@ -57,6 +80,57 @@ final class TableRenderer
         }
 
         return $toolbar;
+    }
+
+    public function renderStatusToggleBar(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
+    {
+        $container = El::double('div')
+            ->addClass('sc-v2-status-toggles')
+            ->addClass($table->useStatusTogglesNewLine() ? 'sc-v2-status-toggles--newline' : 'sc-v2-status-toggles--inline');
+
+        foreach ($table->getStatusToggles() as $toggle) {
+            $name = is_string($toggle['name'] ?? null) ? trim($toggle['name']) : '';
+            if ($name === '') {
+                continue;
+            }
+
+            $group = El::double('div')->addClass('sc-v2-status-toggle');
+            $label = $toggle['label'] ?? null;
+            $hasLabel = $label !== null && $label !== '';
+
+            $group->addClass($hasLabel ? 'sc-v2-status-toggle--labeled' : 'sc-v2-status-toggle--plain');
+
+            if ($hasLabel) {
+                $labelElement = El::double('div')->addClass('sc-v2-status-toggle__label');
+                $labelElement->append(
+                    El::double('span')->addClass('sc-v2-status-toggle__label-text')->append($label),
+                    El::double('span')->addClass('sc-v2-status-toggle__label-colon')->append('：')
+                );
+                $group->append($labelElement);
+            }
+
+            $buttonGroup = El::double('el-button-group')->addClass('sc-v2-status-toggle__buttons');
+            $buttonGroup->append($this->renderStatusToggleButton($bindings, $name, null, '全部', $hasLabel));
+
+            foreach ((array)($toggle['options'] ?? []) as $option) {
+                if (!is_array($option)) {
+                    continue;
+                }
+
+                $buttonGroup->append($this->renderStatusToggleButton(
+                    $bindings,
+                    $name,
+                    $option['value'] ?? null,
+                    (string)($option['label'] ?? ($option['value'] ?? '')),
+                    $hasLabel
+                ));
+            }
+
+            $group->append($buttonGroup);
+            $container->append($group);
+        }
+
+        return $container;
     }
 
     public function renderTable(
@@ -252,6 +326,31 @@ final class TableRenderer
         return El::double('el-button')
             ->setAttrs($attrs)
             ->append($table->getDragSortLabel());
+    }
+
+    private function renderStatusToggleButton(
+        TableRenderBindings $bindings,
+        string $name,
+        mixed $value,
+        string $label,
+        bool $hasGroupLabel = false
+    ): AbstractHtmlElement {
+        $activeExpression = $bindings->statusToggleActiveExpression($name, $value);
+        $attrs = [
+            '@click' => $bindings->statusToggleClickExpression($name, $value),
+        ];
+
+        if ($hasGroupLabel) {
+            $attrs['text'] = '';
+            $attrs[':type'] = $this->jsLiteralTernary($activeExpression, 'primary', '');
+            $attrs[':plain'] = sprintf('!%s', $activeExpression);
+        } else {
+            $attrs['type'] = 'primary';
+            $attrs['bg'] = '';
+            $attrs[':plain'] = sprintf('!%s', $activeExpression);
+        }
+
+        return El::double('el-button')->setAttrs($attrs)->append($label);
     }
 
     private function renderSettingsShowColumn(): AbstractHtmlElement

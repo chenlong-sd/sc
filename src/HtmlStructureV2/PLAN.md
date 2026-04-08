@@ -63,55 +63,43 @@ Confirmed fixes:
 - `cascaderProps()` continues to own the value/label field mapping instead of forcing select-style normalization
 - The V2 route list page no longer relies on debug output during rendering
 
+### Done. V2-native export capability
+
+This gap is no longer pending planning work.
+
+Confirmed landing points:
+
+- `Table::export()` now exists as the V2-native export entry
+- Old `openExportExcel()` can already map onto the same export pipeline as a thin compatibility alias
+- Table/list runtime now consumes column export metadata and can export current selection or filtered full data
+- Export respects `onlyExportExcel()` and current column visibility settings consistently
+
+Outcome:
+
+- V2 tables can export without falling back to V1 rendering behavior
+- Existing V2 column export metadata is now connected to a real runtime feature
+
+### Done. V2-native status toggle button bar
+
+This gap is also no longer pending planning work.
+
+Confirmed landing points:
+
+- `Table::statusToggle()` now exists as the V2-native quick toggle entry
+- Old `addStatusToggleButtons()` / `setStatusToggleButtonsNewLine()` can already map onto the same capability as thin compatibility aliases
+- Toggle clicks now reuse the existing table search pipeline instead of introducing a parallel query path
+- When a table lives inside `ListWidget`, toggle state syncs into the list filter model
+
+Outcome:
+
+- V2 now has a first-class fast segmented filter bar for common enum/status fields
+- QA case style pages can preserve this high-frequency filter UX during migration
+
 ## Current Priority Order
 
-### P1. V2-native export capability
+### P1. Continue migration-driven gap fixing on representative real pages
 
-This is now the clearest remaining real feature gap.
-
-Evidence:
-
-- Real usage exists in `plugins/QA/Http/Admin/View/QaCase/lists.sc.back.php`
-- V1 provides `Table::openExportExcel()`
-- V2 columns already carry export metadata, but there is no completed table/list export feature consuming it
-
-Target:
-
-- Provide a V2-native export action and export pipeline
-- Reuse existing column export metadata where possible
-- Support visible/export-only column rules consistently
-- Keep room for a later thin alias from old `openExportExcel()`
-
-Expected outcome:
-
-- V2 can export table/list data without depending on V1 rendering behavior
-- Existing V2 column export configuration becomes actually useful
-
-### P2. V2-native status toggle button bar
-
-This is a real UI capability gap, even though generic filters already exist.
-
-Evidence:
-
-- Real usage exists in `plugins/QA/Http/Admin/View/QaCase/lists.sc.back.php`
-- V1 provides `addStatusToggleButtons()` and `setStatusToggleButtonsNewLine()`
-- V2 filters can cover the same query semantics, but not the same fast segmented toolbar UX
-
-Target:
-
-- Provide a V2-native quick toggle filter bar for common enum/status fields
-- Support single-line and wrapped/new-line display modes
-- Integrate with list/table filter state instead of creating a parallel search system
-- Keep room for a later thin alias from old status toggle APIs
-
-Expected outcome:
-
-- V2 has a first-class quick filter bar for list-heavy admin pages
-- QA case style pages can migrate without losing the high-frequency filter UX
-
-### P3. Continue migration-driven gap fixing on representative real pages
-
-After drag sort landed, the next useful validation step is continuing to migrate representative pages and only filling gaps that are proven by real usage.
+After drag sort, export, and status toggle bar landed, the next useful validation step is continuing to migrate representative pages and only filling gaps that are proven by real usage.
 
 Target:
 
@@ -141,15 +129,14 @@ Reason:
 
 The recommended execution order is:
 
-1. Finish V2-native export capability
-2. Finish V2-native status toggle button bar
-3. Continue representative real-page migration and close newly exposed native gaps
-4. Re-evaluate whether thin V1 entry aliases are still needed for migration
+1. Continue representative real-page migration and close newly exposed native gaps
+2. Re-evaluate whether thin V1 entry aliases are still needed for migration
 
 ## Notes
 
 - `openPage(dialog)` and `openPage(tab)` have already been brought to usable V2 behavior in recent work.
 - The route list page is now a concrete proof point for V2 tree list migration.
+- `plugins/QA/Http/Admin/View/QaCase/lists.sc.php` is now a concrete proof point for a managed `ListWidget` page using V2 `export()`, `statusToggle()`, and cascader/tree confirm-flow fields together.
 - Recent real-page migration also proved that cascader/tree data must not be normalized with select-style `value` / `label` wrapping.
 - Future planning should continue to distinguish between:
   - missing V2 capability

@@ -83,6 +83,19 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-list{display:flex;flex-direction:column;gap:0}
     .sc-v2-table-block{display:flex;flex-direction:column;gap:10px}
     .sc-v2-list__filters{display:flex;flex-direction:column;gap:10px}
+    .sc-v2-status-toggles{display:block}
+    .sc-v2-status-toggle{margin-bottom:10px;box-sizing:border-box;max-width:100%}
+    .sc-v2-status-toggles--inline .sc-v2-status-toggle{display:inline-flex;vertical-align:top;margin-right:10px}
+    .sc-v2-status-toggles--inline .sc-v2-status-toggle:last-child{margin-right:0}
+    .sc-v2-status-toggles--newline .sc-v2-status-toggle{display:flex;width:100%;margin-right:0}
+    .sc-v2-status-toggle--plain{align-items:center}
+    .sc-v2-status-toggle--labeled{position:relative;align-items:center;min-height:35px;padding:0 10px;border-radius:5px;box-shadow:0 0 5px #bbb;background:#fff;overflow:hidden}
+    .sc-v2-status-toggle--labeled::before{content:'';position:absolute;left:0;top:0;bottom:0;width:110px;background:rgb(121, 187, 255);border-radius:5px 0 0 5px}
+    .sc-v2-status-toggle__label{position:relative;z-index:1;display:inline-flex;align-items:center;color:#fff;margin-right:10px}
+    .sc-v2-status-toggle__label-text{display:inline-block;width:80px;font-size:14px;font-weight:700;text-align:justify;text-align-last:justify;white-space:nowrap}
+    .sc-v2-status-toggle__label-colon{display:inline-block;font-size:14px;font-weight:700}
+    .sc-v2-status-toggle__buttons{position:relative;z-index:1;display:flex;flex-wrap:wrap;margin-right:10px}
+    .sc-v2-status-toggle--plain .sc-v2-status-toggle__buttons{margin-right:0}
     .sc-v2-page__header{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;flex-wrap:wrap;margin-bottom:3px}
     .sc-v2-page__title{display:flex;flex-direction:column;gap:6px}
     .sc-v2-page__title h1{margin:0;font-size:28px;line-height:1.2;color:#111827}
@@ -171,11 +184,18 @@ final class ElementPlusAdminTheme implements ThemeInterface
     @media (max-width: 768px){
       #app{padding:8px 8px 6px}
       .sc-v2-page__header{flex-direction:column;align-items:stretch}
-      .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions{width:100%}
+      .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions,.sc-v2-status-toggles{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
       .sc-v2-form__suffix{width:100%}
       .sc-v2-form-section__heading{flex-direction:column;align-items:stretch}
       .sc-v2-form-section__actions{width:100%}
+      .sc-v2-status-toggles--inline .sc-v2-status-toggle{display:flex;margin-right:0}
+      .sc-v2-status-toggle{align-items:stretch}
+      .sc-v2-status-toggle--labeled{padding:8px 10px}
+      .sc-v2-status-toggle--labeled::before{width:96px}
+      .sc-v2-status-toggle__label{min-height:32px}
+      .sc-v2-status-toggle__label-text{width:66px}
+      .sc-v2-status-toggle__buttons{width:100%}
       .sc-v2-grid{grid-template-columns:minmax(0,1fr)!important}
     }
     CSS;

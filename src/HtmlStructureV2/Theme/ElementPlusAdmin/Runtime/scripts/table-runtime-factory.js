@@ -15,10 +15,18 @@
           const {
             buildTableState,
             emitConfiguredEvent,
+            formatColumnDatetime,
             getByPath,
+            isBlank,
             isEventCanceled,
+            isColumnFalsy,
+            isColumnTruthy,
             isObject,
+            isSameValue,
             resolveContextValue,
+            resolveColumnDisplayValue,
+            resolveColumnMappingLabel,
+            resolveColumnTagMeta,
             setByPath,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
 
@@ -56,8 +64,291 @@
 
               return null;
             };
+          const sanitizeExportFilename = (filename, fallback = 'export') => {
+            const normalized = typeof filename === 'string' ? filename.trim() : '';
+            const baseName = normalized.replace(/\.(xlsx|xls)$/i, '').trim() || fallback;
+
+            return `${baseName}.xlsx`;
+          };
+          const stringifyExportValue = (value, separator = ', ') => {
+            if (value === null || value === undefined) {
+              return '';
+            }
+
+            if (Array.isArray(value)) {
+              return value
+                .map((item) => stringifyExportValue(item, separator))
+                .filter((item) => item !== '')
+                .join(separator);
+            }
+
+            if (typeof value === 'object') {
+              if (typeof value.label === 'string' && value.label !== '') {
+                return value.label;
+              }
+              if (typeof value.name === 'string' && value.name !== '') {
+                return value.name;
+              }
+              if (typeof value.url === 'string' && value.url !== '') {
+                return value.url;
+              }
+
+              try {
+                return JSON.stringify(value);
+              } catch (error) {
+                return String(value);
+              }
+            }
+
+            const resolved = resolveColumnDisplayValue(value, separator);
+            return resolved === null || resolved === undefined ? '' : String(resolved);
+          };
+          const stripExportHtml = (value) => {
+            if (value === null || value === undefined || value === '') {
+              return '';
+            }
+
+            return String(value)
+              .replace(/<br\s*\/?>/gi, '\n')
+              .replace(/<\/(div|p|li|tr|h[1-6])>/gi, '\n')
+              .replace(/<[^>]+>/g, '')
+              .replace(/&nbsp;/gi, ' ')
+              .replace(/\r/g, '');
+          };
+          const evaluateExportExpression = (expression, row = {}) => {
+            const source = typeof expression === 'string' ? expression.trim() : '';
+            if (source === '') {
+              return '';
+            }
+
+            try {
+              const executor = new Function(
+                'row',
+                'scope',
+                'helpers',
+                `
+                  const window = undefined;
+                  const document = undefined;
+                  const vm = undefined;
+                  with (helpers || {}) {
+                    with (row || {}) {
+                      return (${source});
+                    }
+                  }
+                `
+              );
+
+              return executor(row || {}, { row: row || {} }, { getByPath });
+            } catch (error) {
+              return '';
+            }
+          };
+          const renderExportTemplate = (template, row = {}) => {
+            const rawTemplate = typeof template === 'string' ? template : '';
+            if (rawTemplate.trim() === '') {
+              return '';
+            }
+
+            const normalizedTemplate = rawTemplate.replace(/scope\.row/g, 'row');
+            const matcher = /{{([\s\S]+?)}}/g;
+            let cursor = 0;
+            let output = '';
+            let matched = false;
+            let match = null;
+
+            while ((match = matcher.exec(normalizedTemplate)) !== null) {
+              matched = true;
+              output += stripExportHtml(normalizedTemplate.slice(cursor, match.index));
+              output += stringifyExportValue(evaluateExportExpression(match[1], row));
+              cursor = match.index + match[0].length;
+            }
+
+            output += stripExportHtml(normalizedTemplate.slice(cursor));
+
+            return matched ? output.trim() : stripExportHtml(normalizedTemplate).trim();
+          };
+          const resolveExportDisplayValue = (value, column = {}) => {
+            const display = isObject(column?.display) ? column.display : {};
+
+            switch (display.type) {
+              case 'mapping':
+                return stringifyExportValue(
+                  resolveColumnMappingLabel(value, Array.isArray(display.options) ? display.options : [], display.separator || ', ')
+                );
+              case 'tag':
+                return stringifyExportValue(
+                  resolveColumnTagMeta(value, Array.isArray(display.options) ? display.options : [], display.defaultType || 'info')?.label ?? ''
+                );
+              case 'boolean':
+              case 'boolean_tag':
+                if (isColumnTruthy(value)) {
+                  return String(display.truthyLabel ?? '是');
+                }
+                if (isColumnFalsy(value)) {
+                  return String(display.falsyLabel ?? '否');
+                }
+
+                return '';
+              case 'switch':
+                return stringifyExportValue(
+                  resolveColumnMappingLabel(value, Array.isArray(display.options) ? display.options : [], ', ')
+                );
+              case 'datetime':
+                return stringifyExportValue(
+                  formatColumnDatetime(value, String(display.format || 'YYYY-MM-DD HH:mm:ss'))
+                );
+              case 'image':
+                return stringifyExportValue(value);
+              case 'images':
+                if (!Array.isArray(value)) {
+                  return '';
+                }
+
+                return value
+                  .map((item) => {
+                    const srcPath = typeof display.srcPath === 'string' ? display.srcPath : 'url';
+                    return srcPath === ''
+                      ? stringifyExportValue(item)
+                      : stringifyExportValue(getByPath(item, srcPath));
+                  })
+                  .filter((item) => item !== '')
+                  .join(', ');
+              case 'open_page':
+                return stringifyExportValue(resolveColumnDisplayValue(value));
+              default:
+                return stringifyExportValue(resolveColumnDisplayValue(value));
+            }
+          };
+          const resolveExportCellValue = (row, column = {}) => {
+            if (typeof column?.format === 'string' && column.format.trim() !== '') {
+              return renderExportTemplate(column.format, row || {});
+            }
+
+            return resolveExportDisplayValue(
+              getByPath(row || {}, column?.key || ''),
+              column
+            );
+          };
+          const resolveTableExportColumns = (vm, tableKey, tableCfg = {}) => {
+            const source = Array.isArray(tableCfg?.export?.columns) ? tableCfg.export.columns : [];
+
+            return source.filter((item) => {
+              if (!isObject(item) || typeof item.key !== 'string' || item.key === '') {
+                return false;
+              }
+
+              if (item.respectVisibility !== true || typeof vm?.getTableColumnVisible !== 'function') {
+                return true;
+              }
+
+              return vm.getTableColumnVisible(tableKey, item.key) !== false;
+            });
+          };
+          const buildRemoteTableRequest = (
+            vm,
+            tableKey,
+            tableCfg,
+            state,
+            { includePagination = true, extraQuery = {} } = {}
+          ) => {
+            const searchModel = resolveTableSearchModel(vm, tableKey, tableCfg, state);
+            const baseQuery = Object.assign({}, tableCfg?.dataSource?.query || {});
+            const pageQuery = resolveTablePageQuery(tableCfg?.dataSource || {});
+            if (!Object.prototype.hasOwnProperty.call(baseQuery, 'query') && pageQuery !== '') {
+              baseQuery.query = pageQuery;
+            }
+
+            const query = Object.assign(
+              {},
+              baseQuery,
+              buildSearchQuery(searchModel, tableCfg?.searchSchema || {}, tableKey, tableCfg),
+              includePagination && tableCfg?.pagination?.enabled !== false ? {
+                page: state?.page || 1,
+                pageSize: state?.pageSize || tableCfg?.pagination?.pageSize || 20
+              } : {},
+              state?.sort?.field ? {
+                order: {
+                  field: tableCfg?.sortFieldMap?.[state.sort.field] || state.sort.field,
+                  order: state.sort.order
+                }
+              } : {},
+              isObject(extraQuery) ? extraQuery : {}
+            );
+
+            if (query?.query === '') {
+              delete query.query;
+            }
+
+            return Object.assign({}, tableCfg?.dataSource || {}, { query });
+          };
+          const getTableStatusToggleItems = (tableCfg = {}) => {
+            return Array.isArray(tableCfg?.statusToggles?.items)
+              ? tableCfg.statusToggles.items.filter((item) => typeof item?.name === 'string' && item.name !== '')
+              : [];
+          };
+          const resolveTableFilterScope = (vm, tableCfg = {}, tableKey = null) => {
+            const listKey = typeof tableCfg?.listKey === 'string' && tableCfg.listKey !== ''
+              ? tableCfg.listKey
+              : (typeof vm?.resolveTableListKey === 'function' ? vm.resolveTableListKey(tableKey) : null);
+            if (typeof listKey !== 'string' || listKey === '') {
+              return null;
+            }
+
+            if (typeof vm?.getListConfig === 'function') {
+              return vm.getListConfig(listKey)?.filterScope || null;
+            }
+
+            return cfg?.lists?.[listKey]?.filterScope || null;
+          };
+          const syncTableStatusToggleState = (vm, tableKey, tableCfg, state) => {
+            const items = getTableStatusToggleItems(tableCfg);
+            if (!state || items.length <= 0) {
+              return {};
+            }
+
+            if (!isObject(state.quickFilters)) {
+              state.quickFilters = {};
+            }
+
+            const filterScope = resolveTableFilterScope(vm, tableCfg, tableKey);
+            const filterModel = filterScope && typeof vm?.getFormModel === 'function'
+              ? (vm.getFormModel(filterScope) || {})
+              : null;
+
+            items.forEach((item) => {
+              const resolvedFilterValue = filterModel
+                ? getByPath(filterModel, item.name)
+                : undefined;
+              const value = resolvedFilterValue !== undefined
+                ? resolvedFilterValue
+                : state.quickFilters[item.name];
+
+              state.quickFilters[item.name] = isBlank(value) ? null : value;
+            });
+
+            return state.quickFilters;
+          };
+          const resolveTableSearchModel = (vm, tableKey, tableCfg, state) => {
+            const baseSearchModel = getSearchModel(vm, tableKey, tableCfg);
+            const model = isObject(baseSearchModel)
+              ? clone(baseSearchModel)
+              : {};
+            const quickFilters = syncTableStatusToggleState(vm, tableKey, tableCfg, state);
+
+            Object.keys(quickFilters || {}).forEach((name) => {
+              const value = quickFilters[name];
+              if (isBlank(value)) {
+                delete model[name];
+                return;
+              }
+
+              model[name] = value;
+            });
+
+            return model;
+          };
           const buildTableEventContext = (vm, tableKey, tableCfg, state, overrides = {}) => {
-            const filters = getSearchModel(vm, tableKey, tableCfg) || {};
+            const filters = resolveTableSearchModel(vm, tableKey, tableCfg, state) || {};
 
             return Object.assign({
               tableKey,
@@ -498,6 +789,53 @@
             },
             getTableSelection(tableKey = null){
               return this.getTableState(tableKey)?.selection || [];
+            },
+            getTableStatusToggleValue(tableKey = null, name = ''){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state || typeof name !== 'string' || name === '') {
+                return null;
+              }
+
+              syncTableStatusToggleState(this, resolvedKey, tableCfg, state);
+
+              return state.quickFilters?.[name] ?? null;
+            },
+            isTableStatusToggleActive(tableKey = null, name = '', value = null){
+              const currentValue = this.getTableStatusToggleValue(tableKey, name);
+
+              if (value === null || value === undefined || value === '') {
+                return isBlank(currentValue);
+              }
+
+              return isSameValue(currentValue, value);
+            },
+            setTableStatusToggle(tableKey = null, name = '', value = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state || typeof name !== 'string' || name === '') {
+                return Promise.resolve(null);
+              }
+
+              if (!isObject(state.quickFilters)) {
+                state.quickFilters = {};
+              }
+
+              const normalizedValue = isBlank(value) ? null : value;
+              state.quickFilters[name] = normalizedValue;
+
+              const filterScope = resolveTableFilterScope(this, tableCfg, resolvedKey);
+              if (filterScope && typeof this.setFormPathValue === 'function') {
+                this.setFormPathValue(filterScope, name, normalizedValue);
+              }
+
+              if (tableCfg.pagination?.enabled !== false) {
+                state.page = 1;
+              }
+
+              return this.loadTableData(resolvedKey);
             },
             getTableSettingsStorageKey(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
@@ -958,32 +1296,7 @@
                   }
 
                   state.loading = true;
-                  const searchModel = getSearchModel(this, resolvedKey, tableCfg) || {};
-                  const baseQuery = Object.assign({}, tableCfg.dataSource?.query || {});
-                  const pageQuery = resolveTablePageQuery(tableCfg.dataSource || {});
-                  if (!Object.prototype.hasOwnProperty.call(baseQuery, 'query') && pageQuery !== '') {
-                    baseQuery.query = pageQuery;
-                  }
-                  const request = Object.assign({}, tableCfg.dataSource, {
-                    query: Object.assign(
-                      {},
-                      baseQuery,
-                      buildSearchQuery(searchModel, tableCfg.searchSchema || {}, resolvedKey, tableCfg),
-                      tableCfg.pagination?.enabled === false ? {} : {
-                        page: state.page,
-                        pageSize: state.pageSize
-                      },
-                      state.sort?.field ? {
-                        order: {
-                          field: tableCfg.sortFieldMap?.[state.sort.field] || state.sort.field,
-                          order: state.sort.order
-                        }
-                      } : {}
-                    )
-                  });
-                  if (request.query?.query === '') {
-                    delete request.query.query;
-                  }
+                  const request = buildRemoteTableRequest(this, resolvedKey, tableCfg, state);
 
                   return makeRequest(request)
                     .then((response) => {
@@ -1014,6 +1327,91 @@
                     });
                 });
             },
+            exportTableData(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state || tableCfg?.export?.enabled !== true) {
+                return Promise.resolve(null);
+              }
+
+              const xlsx = globalThis.XLSX || (typeof window !== 'undefined' ? window?.XLSX : null);
+              if (!xlsx?.utils || typeof xlsx.writeFile !== 'function') {
+                ElementPlus.ElMessage.error('导出组件未加载');
+                return Promise.resolve(null);
+              }
+
+              const exportColumns = resolveTableExportColumns(this, resolvedKey, tableCfg);
+              if (exportColumns.length <= 0) {
+                ElementPlus.ElMessage.error('当前表格没有可导出的列');
+                return Promise.resolve(null);
+              }
+
+              const selection = Array.isArray(state.selection) ? state.selection.filter(Boolean) : [];
+              let loadingInstance = null;
+              state.exporting = true;
+
+              try {
+                loadingInstance = ElementPlus.ElLoading.service({
+                  lock: true,
+                  text: '正在导出...',
+                  background: 'rgba(255,255,255,0.35)',
+                });
+              } catch (error) {
+              }
+
+              const rowsPromise = selection.length > 0
+                ? Promise.resolve(clone(selection))
+                : (tableCfg.dataSource?.type === 'remote' && tableCfg.dataSource?.url
+                  ? makeRequest(buildRemoteTableRequest(this, resolvedKey, tableCfg, state, {
+                      includePagination: false,
+                      extraQuery: tableCfg.export?.query || {},
+                    }))
+                    .then((response) => {
+                      const payload = ensureSuccess(extractPayload(response), '导出数据加载失败');
+                      return pickRows(payload);
+                    })
+                  : Promise.resolve(clone(state.allRows || [])));
+
+              return rowsPromise
+                .then((rows) => {
+                  const exportRows = Array.isArray(rows) ? rows : [];
+                  if (exportRows.length <= 0) {
+                    ElementPlus.ElMessage.warning('暂无可导出的数据');
+                    return null;
+                  }
+
+                  const sheetData = [
+                    exportColumns.map((column) => column.label || column.key),
+                    ...exportRows.map((row) => exportColumns.map((column) => resolveExportCellValue(row, column)))
+                  ];
+                  const worksheet = xlsx.utils.aoa_to_sheet(sheetData);
+                  const workbook = xlsx.utils.book_new();
+
+                  xlsx.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+                  xlsx.writeFile(
+                    workbook,
+                    sanitizeExportFilename(tableCfg.export?.filename || resolvedKey),
+                    { compression: true }
+                  );
+
+                  ElementPlus.ElMessage.success(selection.length > 0 ? '已导出当前选中数据' : '导出成功');
+
+                  return exportRows;
+                })
+                .catch((error) => {
+                  const message = error?.message || resolveMessage(error?.response?.data, '导出失败');
+                  ElementPlus.ElMessage.error(message);
+
+                  return null;
+                })
+                .finally(() => {
+                  state.exporting = false;
+                  if (loadingInstance && typeof loadingInstance.close === 'function') {
+                    loadingInstance.close();
+                  }
+                });
+            },
             applyClientTableState(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const tableCfg = this.getTableConfig(resolvedKey);
@@ -1025,7 +1423,7 @@
               let rows = clone(tableCfg.initialRows || []);
               rows = applyLocalSearch(
                 rows,
-                getSearchModel(this, resolvedKey, tableCfg) || {},
+                resolveTableSearchModel(this, resolvedKey, tableCfg, state),
                 tableCfg.searchSchema || {},
                 tableCfg
               );

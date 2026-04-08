@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use JetBrains\PhpStorm\ExpectedValues;
+use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\DataSource\ArrayDataSource;
@@ -64,6 +65,16 @@ final class Table implements Renderable, EventAware
     private string $dragSortType = 'primary';
     private ?string $dragSortIcon = 'Rank';
     private array $dragSortConfig = [];
+    private array $statusToggles = [];
+    private bool $statusTogglesNewLine = false;
+    private bool $export = false;
+    private string $exportLabel = '导出Excel';
+    private string $exportFilename = 'export';
+    private string $exportType = 'success';
+    private ?string $exportIcon = 'Download';
+    private array $exportQuery = [
+        'is_export' => 1,
+    ];
 
     public function __construct(
         private readonly string $key
@@ -254,6 +265,148 @@ final class Table implements Renderable, EventAware
         $this->dragSortConfig = array_replace($this->dragSortConfig, $config);
 
         return $this;
+    }
+
+    /**
+     * 设置表格顶部的快速状态切换按钮组。
+     * `name` 是筛选模型字段名；后端真实字段映射应通过 search()/searchSchema()/列 searchable() 定义。
+     * 若当前表格还没有对应搜索协议，V2 会自动补一条 hidden 的 `=` 搜索项，真实字段默认同名。
+     */
+    public function statusToggle(
+        string $name,
+        array $options,
+        string|AbstractHtmlElement|\Stringable|null $label = null
+    ): self {
+        $normalizedName = trim($name);
+        if ($normalizedName === '') {
+            return $this;
+        }
+
+        $this->statusToggles[] = [
+            'name' => $normalizedName,
+            'label' => $label,
+            'options' => $this->normalizeStatusToggleOptions($options),
+        ];
+
+        return $this;
+    }
+
+    /**
+     * 控制多组状态切换按钮是否按换行模式展示。
+     */
+    public function statusTogglesNewLine(bool $newLine = true): self
+    {
+        $this->statusTogglesNewLine = $newLine;
+
+        return $this;
+    }
+
+    /**
+     * V1 `addStatusToggleButtons()` 的兼容别名。
+     * 旧写法传的是后端搜索字段，这里会自动推断一个可用的筛选模型字段名。
+     */
+    public function addStatusToggleButtons(
+        string $searchField,
+        array $mapping,
+        string|AbstractHtmlElement|\Stringable|null $label = null
+    ): self {
+        $name = $this->normalizeStatusToggleName($searchField);
+
+        if (!isset($this->searchSchema[$name])) {
+            $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, [
+                'type' => '=',
+                'field' => $searchField,
+                'hidden' => true,
+            ]);
+        }
+
+        return $this->statusToggle($name, $mapping, $label);
+    }
+
+    /**
+     * V1 `setStatusToggleButtonsNewLine()` 的兼容别名。
+     */
+    public function setStatusToggleButtonsNewLine(bool $newLine = true): self
+    {
+        return $this->statusTogglesNewLine($newLine);
+    }
+
+    /**
+     * 启用表格导出能力。
+     * 默认会在工具栏右侧补一个“导出Excel”按钮；远程表格会复用当前筛选/排序条件重新拉全量数据，
+     * 并自动附加 `is_export=1`，方便沿用旧接口的导出分支。
+     */
+    public function export(string $filename = 'export'): self
+    {
+        $this->export = true;
+
+        return $this->exportFilename($filename);
+    }
+
+    /**
+     * 设置导出按钮文案。
+     */
+    public function exportLabel(string $label = '导出Excel'): self
+    {
+        $this->export = true;
+        $this->exportLabel = trim($label) !== '' ? trim($label) : '导出Excel';
+
+        return $this;
+    }
+
+    /**
+     * 设置导出按钮类型。
+     */
+    public function exportType(string $type = 'success'): self
+    {
+        $this->export = true;
+        $this->exportType = trim($type) !== '' ? trim($type) : 'success';
+
+        return $this;
+    }
+
+    /**
+     * 设置导出按钮图标；传 null 或空字符串可移除图标。
+     */
+    public function exportIcon(?string $icon = 'Download'): self
+    {
+        $this->export = true;
+        $this->exportIcon = $icon !== null && trim($icon) !== '' ? trim($icon) : null;
+
+        return $this;
+    }
+
+    /**
+     * 设置导出文件名，不自动补扩展名。
+     */
+    public function exportFilename(string $filename): self
+    {
+        $this->export = true;
+        $normalized = trim((string)preg_replace('/\.(xlsx|xls)$/i', '', $filename));
+        $this->exportFilename = $normalized !== '' ? $normalized : 'export';
+
+        return $this;
+    }
+
+    /**
+     * 设置导出请求要额外附带的查询参数。
+     * 默认是 `['is_export' => 1]`，用于兼容旧接口的全量导出分支。
+     */
+    public function exportQuery(array $query): self
+    {
+        $this->export = true;
+        $this->exportQuery = $query;
+
+        return $this;
+    }
+
+    /**
+     * export() 的旧版兼容别名。
+     * 保留原版“文件名末尾自动追加当天日期”的习惯。
+     */
+    public function openExportExcel(string $filename = 'export.xlsx'): self
+    {
+        return $this->export($this->normalizeLegacyExportFilename($filename));
     }
 
     /**
@@ -565,10 +718,12 @@ final class Table implements Renderable, EventAware
 
     public function getSearchSchema(): array
     {
-        return array_replace(
+        $schema = array_replace(
             $this->buildColumnSearchSchema(),
             $this->searchSchema
         );
+
+        return $this->appendImplicitStatusToggleSearchSchema($schema);
     }
 
     public function getDeleteUrl(): ?string
@@ -616,6 +771,46 @@ final class Table implements Renderable, EventAware
     public function useDragSort(): bool
     {
         return $this->dragSort;
+    }
+
+    public function getStatusToggles(): array
+    {
+        return $this->statusToggles;
+    }
+
+    public function useStatusTogglesNewLine(): bool
+    {
+        return $this->statusTogglesNewLine;
+    }
+
+    public function useExport(): bool
+    {
+        return $this->export;
+    }
+
+    public function getExportLabel(): string
+    {
+        return $this->exportLabel;
+    }
+
+    public function getExportFilename(): string
+    {
+        return $this->exportFilename;
+    }
+
+    public function getExportType(): string
+    {
+        return $this->exportType;
+    }
+
+    public function getExportIcon(): ?string
+    {
+        return $this->exportIcon;
+    }
+
+    public function getExportQuery(): array
+    {
+        return $this->exportQuery;
     }
 
     public function getDragSortLabel(): string
@@ -690,6 +885,23 @@ final class Table implements Renderable, EventAware
         return $schema;
     }
 
+    private function appendImplicitStatusToggleSearchSchema(array $schema): array
+    {
+        foreach ($this->statusToggles as $toggle) {
+            $name = is_string($toggle['name'] ?? null) ? trim($toggle['name']) : '';
+            if ($name === '' || isset($schema[$name])) {
+                continue;
+            }
+
+            $schema[$name] = $this->normalizeSearchSchemaItem($name, [
+                'type' => '=',
+                'hidden' => true,
+            ]);
+        }
+
+        return $schema;
+    }
+
     private function normalizeSearchSchemaItem(string $name, mixed $config): array
     {
         if (is_string($config)) {
@@ -707,7 +919,57 @@ final class Table implements Renderable, EventAware
         if (is_string($field) && $field !== '') {
             $item['field'] = $field;
         }
+        if (($config['hidden'] ?? false) === true) {
+            $item['hidden'] = true;
+        }
 
         return $item;
+    }
+
+    private function normalizeStatusToggleName(string $searchField): string
+    {
+        $normalized = trim($searchField);
+        if ($normalized === '') {
+            return 'status';
+        }
+
+        $segments = preg_split('/[.]+/', $normalized);
+        $candidate = trim((string)end($segments));
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        return preg_replace('/[^A-Za-z0-9_$]+/', '_', $normalized) ?: 'status';
+    }
+
+    private function normalizeStatusToggleOptions(array $options): array
+    {
+        $normalized = [];
+
+        foreach ($options as $index => $option) {
+            if (!is_array($option)) {
+                $normalized[] = [
+                    'value' => $index,
+                    'label' => (string)$option,
+                ];
+
+                continue;
+            }
+
+            $normalized[] = [
+                'value' => $option['value'] ?? $index,
+                'label' => (string)($option['label'] ?? ($option['value'] ?? $index)),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeLegacyExportFilename(string $filename): string
+    {
+        $normalized = trim((string)preg_replace('/\.(xlsx|xls)$/i', '', $filename));
+        $normalized = $normalized !== '' ? $normalized : 'export';
+
+        return $normalized . date('Y-m-d');
     }
 }

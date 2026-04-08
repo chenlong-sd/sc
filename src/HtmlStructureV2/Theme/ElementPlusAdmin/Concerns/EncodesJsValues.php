@@ -23,6 +23,21 @@ trait EncodesJsValues
     }
 
     /**
+     * 构造一个基于 JS 字面量的三元表达式。
+     * 适合 `condition ? 'primary' : ''` 这类需要输出字符串/布尔/null 字面量的动态属性场景，
+     * 避免调用侧手写双引号字符串后再被 HTML 属性编码成 `&quot;...&quot;`。
+     */
+    protected function jsLiteralTernary(string $condition, mixed $truthy, mixed $falsy): string
+    {
+        return sprintf(
+            '%s ? %s : %s',
+            trim($condition),
+            $this->jsValue($truthy),
+            $this->jsValue($falsy)
+        );
+    }
+
+    /**
      * 规范化最终写入 HTML 的组件属性值。
      * ":" 开头属性的非字符串值会自动转成 JS 字面量，字符串仍视为原始表达式。
      */

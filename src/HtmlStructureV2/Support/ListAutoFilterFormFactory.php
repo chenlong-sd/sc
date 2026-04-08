@@ -76,6 +76,10 @@ final class ListAutoFilterFormFactory
             return null;
         }
 
+        if (($searchConfig['hidden'] ?? false) === true) {
+            return null;
+        }
+
         $searchType = strtoupper((string)($searchConfig['type'] ?? '='));
         $searchField = is_string($searchConfig['field'] ?? null) && $searchConfig['field'] !== ''
             ? (string)$searchConfig['field']

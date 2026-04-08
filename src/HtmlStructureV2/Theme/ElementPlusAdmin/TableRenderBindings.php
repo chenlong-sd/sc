@@ -39,6 +39,11 @@ final class TableRenderBindings
         return sprintf('(%s?.loading || false)', $this->stateExpression());
     }
 
+    public function exportLoadingExpression(): string
+    {
+        return sprintf('(%s?.exporting || false)', $this->stateExpression());
+    }
+
     public function maxHeightExpression(): string
     {
         return sprintf('(%s?.maxHeight || null)', $this->stateExpression());
@@ -67,6 +72,31 @@ final class TableRenderBindings
     public function reloadExpression(): string
     {
         return sprintf('loadTableData(%s)', $this->tableKeyLiteral());
+    }
+
+    public function exportExpression(): string
+    {
+        return sprintf('exportTableData(%s)', $this->tableKeyLiteral());
+    }
+
+    public function statusToggleActiveExpression(string $name, mixed $value = null): string
+    {
+        return sprintf(
+            'isTableStatusToggleActive(%s, %s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($name),
+            $this->jsValue($value)
+        );
+    }
+
+    public function statusToggleClickExpression(string $name, mixed $value = null): string
+    {
+        return sprintf(
+            'setTableStatusToggle(%s, %s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsString($name),
+            $this->jsValue($value)
+        );
     }
 
     public function selectionChangeExpression(): string

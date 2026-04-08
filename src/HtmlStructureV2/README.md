@@ -40,6 +40,76 @@
 
 `List` 是复合组件，需要混合布局时，直接在 `Pages::make()` 里组合 `Lists::make()`、`Tables::make()`、`Forms::make()` 即可。
 
+## 表格导出
+
+V2 现在支持原生表格导出，不再依赖 V1 渲染链路。
+
+- `Table::export('文件名')` 开启导出按钮
+- `Table::exportLabel()` / `exportType()` / `exportIcon()` 可调整按钮表现
+- `Table::exportQuery([...])` 可追加远程导出请求参数；默认会带上 `is_export=1`
+- `Table::openExportExcel()` 作为旧写法兼容别名继续可用
+
+导出规则：
+
+- 当前有勾选行时，优先导出当前选中数据
+- 没有勾选时，远程表格会复用当前筛选和排序重新拉取全量数据
+- `Column::onlyExportExcel()` 会进入导出但不在页面展示
+- 页面可见列默认参与导出；若用户在“列设置”里手动隐藏某列，该列也会同步从导出结果中排除
+
+```injectablephp
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+$table = Tables::make('orders')
+    ->addColumns(
+        Tables::column('订单号', 'order_no'),
+        Tables::column('状态', 'status')->displayMapping([1 => '已支付', 0 => '待支付']),
+        Tables::column('内部备注', 'remark')->onlyExportExcel()
+    )
+    ->export('订单列表')
+    ->exportLabel('导出Excel');
+```
+
+仓库里的真实组合示例可参考 `plugins/QA/Http/Admin/View/QaCase/lists.sc.php`。
+
+## 状态切换按钮栏
+
+V2 现在支持表格顶部的快速状态切换按钮栏，适合列表页里高频的枚举筛选。
+
+- `Table::statusToggle($name, $options, $label = null)` 是原生写法
+- `Table::statusTogglesNewLine()` 控制多组按钮按换行模式展示
+- `Table::addStatusToggleButtons()` / `setStatusToggleButtonsNewLine()` 作为旧写法兼容别名继续可用
+
+行为规则：
+
+- 按钮点击后会复用当前表格已有的搜索协议、分页和排序流程
+- 如果当前表格挂在 `ListWidget` 里，会同步写入该 list 的 filter model，而不是额外维护一套独立 search 状态
+- 未显式勾选时，“全部”会清空对应筛选值
+- 后端真实字段映射继续通过 `Table::search()` / `searchSchema()` / `Column::searchable()` 定义，不再塞进 status toggle 自身参数里
+
+```injectablephp
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+$table = Tables::make('qa')
+    ->addColumns(
+        Tables::column('案件状态', 'case_status')
+    )
+    ->statusToggle(
+        'case_status',
+        [
+            ['value' => 1, 'label' => '待确认'],
+            ['value' => 2, 'label' => '处理中'],
+        ],
+        '案件状态'
+    )
+    ->statusTogglesNewLine();
+```
+
+和 `ListWidget` 自动筛选联动的真实组合示例同样可参考 `plugins/QA/Http/Admin/View/QaCase/lists.sc.php`。
+
 `Pages::make()` 下直接放置的 `Form / Table / ListWidget` 默认按“组件本体”渲染，不自动补一层 card 壳；如果需要卡片、标题、分组说明，显式用 `Layouts::card()` / `Blocks::title()` 组合。
 
 混合布局里如果页面头部动作需要显式指向某个 list / table，统一使用 `->forList('orders')` / `->forTable('audit-table')`，不要再依赖“当前主表”这类隐式约定。显式 key 写错时不会再回退到主 list，而是会在构建期直接抛错，避免误绑到别的组件。
