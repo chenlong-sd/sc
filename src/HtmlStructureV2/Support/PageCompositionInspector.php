@@ -151,6 +151,10 @@ final class PageCompositionInspector
      */
     private function collectRenderableManagedDialogs(Renderable $component): array
     {
+        if ($component instanceof Action && !$component->isAvailable()) {
+            return [];
+        }
+
         $dialogs = [];
         $this->mergeCollectedDialogs($dialogs, $this->metadataRegistry->dialogs($component));
 
@@ -187,6 +191,10 @@ final class PageCompositionInspector
         array $knownListKeys,
         array $knownDialogKeys
     ): void {
+        if ($component instanceof Action && !$component->isAvailable()) {
+            return;
+        }
+
         $this->validateActionCollections(
             $this->metadataRegistry->actionCollections($component),
             $knownTableKeys,

@@ -17,7 +17,6 @@ final class TableBlockRenderer
     public function render(
         Table $table,
         TableRenderBindings $bindings,
-        bool $showSummary = true,
         ?RenderContext $renderContext = null
     ): DoubleLabel
     {
@@ -35,14 +34,6 @@ final class TableBlockRenderer
 
         if ($table->usePagination()) {
             $block->append($this->tableRenderer->renderPagination($table, $bindings));
-        }
-
-        if ($showSummary) {
-            $block->append(
-                El::double('div')->addClass('sc-v2-table__footer')->append(
-                    El::double('span')->append(sprintf('共 {{ %s }} 条数据', $bindings->totalExpression()))
-                )
-            );
         }
 
         if ($table->useSettings()) {

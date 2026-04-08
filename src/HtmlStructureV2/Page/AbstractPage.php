@@ -157,7 +157,10 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     public function getHeaderActions(): array
     {
-        return $this->headerActions;
+        return array_values(array_filter(
+            $this->headerActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     /**
@@ -246,6 +249,10 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     protected function collectDialogsFromActions(array &$dialogs, array $actions): void
     {
         foreach ($actions as $action) {
+            if (!$action instanceof Action || !$action->isAvailable()) {
+                continue;
+            }
+
             if (!$action instanceof DialogAction) {
                 continue;
             }

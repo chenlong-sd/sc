@@ -116,6 +116,8 @@ $table = Tables::make('qa')
 
 像 `Actions::refresh()`、`RequestAction::reloadTable()` 这类“数据目标型动作”，如果当前位置没有局部 table/list 上下文，也没有显式 `forTable()/forList()`，现在会在构建期直接报错，不再生成隐式 `loadTableData()` 之类的回退调用。
 
+`Action::when()` 现在支持两种语义：`->when($condition)` 会直接在 PHP 层禁用当前动作，不再参与渲染、target 校验和 dialog 收集；`->when($condition, fn (Action $action) => ...)` 则继续作为条件链式配置使用。
+
 仓库里可直接渲染的综合示例见 `test/Fixtures/View/ScEngine/v2-full-demo.sc.php`，对应测试入口是 `ScEngine.v2-full-demo`。
 
 ## 设计约束

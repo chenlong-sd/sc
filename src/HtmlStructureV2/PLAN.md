@@ -31,6 +31,8 @@ So the next phase should focus on missing feature bodies, not on re-creating old
 ## Confirmed Principles
 
 - Do not modify controllers for this phase unless a later task proves it is strictly necessary.
+- The planning scope recorded in this file is limited to `sc/`.
+- Work outside `sc/` may be used as validation input, but should not become planned delivery unless explicitly requested by the user.
 - Do not break original V1 pages.
 - Prefer V2-native capabilities first.
 - Add compatibility aliases only when they can map cleanly onto a real V2-native feature.
@@ -45,13 +47,12 @@ This gap is no longer theoretical work.
 Evidence:
 
 - `Table::dragSort()` now exists in V2
-- Route-like tree usage has been migrated in `plugins/AdminBasic/Http/Admin/View/Route/lists.sc.php`
-- ElementPlusAdmin runtime already carries the drag sort integration required by the migrated page
+- ElementPlusAdmin runtime already carries the tree drag integration required by real migration usage
 
 Outcome:
 
 - V2 pages can express sortable row drag behavior directly
-- Route-like tree pages can migrate without falling back to V1 `setDraw()`
+- Tree-like list pages can migrate without falling back to V1 `setDraw()`
 
 ### Done. Route page migration blockers found during real usage
 
@@ -61,7 +62,7 @@ Confirmed fixes:
 
 - `Fields::cascader()` now keeps raw tree node options when the usage side passes cascader/tree data
 - `cascaderProps()` continues to own the value/label field mapping instead of forcing select-style normalization
-- The V2 route list page no longer relies on debug output during rendering
+- V2 list rendering no longer relies on temporary debug output during migration verification
 
 ### Done. V2-native export capability
 
@@ -86,31 +87,35 @@ This gap is also no longer pending planning work.
 Confirmed landing points:
 
 - `Table::statusToggle()` now exists as the V2-native quick toggle entry
+- Native `Table::statusToggle()` has been simplified back to `name + options + label`; backend field mapping stays in `search()` / `searchSchema()` / `Column::searchable()`
 - Old `addStatusToggleButtons()` / `setStatusToggleButtonsNewLine()` can already map onto the same capability as thin compatibility aliases
 - Toggle clicks now reuse the existing table search pipeline instead of introducing a parallel query path
 - When a table lives inside `ListWidget`, toggle state syncs into the list filter model
+- The labeled toggle-bar presentation has been aligned back to the original V1 visual structure during real-page migration
 
 Outcome:
 
 - V2 now has a first-class fast segmented filter bar for common enum/status fields
-- QA case style pages can preserve this high-frequency filter UX during migration
+- List pages can preserve this high-frequency filter UX during migration
+- Native toggle API is now cleaner, while legacy search-field mapping remains isolated in the compatibility alias layer
 
 ## Current Priority Order
 
-### P1. Continue migration-driven gap fixing on representative real pages
+### P1. Continue `sc/`-internal native capability cleanup driven by real usage
 
-After drag sort, export, and status toggle bar landed, the next useful validation step is continuing to migrate representative pages and only filling gaps that are proven by real usage.
+After drag sort, export, and status toggle bar landed, the next useful validation step is continuing to refine the native capability model inside `sc/` and only filling gaps that are proven by real usage.
 
 Target:
 
-- Prefer migrating pages that still depend on V1-only capability or ergonomics
-- When migration exposes a V2 mismatch, fix the native capability instead of adding ad-hoc page-specific workarounds
+- Prefer tightening native `sc/` APIs, renderer behavior, runtime contracts, and docs before expanding more compatibility surface
+- When real usage exposes a V2 mismatch, fix the native capability inside `sc/` instead of adding ad-hoc page-specific workarounds
 - Keep strengthening README and method-level usage notes alongside these fixes
+- Treat work outside `sc/` as explicitly requested follow-up, not as default plan execution
 
 Expected outcome:
 
 - Remaining V2 gaps stay grounded in real business pages
-- Migration cost drops without turning V2 into a thin V1 alias layer
+- `sc/` stays focused on a clear native model instead of drifting into broad compatibility churn
 
 ## Deferred For Now
 
@@ -129,14 +134,13 @@ Reason:
 
 The recommended execution order is:
 
-1. Continue representative real-page migration and close newly exposed native gaps
+1. Continue `sc/`-internal native cleanup and close newly exposed capability gaps
 2. Re-evaluate whether thin V1 entry aliases are still needed for migration
 
 ## Notes
 
 - `openPage(dialog)` and `openPage(tab)` have already been brought to usable V2 behavior in recent work.
-- The route list page is now a concrete proof point for V2 tree list migration.
-- `plugins/QA/Http/Admin/View/QaCase/lists.sc.php` is now a concrete proof point for a managed `ListWidget` page using V2 `export()`, `statusToggle()`, and cascader/tree confirm-flow fields together.
+- Recent status-toggle cleanup also confirmed a planning rule: V2-native toggle API should only own filter-name binding; legacy backend-field mapping belongs in the compatibility alias path, not the native signature.
 - Recent real-page migration also proved that cascader/tree data must not be normalized with select-style `value` / `label` wrapping.
 - Future planning should continue to distinguish between:
   - missing V2 capability

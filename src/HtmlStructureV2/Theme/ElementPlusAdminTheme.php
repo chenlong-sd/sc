@@ -132,7 +132,6 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-icon-selector__preview{font-size:18px;line-height:1;color:#111827}
     .sc-v2-icon-selector__label{width:100%;font-size:11px;line-height:1.35;color:#6b7280;text-align:center;word-break:break-all}
     .sc-v2-icon-selector__empty{padding:18px 12px;color:#909399;text-align:center;grid-column:1/-1}
-    .sc-v2-table__footer{display:flex;justify-content:flex-end;color:#909399;font-size:12px}
     .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
     .sc-v2-row-actions .sc-v2-table-drag-handle{cursor:move;touch-action:none}
     .sc-v2-row-actions .sc-v2-table-drag-handle .el-icon{cursor:move}
@@ -405,7 +404,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $filterContent = $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions, $context);
             $body->append(
                 $wrapInSectionCards
-                    ? $this->wrapInSectionCard($filterContent, $list->getFilterTitle())
+                    ? $this->wrapInSectionCard($filterContent)
                     : El::double('div')->addClass('sc-v2-list__filters')->append($filterContent)
             );
         }
@@ -413,7 +412,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $table = $list->getTable();
         $tableState = $prepared->tableState;
         if ($table !== null && $tableState !== null) {
-            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $list->shouldShowSummary(), $context);
+            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $context);
             $body->append(
                 $wrapInSectionCards
                     ? $this->wrapInSectionCard($tableContent)

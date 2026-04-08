@@ -30,8 +30,6 @@ final class ListWidget implements Renderable, EventAware
     private bool $resolvedFilterFormInitialized = false;
     /** @var array<string, Dialog> */
     private array $dialogs = [];
-    private string $filterTitle = '筛选条件';
-    private bool $showSummary = true;
 
     public function __construct(
         private readonly string $key
@@ -94,26 +92,6 @@ final class ListWidget implements Renderable, EventAware
     }
 
     /**
-     * 设置筛选区域标题。
-     */
-    public function filterTitle(string $title): self
-    {
-        $this->filterTitle = $title;
-
-        return $this;
-    }
-
-    /**
-     * 控制是否显示列表摘要信息。
-     */
-    public function showSummary(bool $showSummary = true): self
-    {
-        $this->showSummary = $showSummary;
-
-        return $this;
-    }
-
-    /**
      * 绑定列表运行时事件。
      * 可用事件：reload / filterSubmit / filterReset。
      *
@@ -167,16 +145,6 @@ final class ListWidget implements Renderable, EventAware
     public function getTable(): ?Table
     {
         return $this->table;
-    }
-
-    public function getFilterTitle(): string
-    {
-        return $this->filterTitle;
-    }
-
-    public function shouldShowSummary(): bool
-    {
-        return $this->showSummary;
     }
 
     /**

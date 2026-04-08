@@ -25,6 +25,10 @@ final class ActionButtonRenderer
         ?string $contextDialogKey = null
     ): AbstractHtmlElement
     {
+        if (!$action->isAvailable()) {
+            return El::double('template');
+        }
+
         $target = ActionRenderTarget::resolve($action, $tableBindings);
         $this->assertActionHasRequiredRenderTarget($action, $rowScoped, $target);
         $attrs = array_merge([

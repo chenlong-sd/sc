@@ -192,7 +192,10 @@ abstract class Field implements FormNode
 
     public function getSuffixActions(): array
     {
-        return $this->suffixActions;
+        return array_values(array_filter(
+            $this->suffixActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     public function getSuffixContent(): string|AbstractHtmlElement|null
@@ -202,7 +205,7 @@ abstract class Field implements FormNode
 
     public function hasSuffix(): bool
     {
-        return $this->suffixActions !== []
+        return $this->getSuffixActions() !== []
             || ($this->suffixContent !== null && $this->suffixContent !== '');
     }
 

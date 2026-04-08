@@ -99,7 +99,10 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      */
     public function getHeaderActions(): array
     {
-        return $this->headerActions;
+        return array_values(array_filter(
+            $this->headerActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     public function isPlain(): bool

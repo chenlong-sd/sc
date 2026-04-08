@@ -832,7 +832,10 @@ final class Dialog implements Renderable, EventAware
 
     public function getFooterActions(): array
     {
-        return $this->footerActions;
+        return array_values(array_filter(
+            $this->footerActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     public function attrs(): array

@@ -16,7 +16,7 @@ final class ActionMetadataProvider implements MetadataProviderInterface
 
     public function dialogs(Renderable $component): array
     {
-        if (!$component instanceof Action) {
+        if (!$component instanceof Action || !$component->isAvailable()) {
             return [];
         }
 
@@ -25,7 +25,7 @@ final class ActionMetadataProvider implements MetadataProviderInterface
 
     public function actionCollections(Renderable $component): array
     {
-        if (!$component instanceof Action) {
+        if (!$component instanceof Action || !$component->isAvailable()) {
             return [];
         }
 

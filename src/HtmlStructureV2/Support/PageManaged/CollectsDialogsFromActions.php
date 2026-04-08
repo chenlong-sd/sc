@@ -18,7 +18,11 @@ trait CollectsDialogsFromActions
         $dialogs = [];
 
         foreach ($actions as $action) {
-            if ($action instanceof Action && $action->hasEventHandlers()) {
+            if (!$action instanceof Action || !$action->isAvailable()) {
+                continue;
+            }
+
+            if ($action->hasEventHandlers()) {
                 foreach ((new StructuredEventInspector())->collectDialogsFromEventMap($action->getEventHandlers()) as $dialog) {
                     $dialogs[$dialog->key()] = $dialog;
                 }

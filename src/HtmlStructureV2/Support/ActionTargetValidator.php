@@ -27,6 +27,10 @@ final class ActionTargetValidator
         string $owner
     ): void {
         foreach ($actions as $action) {
+            if (!$action->isAvailable()) {
+                continue;
+            }
+
             $tableTarget = $action->tableTarget();
             if (is_string($tableTarget) && $tableTarget !== '') {
                 $this->assertKnownTarget('table', $tableTarget, $knownTableKeys, $action, $owner);

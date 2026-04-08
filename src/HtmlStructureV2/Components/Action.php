@@ -7,7 +7,6 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
-use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
@@ -17,7 +16,6 @@ class Action implements Renderable, EventAware
     use HasEvents {
         on as private bindActionEventHandler;
     }
-    use Conditionable;
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = ['click'];
@@ -36,6 +34,7 @@ class Action implements Renderable, EventAware
     private ?string $deleteUrl = null;
     private ?string $deleteKey = null;
     private array $props = [];
+    private bool $available = true;
 
     public function __construct(
         private readonly string $label,
@@ -241,6 +240,45 @@ class Action implements Renderable, EventAware
         $this->handler = $handler;
 
         return $this;
+    }
+
+    /**
+     * 控制当前动作是否在 PHP 层生效。
+     *
+     * - `->when($condition)`：条件不成立时，动作会被整条渲染/校验/收集链忽略
+     * - `->when($condition, fn (Action $action) => ...)`：沿用 Conditionable 语义做链式配置
+     */
+    public function when(bool $condition, ?callable $callback = null, ?callable $otherwise = null): static
+    {
+        if ($callback !== null || $otherwise !== null) {
+            if ($condition) {
+                $callback?->__invoke($this);
+
+                return $this;
+            }
+
+            $otherwise?->__invoke($this);
+
+            return $this;
+        }
+
+        return $this->available($condition);
+    }
+
+    /**
+     * 显式设置当前动作是否可用。
+     * 不可用时不会参与渲染、target 校验、事件 target 校验、弹窗收集。
+     */
+    public function available(bool $available = true): static
+    {
+        $this->available = $available;
+
+        return $this;
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->available;
     }
 
     /**

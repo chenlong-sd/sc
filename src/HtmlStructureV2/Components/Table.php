@@ -653,12 +653,18 @@ final class Table implements Renderable, EventAware
 
     public function getToolbarActions(): array
     {
-        return $this->toolbarActions;
+        return array_values(array_filter(
+            $this->toolbarActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     public function getRowActions(): array
     {
-        return $this->rowActions;
+        return array_values(array_filter(
+            $this->rowActions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
     }
 
     public function getDataSource(): ?DataSourceInterface
