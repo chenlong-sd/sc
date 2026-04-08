@@ -104,8 +104,9 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-section .el-card__body{display:flex;flex-direction:column;gap:16px}
     .sc-v2-section__header{display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
     .sc-v2-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .sc-v2-toolbar__actions{display:flex;gap:10px;flex-wrap:wrap}
-    .sc-v2-toolbar__tools{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+    .sc-v2-toolbar__actions{display:flex;gap:6px;flex-wrap:wrap}
+    .sc-v2-toolbar__tools{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+    .sc-v2-toolbar__actions .el-button+.el-button,.sc-v2-toolbar__tools .el-button+.el-button{margin-left:0}
     .sc-v2-form__control{display:flex;align-items:flex-start;gap:12px;width:100%}
     .sc-v2-form__control>:first-child{flex:1 1 auto;min-width:0}
     .sc-v2-form__suffix{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
