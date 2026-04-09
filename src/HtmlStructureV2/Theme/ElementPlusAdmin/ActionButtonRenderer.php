@@ -247,6 +247,7 @@ final class ActionButtonRenderer
     ): array
     {
         return [
+            'label' => $action->label(),
             'key' => $this->actionLoadingKey($action, $target),
             'tableKey' => $target->tableKey(),
             'listKey' => $target->listKey(),
@@ -260,10 +261,21 @@ final class ActionButtonRenderer
             'reloadPage' => $action->shouldReloadPage(),
             'closeDialog' => $action->shouldCloseAfterSuccess(),
             'dialogTarget' => $action->targetName(),
+            'form' => [
+                'validate' => $action->shouldValidateForm(),
+                'validateScope' => $action->getValidateFormScope(),
+                'payloadSource' => $action->getPayloadSource(),
+                'payloadScope' => $action->getPayloadFormScope(),
+            ],
             'request' => [
                 'method' => $action->getRequestMethod(),
                 'url' => $action->getRequestUrl(),
                 'query' => $action->getPayload(),
+            ],
+            'save' => [
+                'createUrl' => $action->getSaveCreateUrl(),
+                'updateUrl' => $action->getSaveUpdateUrl(),
+                'modeQueryKey' => $action->getSaveModeQueryKey(),
             ],
         ];
     }

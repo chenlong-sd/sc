@@ -83,6 +83,36 @@ final class Events
     }
 
     /**
+     * 创建一个关闭 iframe 宿主弹窗的事件。
+     * 适合 iframe 子页面里的取消操作；若当前不在宿主 iframe 弹窗中，运行时会静默跳过。
+     */
+    public static function closeHostDialog(): StructuredEvent
+    {
+        return StructuredEvent::closeHostDialog();
+    }
+
+    /**
+     * 创建一个刷新 iframe 宿主表格的事件，留空时使用当前上下文表格。
+     * 若当前不在宿主 iframe 弹窗中，运行时会静默跳过。
+     */
+    public static function reloadHostTable(string|Table|null $table = null): StructuredEvent
+    {
+        return StructuredEvent::reloadHostTable($table);
+    }
+
+    /**
+     * 创建一个“优先关闭宿主弹窗，否则跳转到 URL”的事件。
+     * 适合 iframe 子表单页里的取消返回、保存成功返回。
+     * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
+     * 其它页面上下文会直接回退到 URL 跳转。
+     * 返回的事件对象还可继续链式调用 `hostTable()`。
+     */
+    public static function returnTo(string|JsExpression $url): StructuredEvent
+    {
+        return StructuredEvent::returnTo($url);
+    }
+
+    /**
      * 创建一个消息提示事件，type 可传 success / warning / error / info。
      * `message` 支持动态表达式，会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文，例如 Action / RequestAction 常见有 row /

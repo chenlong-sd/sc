@@ -395,7 +395,15 @@
                 return '';
               }
 
-              return buildUrlWithQuery(dialogCfg.iframe.url, dialogCfg.iframe.query || {}, context);
+              const resolvedQuery = resolveContextValue(dialogCfg.iframe.query || {}, context);
+              const query = isObject(resolvedQuery) ? Object.assign({}, resolvedQuery) : {};
+
+              if (dialogCfg.iframe?.host) {
+                query.__scV2DialogHost = 1;
+                query.__scV2DialogKey = context?.dialogKey || '';
+              }
+
+              return buildUrlWithQuery(dialogCfg.iframe.url, query, context);
             },
             syncDialogRuntimeState(dialogKey, row = undefined){
               const dialogCfg = cfg.dialogs?.[dialogKey] || {};

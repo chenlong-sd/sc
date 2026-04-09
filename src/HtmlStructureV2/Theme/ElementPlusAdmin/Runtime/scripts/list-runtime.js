@@ -12,6 +12,7 @@
             isEventCanceled,
             isBlank,
             makeRequest,
+            postDialogHostMessage,
             pickRows,
             registerElementPlusIcons,
             registerScV2Components,
@@ -247,6 +248,81 @@
                 },
                 clearSimpleFormValidate(scope){
                   return this.clearFormValidate(scope);
+                },
+                notifyDialogHost(payload = {}){
+                  return postDialogHostMessage(payload);
+                },
+                closeHostDialog(dialogKey = null){
+                  const payload = { action: 'close' };
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                reloadHostTable(tableKey = null, dialogKey = null){
+                  const payload = { action: 'reloadTable' };
+                  if (typeof tableKey === 'string' && tableKey !== '') {
+                    payload.tableKey = tableKey;
+                  }
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                openHostDialog(target, row = null, tableKey = null){
+                  if (typeof target !== 'string' || target === '') {
+                    return false;
+                  }
+
+                  const payload = { action: 'openDialog', target };
+                  if (row !== null && row !== undefined) {
+                    payload.row = row;
+                  }
+                  if (typeof tableKey === 'string' && tableKey !== '') {
+                    payload.tableKey = tableKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                setHostDialogTitle(title, dialogKey = null){
+                  const payload = {
+                    action: 'setTitle',
+                    title: title ?? '',
+                  };
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                setHostDialogFullscreen(value = true, dialogKey = null){
+                  const payload = {
+                    action: 'setFullscreen',
+                    value: value !== false,
+                  };
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                toggleHostDialogFullscreen(dialogKey = null){
+                  const payload = { action: 'toggleFullscreen' };
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
+                },
+                refreshHostDialogIframe(dialogKey = null){
+                  const payload = { action: 'refreshIframe' };
+                  if (typeof dialogKey === 'string' && dialogKey !== '') {
+                    payload.dialogKey = dialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
                 },
                 setSimpleFormPathValue(scope, fieldName, value){
                   return this.setFormPathValue(scope, fieldName, value);

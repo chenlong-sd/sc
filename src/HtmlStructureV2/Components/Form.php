@@ -31,6 +31,9 @@ final class Form implements Renderable, EventAware
         'uploadSuccess',
         'uploadFail',
     ];
+    private const DEFAULT_LOAD_METHOD = 'get';
+    private const DEFAULT_LOAD_WHEN = 'edit';
+    private const DEFAULT_MODE_QUERY_KEY = 'id';
 
     /** @var FormNode[] */
     private array $children = [];
@@ -39,6 +42,13 @@ final class Form implements Renderable, EventAware
     private string $labelWidth = '100px';
     private string $submitLabel = '查询';
     private string $resetLabel = '重置';
+    private ?string $loadUrl = null;
+    private string $loadMethod = self::DEFAULT_LOAD_METHOD;
+    private array|JsExpression $loadPayload = [];
+    private bool $loadPayloadConfigured = false;
+    private ?string $loadDataPath = null;
+    private string $loadWhen = self::DEFAULT_LOAD_WHEN;
+    private string $modeQueryKey = self::DEFAULT_MODE_QUERY_KEY;
 
     public function __construct(
         private readonly string $key
@@ -131,6 +141,90 @@ final class Form implements Renderable, EventAware
     }
 
     /**
+     * 配置独立表单页的详情加载接口。
+     * 当前主要用于 `Page` 中直接放置的表单；弹窗表单仍优先使用 `Dialog::load()`。
+     * 当 loadWhen() 条件命中时，会在页面初始化阶段请求该接口，再把结果回填到表单。
+     * method 默认值为 get。
+     *
+     * 若未显式设置 loadPayload()，会默认按 modeQueryKey() 当前值自动提交同名查询参数，
+     * 例如默认等价于 `{ id: 当前页面 query.id }`。
+     */
+    public function load(string $url, string $method = 'get'): self
+    {
+        $this->loadUrl = $url;
+        $this->loadMethod = strtolower($method) ?: self::DEFAULT_LOAD_METHOD;
+
+        return $this;
+    }
+
+    /**
+     * 设置独立表单页详情加载请求参数。
+     * 数组/字符串/JsExpression 都会在请求前按页面运行时 context 解析。
+     *
+     * 常用可读取字段：
+     * - query / page.query: 当前页面 URL 查询参数
+     * - mode / page.mode: 当前页面模式，create 或 edit
+     * - formScope / page.formScope: 当前表单 scope
+     * - form / model / forms / dialogs / selection
+     * - vm
+     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
+     * - closeHostDialog() / reloadHostTable() / openHostDialog()
+     *
+     * 例如可写：
+     * - `['id' => "@page.query.id"]`
+     * - `"{ id: page.query.id, tab: query.tab }"`
+     */
+    public function loadPayload(array|string|JsExpression $loadPayload): self
+    {
+        $this->loadPayload = $this->normalizeExpressionConfig($loadPayload);
+        $this->loadPayloadConfigured = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置从详情响应中取表单数据的路径。
+     * 不设置时会自动尝试 `data` / `result` / `payload` 及响应对象本身里的对象结构。
+     */
+    public function loadDataPath(?string $loadDataPath): self
+    {
+        $this->loadDataPath = $loadDataPath;
+
+        return $this;
+    }
+
+    /**
+     * 控制独立表单页详情加载时机，仅支持 always / create / edit。
+     * `edit` 为默认值，表示只有当前页面 query 中存在 modeQueryKey() 对应值时才自动拉取详情。
+     */
+    public function loadWhen(string $loadWhen): self
+    {
+        $loadWhen = strtolower($loadWhen);
+        if (in_array($loadWhen, ['always', 'create', 'edit'], true)) {
+            $this->loadWhen = $loadWhen;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 设置独立表单页 create/edit 模式识别所用的查询参数名。
+     * 默认值为 `id`；当当前页面 query 中该值非空时，页面模式会被视为 edit，否则为 create。
+     *
+     * 该配置会同时影响：
+     * - load() 默认生成的详情加载参数
+     * - `RequestAction::saveUrls()` 的新建/编辑地址自动切换
+     * - 动作/事件上下文中的 `mode` / `page.mode`
+     */
+    public function modeQueryKey(string $queryKey = self::DEFAULT_MODE_QUERY_KEY): self
+    {
+        $queryKey = trim($queryKey);
+        $this->modeQueryKey = $queryKey !== '' ? $queryKey : self::DEFAULT_MODE_QUERY_KEY;
+
+        return $this;
+    }
+
+    /**
      * 绑定表单运行时事件。
      * 可用事件：validateSuccess / validateFail / arrayRowAdd / arrayRowRemove / arrayRowMove / optionsLoaded / optionsLoadFail / uploadSuccess / uploadFail。
      *
@@ -213,6 +307,41 @@ final class Form implements Renderable, EventAware
         return $this->resetLabel;
     }
 
+    public function getLoadUrl(): ?string
+    {
+        return $this->loadUrl;
+    }
+
+    public function getLoadMethod(): string
+    {
+        return $this->loadMethod;
+    }
+
+    public function getLoadPayload(): array|JsExpression
+    {
+        return $this->loadPayload;
+    }
+
+    public function shouldUseDefaultLoadPayload(): bool
+    {
+        return !$this->loadPayloadConfigured;
+    }
+
+    public function getLoadDataPath(): ?string
+    {
+        return $this->loadDataPath;
+    }
+
+    public function getLoadWhen(): string
+    {
+        return $this->loadWhen;
+    }
+
+    public function getModeQueryKey(): string
+    {
+        return $this->modeQueryKey;
+    }
+
     public function defaults(): array
     {
         return $this->schema()->defaults();
@@ -259,5 +388,10 @@ final class Form implements Renderable, EventAware
             'uploadSuccess' => '上传成功后触发，可读取 fieldName / uploadFile / uploadFiles / payload。',
             'uploadFail' => '上传失败后触发，可读取 fieldName / uploadFile / uploadFiles / error。',
         ];
+    }
+
+    private function normalizeExpressionConfig(array|string|JsExpression $value): array|JsExpression
+    {
+        return is_string($value) ? JsExpression::ensure($value) : $value;
     }
 }

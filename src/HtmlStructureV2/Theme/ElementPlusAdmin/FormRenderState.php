@@ -82,6 +82,15 @@ final class FormRenderState
             'linkages' => $schema->linkages(),
             'uploads' => $schema->uploads(),
             'uploadPaths' => $schema->uploadPaths(),
+            'modeQueryKey' => $form->getModeQueryKey(),
+            'load' => [
+                'url' => $form->getLoadUrl(),
+                'method' => $form->getLoadMethod(),
+                'payload' => $form->getLoadPayload(),
+                'useModeQueryPayload' => $form->shouldUseDefaultLoadPayload(),
+                'dataPath' => $form->getLoadDataPath(),
+                'when' => $form->getLoadWhen(),
+            ],
             'arrayGroups' => array_map(
                 static fn(FormArrayGroupSchema $groupSchema) => $groupSchema->toRuntimeConfig(),
                 $schema->arrayGroups()

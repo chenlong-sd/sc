@@ -99,11 +99,173 @@ Outcome:
 - List pages can preserve this high-frequency filter UX during migration
 - Native toggle API is now cleaner, while legacy search-field mapping remains isolated in the compatibility alias layer
 
+### Done. Public CRUD form submission shortcuts
+
+This gap is no longer theoretical planning work.
+
+Confirmed landing points:
+
+- `RequestAction::validateForm()` now exists as the public “validate before submit” entry
+- `RequestAction::payloadFromForm()` now exists as the public “use current form model as request payload” entry
+- `RequestAction::submitForm()` now exists as the common CRUD save shortcut
+- `Actions::save()` now exists as the common standalone page save entry with default icon/type
+- `Actions::back()` now exists as the common standalone page cancel/return entry
+- `RequestAction::returnTo()` now exists as the common save-success return shortcut
+- Request-action runtime context now exposes public form helpers such as `resolveFormScope()` / `validateForm()` / `getFormModel()` / `cloneFormModel()`
+- Usage-side examples no longer need raw `ctx.vm.validateSimpleForm(...)` / `ctx.vm.getSimpleFormModel(...)` for the common save path
+- README, docblocks, and tests have been aligned around these public shortcuts
+
+Outcome:
+
+- Standalone V2 form pages can submit through public DSL instead of runtime-internal `vm` method names
+- Common CRUD save/cancel actions now require less handwritten JS and are discoverable from IDE/comments
+
+### Done. iframe child-page structured host-return flow
+
+The core host-return path is also no longer pending planning work.
+
+Confirmed landing points:
+
+- `Events::closeHostDialog()` now exists as the public close-host shortcut
+- `Events::reloadHostTable()` now exists as the public reload-host-table shortcut
+- `Events::returnTo($url)->hostTable()` now exists as the public “close host if possible, otherwise jump” flow
+- Child-page runtime context now exposes host bridge helpers such as `closeHostDialog()` / `reloadHostTable()` / `openHostDialog()`
+- `returnTo()` only treats real V2 iframe-dialog children as host-dialog context; ordinary tab iframes fall back to URL navigation instead of being misdetected as dialog children
+- Real page usage has been rewritten to use the public structured return flow instead of raw `window.parent.postMessage(...)`
+
+Outcome:
+
+- iframe child pages can complete common cancel/save-success return flows without handwritten bridge payloads
+- Public host-return behavior is now predictable in both dialog iframes and ordinary page/tab iframes
+
+### Done. V2 iframe child-page public submit entry
+
+The child-page submit entry is no longer purely an internal convention.
+
+Confirmed landing points:
+
+- V2 simple pages now automatically expose `"__SC_V2_PAGE__.submit(scope = null)"`
+- Public page API also exposes `"validateForm()"` / `"getFormModel()"` / `"cloneFormModel()"`
+- `"VueApp.submit"` remains available as a compatibility alias for existing host-side defaults
+- README and runtime tests now document and verify this public child-page submit contract
+
+Outcome:
+
+- iframe dialog hosts can submit V2 child pages without requiring the usage side to hand-write a global submit bridge
+- The preferred V2 child-page submit entry is now explicit and documentable instead of being hidden behind historical naming only
+
+### Done. Standalone form page bootstrap and save-url switching
+
+This gap is also no longer theoretical planning work.
+
+Confirmed landing points:
+
+- `Form::load()` now exists as the standalone page-form detail bootstrap entry
+- `Form::loadPayload()` / `loadDataPath()` / `loadWhen()` are now also available on standalone forms, aligned with dialog-side semantics
+- `Form::modeQueryKey()` now exposes create/edit mode recognition publicly on the form itself
+- Standalone page runtime now exposes `query` / `page.query` / `mode` / `page.mode`
+- Standalone page runtime now exposes public helpers such as `getPageQuery()` / `resolvePageMode()` / `resolveFormMode()` / `loadFormData()`
+- `RequestAction::saveUrls()` now exists as the public create/update save-address switch for standalone CRUD pages
+- Common page-form save flows no longer need PHP `if ($isEdit)` only to switch submit URL
+- README, docblocks, and runtime tests now cover the standalone page-form bootstrap/save path
+
+Outcome:
+
+- Standalone V2 forms now have a native create/edit bootstrap model instead of relying only on manual PHP preload
+- Page-form CRUD authoring is shorter and more IDE-visible
+- The common “query id decides edit mode, load detail, save to create/update URL” path is now first-class
+
+## Form-side Reassessment
+
+After re-checking recent real usage around standalone form pages, dialog forms, iframe forms, and request actions, the remaining form-side gaps are mainly about authoring ergonomics and public API clarity, not basic renderer completeness.
+
+Confirmed observations:
+
+- `Forms::arrayGroup()` / `Forms::table()` / `Forms::tabs()` / `Forms::collapse()` already cover the structural side of complex forms well enough for current migration work
+- `Dialog::load()` / `loadPayload()` / `loadWhen()` already cover the common edit-dialog bootstrap path
+- `RequestAction::payload()` already exposes `forms` in public context, so form model reading can be a first-class API instead of forcing runtime-internal `vm` calls
+- `Actions::submit()` already gives dialog-footer submission a relatively clear public shortcut, and standalone page forms now also have public `submitForm()` / `saveUrls()` / `Form::load()` flow
+- Real standalone form-page usage still tends to fall back to internal runtime names such as `validateSimpleForm(...)` / `getSimpleFormModel(...)`
+- iframe child pages can already coordinate with the host, but current usage still leans on raw `window.parent.postMessage(...)` and magic strings such as `"VueApp.submit"`
+- Page-form CRUD flows still duplicate cancel / return / host-close / host-reload handling more often than they should
+- Current comments expose context nouns such as `forms` / `vm`, but they still do not provide one obvious public recipe for “how to save a V2 form page” without reading runtime source
+
+Conclusion:
+
+- The next form-side work should not focus on adding more field types first
+- The remaining priority is keeping common CRUD form flows short, explicit, documented, and IDE-visible across iframe child pages and follow-up migration cases
+- Public form APIs should not require users to know runtime-internal `vm` method names
+- High-frequency CRUD form tasks should have obvious defaults or dedicated shortcuts
+
 ## Current Priority Order
 
-### P1. Continue `sc/`-internal native capability cleanup driven by real usage
+### P1. Completed: standalone form page bootstrap and submit model
 
-After drag sort, export, and status toggle bar landed, the next useful validation step is continuing to refine the native capability model inside `sc/` and only filling gaps that are proven by real usage.
+This priority has been landed in the current iteration.
+
+What changed:
+
+- standalone forms now have public `load()` / `loadPayload()` / `loadWhen()` / `modeQueryKey()`
+- request actions now have public `saveUrls()` for create/update address switching
+- runtime context now exposes page query and mode helpers publicly
+
+Next active priorities start from the iframe child-page and documentation tracks below.
+
+### P2. iframe child-page form and host-bridge ergonomics
+
+Core close/reload/return and child submit entry are now public, but iframe child-page CRUD still has one remaining consolidation area.
+
+Evidence:
+
+- Backward compatibility still keeps the host-side default handler path at `"VueApp.submit"`
+- Host close / reload / return now have public helpers, and child pages now expose `"__SC_V2_PAGE__.submit()"`, but the end-to-end host/child recipe can still be tightened further
+- V2-to-V2 iframe form flows still do not have one highest-level public shortcut for “host opens child page, child validates/submits, host saves/refreshes”
+
+Target:
+
+- Keep the newly landed public host-return helpers as the baseline
+- Prefer the newly landed `"__SC_V2_PAGE__.submit()"` contract in docs/examples, while keeping `"VueApp.submit"` only as compatibility fallback
+- Decide whether that contract should land as runtime-injected JS helper(s), PHP-side public DSL, or both, but make the usage-side entry obvious and documented
+- Ensure V2-to-V2 iframe flows can rely on stronger defaults, including submit entry, host bridge, and selection-path behavior, instead of forcing per-page glue
+- Keep same-origin assumptions and fallback behavior explicit in docs
+- Make iframe form-page CRUD examples look like supported product patterns, not internal runtime tricks
+
+Expected outcome:
+
+- iframe form pages can participate in CRUD flows without handwritten bridge boilerplate
+- Host-bridge usage becomes discoverable, documented, and safer to reuse
+- V2 child pages can submit, close, and refresh host state through a stable public contract
+
+### P3. Form-side public contract documentation and IDE visibility
+
+This is required support work for the priorities above, not optional polish.
+
+Evidence:
+
+- Recent usage feedback repeatedly shows that “it exists in runtime” is not enough if users cannot see the supported contract from code completion and comments
+- Form, request-action, iframe-child, and event contexts still have places where public and internal usage are too easy to mix up
+
+Target:
+
+- Clearly distinguish public form/request contexts from runtime-internal helpers
+- Add IDE-visible method comments for any new CRUD shortcuts and bridge helpers
+- In method comments, explicitly state handler signature, execution order, default behavior, and the available context fields for common form-save scenarios
+- When comments mention special strings such as `"@forms.profile.name"` or `"VueApp.submit"`, keep them quoted so IDE popups can show the full text cleanly
+- Expand README with focused form CRUD examples:
+  - standalone page form save
+  - dialog form save
+  - iframe child-page save and host coordination
+- Include migration-style before/after examples that replace raw `ctx.vm.*` or `window.parent.postMessage(...)` usage with public DSL
+- Add tests around the new shortcuts so docs and behavior stay aligned
+
+Expected outcome:
+
+- Users can discover supported form-side patterns directly from the public API surface
+- The framework becomes better at its stated goal: using the least code to build admin CRUD pages
+
+### P4. Continue `sc/`-internal native capability cleanup driven by real usage
+
+After the form-side CRUD ergonomics above are tightened, continue refining the native capability model inside `sc/` and only fill gaps that are proven by real usage.
 
 Target:
 
@@ -116,6 +278,15 @@ Expected outcome:
 
 - Remaining V2 gaps stay grounded in real business pages
 - `sc/` stays focused on a clear native model instead of drifting into broad compatibility churn
+
+## Form-side Completion Bar
+
+The form-side plan for this phase should be considered complete only when all of the following are true:
+
+- A standalone V2 form page can validate and submit through public DSL without raw `ctx.vm.*` calls in usage-side code
+- A V2 iframe child page can close itself and refresh host state without handwritten `window.parent.postMessage(...)`
+- Public docblocks and README are sufficient for a user to discover the supported save flow from IDE and docs alone
+- Remaining handwritten JS in form CRUD pages is reserved for real business customization, not for framework-default plumbing
 
 ## Deferred For Now
 
@@ -134,14 +305,18 @@ Reason:
 
 The recommended execution order is:
 
-1. Continue `sc/`-internal native cleanup and close newly exposed capability gaps
-2. Re-evaluate whether thin V1 entry aliases are still needed for migration
+1. Reassess and tighten standalone form page bootstrap / submit ergonomics
+2. Continue lifting iframe child-page submit flow onto a clearer public contract
+3. Keep form-side docs, comments, and tests aligned with the public contract as new shortcuts land
+4. Continue `sc/`-internal native cleanup and re-evaluate whether thin V1 entry aliases are still needed for migration
 
 ## Notes
 
 - `openPage(dialog)` and `openPage(tab)` have already been brought to usable V2 behavior in recent work.
 - Recent status-toggle cleanup also confirmed a planning rule: V2-native toggle API should only own filter-name binding; legacy backend-field mapping belongs in the compatibility alias path, not the native signature.
 - Recent real-page migration also proved that cascader/tree data must not be normalized with select-style `value` / `label` wrapping.
+- Recent standalone form-page usage also confirmed a second planning rule: public CRUD form flows must not rely on runtime-internal `vm` method names in usage-side code.
+- For form-side APIs, “discoverable in IDE and comments” should be treated as part of capability completeness, not as optional documentation polish.
 - Future planning should continue to distinguish between:
   - missing V2 capability
   - existing V2 capability with no migration alias

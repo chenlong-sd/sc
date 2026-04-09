@@ -630,7 +630,7 @@ $iframeDialog = Dialogs::make('preview', '页面预览')
 
 `context()` 解析后会同时挂到弹窗上下文的顶层字段和 `ctx.dialogContext` 上，所以你既可以写 `@currentId`，也可以在 hook 里用 `ctx.dialogContext.currentId`。
 
-iframe 弹窗如果要配合 `Actions::submit()` 使用，除了配置 `saveUrl()/createUrl()/updateUrl()` 外，子页面还需要暴露一个提交方法。默认读取 `"VueApp.submit"`，也可以改成别的路径：
+iframe 弹窗如果要配合 `Actions::submit()` 使用，除了配置 `saveUrl()/createUrl()/updateUrl()` 外，子页面还需要暴露一个提交方法。默认读取 `"VueApp.submit"`；V2 子页面现在会自动暴露更明确的 `"__SC_V2_PAGE__.submit"`，也兼容 `"VueApp.submit"`：
 
 ```injectablephp
 <?php
@@ -640,14 +640,21 @@ $fillDialog = Dialogs::make('work-order-fill', '填写')
     ->iframe('/admin/work-order/fill', [
         'id' => '@row.id',
     ])
-    ->iframeSubmitHandler('VueApp.submit')
+    ->iframeSubmitHandler('__SC_V2_PAGE__.submit')
     ->footer(
         Actions::close('取消', 'work-order-fill'),
         Actions::submit('提交结果', 'work-order-fill')->confirm('确认提交吗？')
     );
 ```
 
-子页面里的 `"VueApp.submit"` 应返回最终要提交给接口的数据，也可以返回 Promise。这个能力依赖宿主页直接访问 `iframe.contentWindow`，通常要求子页面与宿主页同源。
+V2 子页面默认可直接使用：
+
+- `"__SC_V2_PAGE__.submit(scope = null)"`: 校验并返回表单数据
+- `"__SC_V2_PAGE__.validateForm(scope = null)"`
+- `"__SC_V2_PAGE__.cloneFormModel(scope = null)"`
+- `"VueApp.submit(scope = null)"`: 兼容别名
+
+如果页面里只有一个可提交表单，`scope` 可以省略；否则应显式传表单 key。这个能力依赖宿主页直接访问 `iframe.contentWindow`，通常要求子页面与宿主页同源。
 
 如果你更希望配置就近写在按钮上，也可以直接在 action 上覆盖默认地址；优先级高于 dialog / table 默认配置：
 
@@ -957,6 +964,11 @@ $page = Pages::make('用户列表')
 - `->patch('/url')`
 - `->request('/url', 'delete')`
 - `->payload([...])`
+- `->validateForm('profile')`
+- `->payloadFromForm('profile')`
+- `->submitForm('profile')`
+- `->saveUrls('/create/url', '/update/url', 'id')`
+- `->returnTo('/list/url')`
 - `->confirm('确认消息')`
 - `->loadingText('处理中...')`
 - `->successMessage('操作成功')`
@@ -969,6 +981,89 @@ $page = Pages::make('用户列表')
 - `->afterFail(...)`
 - `->afterFinally(...)`
 
+### 独立表单页加载
+
+独立表单页现在也可以像弹窗一样直接声明“编辑态详情加载”，不需要先在 PHP 里手写
+`$id = request()->query('id')` 再分支查模型。
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+
+Forms::make('profile')
+    ->modeQueryKey('id')
+    ->load('/admin/profile/detail')
+    ->addFields(
+        Fields::text('name', '名称')->required()
+    );
+```
+
+默认规则：
+
+- `modeQueryKey('id')` 默认值就是 `id`
+- 当前页面 query 中该值非空时，页面模式为 `edit`，否则为 `create`
+- `load('/detail')` 默认只在 `edit` 模式下触发
+- 如果没写 `loadPayload()`，会默认提交 `["id" => "@page.query.id"]` 这种同名参数
+- 若接口返回结构不是直接对象，可用 `loadDataPath('data.form')` 指定回填路径
+
+如果查询参数名不是 `id`，可以直接改：
+
+```php
+Forms::make('profile')
+    ->modeQueryKey('user_id')
+    ->load('/admin/profile/detail');
+```
+
+### 表单保存快捷方式
+
+独立表单页现在推荐直接用 `submitForm()`，不要再手写 `ctx.vm.validateSimpleForm(...)` /
+`ctx.vm.getSimpleFormModel(...)` 这类内部运行时方法名。
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+
+Actions::save('保存')
+    ->saveUrls('/admin/profile/create', '/admin/profile/update')
+    ->submitForm('profile')
+    ->loadingText('保存中...')
+    ->successMessage('保存成功')
+    ->returnTo('/admin/profile/lists');
+```
+
+如果要拆开控制，也可以分别写：
+
+```php
+Actions::request('保存')
+    ->saveUrls('/admin/profile/create', '/admin/profile/update')
+    ->validateForm('profile')
+    ->payloadFromForm('profile');
+```
+
+规则：
+
+- `submitForm("profile")` 等价于 `validateForm("profile")->payloadFromForm("profile")`
+- `saveUrls("/create", "/update")` 会按当前页面模式自动切换请求地址
+- `saveUrls("/save")` 表示新建和编辑都走同一个保存地址
+- `saveUrls()` 默认按当前表单的 `modeQueryKey()` 识别模式；第三个参数可显式覆盖查询参数名
+- 不传表单 key 时，只会在当前运行时能唯一定位表单时自动解析
+- 自动解析优先当前 dialog 表单，其次页面内唯一的非 dialog 表单
+- `payload()` 会覆盖 `payloadFromForm()`，适合你要完全自定义请求体时使用
+- `returnTo("/list")` 等价于 `afterSuccess(Events::returnTo("/list")->hostTable())`
+
+最常见的独立表单页头部动作现在可以直接写：
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+
+Actions::back('/admin/profile/lists');
+
+Actions::save('保存')
+    ->saveUrls('/admin/profile/create', '/admin/profile/update')
+    ->submitForm('profile')
+    ->successMessage('保存成功')
+    ->returnTo('/admin/profile/lists');
+```
+
 ### 请求动作上下文取值
 
 `payload()` 里可以直接写这些 token：
@@ -978,6 +1073,8 @@ $page = Pages::make('用户列表')
 - `@filters.status`
 - `@dialogs.create-normal.name`
 - `@forms.setting-form.site_name`
+- `@page.query.id`
+- `@page.mode`
 
 例如：
 
@@ -993,7 +1090,8 @@ Actions::request('上架')
 
 ### 请求动作自定义钩子
 
-`before/afterSuccess/afterFail/afterFinally` 接收 `JsExpression`，推荐写成函数：
+`before/afterSuccess/afterFail/afterFinally` 可接收 `JsExpression` 或结构化 `Events::*`；
+需要写 JS 时，推荐写成函数：
 
 ```php
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -1011,10 +1109,83 @@ Actions::request('同步')
 - `ctx.filters`
 - `ctx.dialogs`
 - `ctx.forms`
+- `ctx.formScope`
 - `ctx.payload`
 - `ctx.error`
 - `ctx.request`
 - `ctx.vm`
+- `ctx.resolveFormScope()`
+- `ctx.validateForm()`
+- `ctx.getFormModel()`
+- `ctx.cloneFormModel()`
+
+### iframe 子页面宿主桥
+
+V2 iframe 子页面里，优先推荐直接用结构化事件；只有确实需要自定义逻辑时，再调用宿主桥方法。
+
+最常见的“保存成功后返回列表页；如果当前是 iframe 子页则先刷新宿主表格并关闭宿主弹窗”现在可以直接写：
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Events;
+
+Actions::request('保存')
+    ->post('/admin/profile/save')
+    ->submitForm('profile')
+    ->afterSuccess(
+        Events::returnTo('/admin/profile/lists')->hostTable()
+    );
+```
+
+取消按钮也可以直接写：
+
+```php
+Actions::custom('取消', Events::returnTo('/admin/profile/lists'));
+```
+
+结构化宿主桥事件：
+
+- `Events::closeHostDialog()`
+- `Events::reloadHostTable($table = null)`
+- `Events::returnTo($url)->hostTable($table = null)`
+
+说明：
+
+- `Events::returnTo()` 只有在当前页面确实由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先关闭宿主弹窗
+- 普通页面或普通 tab iframe 页面会直接回退到 `url` 跳转，不会把“存在 parent window”误判成宿主弹窗
+
+如果确实要写 JS，动作上下文里也能直接调用宿主桥方法，不需要再手写
+`window.parent.postMessage(...)`：
+
+```php
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+Actions::request('保存')
+    ->post('/admin/profile/save')
+    ->submitForm('profile')
+    ->afterSuccess(JsExpression::make(<<<'JS'
+(ctx) => {
+  ctx.reloadHostTable();
+  ctx.closeHostDialog();
+}
+JS));
+```
+
+可用宿主桥方法：
+
+- `ctx.notifyDialogHost(payload)`
+- `ctx.closeHostDialog(dialogKey = null)`
+- `ctx.reloadHostTable(tableKey = null, dialogKey = null)`
+- `ctx.openHostDialog(dialogKey, row = null, tableKey = null)`
+- `ctx.setHostDialogTitle(title, dialogKey = null)`
+- `ctx.setHostDialogFullscreen(value = true, dialogKey = null)`
+- `ctx.toggleHostDialogFullscreen(dialogKey = null)`
+- `ctx.refreshHostDialogIframe(dialogKey = null)`
+
+如果是 `Actions::custom()` 这类直接执行模板表达式的场景，也可以直接走页面 runtime 方法：
+
+```php
+Actions::custom('取消', 'vm.closeHostDialog()');
+```
 
 ## 统一事件
 
@@ -1048,6 +1219,9 @@ Blocks::button('查看源数据')
 - `Events::reloadTable()`
 - `Events::reloadList()`
 - `Events::reloadPage()`
+- `Events::closeHostDialog()`
+- `Events::reloadHostTable()`
+- `Events::returnTo()`
 - `Events::message()`
 - `Events::request()`
 

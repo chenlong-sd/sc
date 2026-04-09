@@ -58,6 +58,59 @@
             }
             return response;
           };
+          const extractLoadData = (payload, dataPath = null) => {
+            const candidates = [];
+            const normalizedPath = typeof dataPath === 'string' ? dataPath.trim() : '';
+
+            if (normalizedPath !== '') {
+              candidates.push(getByPath(payload, normalizedPath));
+            } else {
+              if (isObject(payload)) {
+                candidates.push(payload.data, payload.result, payload.payload);
+                if (isObject(payload.data)) {
+                  candidates.push(payload.data.data, payload.data.result, payload.data.payload);
+                }
+              }
+              candidates.push(payload);
+            }
+
+            for (const item of candidates) {
+              if (isObject(item)) {
+                return item;
+              }
+            }
+
+            return {};
+          };
+          const readPageQuery = (search = window.location.search) => {
+            const output = {};
+            const rawSearch = typeof search === 'string' ? search.trim() : '';
+            const params = new URLSearchParams(rawSearch.startsWith('?') ? rawSearch.slice(1) : rawSearch);
+
+            params.forEach((value, key) => {
+              if (Object.prototype.hasOwnProperty.call(output, key)) {
+                if (Array.isArray(output[key])) {
+                  output[key].push(value);
+                } else {
+                  output[key] = [output[key], value];
+                }
+
+                return;
+              }
+
+              output[key] = value;
+            });
+
+            return output;
+          };
+          const resolvePageMode = (query = {}, queryKey = 'id') => {
+            const normalizedKey = typeof queryKey === 'string' && queryKey.trim() !== ''
+              ? queryKey.trim()
+              : 'id';
+            const value = getByPath(query || {}, normalizedKey);
+
+            return isBlank(value) ? 'create' : 'edit';
+          };
           const resolveMessage = (payload, fallback = '') => {
             if (typeof payload === 'string' && payload !== '') return payload;
             if (!isObject(payload)) return fallback;
@@ -440,6 +493,49 @@
               return true;
             }
 
+            if (type === 'closeHostDialog') {
+              if (typeof context?.closeHostDialog === 'function') {
+                return context.closeHostDialog();
+              }
+
+              return false;
+            }
+
+            if (type === 'reloadHostTable') {
+              const tableKey = resolveContextValue(handler.tableKey ?? context?.tableKey ?? null, context);
+              if (typeof context?.reloadHostTable === 'function') {
+                return context.reloadHostTable(
+                  typeof tableKey === 'string' && tableKey !== '' ? tableKey : null
+                );
+              }
+
+              return false;
+            }
+
+            if (type === 'returnTo') {
+              const url = resolveContextValue(handler.url || '', context);
+              const shouldReloadHostTable = handler.reloadHostTable === true;
+              const tableKey = resolveContextValue(handler.tableKey ?? context?.tableKey ?? null, context);
+
+              if (shouldReloadHostTable && typeof context?.reloadHostTable === 'function') {
+                context.reloadHostTable(typeof tableKey === 'string' && tableKey !== '' ? tableKey : null);
+              }
+
+              const closed = typeof context?.closeHostDialog === 'function'
+                ? context.closeHostDialog()
+                : false;
+              if (closed) {
+                return true;
+              }
+
+              if (typeof url === 'string' && url !== '') {
+                window.location.href = url;
+                return url;
+              }
+
+              throw new Error('Structured event [returnTo] requires a resolvable url or host dialog context.');
+            }
+
             if (type === 'message') {
               const message = resolveContextValue(handler.message ?? '', context);
               if (message === null || message === undefined || message === '') {
@@ -713,9 +809,46 @@
             return query;
           };
           const dialogScopePrefix = 'dialog:';
+          const dialogHostBridgeQueryKey = '__scV2DialogHost';
           const toDialogScope = (dialogKey) => {
             const normalized = String(dialogKey || '').trim();
             return normalized === '' ? dialogScopePrefix : (dialogScopePrefix + normalized);
+          };
+          const hasDialogHostBridge = () => {
+            if (typeof window === 'undefined' || !window.location || typeof URLSearchParams !== 'function') {
+              return false;
+            }
+
+            try {
+              const params = new URLSearchParams(window.location.search || '');
+              if (!params.has(dialogHostBridgeQueryKey)) {
+                return false;
+              }
+
+              const value = String(params.get(dialogHostBridgeQueryKey) || '').trim().toLowerCase();
+              return value === '' || !['0', 'false', 'no', 'off'].includes(value);
+            } catch (error) {
+              return false;
+            }
+          };
+          const postDialogHostMessage = (payload = {}) => {
+            if (!isObject(payload)) {
+              return false;
+            }
+            if (!hasDialogHostBridge()) {
+              return false;
+            }
+
+            const parentWindow = typeof window !== 'undefined' ? window.parent : null;
+            if (!parentWindow || parentWindow === window || typeof parentWindow.postMessage !== 'function') {
+              return false;
+            }
+
+            parentWindow.postMessage({
+              __scV2DialogHost: payload
+            }, '*');
+
+            return true;
           };
           const isDialogScope = (scope) => {
             return typeof scope === 'string' && scope.startsWith(dialogScopePrefix);
@@ -1392,6 +1525,7 @@
             emitConfiguredEvent,
             ensureSuccess,
             extractFileName,
+            extractLoadData,
             extractPayload,
             formatColumnDatetime,
             getConfigState,
@@ -1419,12 +1553,15 @@
             normalizeUploadFile,
             normalizeUploadFiles,
             pickRows,
+            postDialogHostMessage,
+            readPageQuery,
             resolveContextToken,
             resolveContextValue,
             resolveColumnDisplayValue,
             resolveColumnMappingLabel,
             resolveColumnTagMeta,
             resolveDynamicParams,
+            resolvePageMode,
             resolveLinkageTemplate,
             resolvePickerDisplayTemplate,
             resolveMessage,

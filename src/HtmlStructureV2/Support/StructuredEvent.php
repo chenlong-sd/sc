@@ -104,6 +104,44 @@ final class StructuredEvent implements StructuredEventInterface
     }
 
     /**
+     * 创建一个关闭 iframe 宿主弹窗的结构化事件。
+     * 若当前页面不在宿主 iframe 弹窗中，运行时会静默跳过。
+     */
+    public static function closeHostDialog(): self
+    {
+        return new self('closeHostDialog');
+    }
+
+    /**
+     * 创建一个刷新 iframe 宿主表格的结构化事件。
+     * 若未显式传入表格，运行时会尝试从当前 handler context 读取 `tableKey`。
+     * 若当前页面不在宿主 iframe 弹窗中，运行时会静默跳过。
+     */
+    public static function reloadHostTable(string|Table|null $table = null): self
+    {
+        $event = new self('reloadHostTable', [
+            'tableKey' => self::tableKeyOf($table),
+        ]);
+
+        return $event->registerTableTarget($table);
+    }
+
+    /**
+     * 创建一个“优先关闭宿主弹窗，否则跳转到指定 URL”的结构化事件。
+     * 适合 iframe 子表单页里的取消返回、保存成功返回等常见场景。
+     * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
+     * 其它页面上下文会直接回退到 URL 跳转。
+     * 可继续链式调用 `hostTable()`，让关闭前先请求宿主刷新表格。
+     */
+    public static function returnTo(string|JsExpression $url): self
+    {
+        return new self('returnTo', [
+            'url' => $url,
+            'reloadHostTable' => false,
+        ]);
+    }
+
+    /**
      * 创建一个消息提示的结构化事件。
      * `message` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文。
@@ -189,6 +227,21 @@ final class StructuredEvent implements StructuredEventInterface
         $this->payload['tableKey'] = self::tableKeyOf($table);
 
         return $this->registerTableTarget($table);
+    }
+
+    /**
+     * 为 `returnTo()` 结构化事件追加“先刷新宿主表格”语义。
+     * 若未显式传入表格，运行时会优先读取当前 handler context 的 `tableKey`。
+     */
+    public function hostTable(string|Table|null $table = null): self
+    {
+        $this->payload['reloadHostTable'] = true;
+        if ($table !== null) {
+            $this->payload['tableKey'] = self::tableKeyOf($table);
+            $this->registerTableTarget($table);
+        }
+
+        return $this;
     }
 
     /**

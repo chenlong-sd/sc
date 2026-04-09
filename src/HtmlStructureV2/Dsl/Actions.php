@@ -57,8 +57,19 @@ final class Actions
     }
 
     /**
+     * 创建一个独立表单页常用的“保存”请求动作。
+     * 默认按钮类型为 primary，图标为 Check；
+     * 推荐继续链式调用 saveUrls()/post()/put()/submitForm()/returnTo()/successMessage()。
+     */
+    public static function save(string $label = '保存'): RequestAction
+    {
+        return RequestAction::make($label)->icon('Check');
+    }
+
+    /**
      * 创建一个请求动作，适合直接发起接口调用并处理成功/失败反馈。
-     * 后续可继续链式配置 request()/payload()/on()/before()/afterSuccess() 等运行时行为。
+     * 后续可继续链式配置 request()/saveUrls()/payload()/submitForm()/validateForm()/payloadFromForm()/on() /
+     * before()/afterSuccess() 等运行时行为。
      * 默认按钮类型为 primary。
      */
     public static function request(string $label): RequestAction
@@ -75,6 +86,17 @@ final class Actions
     public static function submit(string $label = '保存', string $dialog = 'editor'): Action
     {
         return Action::submit($label, $dialog);
+    }
+
+    /**
+     * 创建一个独立页面常用的“取消/返回”动作。
+     * 默认按钮类型为 default，点击后执行 `Events::returnTo($url)`；
+     * 若当前页面是启用 `iframeHost()` 的 V2 iframe 子页，则会优先关闭宿主弹窗，否则跳转到指定 URL。
+     */
+    public static function back(string|JsExpression $url, string $label = '取消'): Action
+    {
+        return Action::custom($label, Events::returnTo($url))
+            ->type('default');
     }
 
     /**
