@@ -11,6 +11,8 @@
               validateForm: 'validateForm',
               clearFormValidate: 'clearFormValidate',
               getFormModel: 'getFormModel',
+              setFormModel: 'setFormModel',
+              initializeFormModel: 'initializeFormModel',
               setFormPathValue: 'setFormPathValue',
               getOptionState: 'getOptionState',
               getOptionLoadingState: 'getOptionLoadingState',
@@ -39,6 +41,7 @@
               handleUploadExceed: 'handleUploadExceed',
               handleUploadPreview: 'handleUploadPreview'
             },
+            getFormConfig: (scope) => getScopedFormConfig(scope),
             getRefName: (scope) => getScopedFormConfig(scope)?.ref || null,
             getFormModel: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'modelVar', 'modelPath'),
             getOptionState: (vm, scope) => getConfigState(vm, getScopedFormConfig(scope), 'optionStateVar', 'optionStatePath', true),

@@ -130,14 +130,40 @@ final class StructuredEvent implements StructuredEventInterface
      * 创建一个“优先关闭宿主弹窗，否则跳转到指定 URL”的结构化事件。
      * 适合 iframe 子表单页里的取消返回、保存成功返回等常见场景。
      * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
-     * 其它页面上下文会直接回退到 URL 跳转。
+     * 其它页面上下文会直接回退到 URL 跳转；若未传 URL，则会静默跳过。
      * 可继续链式调用 `hostTable()`，让关闭前先请求宿主刷新表格。
      */
-    public static function returnTo(string|JsExpression $url): self
+    public static function returnTo(string|JsExpression|null $url = null): self
     {
         return new self('returnTo', [
             'url' => $url,
             'reloadHostTable' => false,
+        ]);
+    }
+
+    /**
+     * 创建一个整表赋值的结构化事件。
+     * 适合在表单事件、请求成功后回填等场景下直接替换当前表单 model。
+     * 目标表单可继续链式调用 `form('profile')` 显式指定。
+     */
+    public static function setFormModel(array|string|JsExpression $values): self
+    {
+        return new self('setFormModel', [
+            'values' => self::normalizeExpressionConfig($values),
+            'formScope' => null,
+        ]);
+    }
+
+    /**
+     * 创建一个按表单 schema 初始化数据的结构化事件。
+     * 回填时会自动剔除表单未声明的字段，并按数组组 schema 递归裁剪。
+     * 目标表单可继续链式调用 `form('profile')` 显式指定。
+     */
+    public static function initializeFormModel(array|string|JsExpression $values): self
+    {
+        return new self('initializeFormModel', [
+            'values' => self::normalizeExpressionConfig($values),
+            'formScope' => null,
         ]);
     }
 
@@ -214,6 +240,18 @@ final class StructuredEvent implements StructuredEventInterface
     public function row(string|JsExpression|null $row): self
     {
         $this->payload['row'] = $row;
+
+        return $this;
+    }
+
+    /**
+     * 显式覆盖事件运行时使用的 `formScope`。
+     * 可用于 `setFormModel()` 等依赖表单上下文的结构化事件。
+     */
+    public function form(?string $scope): self
+    {
+        $scope = $scope === null ? null : trim($scope);
+        $this->payload['formScope'] = $scope === '' ? null : $scope;
 
         return $this;
     }

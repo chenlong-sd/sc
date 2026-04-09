@@ -57,7 +57,7 @@ final class RequestAction extends Action
      * - filters / forms / dialogs / selection / query / page / mode
      * - dialog / dialogKey: 当前动作运行在目标弹窗上下文时可用
      * - vm
-     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
+     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel()
      * 例如可写 "@row.id"、"@dialogKey"、"@filters.keyword"、"@page.query.id"。
      */
     public function request(string $url, string $method = 'post'): static
@@ -123,7 +123,7 @@ final class RequestAction extends Action
      * - dialog / dialogKey: 当前动作运行在弹窗上下文时可用
      * - vm
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      *
      * 常见写法：
@@ -237,10 +237,11 @@ final class RequestAction extends Action
      * 常用于独立表单页或 iframe 子表单页的保存成功返回。
      *
      * - 若当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开，则会优先关闭宿主弹窗
+     * - 若未传 `url` 且当前不在宿主 iframe 弹窗中，则会静默跳过
      * - 若传了 `table`，关闭前会显式请求宿主刷新该表格
      * - 不传 `table` 时，会优先使用当前 success context 的 `tableKey`
      */
-    public function returnTo(string|JsExpression $url, string|Table|null $table = null): static
+    public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): static
     {
         return $this->afterSuccess(
             Events::returnTo($url)->hostTable($table)
@@ -317,7 +318,7 @@ final class RequestAction extends Action
      * dialogs / selection / query / page / mode / dialog / dialogKey / vm，以及已组装好的 request。
      * 若当前请求动作使用了 validateForm()/payloadFromForm()/submitForm()，还可读取：
      * - formScope
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      * - closeHostDialog() / reloadHostTable() / openHostDialog()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
@@ -340,7 +341,7 @@ final class RequestAction extends Action
      * 可用字段与 success 事件一致，常用有 request / response / payload / row / filters /
      * forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterSuccess(string|JsExpression|StructuredEventInterface $afterSuccessHook): static
@@ -361,7 +362,7 @@ final class RequestAction extends Action
      * 可用字段与 fail 事件一致，常用有 request / error / row / filters / forms / dialogs /
      * selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterFail(string|JsExpression|StructuredEventInterface $afterFailHook): static
@@ -382,7 +383,7 @@ final class RequestAction extends Action
      * 可用字段与 finally 事件一致，常用有 request，以及可能存在的 response / payload / error，
      * 同时也可读取 row / filters / forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterFinally(string|JsExpression|StructuredEventInterface $afterFinallyHook): static
@@ -408,7 +409,7 @@ final class RequestAction extends Action
      * - action / row / tableKey / listKey / filters / forms / dialogs / selection / query / page / mode / vm
      * - dialog / dialogKey: 动作目标指向弹窗且运行时存在对应弹窗时可用
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()

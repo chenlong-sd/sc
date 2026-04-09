@@ -104,12 +104,40 @@ final class Events
      * 创建一个“优先关闭宿主弹窗，否则跳转到 URL”的事件。
      * 适合 iframe 子表单页里的取消返回、保存成功返回。
      * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
-     * 其它页面上下文会直接回退到 URL 跳转。
+     * 其它页面上下文会直接回退到 URL 跳转；若未传 URL，则会静默跳过。
      * 返回的事件对象还可继续链式调用 `hostTable()`。
      */
-    public static function returnTo(string|JsExpression $url): StructuredEvent
+    public static function returnTo(string|JsExpression|null $url = null): StructuredEvent
     {
         return StructuredEvent::returnTo($url);
+    }
+
+    /**
+     * 创建一个整表赋值事件。
+     * 适合在 `on()` / `afterSuccess()` 这类结构化事件里，直接回填当前表单或指定表单。
+     * 目标表单可继续链式调用 `->form('profile')` 显式指定；
+     * 不指定时，运行时会优先尝试使用当前事件上下文里的表单 scope。
+     *
+     * `values` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * 例如可写：
+     * - `Events::setFormModel(['status' => 1])`
+     * - `Events::setFormModel(['id' => '@row.id'])->form('profile')`
+     * - `Events::setFormModel('{ title: row?.title, status: 1 }')->form('profile')`
+     */
+    public static function setFormModel(array|string|JsExpression $values): StructuredEvent
+    {
+        return StructuredEvent::setFormModel($values);
+    }
+
+    /**
+     * 创建一个按表单 schema 初始化数据的事件。
+     * 与 `setFormModel()` 不同，这里会在回填时剔除表单未声明的字段；
+     * 对数组组会按行 schema 递归裁剪。
+     * 目标表单可继续链式调用 `->form('profile')` 显式指定。
+     */
+    public static function initializeFormModel(array|string|JsExpression $values): StructuredEvent
+    {
+        return StructuredEvent::initializeFormModel($values);
     }
 
     /**

@@ -25,6 +25,19 @@ final class DialogAction extends Action
     }
 
     /**
+     * dialog() 的 DialogAction 版本支持直接传 Dialog 对象。
+     * 传字符串时与基类行为一致；传 Dialog 时会自动完成对象绑定和页面收集。
+     */
+    public function dialog(string|Dialog $dialog): static
+    {
+        if ($dialog instanceof Dialog) {
+            return $this->bindDialog($dialog);
+        }
+
+        return $this->target($dialog);
+    }
+
+    /**
      * 指定 dialog key；如果与已绑定 Dialog 不一致，会解除对象绑定。
      */
     public function target(?string $target): static

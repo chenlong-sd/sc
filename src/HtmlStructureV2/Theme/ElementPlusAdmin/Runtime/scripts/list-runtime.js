@@ -327,6 +327,12 @@
                 setSimpleFormPathValue(scope, fieldName, value){
                   return this.setFormPathValue(scope, fieldName, value);
                 },
+                setSimpleFormModel(scope, values = {}){
+                  return this.setFormModel(scope, values);
+                },
+                initializeSimpleFormModel(scope, values = {}){
+                  return this.initializeFormModel(scope, values);
+                },
                 withSimpleDependencyResetSuspended(scope, callback){
                   return this.withDependencyResetSuspended(scope, callback);
                 },

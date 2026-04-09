@@ -15,18 +15,16 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     use HasFormNodeChildren;
 
     public function __construct(
-        private readonly string $title,
-        FormNode ...$children
+        private readonly string $title
     ) {
-        $this->setFormNodeChildren(...$children);
     }
 
     /**
      * 直接创建一个折叠项节点。
      */
-    public static function make(string $title, FormNode ...$children): self
+    public static function make(string $title): self
     {
-        return new self($title, ...$children);
+        return new self($title);
     }
 
     /**

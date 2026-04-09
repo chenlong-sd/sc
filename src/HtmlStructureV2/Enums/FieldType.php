@@ -8,6 +8,7 @@ enum FieldType: string
     case PASSWORD = 'password';
     case ICON = 'icon';
     case TEXTAREA = 'textarea';
+    case EDITOR = 'editor';
     case NUMBER = 'number';
     case SELECT = 'select';
     case RADIO = 'radio';

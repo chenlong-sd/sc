@@ -52,6 +52,86 @@
 
             current[segments[segments.length - 1]] = value;
           };
+          const findArrayGroupConfig = (arrayGroups = [], path = '') => {
+            const target = typeof path === 'string' ? path.trim() : '';
+            if (target === '') {
+              return null;
+            }
+
+            return (Array.isArray(arrayGroups) ? arrayGroups : []).find((groupCfg) => {
+              return String(groupCfg?.path || '').trim() === target;
+            }) || null;
+          };
+          const rebaseArrayGroupConfigs = (arrayGroups = [], prefix = '') => {
+            const normalizedPrefix = typeof prefix === 'string' ? prefix.trim() : '';
+            if (normalizedPrefix === '') {
+              return Array.isArray(arrayGroups) ? arrayGroups : [];
+            }
+
+            const needle = normalizedPrefix + '.';
+            return (Array.isArray(arrayGroups) ? arrayGroups : []).reduce((output, groupCfg) => {
+              const path = typeof groupCfg?.path === 'string' ? groupCfg.path.trim() : '';
+              if (!path.startsWith(needle)) {
+                return output;
+              }
+
+              output.push(Object.assign({}, groupCfg, {
+                path: path.slice(needle.length)
+              }));
+
+              return output;
+            }, []);
+          };
+          const initializeFormArrayGroupRowsBySchema = (rows, groupCfg = {}) => {
+            const rowDefaults = isObject(groupCfg?.defaultRow) ? groupCfg.defaultRow : {};
+            const rowArrayGroups = Array.isArray(groupCfg?.rowArrayGroups) ? groupCfg.rowArrayGroups : [];
+
+            if (!Array.isArray(rows)) {
+              return clone(groupCfg?.initialRows || []);
+            }
+
+            return rows.map((row) => initializeFormModelBySchema(rowDefaults, row, rowArrayGroups));
+          };
+          const initializeFormModelBySchema = (defaults = {}, values = {}, arrayGroups = []) => {
+            const nextModel = isObject(defaults) ? clone(defaults) : {};
+            const source = isObject(values) ? values : {};
+
+            Object.keys(nextModel).forEach((key) => {
+              if (!Object.prototype.hasOwnProperty.call(source, key)) {
+                return;
+              }
+
+              const sourceValue = source[key];
+              if (sourceValue === undefined) {
+                return;
+              }
+
+              const defaultValue = nextModel[key];
+              const arrayGroupCfg = findArrayGroupConfig(arrayGroups, key);
+              if (arrayGroupCfg) {
+                nextModel[key] = initializeFormArrayGroupRowsBySchema(sourceValue, arrayGroupCfg);
+                return;
+              }
+
+              if (isObject(defaultValue)) {
+                nextModel[key] = initializeFormModelBySchema(
+                  defaultValue,
+                  sourceValue,
+                  rebaseArrayGroupConfigs(arrayGroups, key)
+                );
+                return;
+              }
+
+              if (Array.isArray(defaultValue)) {
+                nextModel[key] = Array.isArray(sourceValue) ? clone(sourceValue) : clone(defaultValue);
+                return;
+              }
+
+              nextModel[key] = clone(sourceValue);
+            });
+
+            return nextModel;
+          };
           const extractPayload = (response) => {
             if (response && typeof response === 'object' && Object.prototype.hasOwnProperty.call(response, 'data')) {
               return response.data;
@@ -157,218 +237,455 @@
               return;
             }
 
-            if (app.component('sc-v2-icon-selector')) {
-              return;
+            if (!app.component('sc-v2-icon-selector')) {
+              app.component('sc-v2-icon-selector', {
+                inheritAttrs: false,
+                props: {
+                  modelValue: {
+                    type: String,
+                    default: ''
+                  }
+                },
+                emits: ['update:modelValue'],
+                data() {
+                  return {
+                    visible: false,
+                    searchKeyword: '',
+                  };
+                },
+                watch: {
+                  visible(newValue) {
+                    if (!newValue) {
+                      this.searchKeyword = '';
+                      return;
+                    }
+
+                    this.searchKeyword = '';
+                    this.scrollResultsToTop();
+                    this.focusSearchInput();
+                  },
+                  filterKeyword(newValue, oldValue) {
+                    if (newValue === oldValue || !this.visible) {
+                      return;
+                    }
+
+                    this.scrollResultsToTop();
+                  }
+                },
+                computed: {
+                  availableIcons() {
+                    const icons = globalThis.ElementPlusIconsVue;
+                    if (!icons || typeof icons !== 'object') {
+                      return [];
+                    }
+
+                    return Object.keys(icons).sort((left, right) => String(left).localeCompare(String(right), 'zh-CN'));
+                  },
+                  previewIcon() {
+                    const current = String(this.modelValue || '');
+                    if (current === '') {
+                      return '';
+                    }
+
+                    return this.availableIcons.includes(current) ? current : '';
+                  },
+                  filterKeyword() {
+                    return String(this.searchKeyword || '').trim().toLowerCase();
+                  },
+                  matchedIcons() {
+                    if (this.filterKeyword === '') {
+                      return this.availableIcons;
+                    }
+
+                    return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(this.filterKeyword));
+                  },
+                  unmatchedIcons() {
+                    if (this.filterKeyword === '') {
+                      return [];
+                    }
+
+                    return this.availableIcons.filter((iconName) => !String(iconName).toLowerCase().includes(this.filterKeyword));
+                  },
+                  hasMatchedIcons() {
+                    return this.matchedIcons.length > 0;
+                  },
+                  hasUnmatchedIcons() {
+                    return this.unmatchedIcons.length > 0;
+                  },
+                  shouldShowGroupedResult() {
+                    return this.filterKeyword !== '';
+                  },
+                  filteredIcons() {
+                    const keyword = this.filterKeyword;
+                    if (keyword === '') {
+                      return this.availableIcons;
+                    }
+
+                    return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(keyword));
+                  }
+                },
+                methods: {
+                  normalizeValue(value) {
+                    return value == null ? '' : String(value);
+                  },
+                  focusSearchInput() {
+                    this.$nextTick(() => {
+                      const input = this.$refs.searchInput;
+                      if (input && typeof input.focus === 'function') {
+                        input.focus();
+                      }
+                    });
+                  },
+                  scrollResultsToTop() {
+                    this.$nextTick(() => {
+                      const scrollbar = this.$refs.iconScrollbar;
+                      if (!scrollbar) {
+                        return;
+                      }
+
+                      if (typeof scrollbar.setScrollTop === 'function') {
+                        scrollbar.setScrollTop(0);
+                        return;
+                      }
+
+                      const wrap = scrollbar.wrapRef || scrollbar.wrap$ || null;
+                      if (wrap && typeof wrap.scrollTop === 'number') {
+                        wrap.scrollTop = 0;
+                      }
+                    });
+                  },
+                  updateValue(value) {
+                    this.$emit('update:modelValue', this.normalizeValue(value));
+                  },
+                  selectIcon(iconName) {
+                    this.updateValue(iconName);
+                    this.visible = false;
+                  }
+                },
+                template: `
+                  <el-popover
+                    v-model:visible="visible"
+                    :width="540"
+                    trigger="click"
+                    placement="bottom-start"
+                  >
+                    <template #reference>
+                      <el-input
+                        v-bind="$attrs"
+                        :model-value="modelValue"
+                        @update:model-value="updateValue"
+                      >
+                        <template #prefix>
+                          <el-icon v-if="previewIcon" class="el-input__icon">
+                            <component :is="previewIcon"></component>
+                          </el-icon>
+                        </template>
+                      </el-input>
+                    </template>
+                    <div class="sc-v2-icon-selector-panel">
+                      <el-input
+                        ref="searchInput"
+                        v-model="searchKeyword"
+                        placeholder="搜索图标"
+                        clearable
+                      ></el-input>
+                      <el-scrollbar ref="iconScrollbar" max-height="350px">
+                        <div v-if="shouldShowGroupedResult" class="sc-v2-icon-selector-group">
+                          <div v-if="hasMatchedIcons" class="sc-v2-icon-selector-group__section">
+                            <div class="sc-v2-icon-selector-group__title">匹配结果</div>
+                            <div class="sc-v2-icon-selector">
+                              <div
+                                v-for="iconName in matchedIcons"
+                                :key="'matched-' + iconName"
+                                :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
+                                @click.stop="selectIcon(iconName)"
+                              >
+                                <div class="sc-v2-icon-selector__preview">
+                                  <el-icon><component :is="iconName"></component></el-icon>
+                                </div>
+                                <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div
+                            v-if="hasUnmatchedIcons"
+                            :class="['sc-v2-icon-selector-group__section', { 'has-divider': hasMatchedIcons }]"
+                          >
+                            <div class="sc-v2-icon-selector-group__title">其他图标</div>
+                            <div class="sc-v2-icon-selector">
+                              <div
+                                v-for="iconName in unmatchedIcons"
+                                :key="'unmatched-' + iconName"
+                                :class="['sc-v2-icon-selector__item', 'is-unmatched', { 'is-active': iconName === modelValue }]"
+                                @click.stop="selectIcon(iconName)"
+                              >
+                                <div class="sc-v2-icon-selector__preview">
+                                  <el-icon><component :is="iconName"></component></el-icon>
+                                </div>
+                                <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div v-else class="sc-v2-icon-selector">
+                          <div
+                            v-for="iconName in filteredIcons"
+                            :key="iconName"
+                            :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
+                            @click.stop="selectIcon(iconName)"
+                          >
+                            <div class="sc-v2-icon-selector__preview">
+                              <el-icon><component :is="iconName"></component></el-icon>
+                            </div>
+                            <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
+                          </div>
+                        </div>
+                      </el-scrollbar>
+                    </div>
+                  </el-popover>
+                `
+              });
             }
 
-            app.component('sc-v2-icon-selector', {
-              inheritAttrs: false,
-              props: {
-                modelValue: {
-                  type: String,
-                  default: ''
-                }
-              },
-              emits: ['update:modelValue'],
-              data() {
-                return {
-                  visible: false,
-                  searchKeyword: '',
-                };
-              },
-              watch: {
-                visible(newValue) {
-                  if (!newValue) {
-                    this.searchKeyword = '';
-                    return;
+            if (!app.component('sc-v2-rich-editor')) {
+              app.component('sc-v2-rich-editor', {
+                inheritAttrs: false,
+                props: {
+                  modelValue: {
+                    type: String,
+                    default: ''
+                  },
+                  placeholder: {
+                    type: String,
+                    default: ''
+                  },
+                  config: {
+                    type: Object,
+                    default: () => ({})
+                  },
+                  uploadUrl: {
+                    type: String,
+                    default: ''
+                  },
+                  disabled: {
+                    type: Boolean,
+                    default: false
                   }
-
-                  this.searchKeyword = '';
-                  this.scrollResultsToTop();
-                  this.focusSearchInput();
                 },
-                filterKeyword(newValue, oldValue) {
-                  if (newValue === oldValue || !this.visible) {
-                    return;
+                emits: ['update:modelValue'],
+                data() {
+                  return {
+                    editor: null,
+                    mountRetryTimer: 0,
+                    mountId: `sc-v2-rich-editor-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+                  };
+                },
+                watch: {
+                  modelValue(newValue) {
+                    this.syncEditorValue(newValue);
+                  },
+                  disabled(newValue) {
+                    this.syncDisabledState(this.resolveDisabledState(newValue));
                   }
-
-                  this.scrollResultsToTop();
-                }
-              },
-              computed: {
-                availableIcons() {
-                  const icons = globalThis.ElementPlusIconsVue;
-                  if (!icons || typeof icons !== 'object') {
-                    return [];
+                },
+                mounted() {
+                  this.tryMountEditor();
+                },
+                beforeUnmount() {
+                  this.clearMountRetry();
+                  const mountEl = document.getElementById(this.mountId);
+                  if (mountEl) {
+                    mountEl.innerHTML = '';
                   }
-
-                  return Object.keys(icons).sort((left, right) => String(left).localeCompare(String(right), 'zh-CN'));
+                  this.editor = null;
                 },
-                previewIcon() {
-                  const current = String(this.modelValue || '');
-                  if (current === '') {
-                    return '';
-                  }
-
-                  return this.availableIcons.includes(current) ? current : '';
-                },
-                filterKeyword() {
-                  return String(this.searchKeyword || '').trim().toLowerCase();
-                },
-                matchedIcons() {
-                  if (this.filterKeyword === '') {
-                    return this.availableIcons;
-                  }
-
-                  return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(this.filterKeyword));
-                },
-                unmatchedIcons() {
-                  if (this.filterKeyword === '') {
-                    return [];
-                  }
-
-                  return this.availableIcons.filter((iconName) => !String(iconName).toLowerCase().includes(this.filterKeyword));
-                },
-                hasMatchedIcons() {
-                  return this.matchedIcons.length > 0;
-                },
-                hasUnmatchedIcons() {
-                  return this.unmatchedIcons.length > 0;
-                },
-                shouldShowGroupedResult() {
-                  return this.filterKeyword !== '';
-                },
-                filteredIcons() {
-                  const keyword = this.filterKeyword;
-                  if (keyword === '') {
-                    return this.availableIcons;
-                  }
-
-                  return this.availableIcons.filter((iconName) => String(iconName).toLowerCase().includes(keyword));
-                }
-              },
-              methods: {
-                normalizeValue(value) {
-                  return value == null ? '' : String(value);
-                },
-                focusSearchInput() {
-                  this.$nextTick(() => {
-                    const input = this.$refs.searchInput;
-                    if (input && typeof input.focus === 'function') {
-                      input.focus();
-                    }
-                  });
-                },
-                scrollResultsToTop() {
-                  this.$nextTick(() => {
-                    const scrollbar = this.$refs.iconScrollbar;
-                    if (!scrollbar) {
+                methods: {
+                  normalizeValue(value) {
+                    return value == null ? '' : String(value);
+                  },
+                  resolveDisabledState(disabled = this.disabled) {
+                    return Boolean(disabled) || (isObject(this.config) && this.config.disabled === true);
+                  },
+                  clearMountRetry() {
+                    if (!this.mountRetryTimer) {
                       return;
                     }
 
-                    if (typeof scrollbar.setScrollTop === 'function') {
-                      scrollbar.setScrollTop(0);
+                    globalThis.clearTimeout(this.mountRetryTimer);
+                    this.mountRetryTimer = 0;
+                  },
+                  queueMountRetry() {
+                    if (this.mountRetryTimer) {
                       return;
                     }
 
-                    const wrap = scrollbar.wrapRef || scrollbar.wrap$ || null;
-                    if (wrap && typeof wrap.scrollTop === 'number') {
-                      wrap.scrollTop = 0;
+                    this.mountRetryTimer = globalThis.setTimeout(() => {
+                      this.mountRetryTimer = 0;
+                      this.tryMountEditor();
+                    }, 60);
+                  },
+                  resolveUploadUrl(response) {
+                    const payload = ensureSuccess(extractPayload(response), '上传失败');
+                    if (typeof payload === 'string' && payload !== '') {
+                      return payload;
                     }
-                  });
-                },
-                updateValue(value) {
-                  this.$emit('update:modelValue', this.normalizeValue(value));
-                },
-                selectIcon(iconName) {
-                  this.updateValue(iconName);
-                  this.visible = false;
-                }
-              },
-              template: `
-                <el-popover
-                  v-model:visible="visible"
-                  :width="540"
-                  trigger="click"
-                  placement="bottom-start"
-                >
-                  <template #reference>
-                    <el-input
-                      v-bind="$attrs"
-                      :model-value="modelValue"
-                      @update:model-value="updateValue"
-                    >
-                      <template #prefix>
-                        <el-icon v-if="previewIcon" class="el-input__icon">
-                          <component :is="previewIcon"></component>
-                        </el-icon>
-                      </template>
-                    </el-input>
-                  </template>
-                  <div class="sc-v2-icon-selector-panel">
-                    <el-input
-                      ref="searchInput"
-                      v-model="searchKeyword"
-                      placeholder="搜索图标"
-                      clearable
-                    ></el-input>
-                    <el-scrollbar ref="iconScrollbar" max-height="350px">
-                      <div v-if="shouldShowGroupedResult" class="sc-v2-icon-selector-group">
-                        <div v-if="hasMatchedIcons" class="sc-v2-icon-selector-group__section">
-                          <div class="sc-v2-icon-selector-group__title">匹配结果</div>
-                          <div class="sc-v2-icon-selector">
-                            <div
-                              v-for="iconName in matchedIcons"
-                              :key="'matched-' + iconName"
-                              :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
-                              @click.stop="selectIcon(iconName)"
-                            >
-                              <div class="sc-v2-icon-selector__preview">
-                                <el-icon><component :is="iconName"></component></el-icon>
-                              </div>
-                              <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
-                            </div>
-                          </div>
-                        </div>
 
-                        <div
-                          v-if="hasUnmatchedIcons"
-                          :class="['sc-v2-icon-selector-group__section', { 'has-divider': hasMatchedIcons }]"
-                        >
-                          <div class="sc-v2-icon-selector-group__title">其他图标</div>
-                          <div class="sc-v2-icon-selector">
-                            <div
-                              v-for="iconName in unmatchedIcons"
-                              :key="'unmatched-' + iconName"
-                              :class="['sc-v2-icon-selector__item', 'is-unmatched', { 'is-active': iconName === modelValue }]"
-                              @click.stop="selectIcon(iconName)"
-                            >
-                              <div class="sc-v2-icon-selector__preview">
-                                <el-icon><component :is="iconName"></component></el-icon>
-                              </div>
-                              <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else class="sc-v2-icon-selector">
-                        <div
-                          v-for="iconName in filteredIcons"
-                          :key="iconName"
-                          :class="['sc-v2-icon-selector__item', { 'is-active': iconName === modelValue }]"
-                          @click.stop="selectIcon(iconName)"
-                        >
-                          <div class="sc-v2-icon-selector__preview">
-                            <el-icon><component :is="iconName"></component></el-icon>
-                          </div>
-                          <div class="sc-v2-icon-selector__label">{{ iconName }}</div>
-                        </div>
-                      </div>
-                    </el-scrollbar>
+                    return (payload && (payload.link || payload.data || payload.url || payload.fileFullPath)) || '';
+                  },
+                  async uploadFile(file, { onProgress } = {}) {
+                    if (!this.uploadUrl) {
+                      throw new Error('上传地址未配置');
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const response = await axios.post(this.uploadUrl, formData, {
+                      headers: { 'Content-Type': 'multipart/form-data' },
+                      onUploadProgress: (event) => {
+                        if (typeof onProgress !== 'function' || !event || !event.total) {
+                          return;
+                        }
+
+                        onProgress(Math.round((event.loaded / event.total) * 100));
+                      },
+                    });
+
+                    const url = this.resolveUploadUrl(response);
+                    if (!url) {
+                      throw new Error('上传失败');
+                    }
+
+                    return url;
+                  },
+                  buildEditorOptions() {
+                    const options = isObject(this.config) ? clone(this.config) : {};
+                    const userOnChange = typeof options.onChange === 'function' ? options.onChange : null;
+                    const userOnFocus = typeof options.onFocus === 'function' ? options.onFocus : null;
+                    const userOnBlur = typeof options.onBlur === 'function' ? options.onBlur : null;
+
+                    options.placeholder = options.placeholder || this.placeholder || '请输入内容...';
+                    options.initialHTML = this.normalizeValue(this.modelValue);
+                    options.disabled = this.resolveDisabledState();
+
+                    options.onChange = (payload) => {
+                      try {
+                        if (typeof userOnChange === 'function') {
+                          userOnChange(payload);
+                        }
+                      } catch (error) {
+                        console.warn(error);
+                      }
+
+                      const html = this.normalizeValue(
+                        payload && Object.prototype.hasOwnProperty.call(payload, 'html')
+                          ? payload.html
+                          : ''
+                      );
+
+                      this.$emit('update:modelValue', html);
+                    };
+
+                    options.onFocus = (payload) => {
+                      try {
+                        if (typeof userOnFocus === 'function') {
+                          userOnFocus(payload);
+                        }
+                      } catch (error) {
+                        console.warn(error);
+                      }
+                    };
+
+                    options.onBlur = (payload) => {
+                      try {
+                        if (typeof userOnBlur === 'function') {
+                          userOnBlur(payload);
+                        }
+                      } catch (error) {
+                        console.warn(error);
+                      }
+                    };
+
+                    if (this.uploadUrl) {
+                      if (typeof options.onImageUpload !== 'function') {
+                        options.onImageUpload = (file, hooks = {}) => this.uploadFile(file, hooks);
+                      }
+
+                      if (typeof options.onFileUpload !== 'function') {
+                        options.onFileUpload = (file, hooks = {}) => this.uploadFile(file, hooks);
+                      }
+                    }
+
+                    return options;
+                  },
+                  tryMountEditor() {
+                    if (this.editor) {
+                      return;
+                    }
+
+                    const mountEl = document.getElementById(this.mountId);
+                    const Editor = globalThis.SimpleRichEditor;
+
+                    if (!mountEl || typeof Editor !== 'function') {
+                      this.queueMountRetry();
+                      return;
+                    }
+
+                    try {
+                      this.editor = new Editor('#' + this.mountId, this.buildEditorOptions()).init();
+                      this.syncEditorValue(this.modelValue);
+                      this.syncDisabledState(this.resolveDisabledState());
+                    } catch (error) {
+                      console.warn(error);
+                      this.queueMountRetry();
+                    }
+                  },
+                  syncEditorValue(value) {
+                    if (
+                      !this.editor
+                      || typeof this.editor.getHTML !== 'function'
+                      || typeof this.editor.setHTML !== 'function'
+                    ) {
+                      return;
+                    }
+
+                    const next = this.normalizeValue(value);
+
+                    try {
+                      if (this.normalizeValue(this.editor.getHTML()) !== next) {
+                        this.editor.setHTML(next);
+                      }
+                    } catch (error) {
+                      console.warn(error);
+                    }
+                  },
+                  syncDisabledState(disabled) {
+                    if (!this.editor) {
+                      return;
+                    }
+
+                    try {
+                      if (typeof this.editor.setDisabled === 'function') {
+                        this.editor.setDisabled(Boolean(disabled));
+                        return;
+                      }
+
+                      if (typeof this.editor.setReadOnly === 'function') {
+                        this.editor.setReadOnly(Boolean(disabled));
+                      }
+                    } catch (error) {
+                      console.warn(error);
+                    }
+                  }
+                },
+                template: `
+                  <div class="sc-v2-rich-editor" v-bind="$attrs">
+                    <div :id="mountId" class="sc-v2-rich-editor__mount"></div>
                   </div>
-                </el-popover>
-              `
-            });
+                `
+              });
+            }
           };
           const isStructuredEventHandler = (handler) => {
             return isObject(handler) && typeof handler.type === 'string' && handler.type !== '';
@@ -513,7 +830,7 @@
             }
 
             if (type === 'returnTo') {
-              const url = resolveContextValue(handler.url || '', context);
+              const url = resolveContextValue(handler.url ?? '', context);
               const shouldReloadHostTable = handler.reloadHostTable === true;
               const tableKey = resolveContextValue(handler.tableKey ?? context?.tableKey ?? null, context);
 
@@ -533,7 +850,59 @@
                 return url;
               }
 
-              throw new Error('Structured event [returnTo] requires a resolvable url or host dialog context.');
+              return null;
+            }
+
+            if (type === 'setFormModel') {
+              const values = resolveContextValue(handler.values ?? {}, context);
+              const formScope = resolveContextValue(
+                handler.formScope ?? context?.formScope ?? context?.scope ?? null,
+                context
+              );
+
+              if (typeof context?.setFormModel === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return context.setFormModel(formScope, values);
+                }
+
+                return context.setFormModel(values);
+              }
+
+              if (typeof vm?.setFormModel === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return vm.setFormModel(formScope, values);
+                }
+
+                throw new Error('Structured event [setFormModel] requires explicit formScope or form-aware runtime context.');
+              }
+
+              throw new Error('Structured event [setFormModel] requires public setFormModel() support.');
+            }
+
+            if (type === 'initializeFormModel') {
+              const values = resolveContextValue(handler.values ?? {}, context);
+              const formScope = resolveContextValue(
+                handler.formScope ?? context?.formScope ?? context?.scope ?? null,
+                context
+              );
+
+              if (typeof context?.initializeFormModel === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return context.initializeFormModel(formScope, values);
+                }
+
+                return context.initializeFormModel(values);
+              }
+
+              if (typeof vm?.initializeFormModel === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return vm.initializeFormModel(formScope, values);
+                }
+
+                throw new Error('Structured event [initializeFormModel] requires explicit formScope or form-aware runtime context.');
+              }
+
+              throw new Error('Structured event [initializeFormModel] requires public initializeFormModel() support.');
             }
 
             if (type === 'message') {
@@ -1450,10 +1819,14 @@
           };
           const buildManagedDialogRuntimeState = (dialogs = {}, forms = {}) => {
             const getDialogFormConfig = (dialogKey) => forms?.[toDialogScope(dialogKey)] || {};
+            const getDialogFormInitialData = (dialogKey) => {
+              const formConfig = getDialogFormConfig(dialogKey);
+              return clone(formConfig.initialData || formConfig.defaults || {});
+            };
 
             return {
-            dialogForms: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
-            dialogInitials: buildDialogState(dialogs, (_, dialogKey) => clone(getDialogFormConfig(dialogKey).defaults || {})),
+            dialogForms: buildDialogState(dialogs, (_, dialogKey) => getDialogFormInitialData(dialogKey)),
+            dialogInitials: buildDialogState(dialogs, (_, dialogKey) => getDialogFormInitialData(dialogKey)),
             dialogRules: buildDialogState(dialogs, (_, dialogKey) => getDialogFormConfig(dialogKey).rules || {}),
             dialogOptions: buildDialogState(dialogs, (_, dialogKey) => buildOptionState(
               getDialogFormConfig(dialogKey).remoteOptions || {},
@@ -1467,7 +1840,7 @@
             )),
             dialogUploadFiles: buildDialogState(dialogs, (_, dialogKey) => buildUploadFileState(
               getDialogFormConfig(dialogKey).uploads || {},
-              getDialogFormConfig(dialogKey).defaults || {},
+              getDialogFormInitialData(dialogKey),
               getDialogFormConfig(dialogKey).uploadPaths || []
             )),
             dialogPickerItems: buildDialogState(dialogs, (_, dialogKey) => buildPickerState(
@@ -1533,6 +1906,7 @@
             hasReadyDependencies,
             ensureFormArrayGroupState,
             initializeConfiguredForms,
+            initializeFormModelBySchema,
             isBlank,
             isColumnDisplayBlank,
             isEventCanceled,

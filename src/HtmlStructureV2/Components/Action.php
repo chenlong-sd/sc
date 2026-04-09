@@ -52,47 +52,25 @@ class Action implements Renderable, EventAware
     }
 
     /**
-     * 创建“新建”动作，可直接绑定 Dialog 对象或 dialog key。
+     * 创建“新建”动作。
+     * 额外目标（例如 dialog）请继续链式调用 dialog()/bindDialog()。
      */
-    public static function create(string|Dialog $labelOrDialog = '新建', string|Dialog|null $dialog = null): DialogAction
+    public static function create(string $label = '新建'): DialogAction
     {
-        [$label, $target, $dialogDefinition] = self::resolveDialogActionArguments(
-            $labelOrDialog,
-            $dialog,
-            ActionIntent::CREATE
-        );
-
-        $action = (new DialogAction($label, ActionIntent::CREATE))
+        return (new DialogAction($label, ActionIntent::CREATE))
             ->type('primary')
             ->icon('Plus');
-
-        if ($dialogDefinition !== null) {
-            return $action->bindDialog($dialogDefinition);
-        }
-
-        return $action->target($target);
     }
 
     /**
-     * 创建“编辑”动作，可直接绑定 Dialog 对象或 dialog key。
+     * 创建“编辑”动作。
+     * 额外目标（例如 dialog）请继续链式调用 dialog()/bindDialog()。
      */
-    public static function edit(string|Dialog $labelOrDialog = '编辑', string|Dialog|null $dialog = null): DialogAction
+    public static function edit(string $label = '编辑'): DialogAction
     {
-        [$label, $target, $dialogDefinition] = self::resolveDialogActionArguments(
-            $labelOrDialog,
-            $dialog,
-            ActionIntent::EDIT
-        );
-
-        $action = (new DialogAction($label, ActionIntent::EDIT))
+        return (new DialogAction($label, ActionIntent::EDIT))
             ->type('primary')
             ->icon('Edit');
-
-        if ($dialogDefinition !== null) {
-            return $action->bindDialog($dialogDefinition);
-        }
-
-        return $action->target($target);
     }
 
     /**
@@ -123,21 +101,19 @@ class Action implements Renderable, EventAware
      * 目标为 iframe 弹窗时，会先调用子页面的提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
      * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
      */
-    public static function submit(string $label = '保存', string $dialog = 'editor'): self
+    public static function submit(string $label = '保存'): self
     {
         return (new self($label, ActionIntent::SUBMIT))
-            ->target($dialog)
             ->type('primary');
     }
 
     /**
      * 创建“关闭弹窗”动作。
      */
-    public static function close(string $label = '取消', string $dialog = 'editor'): self
+    public static function close(string $label = '取消'): self
     {
         return (new self($label, ActionIntent::CLOSE))
-            ->type('default')
-            ->target($dialog);
+            ->type('default');
     }
 
     /**
@@ -486,43 +462,4 @@ class Action implements Renderable, EventAware
         return $value !== '' ? $value : null;
     }
 
-    private static function resolveDialogActionArguments(
-        string|Dialog $labelOrDialog,
-        string|Dialog|null $dialogOrLabel,
-        ActionIntent $intent
-    ): array {
-        $defaultLabel = $intent === ActionIntent::CREATE ? '新建' : '编辑';
-        $label = $defaultLabel;
-        $target = 'editor';
-        $dialog = null;
-
-        if ($labelOrDialog instanceof Dialog) {
-            $dialog = $labelOrDialog;
-            $target = $dialog->key();
-            if (is_string($dialogOrLabel) && $dialogOrLabel !== '') {
-                $label = $dialogOrLabel;
-            } elseif ($intent === ActionIntent::CREATE) {
-                $label = $dialog->title();
-            }
-
-            return [$label, $target, $dialog];
-        }
-
-        if ($labelOrDialog !== '') {
-            $label = $labelOrDialog;
-        }
-
-        if ($dialogOrLabel instanceof Dialog) {
-            $dialog = $dialogOrLabel;
-            $target = $dialog->key();
-
-            return [$label, $target, $dialog];
-        }
-
-        if (is_string($dialogOrLabel) && $dialogOrLabel !== '') {
-            $target = $dialogOrLabel;
-        }
-
-        return [$label, $target, $dialog];
-    }
 }

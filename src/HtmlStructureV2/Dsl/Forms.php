@@ -31,10 +31,11 @@ final class Forms
     /**
      * 创建一个带标题的表单分组，默认会以卡片区块渲染。
      * 只影响视觉分组，不改变子字段的数据路径。
+     * 子节点请继续链式调用 addNodes()。
      */
-    public static function section(string $title, FormNode ...$children): SectionNode
+    public static function section(string $title): SectionNode
     {
-        return SectionNode::make($title)->addChildren(...$children);
+        return SectionNode::make($title);
     }
 
     /**
@@ -66,10 +67,11 @@ final class Forms
 
     /**
      * 创建一个标签页面板，只能作为 Forms::tabs() 的子节点使用。
+     * 子节点请继续链式调用 addNodes()。
      */
-    public static function tab(string $label, FormNode ...$children): TabPaneNode
+    public static function tab(string $label): TabPaneNode
     {
-        return TabPaneNode::make($label, ...$children);
+        return TabPaneNode::make($label);
     }
 
     /**
@@ -83,10 +85,11 @@ final class Forms
 
     /**
      * 创建一个折叠面板项，只能作为 Forms::collapse() 的子节点使用。
+     * 子节点请继续链式调用 addNodes()。
      */
-    public static function collapseItem(string $title, FormNode ...$children): CollapseItemNode
+    public static function collapseItem(string $title): CollapseItemNode
     {
-        return CollapseItemNode::make($title, ...$children);
+        return CollapseItemNode::make($title);
     }
 
     /**

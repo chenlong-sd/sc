@@ -3,6 +3,7 @@
           tokenStoreKey = '__managedRemoteRequestTokens',
           dependencyLockStoreKey = null,
           getRefName,
+          getFormConfig = () => null,
           getFormModel,
           getOptionState,
           getOptionLoadingState,
@@ -29,8 +30,10 @@
             ensureSuccess,
             getByPath,
             hasReadyDependencies,
+            initializeFormModelBySchema,
             isEventCanceled,
             isBlank,
+            isObject,
             isSameValue,
             makeRequest,
             normalizeArrayGroupRow,
@@ -45,6 +48,7 @@
             resolvePickerDisplayTemplate,
             resolveMessage,
             resolveUploadValue,
+            setConfigState,
             setByPath,
             syncUploadModelValue
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
@@ -54,6 +58,8 @@
             validateForm: 'validateManagedForm',
             clearFormValidate: 'clearManagedFormValidate',
             getFormModel: 'getManagedFormModel',
+            setFormModel: 'setManagedFormModel',
+            initializeFormModel: 'initializeManagedFormModel',
             getFormPathStateValue: 'getFormPathStateValue',
             setFormPathValue: 'setManagedFormPathValue',
             getFormArrayGroupConfig: 'getFormArrayGroupConfig',
@@ -118,6 +124,54 @@
               eventName,
               buildFormEventContext(vm, scope, overrides)
             );
+          };
+          const buildNextFormModel = (vm, scope, values) => {
+            const formCfg = (typeof getFormConfig === 'function' ? getFormConfig(scope, vm) : null) || {};
+            const nextModel = Object.assign({}, clone(formCfg?.defaults || {}));
+            if (isObject(values)) {
+              Object.assign(nextModel, clone(values));
+            }
+
+            return {
+              formCfg,
+              nextModel
+            };
+          };
+          const buildInitializedFormModel = (vm, scope, values) => {
+            const formCfg = (typeof getFormConfig === 'function' ? getFormConfig(scope, vm) : null) || {};
+
+            return {
+              formCfg,
+              nextModel: initializeFormModelBySchema(
+                formCfg?.defaults || {},
+                values,
+                formCfg?.arrayGroups || []
+              )
+            };
+          };
+          const applyResolvedFormModel = (vm, scope, formCfg, nextModel) => {
+            const applyModel = () => setConfigState(vm, formCfg, 'modelVar', 'modelPath', nextModel);
+
+            if (typeof vm[names.withDependencyResetSuspended] === 'function') {
+              vm[names.withDependencyResetSuspended](scope, applyModel);
+            } else {
+              applyModel();
+            }
+
+            if (typeof vm[names.initializeFormArrayGroups] === 'function') {
+              vm[names.initializeFormArrayGroups](scope);
+            }
+            if (typeof vm[names.initializeFormOptions] === 'function') {
+              vm[names.initializeFormOptions](scope, true);
+            }
+            if (typeof vm[names.initializeUploadFiles] === 'function') {
+              vm[names.initializeUploadFiles](scope);
+            }
+            if (typeof vm[names.clearFormValidate] === 'function') {
+              vm[names.clearFormValidate](scope);
+            }
+
+            return vm[names.getFormModel](scope) || {};
           };
           const syncFormStructureValidation = (vm, scope) => {
             Vue.nextTick(() => {
@@ -575,6 +629,14 @@
             },
             [names.getFormModel](scope){
               return getFormModel(this, scope) || {};
+            },
+            [names.setFormModel](scope, values = {}){
+              const { formCfg, nextModel } = buildNextFormModel(this, scope, values);
+              return applyResolvedFormModel(this, scope, formCfg, nextModel);
+            },
+            [names.initializeFormModel](scope, values = {}){
+              const { formCfg, nextModel } = buildInitializedFormModel(this, scope, values);
+              return applyResolvedFormModel(this, scope, formCfg, nextModel);
             },
             [names.setFormPathValue](scope, fieldName, value){
               const model = this[names.getFormModel](scope);

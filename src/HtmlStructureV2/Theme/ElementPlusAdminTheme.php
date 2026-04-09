@@ -133,6 +133,9 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-icon-selector__preview{font-size:18px;line-height:1;color:#111827}
     .sc-v2-icon-selector__label{width:100%;font-size:11px;line-height:1.35;color:#6b7280;text-align:center;word-break:break-all}
     .sc-v2-icon-selector__empty{padding:18px 12px;color:#909399;text-align:center;grid-column:1/-1}
+    .sc-v2-rich-editor{width:100%}
+    .sc-v2-rich-editor__mount{width:100%}
+    .sc-v2-rich-editor .sre-root{width:100%}
     .sc-v2-row-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
     .sc-v2-row-actions .sc-v2-table-drag-handle{cursor:move;touch-action:none}
     .sc-v2-row-actions .sc-v2-table-drag-handle .el-icon{cursor:move}
@@ -152,13 +155,20 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-block-title p{margin:0;color:#6b7280;font-size:14px}
     .sc-v2-block-text{margin:0;line-height:1.7;color:#374151}
     .sc-v2-block-text--muted{color:#6b7280}
-    .sc-v2-form-section{display:flex;flex-direction:column;gap:16px}
-    .sc-v2-form-section__header{display:flex;flex-direction:column;gap:4px}
-    .sc-v2-form-section__heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-    .sc-v2-form-section__heading-body{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .sc-v2-form-section__actions{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto}
-    .sc-v2-form-section__header h3{margin:0;font-size:18px;line-height:1.3;color:#111827}
-    .sc-v2-form-section__header p{margin:0;color:#6b7280;font-size:13px}
+    .sc-v2-form-section-block:not(:last-child){margin-bottom:18px}
+    .sc-v2-form-section-block--plain{padding:4px 0}
+    .sc-v2-form-section-block--plain:not(:last-child){padding-bottom:20px;border-bottom:1px dashed #e5e7eb}
+    .sc-v2-form-section-card{border:1px solid #e7edf5;border-radius:14px;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);box-shadow:0 10px 28px rgba(15,23,42,.05),0 2px 6px rgba(15,23,42,.04);overflow:hidden}
+    .sc-v2-form-section-card>.el-card__body{padding:18px 20px 20px;display:flex;flex-direction:column;gap:18px}
+    .sc-v2-form-section{display:flex;flex-direction:column;gap:18px}
+    .sc-v2-form-section__header{display:flex;flex-direction:column;gap:4px;padding-bottom:14px;border-bottom:1px solid #eef2f7}
+    .sc-v2-form-section__heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+    .sc-v2-form-section__heading-body{position:relative;display:flex;flex-direction:column;gap:4px;min-width:0;padding-left:14px}
+    .sc-v2-form-section__heading-body::before{content:'';position:absolute;left:0;top:2px;bottom:2px;width:4px;border-radius:999px;background:linear-gradient(180deg,#409eff 0%,#79bbff 100%)}
+    .sc-v2-form-section__actions{display:flex;gap:8px;flex-wrap:wrap;flex:0 0 auto;padding-left:12px}
+    .sc-v2-form-section__header h3{margin:0;font-size:17px;font-weight:700;line-height:1.35;color:#111827}
+    .sc-v2-form-section__header p{margin:0;max-width:860px;color:#6b7280;font-size:13px;line-height:1.65}
+    .sc-v2-form-section__body{display:flex;flex-direction:column;gap:4px}
     .sc-v2-form-inline{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
     .sc-v2-form-tabs{display:flex;flex-direction:column;gap:8px}
     .sc-v2-form-tabs .el-tabs__content{overflow:visible}
@@ -187,8 +197,10 @@ final class ElementPlusAdminTheme implements ThemeInterface
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions,.sc-v2-status-toggles{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
       .sc-v2-form__suffix{width:100%}
+      .sc-v2-form-section-block:not(:last-child){margin-bottom:14px}
+      .sc-v2-form-section-card>.el-card__body{padding:16px 14px 16px}
       .sc-v2-form-section__heading{flex-direction:column;align-items:stretch}
-      .sc-v2-form-section__actions{width:100%}
+      .sc-v2-form-section__actions{width:100%;padding-left:0}
       .sc-v2-status-toggles--inline .sc-v2-status-toggle{display:flex;margin-right:0}
       .sc-v2-status-toggle{align-items:stretch}
       .sc-v2-status-toggle--labeled{padding:8px 10px}

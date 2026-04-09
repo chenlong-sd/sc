@@ -36,9 +36,10 @@ final class FormRenderState
     public function simpleRuntimeState(Form $form): array
     {
         $schema = $form->schema();
+        $initialData = $form->initialData();
 
         return array_filter([
-            $this->model => $schema->defaults(),
+            $this->model => $initialData === [] ? $schema->defaults() : $initialData,
             $this->rules => $schema->rules(),
             $this->optionState => $this->buildInitialOptionState($schema),
             $this->optionLoading => $this->buildFlagState($schema->remoteOptionPaths()),
@@ -54,6 +55,7 @@ final class FormRenderState
 
         return [
             'defaults' => $schema->defaults(),
+            'initialData' => $form->initialData(),
             'rules' => $schema->rules(),
             'ref' => $this->ref,
             'modelVar' => $this->modelPath === null ? $this->model : null,
@@ -90,6 +92,14 @@ final class FormRenderState
                 'useModeQueryPayload' => $form->shouldUseDefaultLoadPayload(),
                 'dataPath' => $form->getLoadDataPath(),
                 'when' => $form->getLoadWhen(),
+            ],
+            'submit' => [
+                'method' => $form->getSaveMethod(),
+                'createUrl' => $form->getSaveCreateUrl(),
+                'updateUrl' => $form->getSaveUpdateUrl(),
+                'loadingText' => $form->getSaveLoadingText(),
+                'successMessage' => $form->getSaveSuccessMessage(),
+                'errorMessage' => $form->getSaveErrorMessage(),
             ],
             'arrayGroups' => array_map(
                 static fn(FormArrayGroupSchema $groupSchema) => $groupSchema->toRuntimeConfig(),

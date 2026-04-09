@@ -204,8 +204,8 @@ final class DialogRenderer
 
         if ($dialog->getForm()) {
             return [
-                Action::close('取消', $dialog->key()),
-                Action::submit('保存', $dialog->key()),
+                Action::close('取消')->dialog($dialog->key()),
+                Action::submit('保存')->dialog($dialog->key()),
             ];
         }
 

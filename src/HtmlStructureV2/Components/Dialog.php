@@ -30,12 +30,14 @@ final class Dialog implements Renderable, EventAware
     ];
 
     private const DEFAULT_WIDTH = '760px';
-    private const DEFAULT_IFRAME_HEIGHT = '70vh';
+    private const DEFAULT_IFRAME_WIDTH = '1000px';
+    private const DEFAULT_IFRAME_HEIGHT = '84vh';
     private const DEFAULT_COMPONENT_OPEN_METHOD = 'onShow';
     private const DEFAULT_LOAD_METHOD = 'get';
     private const DEFAULT_LOAD_WHEN = 'edit';
 
     private string $width = self::DEFAULT_WIDTH;
+    private bool $widthConfigured = false;
     private ?string $height = null;
     private bool $heightConfigured = false;
     private bool $draggable = false;
@@ -47,7 +49,9 @@ final class Dialog implements Renderable, EventAware
     private ?string $createUrl = null;
     private ?string $updateUrl = null;
     private ?string $titleTemplate = null;
+    private ?string $implicitTitleTemplate = null;
     private array $footerActions = [];
+    private string $title = '';
     private ?Form $form = null;
     private string|AbstractHtmlElement|null $content = null;
     private ?string $componentName = null;
@@ -74,12 +78,20 @@ final class Dialog implements Renderable, EventAware
 
     public function __construct(
         private readonly string $key,
-        private readonly string $title
+        string $title
     ) {
+        $normalizedTitle = trim($title);
+        $this->implicitTitleTemplate = self::containsDynamicTitleSyntax($normalizedTitle)
+            ? $normalizedTitle
+            : null;
+        $this->title = self::normalizeStaticTitle($normalizedTitle);
     }
 
     /**
      * 直接创建一个弹窗组件实例。
+     * title 支持和 titleTemplate() 相同的模板语法；若包含动态占位符，会自动拆成：
+     * - 静态兜底标题：用于按钮文案、关闭后回退态等场景
+     * - 隐式标题模板：用于弹窗打开时按当前上下文动态解析
      */
     public static function make(string $key, string $title): self
     {
@@ -88,18 +100,19 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 设置弹窗宽度，例如 760px / 80vw。
-     * 默认值为 760px。
+     * 普通弹窗默认值为 760px；iframe 弹窗未显式设置时默认值为 1000px。
      */
     public function width(string $width): self
     {
         $this->width = $width;
+        $this->widthConfigured = true;
 
         return $this;
     }
 
     /**
      * 设置弹窗高度，例如 70vh；传 null 表示自动高度。
-     * 未显式设置时，iframe 弹窗默认高度为 70vh，其它类型默认自动高度。
+     * 未显式设置时，iframe 弹窗默认高度为 84vh，其它类型默认自动高度。
      */
     public function height(?string $height): self
     {
@@ -215,6 +228,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置动态标题模板，例如 编辑 {name}。
      * `{field}` 会先从当前 `row` 中取值；若模板里还包含 token，也会在前端打开弹窗时继续解析。
+     * 显式调用后会覆盖 make($key, $title) 中自动识别出的隐式标题模板。
      * 常用可用字段：
      * - row / mode / dialogKey / tableKey
      * - dialogContext / data
@@ -653,7 +667,15 @@ final class Dialog implements Renderable, EventAware
 
     public function getWidth(): string
     {
-        return $this->width;
+        if ($this->widthConfigured) {
+            return $this->width;
+        }
+
+        if ($this->bodyType() === 'iframe') {
+            return self::DEFAULT_IFRAME_WIDTH;
+        }
+
+        return self::DEFAULT_WIDTH;
     }
 
     public function getHeight(): ?string
@@ -715,7 +737,28 @@ final class Dialog implements Renderable, EventAware
 
     public function getTitleTemplate(): ?string
     {
-        return $this->titleTemplate;
+        return $this->titleTemplate ?? $this->implicitTitleTemplate;
+    }
+
+    private static function containsDynamicTitleSyntax(string $title): bool
+    {
+        if ($title === '') {
+            return false;
+        }
+
+        return preg_match('/\{[^{}]+\}/', $title) === 1
+            || preg_match('/@[A-Za-z0-9_.$:-]+/', $title) === 1;
+    }
+
+    private static function normalizeStaticTitle(string $title): string
+    {
+        $staticTitle = preg_replace('/\{[^{}]+\}/', '', $title);
+        $staticTitle = preg_replace('/@[A-Za-z0-9_.$:-]+/', '', (string)$staticTitle);
+        $staticTitle = str_replace(['【】', '[]', '()'], '', (string)$staticTitle);
+        $staticTitle = preg_replace('/\s+/', ' ', (string)$staticTitle);
+        $staticTitle = trim((string)$staticTitle);
+
+        return $staticTitle !== '' ? $staticTitle : '详情';
     }
 
     public function getForm(): ?Form

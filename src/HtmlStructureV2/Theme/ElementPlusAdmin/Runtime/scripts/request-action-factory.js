@@ -371,6 +371,36 @@
 
                 throw new Error('Current runtime does not expose public validateForm() support.');
               };
+              const setRuntimeFormModel = (scope, values) => {
+                if (typeof this.setFormModel === 'function') {
+                  return this.setFormModel(scope, values);
+                }
+                if (typeof this.setSimpleFormModel === 'function') {
+                  return this.setSimpleFormModel(scope, values);
+                }
+
+                throw new Error('Current runtime does not expose public setFormModel() support.');
+              };
+              const initializeRuntimeFormModel = (scope, values) => {
+                if (typeof this.initializeFormModel === 'function') {
+                  return this.initializeFormModel(scope, values);
+                }
+                if (typeof this.initializeSimpleFormModel === 'function') {
+                  return this.initializeSimpleFormModel(scope, values);
+                }
+
+                throw new Error('Current runtime does not expose public initializeFormModel() support.');
+              };
+              const resolveFormModelSetArgs = (arg1 = null, arg2 = undefined) => {
+                if (typeof arg1 === 'string') {
+                  return { scope: arg1, values: arg2 };
+                }
+                if (typeof arg2 === 'string') {
+                  return { scope: arg2, values: arg1 };
+                }
+
+                return { scope: null, values: arg1 };
+              };
 
               context.resolveFormScope = (scope = null) => resolveContextFormScope(scope, 'request action form');
               context.getPageQuery = () => cloneRequestValue(pageQuery);
@@ -396,6 +426,28 @@
                 return getRuntimeFormModel(resolvedScope);
               };
               context.cloneFormModel = (scope = null) => cloneRequestValue(context.getFormModel(scope));
+              context.setFormModel = (arg1 = null, arg2 = undefined) => {
+                const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
+                const resolvedScope = resolveContextFormScope(scope, 'form model update');
+                context.formScope = resolvedScope;
+                context.resolveFormMode(resolvedScope);
+                const nextModel = setRuntimeFormModel(resolvedScope, values);
+                context.form = nextModel || {};
+                context.model = context.form;
+
+                return context.form;
+              };
+              context.initializeFormModel = (arg1 = null, arg2 = undefined) => {
+                const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
+                const resolvedScope = resolveContextFormScope(scope, 'form model initialization');
+                context.formScope = resolvedScope;
+                context.resolveFormMode(resolvedScope);
+                const nextModel = initializeRuntimeFormModel(resolvedScope, values);
+                context.form = nextModel || {};
+                context.model = context.form;
+
+                return context.form;
+              };
               context.validateForm = (scope = null) => {
                 const resolvedScope = resolveContextFormScope(scope, 'form validation');
                 context.formScope = resolvedScope;
@@ -499,9 +551,7 @@
             },
             runRequestAction(actionConfig, row = null){
               const resolvedActionConfig = this.resolveActionConfig(actionConfig);
-              const saveConfig = isObject(resolvedActionConfig?.save) ? resolvedActionConfig.save : {};
-              const hasSaveUrls = !!(saveConfig.createUrl || saveConfig.updateUrl);
-              if ((!resolvedActionConfig?.request?.url && !hasSaveUrls) || !resolvedActionConfig?.key) {
+              if (!resolvedActionConfig?.key) {
                 return Promise.resolve(null);
               }
 
@@ -512,18 +562,108 @@
               };
               const shouldValidateForm = () => resolveActionFormConfig().validate === true;
               const usesFormPayload = () => resolveActionFormConfig().payloadSource === 'form';
+              const usesFormSubmitFlow = () => shouldValidateForm() || usesFormPayload();
               const resolveConfiguredFormScope = (fieldName) => {
                 const formConfig = resolveActionFormConfig();
                 return context.resolveFormScope(formConfig?.[fieldName] || null);
               };
+              const resolveSubmitFormScope = () => {
+                if (!usesFormSubmitFlow()) {
+                  return null;
+                }
+
+                const formConfig = resolveActionFormConfig();
+                return context.resolveFormScope(formConfig?.payloadScope || formConfig?.validateScope || null);
+              };
+              const getRuntimeFormConfig = (scope) => {
+                return scope && isObject(cfg?.forms?.[scope]) ? cfg.forms[scope] : {};
+              };
+              let cachedSubmitFormState = undefined;
+              const resolveSubmitFormState = () => {
+                if (cachedSubmitFormState !== undefined) {
+                  return cachedSubmitFormState;
+                }
+
+                const scope = resolveSubmitFormScope();
+                const formConfig = getRuntimeFormConfig(scope);
+                cachedSubmitFormState = {
+                  scope,
+                  formConfig,
+                  submitConfig: isObject(formConfig?.submit) ? formConfig.submit : {},
+                };
+
+                return cachedSubmitFormState;
+              };
+              const buildSubmitFormContext = (scope, overrides = {}) => {
+                if (!scope) {
+                  return Object.assign({}, context, overrides || {});
+                }
+
+                const formConfig = getRuntimeFormConfig(scope);
+                const mode = context.resolveFormMode(scope);
+                const model = cloneRequestValue(context.getFormModel(scope));
+                const currentPageQuery = typeof context.getPageQuery === 'function'
+                  ? cloneRequestValue(context.getPageQuery())
+                  : cloneRequestValue(context.page?.query || {});
+
+                return Object.assign({}, context, {
+                  scope,
+                  formScope: scope,
+                  mode,
+                  form: model,
+                  model,
+                  formConfig,
+                  page: Object.assign({}, context.page || {}, {
+                    query: currentPageQuery,
+                    mode,
+                    formScope: scope,
+                  }),
+                }, overrides || {});
+              };
+              const emitSubmitFormEvent = (scope, eventName, overrides = {}) => {
+                if (!scope) {
+                  return Promise.resolve([]);
+                }
+
+                return emitConfiguredEvent(
+                  { events: getRuntimeFormConfig(scope)?.events || {} },
+                  eventName,
+                  buildSubmitFormContext(scope, overrides)
+                );
+              };
+              const saveConfig = isObject(resolvedActionConfig?.save) ? resolvedActionConfig.save : {};
+              const hasSaveUrls = !!(saveConfig.createUrl || saveConfig.updateUrl);
+              let submitFormState = null;
+              try {
+                submitFormState = resolveSubmitFormState();
+              } catch (error) {
+                const message = error?.message || '操作失败';
+                if (message) {
+                  ElementPlus.ElMessage.error(message);
+                }
+
+                return Promise.resolve(null);
+              }
+              const hasFormSaveUrls = !!(submitFormState.submitConfig.createUrl || submitFormState.submitConfig.updateUrl);
+              if ((!resolvedActionConfig?.request?.url && !hasSaveUrls && !hasFormSaveUrls)) {
+                if (usesFormSubmitFlow()) {
+                  ElementPlus.ElMessage.error('当前表单未配置保存地址，请先调用 Form::saveUrls()。');
+                }
+
+                return Promise.resolve(null);
+              }
               const resolveSaveMode = () => {
                 const saveConfig = isObject(resolvedActionConfig.save) ? resolvedActionConfig.save : {};
                 if (saveConfig.modeQueryKey) {
                   return context.resolvePageMode(saveConfig.modeQueryKey);
                 }
 
-                const formConfig = resolveActionFormConfig();
-                return context.resolveFormMode(formConfig?.payloadScope || formConfig?.validateScope || null);
+                const submitFormState = resolveSubmitFormState();
+                if (submitFormState.scope) {
+                  return context.resolveFormMode(submitFormState.scope);
+                }
+
+                return context.resolvePageMode();
               };
               const resolveRequestUrl = () => {
                 const saveConfig = isObject(resolvedActionConfig.save) ? resolvedActionConfig.save : {};
@@ -536,7 +676,64 @@
                   return resolveContextValue(candidateUrl, context);
                 }
 
-                return resolveContextValue(resolvedActionConfig.request.url, context);
+                if (resolvedActionConfig.request.url) {
+                  return resolveContextValue(resolvedActionConfig.request.url, context);
+                }
+
+                const submitFormState = resolveSubmitFormState();
+                const submitConfig = submitFormState.submitConfig || {};
+                if (submitConfig.createUrl || submitConfig.updateUrl) {
+                  const mode = resolveSaveMode();
+                  const candidateUrl = mode === 'edit'
+                    ? (submitConfig.updateUrl || submitConfig.createUrl || '')
+                    : (submitConfig.createUrl || submitConfig.updateUrl || '');
+
+                  return resolveContextValue(candidateUrl, context);
+                }
+
+                return null;
+              };
+              const resolveRequestMethod = () => {
+                if (saveConfig.createUrl || saveConfig.updateUrl || resolvedActionConfig.request.url) {
+                  return resolvedActionConfig.request.method || 'post';
+                }
+
+                const submitFormState = resolveSubmitFormState();
+                return submitFormState.submitConfig?.method || 'post';
+              };
+              const resolveLoadingText = () => {
+                if (resolvedActionConfig.loadingText !== null && resolvedActionConfig.loadingText !== undefined) {
+                  return resolvedActionConfig.loadingText;
+                }
+
+                const submitFormState = resolveSubmitFormState();
+                if (submitFormState.submitConfig?.loadingText) {
+                  return submitFormState.submitConfig.loadingText;
+                }
+
+                if (usesFormSubmitFlow() || hasSaveUrls || hasFormSaveUrls) {
+                  return '请稍后...';
+                }
+
+                return null;
+              };
+              const resolveSuccessMessage = (payload) => {
+                const submitFormState = resolveSubmitFormState();
+                return resolveMessage(
+                  payload,
+                  resolvedActionConfig.successMessage
+                  ?? submitFormState.submitConfig?.successMessage
+                  ?? '操作成功'
+                );
+              };
+              const resolveErrorMessage = (responsePayload = null) => {
+                const submitFormState = resolveSubmitFormState();
+                return resolveMessage(
+                  responsePayload,
+                  resolvedActionConfig.errorMessage
+                  ?? submitFormState.submitConfig?.errorMessage
+                  ?? '操作失败'
+                );
               };
               const validateConfiguredForm = () => {
                 if (!shouldValidateForm()) {
@@ -554,7 +751,20 @@
               };
 
               const perform = () => {
+                if (actionLoading[resolvedActionConfig.key]) {
+                  return Promise.resolve(null);
+                }
+
                 let loadingInstance = null;
+                actionLoading[resolvedActionConfig.key] = true;
+                const loadingText = resolveLoadingText();
+                if (loadingText) {
+                  loadingInstance = ElementPlus.ElLoading.service({
+                    lock: true,
+                    text: loadingText,
+                    background: 'rgba(255,255,255,0.35)',
+                  });
+                }
 
                 return validateConfiguredForm()
                   .then((results) => {
@@ -568,45 +778,56 @@
                     }
 
                     const request = {
-                      method: resolvedActionConfig.request.method || 'post',
+                      method: resolveRequestMethod(),
                       url: requestUrl,
                       query: resolveRequestPayload(),
                     };
 
                     context.request = request;
+                    const submitFormState = resolveSubmitFormState();
+                    if (submitFormState.scope) {
+                      context.formScope = submitFormState.scope;
+                      context.formConfig = submitFormState.formConfig;
+                      context.resolveFormMode(submitFormState.scope);
+                      context.form = context.getFormModel(submitFormState.scope);
+                      context.model = context.form;
+                    }
 
-                    return emitConfiguredEvent(resolvedActionConfig, 'before', context)
+                    return emitSubmitFormEvent(submitFormState.scope, 'submitBefore', {
+                      request,
+                      payload: request.query,
+                    }).then((submitBeforeResults) => {
+                      if (isEventCanceled(submitBeforeResults)) {
+                        return null;
+                      }
+
+                      return emitConfiguredEvent(resolvedActionConfig, 'before', context);
+                    })
                       .then((beforeResults) => {
                         if (isEventCanceled(beforeResults)) {
                           return null;
-                        }
-
-                        actionLoading[resolvedActionConfig.key] = true;
-
-                        if (resolvedActionConfig.loadingText) {
-                          loadingInstance = ElementPlus.ElLoading.service({
-                            lock: true,
-                            text: resolvedActionConfig.loadingText,
-                            background: 'rgba(255,255,255,0.35)',
-                          });
                         }
 
                         return makeRequest(request)
                           .then((response) => {
                             const payload = ensureSuccess(
                               extractPayload(response),
-                              resolvedActionConfig.errorMessage || '操作失败'
+                              resolveErrorMessage(extractPayload(response))
                             );
 
                             context.response = response;
                             context.payload = payload;
 
-                            const successMessage = resolvedActionConfig.successMessage ?? resolveMessage(payload, '操作成功');
+                            const successMessage = resolveSuccessMessage(payload);
                             if (successMessage) {
                               ElementPlus.ElMessage.success(successMessage);
                             }
 
-                            return emitConfiguredEvent(resolvedActionConfig, 'success', context)
+                            return emitSubmitFormEvent(submitFormState.scope, 'submitSuccess', {
+                              request,
+                              response,
+                              payload,
+                            }).then(() => emitConfiguredEvent(resolvedActionConfig, 'success', context))
                               .then(() => {
                                 if (resolvedActionConfig.closeDialog && resolvedActionConfig.dialogTarget) {
                                   context.closeDialog(resolvedActionConfig.dialogTarget);
@@ -629,23 +850,27 @@
                             context.error = error;
                             const message = error?.message || resolveMessage(
                               error?.response?.data,
-                              resolvedActionConfig.errorMessage || '操作失败'
+                              resolveErrorMessage(error?.response?.data)
                             );
 
                             if (message) {
                               ElementPlus.ElMessage.error(message);
                             }
 
-                            return emitConfiguredEvent(resolvedActionConfig, 'fail', context)
+                            return emitSubmitFormEvent(submitFormState.scope, 'submitFail', {
+                              request,
+                              error,
+                            })
+                              .then(() => emitConfiguredEvent(resolvedActionConfig, 'fail', context))
                               .then(() => null);
                           })
                           .finally(() => {
-                            actionLoading[resolvedActionConfig.key] = false;
-                            if (loadingInstance && typeof loadingInstance.close === 'function') {
-                              loadingInstance.close();
-                            }
-
-                            return emitConfiguredEvent(resolvedActionConfig, 'finally', context);
+                            return emitSubmitFormEvent(submitFormState.scope, 'submitFinally', {
+                              request,
+                              response: context.response,
+                              payload: context.payload,
+                              error: context.error,
+                            }).then(() => emitConfiguredEvent(resolvedActionConfig, 'finally', context));
                           });
                       });
                   })
@@ -656,6 +881,12 @@
                     }
 
                     return null;
+                  })
+                  .finally(() => {
+                    actionLoading[resolvedActionConfig.key] = false;
+                    if (loadingInstance && typeof loadingInstance.close === 'function') {
+                      loadingInstance.close();
+                    }
                   });
               };
 

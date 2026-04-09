@@ -3,7 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Dsl;
 
 use Sc\Util\HtmlStructureV2\Components\Action;
-use Sc\Util\HtmlStructureV2\Components\Dialog;
+use Sc\Util\HtmlStructureV2\Components\DialogAction;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -20,21 +20,21 @@ final class Actions
     }
 
     /**
-     * 创建“新建”动作，可直接绑定 Dialog 对象或 dialog key。
-     * 传 Dialog 对象时，页面构建阶段会自动收集该弹窗定义。
+     * 创建“新建”动作。
+     * 额外目标（例如 dialog）请继续链式调用 dialog()/bindDialog()。
      */
-    public static function create(string|Dialog $labelOrDialog = '新建', string|Dialog|null $dialog = null): Action
+    public static function create(string $label = '新建'): DialogAction
     {
-        return Action::create($labelOrDialog, $dialog);
+        return Action::create($label);
     }
 
     /**
-     * 创建“编辑”动作，可直接绑定 Dialog 对象或 dialog key。
-     * 常用于表格行操作；若传 Dialog 对象，同样会自动纳入页面弹窗集合。
+     * 创建“编辑”动作。
+     * 常用于表格行操作；额外目标（例如 dialog）请继续链式调用 dialog()/bindDialog()。
      */
-    public static function edit(string|Dialog $labelOrDialog = '编辑', string|Dialog|null $dialog = null): Action
+    public static function edit(string $label = '编辑'): DialogAction
     {
-        return Action::edit($labelOrDialog, $dialog);
+        return Action::edit($label);
     }
 
     /**
@@ -59,11 +59,13 @@ final class Actions
     /**
      * 创建一个独立表单页常用的“保存”请求动作。
      * 默认按钮类型为 primary，图标为 Check；
-     * 推荐继续链式调用 saveUrls()/post()/put()/submitForm()/returnTo()/successMessage()。
+     * 默认会按当前唯一表单或显式 submitForm() 目标执行表单提交；
+     * 保存地址、提示文案、submit* 生命周期事件推荐配置在 Form 上；
+     * 如果页面里有多个表单，可继续链式调用 submitForm('formKey') 显式指定目标。
      */
     public static function save(string $label = '保存'): RequestAction
     {
-        return RequestAction::make($label)->icon('Check');
+        return RequestAction::make($label)->icon('Check')->submitForm();
     }
 
     /**
@@ -78,33 +80,35 @@ final class Actions
     }
 
     /**
-     * 创建“提交弹窗数据”动作，默认目标 dialog key 为 editor。
+     * 创建“提交弹窗数据”动作。
      * 目标为 form 弹窗时直接提交表单；
      * 目标为 iframe 弹窗时，会先调用子页面提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
-     * 如需就近覆盖默认提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
+     * 目标 dialog 请继续链式调用 dialog()；如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
      */
-    public static function submit(string $label = '保存', string $dialog = 'editor'): Action
+    public static function submit(string $label = '保存'): Action
     {
-        return Action::submit($label, $dialog);
+        return Action::submit($label);
     }
 
     /**
      * 创建一个独立页面常用的“取消/返回”动作。
      * 默认按钮类型为 default，点击后执行 `Events::returnTo($url)`；
-     * 若当前页面是启用 `iframeHost()` 的 V2 iframe 子页，则会优先关闭宿主弹窗，否则跳转到指定 URL。
+     * 若当前页面是启用 `iframeHost()` 的 V2 iframe 子页，则会优先关闭宿主弹窗；
+     * 否则跳转到指定 URL；若 URL 为空，则静默跳过。
      */
-    public static function back(string|JsExpression $url, string $label = '取消'): Action
+    public static function back(string|JsExpression|null $url = null, string $label = '取消'): Action
     {
         return Action::custom($label, Events::returnTo($url))
             ->type('default');
     }
 
     /**
-     * 创建“关闭弹窗”动作，默认目标 dialog key 为 editor。
+     * 创建“关闭弹窗”动作。
+     * 目标 dialog 请继续链式调用 dialog()。
      */
-    public static function close(string $label = '取消', string $dialog = 'editor'): Action
+    public static function close(string $label = '取消'): Action
     {
-        return Action::close($label, $dialog);
+        return Action::close($label);
     }
 
     /**

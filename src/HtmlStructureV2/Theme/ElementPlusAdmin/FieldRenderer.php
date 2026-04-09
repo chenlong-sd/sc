@@ -7,6 +7,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Field;
+use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
@@ -14,6 +15,7 @@ use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
@@ -106,9 +108,14 @@ final class FieldRenderer
         $optionField = $field instanceof OptionField ? $field : null;
         $pickerField = $field instanceof PickerField ? $field : null;
         $uploadField = $field instanceof UploadField ? $field : null;
+        $editorField = $field instanceof EditorField ? $field : null;
         $placeholderField = $field instanceof PlaceholderFieldInterface ? $field : null;
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
         $hasRemoteOptions = $optionField?->hasRemoteOptions() && $options->hasRemoteOptionsContext();
+
+        if ($editorField !== null && $renderContext !== null) {
+            $this->ensureEditorAssets($renderContext);
+        }
 
         $item = $this->buildRenderItem(
             $field,
@@ -266,6 +273,12 @@ final class FieldRenderer
                 'type' => 'textarea',
                 ':rows' => (string)($field->getProps()['rows'] ?? 4),
                 'placeholder' => $placeholder,
+            ])),
+            FieldType::EDITOR => El::double('sc-v2-rich-editor')->setAttrs($bindModelValue([
+                'placeholder' => $placeholder,
+                ':config' => $this->jsValue($field instanceof EditorField ? $field->getEditorOptions() : []),
+                'upload-url' => $field instanceof EditorField ? $field->getUploadUrl() : '',
+                'style' => $inline ? 'width:min(860px,100%)' : 'width:100%',
             ])),
             FieldType::NUMBER => El::double('el-input-number')->setAttrs($bindModelValue([
                 'style' => $inline ? 'width: 180px' : 'width: 100%',
@@ -726,5 +739,12 @@ final class FieldRenderer
         $control->append($suffix);
 
         return $control;
+    }
+
+    private function ensureEditorAssets(RenderContext $renderContext): void
+    {
+        $assets = $renderContext->document()->assets();
+        $assets->addStylesheet(StaticResource::SCEDITOR_CSS);
+        $assets->addScript(StaticResource::SCEDITOR_JS);
     }
 }

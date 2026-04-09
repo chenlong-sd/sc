@@ -10,6 +10,8 @@
               validateForm: 'validateSimpleForm',
               clearFormValidate: 'clearSimpleFormValidate',
               getFormModel: 'getSimpleFormModel',
+              setFormModel: 'setSimpleFormModel',
+              initializeFormModel: 'initializeSimpleFormModel',
               setFormPathValue: 'setSimpleFormPathValue',
               getOptionState: 'getSimpleOptionState',
               getOptionLoadingState: 'getSimpleOptionLoadingState',
@@ -38,6 +40,7 @@
               handleUploadExceed: 'handleSimpleUploadExceed',
               handleUploadPreview: 'handleSimpleUploadPreview'
             },
+            getFormConfig: (scope) => getFormConfig(scope),
             getRefName: (scope) => getFormConfig(scope)?.ref || null,
             getFormModel: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'modelVar', 'modelPath'),
             getOptionState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionStateVar', 'optionStatePath', true),

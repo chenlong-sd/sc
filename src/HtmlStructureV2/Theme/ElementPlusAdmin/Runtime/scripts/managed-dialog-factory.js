@@ -19,6 +19,7 @@
             resolveContextValue,
             resolveTitleTemplate,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const defaultSubmitLoadingText = '请稍后...';
 
           const names = Object.assign({
             withDependencyResetSuspended: 'withDependencyResetSuspended',
@@ -757,24 +758,50 @@
                 return;
               }
 
+              let loadingInstance = null;
+              const beginSubmitting = () => {
+                if (this.dialogSubmitting?.[dialogKey]) {
+                  return false;
+                }
+
+                this.dialogSubmitting[dialogKey] = true;
+                loadingInstance = ElementPlus.ElLoading.service({
+                  lock: true,
+                  text: defaultSubmitLoadingText,
+                  background: 'rgba(255,255,255,0.35)',
+                });
+
+                return true;
+              };
+              const finishSubmitting = () => {
+                this.dialogSubmitting[dialogKey] = false;
+                if (loadingInstance && typeof loadingInstance.close === 'function') {
+                  loadingInstance.close();
+                }
+                loadingInstance = null;
+              };
+
               if (dialogCfg.type === 'form') {
+                if (!beginSubmitting()) {
+                  return;
+                }
+
                 const scope = toDialogScope(dialogKey);
                 const validate = typeof this[names.validateForm] === 'function'
                   ? this[names.validateForm](scope)
                   : Promise.resolve(true);
 
-                validate.then((valid) => {
-                  if (!valid) return;
+                Promise.resolve(validate).then((valid) => {
+                  if (!valid) return null;
 
                   const submitUrl = this.resolveDialogSubmitUrl(dialogKey, actionConfig, actionContext);
                   if (!submitUrl) {
                     this.closeDialog(dialogKey);
-                    return;
+                    return null;
                   }
 
                   const submitData = this.dialogForms?.[dialogKey] || {};
-                  this.dialogSubmitting[dialogKey] = true;
-                  makeRequest({
+                  return makeRequest({
                     method: 'post',
                     url: submitUrl,
                     query: submitData
@@ -808,11 +835,17 @@
                       return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogSubmitContext(dialogKey, submitData, {
                         error,
                       }));
-                    })
-                    .finally(() => {
-                      this.dialogSubmitting[dialogKey] = false;
                     });
-                });
+                })
+                  .catch((error) => {
+                    const message = error?.message || '保存失败';
+                    ElementPlus.ElMessage.error(message);
+
+                    return null;
+                  })
+                  .finally(() => {
+                    finishSubmitting();
+                  });
 
                 return;
               }
@@ -823,7 +856,9 @@
                 return;
               }
 
-              this.dialogSubmitting[dialogKey] = true;
+              if (!beginSubmitting()) {
+                return;
+              }
               const submitContext = this.buildDialogContext(dialogKey);
               let submitData = null;
 
@@ -867,7 +902,7 @@
                   }));
                 })
                 .finally(() => {
-                  this.dialogSubmitting[dialogKey] = false;
+                  finishSubmitting();
                 });
             }
           };

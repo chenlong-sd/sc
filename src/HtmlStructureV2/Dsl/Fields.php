@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Dsl;
 use Sc\Util\HtmlStructureV2\Components\Fields\BasicField;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
+use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
 use Sc\Util\HtmlStructureV2\Components\Fields\IconField;
 use Sc\Util\HtmlStructureV2\Components\Fields\NumberField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
@@ -51,6 +52,15 @@ final class Fields
     {
         return (new TextField($name, $label ?? '', FieldType::TEXTAREA))
             ->prop('rows', 4);
+    }
+
+    /**
+     * 创建富文本编辑器字段。
+     * 底层使用 SimpleRichEditor，并支持 uploadUrl()/initOptions()/event() 等编辑器配置。
+     */
+    public static function editor(string $name, ?string $label = null): EditorField
+    {
+        return new EditorField($name, $label ?? '');
     }
 
     /**

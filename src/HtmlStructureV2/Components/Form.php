@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Support\FormSchema;
 use Sc\Util\HtmlStructureV2\Support\FormSchemaWalker;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -21,6 +22,10 @@ final class Form implements Renderable, EventAware
     use RendersWithTheme;
 
     private const SUPPORTED_ON_EVENTS = [
+        'submitBefore',
+        'submitSuccess',
+        'submitFail',
+        'submitFinally',
         'validateSuccess',
         'validateFail',
         'arrayRowAdd',
@@ -49,6 +54,13 @@ final class Form implements Renderable, EventAware
     private ?string $loadDataPath = null;
     private string $loadWhen = self::DEFAULT_LOAD_WHEN;
     private string $modeQueryKey = self::DEFAULT_MODE_QUERY_KEY;
+    private string $saveMethod = 'post';
+    private ?string $saveCreateUrl = null;
+    private ?string $saveUpdateUrl = null;
+    private ?string $saveLoadingText = null;
+    private ?string $saveSuccessMessage = null;
+    private ?string $saveErrorMessage = null;
+    private ?array $initialData = null;
 
     public function __construct(
         private readonly string $key
@@ -167,7 +179,7 @@ final class Form implements Renderable, EventAware
      * - formScope / page.formScope: 当前表单 scope
      * - form / model / forms / dialogs / selection
      * - vm
-     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
+     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel()
      * - closeHostDialog() / reloadHostTable() / openHostDialog()
      *
      * 例如可写：
@@ -213,7 +225,7 @@ final class Form implements Renderable, EventAware
      *
      * 该配置会同时影响：
      * - load() 默认生成的详情加载参数
-     * - `RequestAction::saveUrls()` 的新建/编辑地址自动切换
+     * - `Form::saveUrls()` 与 `RequestAction::saveUrls()` 的新建/编辑地址自动切换
      * - 动作/事件上下文中的 `mode` / `page.mode`
      */
     public function modeQueryKey(string $queryKey = self::DEFAULT_MODE_QUERY_KEY): self
@@ -225,8 +237,91 @@ final class Form implements Renderable, EventAware
     }
 
     /**
+     * 配置表单保存地址；会按当前表单 modeQueryKey() 自动在 create/update 地址间切换。
+     * 第二个参数为空时，新建和编辑都会复用同一个地址。
+     */
+    public function saveUrls(string $createUrl, ?string $updateUrl = null): self
+    {
+        $this->saveCreateUrl = $this->normalizeNullableString($createUrl);
+        $this->saveUpdateUrl = $this->normalizeNullableString($updateUrl);
+        if ($this->saveUpdateUrl === null) {
+            $this->saveUpdateUrl = $this->saveCreateUrl;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 直接设置表单初始数据，适合像 V1 一样在 PHP 层先查好数据再回填。
+     * 传入数据会按当前表单 schema 初始化，只保留已声明字段；
+     * array group / 嵌套对象也会递归裁剪。
+     */
+    public function setData(array $data): self
+    {
+        $this->initialData = $data;
+
+        return $this;
+    }
+
+    /**
+     * 设置表单提交请求方法，默认值为 post。
+     */
+    public function saveMethod(string $method = 'post'): self
+    {
+        $normalized = strtolower(trim($method));
+        $this->saveMethod = $normalized !== '' ? $normalized : 'post';
+
+        return $this;
+    }
+
+    /**
+     * 设置表单提交中的 loading 文案；传 null 表示关闭 loading 文案。
+     */
+    public function loadingText(?string $loadingText = '请稍后...'): self
+    {
+        $this->saveLoadingText = $this->normalizeNullableString($loadingText);
+
+        return $this;
+    }
+
+    /**
+     * 设置表单提交成功后的默认提示文案。
+     */
+    public function successMessage(?string $successMessage): self
+    {
+        $this->saveSuccessMessage = $this->normalizeNullableString($successMessage);
+
+        return $this;
+    }
+
+    /**
+     * 设置表单提交失败后的默认提示文案。
+     */
+    public function errorMessage(?string $errorMessage): self
+    {
+        $this->saveErrorMessage = $this->normalizeNullableString($errorMessage);
+
+        return $this;
+    }
+
+    /**
+     * 提交成功后执行“优先关闭宿主弹窗，否则跳转到指定 URL”的快捷方式。
+     * 等价于给 submitSuccess 事件追加 `Events::returnTo($url)->hostTable($table)`。
+     */
+    public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): self
+    {
+        return $this->on(
+            'submitSuccess',
+            Events::returnTo($url)->hostTable($table)
+        );
+    }
+
+    /**
      * 绑定表单运行时事件。
-     * 可用事件：validateSuccess / validateFail / arrayRowAdd / arrayRowRemove / arrayRowMove / optionsLoaded / optionsLoadFail / uploadSuccess / uploadFail。
+     * 可用事件：
+     * submitBefore / submitSuccess / submitFail / submitFinally /
+     * validateSuccess / validateFail / arrayRowAdd / arrayRowRemove / arrayRowMove /
+     * optionsLoaded / optionsLoadFail / uploadSuccess / uploadFail。
      *
      * handler 签名：`(context) => mixed`
      * 推荐写法：`({ scope, model, form, formConfig, error, fieldName, payload, vm }) => {}`
@@ -239,6 +334,10 @@ final class Form implements Renderable, EventAware
      * - vm: 当前 Vue 实例
      *
      * 事件额外字段：
+     * - submitBefore: request / payload
+     * - submitSuccess: request / response / payload
+     * - submitFail: request / error
+     * - submitFinally: request，以及可能存在的 response / payload / error
      * - validateFail: error
      * - arrayRowAdd: arrayPath / groupConfig / row / rowIndex / rows
      * - arrayRowRemove: arrayPath / groupConfig / row / rowIndex / rows
@@ -342,9 +441,44 @@ final class Form implements Renderable, EventAware
         return $this->modeQueryKey;
     }
 
+    public function getSaveMethod(): string
+    {
+        return $this->saveMethod;
+    }
+
+    public function getSaveCreateUrl(): ?string
+    {
+        return $this->saveCreateUrl;
+    }
+
+    public function getSaveUpdateUrl(): ?string
+    {
+        return $this->saveUpdateUrl;
+    }
+
+    public function getSaveLoadingText(): ?string
+    {
+        return $this->saveLoadingText;
+    }
+
+    public function getSaveSuccessMessage(): ?string
+    {
+        return $this->saveSuccessMessage;
+    }
+
+    public function getSaveErrorMessage(): ?string
+    {
+        return $this->saveErrorMessage;
+    }
+
     public function defaults(): array
     {
         return $this->schema()->defaults();
+    }
+
+    public function initialData(): array
+    {
+        return $this->schema()->initializeData($this->initialData ?? []);
     }
 
     public function rules(): array
@@ -378,6 +512,10 @@ final class Form implements Renderable, EventAware
     protected function defineSupportedEvents(): array
     {
         return [
+            'submitBefore' => '表单提交请求发出前触发，可读取 request / payload。',
+            'submitSuccess' => '表单提交成功后触发，可读取 request / response / payload。',
+            'submitFail' => '表单提交失败后触发，可读取 request / error。',
+            'submitFinally' => '表单提交流程结束后触发，可读取 request，以及可能存在的 response / payload / error。',
             'validateSuccess' => '表单校验通过后触发。',
             'validateFail' => '表单校验失败后触发，可读取 error。',
             'arrayRowAdd' => '表单数组新增一行后触发，可读取 arrayPath / row / rowIndex / rows。',
@@ -393,5 +531,16 @@ final class Form implements Renderable, EventAware
     private function normalizeExpressionConfig(array|string|JsExpression $value): array|JsExpression
     {
         return is_string($value) ? JsExpression::ensure($value) : $value;
+    }
+
+    private function normalizeNullableString(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = trim($value);
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

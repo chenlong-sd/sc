@@ -57,16 +57,50 @@
             }
 
             throw new Error(
-              'Current V2 page cannot resolve a public form scope automatically; please call "__SC_V2_PAGE__.submit(\'...\')" or "__SC_V2_PAGE__.cloneFormModel(\'...\')" with an explicit form key.'
+              'Current V2 page cannot resolve a public form scope automatically; please call "__SC_V2_PAGE__.submit(\'...\')" / "__SC_V2_PAGE__.cloneFormModel(\'...\')" / "__SC_V2_PAGE__.setFormModel(\'...\', {...})" / "__SC_V2_PAGE__.initializeFormModel(\'...\', {...})" with an explicit form key.'
             );
           };
           const createPublicPageApi = (vm) => {
+            const resolveFormModelSetArgs = (arg1 = null, arg2 = undefined) => {
+              if (typeof arg1 === 'string') {
+                return { scope: arg1, values: arg2 };
+              }
+              if (typeof arg2 === 'string') {
+                return { scope: arg2, values: arg1 };
+              }
+
+              return { scope: null, values: arg1 };
+            };
             const getPageQuery = () => clone(vm.getPageQuery ? vm.getPageQuery() : initialPageQuery);
             const getFormModel = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return vm.getFormModel(resolvedScope) || {};
             };
             const cloneFormModel = (scope = null) => clone(getFormModel(scope));
+            const setFormModel = (arg1 = null, arg2 = undefined) => {
+              const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.setFormModel === 'function') {
+                return vm.setFormModel(resolvedScope, values);
+              }
+              if (typeof vm.setSimpleFormModel === 'function') {
+                return vm.setSimpleFormModel(resolvedScope, values);
+              }
+
+              throw new Error('Current runtime does not expose public setFormModel() support.');
+            };
+            const initializeFormModel = (arg1 = null, arg2 = undefined) => {
+              const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.initializeFormModel === 'function') {
+                return vm.initializeFormModel(resolvedScope, values);
+              }
+              if (typeof vm.initializeSimpleFormModel === 'function') {
+                return vm.initializeSimpleFormModel(resolvedScope, values);
+              }
+
+              throw new Error('Current runtime does not expose public initializeFormModel() support.');
+            };
             const validateForm = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return Promise.resolve(vm.validateForm(resolvedScope)).then((valid) => valid !== false);
@@ -98,6 +132,8 @@
               validateForm,
               getFormModel,
               cloneFormModel,
+              setFormModel,
+              initializeFormModel,
               loadFormData: (scope = null, force = false) => vm.loadFormData(resolvePublicFormScope(scope), force),
               submit,
               notifyDialogHost: (...args) => vm.notifyDialogHost(...args),
@@ -390,6 +426,12 @@
                 },
                 getFormModel(scope){
                   return this.getSimpleFormModel(scope);
+                },
+                setFormModel(scope, values = {}){
+                  return this.setSimpleFormModel(scope, values);
+                },
+                initializeFormModel(scope, values = {}){
+                  return this.initializeSimpleFormModel(scope, values);
                 },
                 notifyDialogHost(payload = {}){
                   return postDialogHostMessage(payload);

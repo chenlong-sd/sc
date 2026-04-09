@@ -281,7 +281,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
 
         $dialogKey = $this->dialog->key();
         $this->dialog->footer(
-            Action::close('取消', $dialogKey),
+            Action::close('取消')->dialog($dialogKey),
             Action::make($this->confirmLabel)
                 ->type('primary')
                 ->icon('Check')

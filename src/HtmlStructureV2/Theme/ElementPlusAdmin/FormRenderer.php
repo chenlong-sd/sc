@@ -144,13 +144,24 @@ final class FormRenderer
         if ($header !== null) {
             $body->append($header);
         }
-        $body->append($this->renderChildrenRow($section->getChildren(), $context));
+        $body->append(
+            El::double('div')
+                ->addClass('sc-v2-form-section__body')
+                ->append($this->renderChildrenRow($section->getChildren(), $context))
+        );
 
         $wrapped = $section->isPlain()
             ? $body
-            : El::double('el-card')->append($body);
+            : El::double('el-card')->addClass('sc-v2-form-section-card')->append($body);
 
-        return $this->wrapBlockNode($wrapped, $section->getSpan());
+        $block = $this->wrapBlockNode($wrapped, $section->getSpan())
+            ->addClass('sc-v2-form-section-block');
+
+        if ($section->isPlain()) {
+            $block->addClass('sc-v2-form-section-block--plain');
+        }
+
+        return $block;
     }
 
     private function renderInlineNode(InlineNode $inlineNode, FormNodeRenderContext $context): AbstractHtmlElement

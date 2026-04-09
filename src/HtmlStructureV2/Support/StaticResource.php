@@ -12,4 +12,6 @@ final class StaticResource
     public const ELEMENT_PLUS_LANG = '/elementUI/zh-cn.min.js';
     public const SORTABLE = '/js/Sortable.min.js';
     public const XLSX = '/js/xlsx.full.min.js';
+    public const SCEDITOR_JS = '/sceditor/editor.min.js';
+    public const SCEDITOR_CSS = '/sceditor/editor.min.css';
 }

@@ -16,18 +16,16 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
     private bool $lazy = false;
 
     public function __construct(
-        private readonly string $label,
-        FormNode ...$children
+        private readonly string $label
     ) {
-        $this->setFormNodeChildren(...$children);
     }
 
     /**
      * 直接创建一个标签页面板节点。
      */
-    public static function make(string $label, FormNode ...$children): self
+    public static function make(string $label): self
     {
-        return new self($label, ...$children);
+        return new self($label);
     }
 
     /**
