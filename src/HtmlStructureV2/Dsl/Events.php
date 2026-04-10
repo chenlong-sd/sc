@@ -141,6 +141,17 @@ final class Events
     }
 
     /**
+     * 创建一个把表单恢复到“当前初始值快照”的事件。
+     * 初始值会优先取最近一次初始化、详情加载成功或弹窗打开时形成的快照；
+     * 也就是优先恢复到当前业务初始化结果，而不是单纯退回 schema defaults；
+     * 目标表单可继续链式调用 `->form('profile')` 显式指定。
+     */
+    public static function resetForm(?string $scope = null): StructuredEvent
+    {
+        return StructuredEvent::resetForm($scope);
+    }
+
+    /**
      * 创建一个消息提示事件，type 可传 success / warning / error / info。
      * `message` 支持动态表达式，会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文，例如 Action / RequestAction 常见有 row /

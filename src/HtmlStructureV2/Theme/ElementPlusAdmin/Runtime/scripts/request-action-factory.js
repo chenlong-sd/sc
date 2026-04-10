@@ -73,6 +73,7 @@
               return this.actionLoading;
             },
             buildActionContext(actionConfig, row = null){
+              const explicitActionFormScope = normalizeFormScope(actionConfig.formScope || null);
               const resolveActionTableKey = () => {
                 if (actionConfig.tableKey) {
                   return actionConfig.tableKey;
@@ -137,12 +138,13 @@
                 forms: {},
                 dialogs: {},
                 selection: [],
+                formScope: explicitActionFormScope,
                 query: pageQuery,
                 mode: resolveRuntimePageMode(),
                 page: {
                   query: pageQuery,
                   mode: resolveRuntimePageMode(),
-                  formScope: null,
+                  formScope: explicitActionFormScope,
                 },
                 vm: this,
                 reloadTable: (tableKey = resolvedTableKey) => {
@@ -292,6 +294,10 @@
                 },
               }, sourceDialogContext || {}, baseContext);
               const resolveImplicitFormScope = () => {
+                if (explicitActionFormScope && cfg?.forms?.[explicitActionFormScope]) {
+                  return explicitActionFormScope;
+                }
+
                 if (activeDialogKey) {
                   const dialogScope = dialogFormScopePrefix + activeDialogKey;
                   if (cfg?.forms?.[dialogScope]) {
@@ -443,6 +449,25 @@
                 context.formScope = resolvedScope;
                 context.resolveFormMode(resolvedScope);
                 const nextModel = initializeRuntimeFormModel(resolvedScope, values);
+                context.form = nextModel || {};
+                context.model = context.form;
+
+                return context.form;
+              };
+              context.resetForm = (scope = null) => {
+                const resolvedScope = resolveContextFormScope(scope, 'form reset');
+                context.formScope = resolvedScope;
+                context.resolveFormMode(resolvedScope);
+
+                let nextModel = null;
+                if (typeof this.resetForm === 'function') {
+                  nextModel = this.resetForm(resolvedScope);
+                } else if (typeof this.resetSimpleForm === 'function') {
+                  nextModel = this.resetSimpleForm(resolvedScope);
+                } else {
+                  throw new Error('Current runtime does not expose public resetForm() support.');
+                }
+
                 context.form = nextModel || {};
                 context.model = context.form;
 

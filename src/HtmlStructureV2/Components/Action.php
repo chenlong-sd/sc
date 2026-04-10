@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
@@ -114,6 +115,19 @@ class Action implements Renderable, EventAware
     {
         return (new self($label, ActionIntent::CLOSE))
             ->type('default');
+    }
+
+    /**
+     * 创建“重置表单”动作。
+     * 默认会把目标表单恢复到初始值快照；若当前运行时只有一个可解析表单，可省略 "$scope"。
+     * 这份快照通常来自表单首次渲染值、`Form::setData()`、独立表单页 `load()` 成功结果，
+     * 以及 form 弹窗最近一次打开并初始化/加载后的结果。
+     */
+    public static function resetForm(string $label = '重置', ?string $scope = null): self
+    {
+        return self::custom($label, Events::resetForm($scope))
+            ->type('default')
+            ->icon('RefreshLeft');
     }
 
     /**

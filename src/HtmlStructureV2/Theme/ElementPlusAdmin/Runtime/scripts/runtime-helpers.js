@@ -905,6 +905,39 @@
               throw new Error('Structured event [initializeFormModel] requires public initializeFormModel() support.');
             }
 
+            if (type === 'resetForm') {
+              const formScope = resolveContextValue(
+                handler.formScope ?? context?.formScope ?? context?.scope ?? null,
+                context
+              );
+
+              if (typeof context?.resetForm === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return context.resetForm(formScope);
+                }
+
+                return context.resetForm();
+              }
+
+              if (typeof vm?.resetForm === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return vm.resetForm(formScope);
+                }
+
+                throw new Error('Structured event [resetForm] requires explicit formScope or form-aware runtime context.');
+              }
+
+              if (typeof vm?.resetSimpleForm === 'function') {
+                if (typeof formScope === 'string' && formScope !== '') {
+                  return vm.resetSimpleForm(formScope);
+                }
+
+                throw new Error('Structured event [resetForm] requires explicit formScope or form-aware runtime context.');
+              }
+
+              throw new Error('Structured event [resetForm] requires public resetForm() support.');
+            }
+
             if (type === 'message') {
               const message = resolveContextValue(handler.message ?? '', context);
               if (message === null || message === undefined || message === '') {

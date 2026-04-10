@@ -15,7 +15,6 @@ use Sc\Util\HtmlStructureV2\Components\FormNodes\InlineNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\SectionNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\TabPaneNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\TabsNode;
-use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 
 final class Forms
@@ -31,7 +30,7 @@ final class Forms
     /**
      * 创建一个带标题的表单分组，默认会以卡片区块渲染。
      * 只影响视觉分组，不改变子字段的数据路径。
-     * 子节点请继续链式调用 addNodes()。
+     * 当前推荐继续链式调用 `addContent()`，旧 `addNodes()` 仍保留兼容。
      */
     public static function section(string $title): SectionNode
     {
@@ -41,33 +40,36 @@ final class Forms
     /**
      * 创建一个行内布局容器，内部字段会按横向方式排列并自动换行。
      * 只影响排版，不改变子字段的表单作用域。
+     * 当前推荐继续链式调用 `addItems()`，旧 `addNodes()` 仍保留兼容。
      */
-    public static function inline(FormNode ...$children): InlineNode
+    public static function inline(): InlineNode
     {
-        return InlineNode::make(...$children);
+        return InlineNode::make();
     }
 
     /**
      * 创建一个栅格布局容器，内部字段继续按各自 span 参与排版。
      * 只影响排版，不改变子字段的数据路径和校验逻辑。
+     * 当前推荐继续链式调用 `addItems()`，旧 `addNodes()` 仍保留兼容。
      */
-    public static function grid(FormNode ...$children): GridNode
+    public static function grid(): GridNode
     {
-        return GridNode::make(...$children);
+        return GridNode::make();
     }
 
     /**
      * 创建一个标签页布局容器，内部必须放 Forms::tab()。
      * 各页签里的字段仍然属于同一张表单，提交、校验、事件作用域都不分裂。
+     * 子页签请继续链式调用 `addTabs()`。
      */
-    public static function tabs(TabPaneNode ...$tabs): TabsNode
+    public static function tabs(): TabsNode
     {
-        return TabsNode::make(...$tabs);
+        return TabsNode::make();
     }
 
     /**
      * 创建一个标签页面板，只能作为 Forms::tabs() 的子节点使用。
-     * 子节点请继续链式调用 addNodes()。
+     * 当前推荐继续链式调用 `addContent()`，旧 `addNodes()` 仍保留兼容。
      */
     public static function tab(string $label): TabPaneNode
     {
@@ -77,15 +79,16 @@ final class Forms
     /**
      * 创建一个折叠面板容器，内部必须放 Forms::collapseItem()。
      * 折叠只影响显示状态，不改变子字段的数据路径。
+     * 折叠项请继续链式调用 `addItems()`。
      */
-    public static function collapse(CollapseItemNode ...$items): CollapseNode
+    public static function collapse(): CollapseNode
     {
-        return CollapseNode::make(...$items);
+        return CollapseNode::make();
     }
 
     /**
      * 创建一个折叠面板项，只能作为 Forms::collapse() 的子节点使用。
-     * 子节点请继续链式调用 addNodes()。
+     * 当前推荐继续链式调用 `addContent()`，旧 `addNodes()` 仍保留兼容。
      */
     public static function collapseItem(string $title): CollapseItemNode
     {
@@ -94,29 +97,32 @@ final class Forms
 
     /**
      * 创建一个对象作用域节点，把子节点的数据路径切到指定对象下。
-     * 例如 `Forms::object('profile', Fields::text('name'))` 最终字段路径会变成 `profile.name`。
+     * 例如 `Forms::object('profile')->addSchema(Fields::text('name'))`
+     * 最终字段路径会变成 `profile.name`。
      */
-    public static function object(string $name, FormNode ...$children): FormObjectGroup
+    public static function object(string $name): FormObjectGroup
     {
-        return FormObjectGroup::make($name, ...$children);
+        return FormObjectGroup::make($name);
     }
 
     /**
      * 创建一个重复分组表单节点，适合“多组同结构数据”编辑。
      * 子字段路径会变成 `name.0.xxx`、`name.1.xxx`；新增/删除/排序会触发表单数组事件。
+     * 当前推荐继续链式调用 `addSchema()`，旧 `addNodes()` 仍保留兼容。
      */
-    public static function arrayGroup(string $name, FormNode ...$children): FormArrayGroup
+    public static function arrayGroup(string $name): FormArrayGroup
     {
-        return FormArrayGroup::make($name, ...$children);
+        return FormArrayGroup::make($name);
     }
 
     /**
      * 创建一个表格化数组编辑节点，适合行列式编辑多条数据。
      * 数据路径语义与 arrayGroup() 一致，只是渲染为表格 UI。
+     * 当前推荐继续链式调用 `addColumns()`，旧 `addNodes()` 仍保留兼容。
      */
-    public static function table(string $name, FormNode ...$children): FormTable
+    public static function table(string $name): FormTable
     {
-        return FormTable::make($name, ...$children);
+        return FormTable::make($name);
     }
 
     /**

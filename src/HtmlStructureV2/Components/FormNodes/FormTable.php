@@ -11,10 +11,19 @@ final class FormTable extends FormArrayGroup
     private string $emptyText = '暂无数据';
     private bool $border = true;
 
-    public function __construct(string $name, FormNode ...$children)
+    public function __construct(string $name)
     {
-        parent::__construct($name, ...$children);
+        parent::__construct($name);
         $this->addButtonText('新增一行');
+    }
+
+    /**
+     * 追加表格行 schema，并按列方式渲染。
+     * 推荐使用这个方法表达“表格里有哪些列”，比通用 `addNodes()` 更符合使用侧认知。
+     */
+    public function addColumns(FormNode ...$columns): static
+    {
+        return $this->addNodes(...$columns);
     }
 
     /**

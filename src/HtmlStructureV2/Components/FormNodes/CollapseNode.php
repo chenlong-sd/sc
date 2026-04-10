@@ -15,17 +15,24 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
     use HasFormNodeChildren;
     private bool $accordion = false;
 
-    public function __construct(CollapseItemNode ...$items)
+    public function __construct()
     {
-        $this->setFormNodeChildren(...$items);
     }
 
     /**
      * 直接创建一个折叠面板节点。
      */
-    public static function make(CollapseItemNode ...$items): self
+    public static function make(): self
     {
-        return new self(...$items);
+        return new self();
+    }
+
+    /**
+     * 继续向当前折叠容器追加折叠项。
+     */
+    public function addNodes(CollapseItemNode ...$items): self
+    {
+        return $this->appendFormNodeChildren(...$items);
     }
 
     /**
@@ -33,7 +40,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
      */
     public function addItems(CollapseItemNode ...$items): self
     {
-        return $this->appendFormNodeChildren(...$items);
+        return $this->addNodes(...$items);
     }
 
     /**

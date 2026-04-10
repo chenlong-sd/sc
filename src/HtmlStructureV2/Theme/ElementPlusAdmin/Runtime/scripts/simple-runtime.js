@@ -57,7 +57,7 @@
             }
 
             throw new Error(
-              'Current V2 page cannot resolve a public form scope automatically; please call "__SC_V2_PAGE__.submit(\'...\')" / "__SC_V2_PAGE__.cloneFormModel(\'...\')" / "__SC_V2_PAGE__.setFormModel(\'...\', {...})" / "__SC_V2_PAGE__.initializeFormModel(\'...\', {...})" with an explicit form key.'
+              'Current V2 page cannot resolve a public form scope automatically; please call "__SC_V2_PAGE__.submit(\'...\')" / "__SC_V2_PAGE__.cloneFormModel(\'...\')" / "__SC_V2_PAGE__.setFormModel(\'...\', {...})" / "__SC_V2_PAGE__.initializeFormModel(\'...\', {...})" / "__SC_V2_PAGE__.resetForm(\'...\')" with an explicit form key.'
             );
           };
           const createPublicPageApi = (vm) => {
@@ -101,6 +101,17 @@
 
               throw new Error('Current runtime does not expose public initializeFormModel() support.');
             };
+            const resetForm = (scope = null) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.resetForm === 'function') {
+                return vm.resetForm(resolvedScope);
+              }
+              if (typeof vm.resetSimpleForm === 'function') {
+                return vm.resetSimpleForm(resolvedScope);
+              }
+
+              throw new Error('Current runtime does not expose public resetForm() support.');
+            };
             const validateForm = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return Promise.resolve(vm.validateForm(resolvedScope)).then((valid) => valid !== false);
@@ -134,6 +145,7 @@
               cloneFormModel,
               setFormModel,
               initializeFormModel,
+              resetForm,
               loadFormData: (scope = null, force = false) => vm.loadFormData(resolvePublicFormScope(scope), force),
               submit,
               notifyDialogHost: (...args) => vm.notifyDialogHost(...args),
@@ -166,6 +178,7 @@
               initializeConfiguredForms(forms, {
                 initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
               });
+              this.initializeSimpleFormInitialSnapshots();
             },
             mounted(){
               this.ensureDialogMessageBridge();
@@ -237,6 +250,44 @@
                   const resolvedScope = resolvePublicFormScope(scope);
                   return (this.ensureSimpleFormLoadTokenStore()[resolvedScope] || 0) === token;
                 },
+                ensureSimpleFormInitialStore(){
+                  if (!isObject(this.__simpleFormInitials)) {
+                    this.__simpleFormInitials = {};
+                  }
+
+                  return this.__simpleFormInitials;
+                },
+                buildSimpleFormInitialSnapshot(scope){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const formCfg = getFormConfig(resolvedScope) || {};
+
+                  return clone(formCfg.initialData || formCfg.defaults || {});
+                },
+                setSimpleFormInitialSnapshot(scope, values = undefined){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const store = this.ensureSimpleFormInitialStore();
+                  store[resolvedScope] = values === undefined
+                    ? clone(this.getFormModel(resolvedScope) || this.buildSimpleFormInitialSnapshot(resolvedScope))
+                    : clone(values || {});
+
+                  return clone(store[resolvedScope]);
+                },
+                getSimpleFormInitialSnapshot(scope){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const store = this.ensureSimpleFormInitialStore();
+                  if (store[resolvedScope] === undefined) {
+                    store[resolvedScope] = this.buildSimpleFormInitialSnapshot(resolvedScope);
+                  }
+
+                  return clone(store[resolvedScope] || {});
+                },
+                initializeSimpleFormInitialSnapshots(){
+                  knownFormScopes().forEach((scope) => {
+                    this.setSimpleFormInitialSnapshot(scope);
+                  });
+
+                  return this.ensureSimpleFormInitialStore();
+                },
                 buildPageFormLoadContext(scope, overrides = {}){
                   const resolvedScope = resolvePublicFormScope(scope);
                   const query = this.getPageQuery();
@@ -264,6 +315,7 @@
                     ),
                     resolveFormMode: (requestedScope = resolvedScope) => this.resolveFormMode(requestedScope),
                     loadFormData: (requestedScope = resolvedScope, force = false) => this.loadFormData(requestedScope, force),
+                    resetForm: (requestedScope = resolvedScope) => this.resetForm(requestedScope),
                     reloadPage: () => window.location.reload(),
                     notifyDialogHost: (payload = {}) => this.notifyDialogHost(payload),
                     closeHostDialog: (...args) => this.closeHostDialog(...args),
@@ -388,6 +440,7 @@
                       }
 
                       const currentForm = this.preparePageForm(resolvedScope, true);
+                      this.setSimpleFormInitialSnapshot(resolvedScope, currentForm);
 
                       return Object.assign(this.buildPageFormLoadContext(resolvedScope), {
                         response,
@@ -432,6 +485,22 @@
                 },
                 initializeFormModel(scope, values = {}){
                   return this.initializeSimpleFormModel(scope, values);
+                },
+                resetSimpleForm(scope){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const initialSnapshot = this.getSimpleFormInitialSnapshot(resolvedScope);
+
+                  if (typeof this.initializeSimpleFormModel === 'function') {
+                    return this.initializeSimpleFormModel(resolvedScope, initialSnapshot);
+                  }
+                  if (typeof this.setSimpleFormModel === 'function') {
+                    return this.setSimpleFormModel(resolvedScope, initialSnapshot);
+                  }
+
+                  throw new Error('Current runtime does not expose resetSimpleForm() support.');
+                },
+                resetForm(scope){
+                  return this.resetSimpleForm(scope);
                 },
                 notifyDialogHost(payload = {}){
                   return postDialogHostMessage(payload);

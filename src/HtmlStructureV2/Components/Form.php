@@ -47,6 +47,8 @@ final class Form implements Renderable, EventAware
     private string $labelWidth = '100px';
     private string $submitLabel = '查询';
     private string $resetLabel = '重置';
+    /** @var Action[] */
+    private array $footerActions = [];
     private ?string $loadUrl = null;
     private string $loadMethod = self::DEFAULT_LOAD_METHOD;
     private array|JsExpression $loadPayload = [];
@@ -153,6 +155,18 @@ final class Form implements Renderable, EventAware
     }
 
     /**
+     * 在普通表单底部追加动作按钮，适合常规 CRUD 页尾的“保存 / 重置 / 取消”。
+     * 这些动作会在当前表单渲染作用域下运行；若动作依赖表单上下文，默认会优先命中当前表单。
+     * 当前仅普通表单会渲染 footerActions()；筛选表单仍使用 submitLabel()/resetLabel() 那组内联按钮。
+     */
+    public function footerActions(Action ...$actions): self
+    {
+        $this->footerActions = array_merge($this->footerActions, $actions);
+
+        return $this;
+    }
+
+    /**
      * 配置独立表单页的详情加载接口。
      * 当前主要用于 `Page` 中直接放置的表单；弹窗表单仍优先使用 `Dialog::load()`。
      * 当 loadWhen() 条件命中时，会在页面初始化阶段请求该接口，再把结果回填到表单。
@@ -179,7 +193,7 @@ final class Form implements Renderable, EventAware
      * - formScope / page.formScope: 当前表单 scope
      * - form / model / forms / dialogs / selection
      * - vm
-     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel()
+     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel() / resetForm()
      * - closeHostDialog() / reloadHostTable() / openHostDialog()
      *
      * 例如可写：
@@ -404,6 +418,14 @@ final class Form implements Renderable, EventAware
     public function getResetLabel(): string
     {
         return $this->resetLabel;
+    }
+
+    /**
+     * @return Action[]
+     */
+    public function getFooterActions(): array
+    {
+        return $this->footerActions;
     }
 
     public function getLoadUrl(): ?string

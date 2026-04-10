@@ -10,6 +10,7 @@ final class FormRenderOptions
 
     public function __construct(
         public readonly string $mode = 'default',
+        public readonly ?string $formScope = null,
         public readonly bool $showLabels = true,
         public readonly ?string $ref = null,
         public readonly ?string $rules = null,
@@ -41,6 +42,7 @@ final class FormRenderOptions
     {
         return new self(
             mode: self::stringOrDefault($options, 'mode', 'default'),
+            formScope: self::stringOrNull($options, 'formScope'),
             showLabels: self::boolOrDefault($options, 'showLabels', true),
             ref: self::stringOrNull($options, 'ref'),
             rules: self::stringOrNull($options, 'rules'),
@@ -137,6 +139,7 @@ final class FormRenderOptions
     {
         return new self(
             mode: $this->mode,
+            formScope: $this->formScope,
             showLabels: $showLabels,
             ref: $this->ref,
             rules: $this->rules,

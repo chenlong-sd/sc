@@ -109,6 +109,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-toolbar__actions .el-button+.el-button,.sc-v2-toolbar__tools .el-button+.el-button{margin-left:0}
     .sc-v2-form__control{display:flex;align-items:flex-start;gap:12px;width:100%}
     .sc-v2-form__control>:first-child{flex:1 1 auto;min-width:0}
+    .sc-v2-form__footer{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:6px}
+    .sc-v2-form__footer .el-button+.el-button{margin-left:0}
     .sc-v2-form__suffix{display:flex;align-items:center;gap:8px;flex:0 0 auto;flex-wrap:wrap}
     .sc-v2-form__suffix-text{font-size:13px;line-height:1.5;color:#6b7280}
     .sc-v2-form__help{margin-top:6px;font-size:12px;line-height:1.5;color:#909399}
@@ -189,13 +191,16 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-form-table__header{display:flex;justify-content:space-between;align-items:center;gap:12px}
     .sc-v2-form-table__header h4{margin:0;font-size:14px;line-height:1.4;color:#374151}
     .sc-v2-form-table__footer{display:flex;justify-content:flex-start}
-    .sc-v2-form-table__actions{display:flex;gap:8px;flex-wrap:wrap}
+    .sc-v2-form-table__actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+    .sc-v2-form-table__actions .sc-v2-table-drag-handle{cursor:move;touch-action:none}
+    .sc-v2-form-table__actions .sc-v2-table-drag-handle .el-icon{cursor:move}
     .sc-v2-form-table__item{margin-bottom:0}
     @media (max-width: 768px){
       #app{padding:8px 8px 6px}
       .sc-v2-page__header{flex-direction:column;align-items:stretch}
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions,.sc-v2-status-toggles{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
+      .sc-v2-form__footer{justify-content:flex-start}
       .sc-v2-form__suffix{width:100%}
       .sc-v2-form-section-block:not(:last-child){margin-bottom:14px}
       .sc-v2-form-section-card>.el-card__body{padding:16px 14px 16px}

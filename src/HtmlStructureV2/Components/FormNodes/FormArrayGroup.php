@@ -22,30 +22,45 @@ class FormArrayGroup implements FormNode, FormNodeContainer
     private ?int $maxRows = null;
 
     public function __construct(
-        private readonly string $name,
-        FormNode ...$children
+        private readonly string $name
     ) {
         if (trim($name) === '') {
             throw new InvalidArgumentException('Form array group name cannot be empty.');
         }
-
-        $this->setFormNodeChildren(...$children);
     }
 
     /**
      * 直接创建一个重复分组节点。
      */
-    public static function make(string $name, FormNode ...$children): static
+    public static function make(string $name): static
     {
-        return new static($name, ...$children);
+        return new static($name);
     }
 
     /**
      * 继续向当前重复分组追加子节点。
      */
-    public function addChildren(FormNode ...$children): static
+    public function addNodes(FormNode ...$children): static
     {
         return $this->appendFormNodeChildren(...$children);
+    }
+
+    /**
+     * 追加当前数组分组的“每一行 schema”。
+     * 推荐使用这个方法表达“这一组数据有哪些字段/结构节点”，比通用 `addNodes()` 更直观。
+     */
+    public function addSchema(FormNode ...$children): static
+    {
+        return $this->addNodes(...$children);
+    }
+
+    /**
+     * 继续向当前重复分组追加子节点。
+     * `addNodes()` 的兼容别名。
+     */
+    public function addChildren(FormNode ...$children): static
+    {
+        return $this->addNodes(...$children);
     }
 
     /**

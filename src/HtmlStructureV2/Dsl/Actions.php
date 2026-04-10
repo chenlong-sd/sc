@@ -69,6 +69,17 @@ final class Actions
     }
 
     /**
+     * 创建一个独立表单页常用的“重置到初始值”动作。
+     * 初始值会优先使用当前表单最近一次初始化/详情加载后的快照；
+     * 也就是优先恢复到业务初始化结果，而不是单纯退回 schema 默认值；
+     * 若未传表单 key，则仅在当前运行时能唯一定位表单时才会自动解析。
+     */
+    public static function resetForm(string $label = '重置', ?string $scope = null): Action
+    {
+        return Action::resetForm($label, $scope);
+    }
+
+    /**
      * 创建一个请求动作，适合直接发起接口调用并处理成功/失败反馈。
      * 后续可继续链式配置 request()/saveUrls()/payload()/submitForm()/validateForm()/payloadFromForm()/on() /
      * before()/afterSuccess() 等运行时行为。

@@ -168,6 +168,22 @@ final class StructuredEvent implements StructuredEventInterface
     }
 
     /**
+     * 创建一个把表单恢复到“当前初始值快照”的结构化事件。
+     * 常见场景是独立表单页或弹窗表单里的“重置”按钮；
+     * 初始值会优先取最近一次初始化、打开弹窗或详情加载成功后的表单快照。
+     * 也就是优先恢复到当前业务初始化结果，而不是单纯退回 schema defaults。
+     * 目标表单可继续链式调用 `form('profile')` 显式指定。
+     */
+    public static function resetForm(?string $scope = null): self
+    {
+        $scope = $scope === null ? null : trim($scope);
+
+        return new self('resetForm', [
+            'formScope' => $scope === '' ? null : $scope,
+        ]);
+    }
+
+    /**
      * 创建一个消息提示的结构化事件。
      * `message` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文。
@@ -246,7 +262,7 @@ final class StructuredEvent implements StructuredEventInterface
 
     /**
      * 显式覆盖事件运行时使用的 `formScope`。
-     * 可用于 `setFormModel()` 等依赖表单上下文的结构化事件。
+     * 可用于 `setFormModel()` / `initializeFormModel()` / `resetForm()` 等依赖表单上下文的结构化事件。
      */
     public function form(?string $scope): self
     {

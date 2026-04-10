@@ -36,9 +36,27 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
     /**
      * 继续向当前分组追加子节点。
      */
-    public function addChildren(FormNode ...$children): self
+    public function addNodes(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
+    }
+
+    /**
+     * 追加当前分组内容。
+     * 推荐使用这个方法表达“这个 section 里放什么内容”，比通用 `addNodes()` 更直观。
+     */
+    public function addContent(FormNode ...$children): self
+    {
+        return $this->addNodes(...$children);
+    }
+
+    /**
+     * 继续向当前分组追加子节点。
+     * `addNodes()` 的兼容别名。
+     */
+    public function addChildren(FormNode ...$children): self
+    {
+        return $this->addNodes(...$children);
     }
 
     /**

@@ -15,7 +15,10 @@ final class FormActionCollector
 
     public function collect(Form $form): array
     {
-        return $this->collectFromNodes($form->children());
+        return array_merge(
+            $this->collectFromNodes($form->children()),
+            $form->getFooterActions()
+        );
     }
 
     public function collectFromNodes(array $nodes): array

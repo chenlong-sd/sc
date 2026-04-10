@@ -17,17 +17,24 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
     private string $tabPosition = 'top';
     private bool $stretch = false;
 
-    public function __construct(TabPaneNode ...$tabs)
+    public function __construct()
     {
-        $this->setFormNodeChildren(...$tabs);
     }
 
     /**
      * 直接创建一个标签页布局节点。
      */
-    public static function make(TabPaneNode ...$tabs): self
+    public static function make(): self
     {
-        return new self(...$tabs);
+        return new self();
+    }
+
+    /**
+     * 继续向当前标签页容器追加 tab。
+     */
+    public function addNodes(TabPaneNode ...$tabs): self
+    {
+        return $this->appendFormNodeChildren(...$tabs);
     }
 
     /**
@@ -35,7 +42,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      */
     public function addTabs(TabPaneNode ...$tabs): self
     {
-        return $this->appendFormNodeChildren(...$tabs);
+        return $this->addNodes(...$tabs);
     }
 
     /**

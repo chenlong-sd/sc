@@ -456,6 +456,10 @@
                 }
               }
 
+              if (typeof this.setSimpleFormInitialSnapshot === 'function') {
+                this.setSimpleFormInitialSnapshot(scope, this.dialogForms?.[dialogKey] || formData);
+              }
+
               return formData;
             },
             shouldLoadDialog(dialogCfg, mode){

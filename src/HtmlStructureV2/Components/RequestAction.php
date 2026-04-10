@@ -57,7 +57,7 @@ final class RequestAction extends Action
      * - filters / forms / dialogs / selection / query / page / mode
      * - dialog / dialogKey: 当前动作运行在目标弹窗上下文时可用
      * - vm
-     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel()
+     * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel() / resetForm()
      * 例如可写 "@row.id"、"@dialogKey"、"@filters.keyword"、"@page.query.id"。
      */
     public function request(string $url, string $method = 'post'): static
@@ -123,7 +123,7 @@ final class RequestAction extends Action
      * - dialog / dialogKey: 当前动作运行在弹窗上下文时可用
      * - vm
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      *
      * 常见写法：
@@ -318,7 +318,7 @@ final class RequestAction extends Action
      * dialogs / selection / query / page / mode / dialog / dialogKey / vm，以及已组装好的 request。
      * 若当前请求动作使用了 validateForm()/payloadFromForm()/submitForm()，还可读取：
      * - formScope
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      * - closeHostDialog() / reloadHostTable() / openHostDialog()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
@@ -341,7 +341,7 @@ final class RequestAction extends Action
      * 可用字段与 success 事件一致，常用有 request / response / payload / row / filters /
      * forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterSuccess(string|JsExpression|StructuredEventInterface $afterSuccessHook): static
@@ -362,7 +362,7 @@ final class RequestAction extends Action
      * 可用字段与 fail 事件一致，常用有 request / error / row / filters / forms / dialogs /
      * selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterFail(string|JsExpression|StructuredEventInterface $afterFailHook): static
@@ -383,7 +383,7 @@ final class RequestAction extends Action
      * 可用字段与 finally 事件一致，常用有 request，以及可能存在的 response / payload / error，
      * 同时也可读取 row / filters / forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
      */
     public function afterFinally(string|JsExpression|StructuredEventInterface $afterFinallyHook): static
@@ -409,7 +409,7 @@ final class RequestAction extends Action
      * - action / row / tableKey / listKey / filters / forms / dialogs / selection / query / page / mode / vm
      * - dialog / dialogKey: 动作目标指向弹窗且运行时存在对应弹窗时可用
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
-     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel()
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()

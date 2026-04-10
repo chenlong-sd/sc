@@ -71,7 +71,12 @@
             joinFormArrayFieldPath: 'joinFormArrayFieldPath',
             addFormArrayRow: 'addFormArrayRow',
             removeFormArrayRow: 'removeFormArrayRow',
+            reorderFormArrayRow: 'reorderFormArrayRow',
             moveFormArrayRow: 'moveFormArrayRow',
+            ensureFormTableSortableStore: 'ensureFormTableSortableStore',
+            destroyFormTableSortables: 'destroyFormTableSortables',
+            refreshFormTableSortables: 'refreshFormTableSortables',
+            syncFormTableSortables: 'syncFormTableSortables',
             getOptionState: 'getManagedOptionState',
             getOptionLoadingState: 'getManagedOptionLoadingState',
             getOptionLoadedState: 'getManagedOptionLoadedState',
@@ -178,7 +183,27 @@
               if (typeof vm[names.clearFormValidate] === 'function') {
                 vm[names.clearFormValidate](scope);
               }
+              if (typeof vm[names.refreshFormTableSortables] === 'function') {
+                vm[names.refreshFormTableSortables](scope);
+              }
             });
+          };
+          const buildFormTableSortableKey = (scope, arrayPath) => {
+            return [scope, arrayPath]
+              .map((segment) => String(segment || '').trim())
+              .join('::');
+          };
+          const queryScopedFormTableElements = (scope = null) => {
+            const elements = Array.from(document.querySelectorAll('.sc-v2-form-table__table[data-sc-form-table="1"]'));
+            const targetScope = typeof scope === 'string' ? scope.trim() : '';
+            if (targetScope === '') {
+              return elements;
+            }
+
+            return elements.filter((element) => String(element?.dataset?.scFormScope || '').trim() === targetScope);
+          };
+          const getFormTableBodyElement = (element) => {
+            return element?.querySelector?.('.el-table__body-wrapper tbody') || null;
           };
           const contextualizeArrayRowFieldPath = (arrayPath, rowIndex, fieldPath) => {
             return [arrayPath, rowIndex, fieldPath]
@@ -664,6 +689,7 @@
               });
               rebuildArrayGroupRemoteOptionState(this, scope);
               rebuildPickerState(this, scope);
+              this[names.syncFormTableSortables](scope);
 
               return model;
             },
@@ -694,6 +720,88 @@
             [names.getFormArrayRows](scope, arrayPath){
               const model = this[names.getFormModel](scope);
               return readFormArrayRows(model, arrayPath);
+            },
+            [names.ensureFormTableSortableStore](){
+              if (!isObject(this.__scV2FormTableSortables)) {
+                this.__scV2FormTableSortables = {};
+              }
+
+              return this.__scV2FormTableSortables;
+            },
+            [names.destroyFormTableSortables](scope = null){
+              const targetScope = typeof scope === 'string' ? scope.trim() : '';
+              const store = this[names.ensureFormTableSortableStore]();
+              Object.keys(store).forEach((key) => {
+                if (targetScope !== '' && !key.startsWith(targetScope + '::')) {
+                  return;
+                }
+
+                const sortable = store[key];
+                if (sortable && typeof sortable.destroy === 'function') {
+                  sortable.destroy();
+                }
+                delete store[key];
+              });
+
+              return store;
+            },
+            [names.refreshFormTableSortables](scope = null){
+              const targetScope = typeof scope === 'string' ? scope.trim() : '';
+              this[names.destroyFormTableSortables](targetScope);
+
+              if (typeof Sortable !== 'function') {
+                return [];
+              }
+
+              const created = [];
+              queryScopedFormTableElements(targetScope).forEach((element) => {
+                if (String(element?.dataset?.scFormTableSortable || '') !== '1') {
+                  return;
+                }
+
+                const tableScope = String(element?.dataset?.scFormScope || '').trim();
+                const arrayPath = String(element?.dataset?.scFormArrayPath || '').trim();
+                if (tableScope === '' || arrayPath === '') {
+                  return;
+                }
+
+                const rows = this[names.getFormArrayRows](tableScope, arrayPath);
+                if (!Array.isArray(rows) || rows.length <= 1) {
+                  return;
+                }
+
+                const tbody = getFormTableBodyElement(element);
+                if (!tbody) {
+                  return;
+                }
+
+                const sortable = new Sortable(tbody, {
+                  animation: 150,
+                  handle: '.sc-v2-table-drag-handle',
+                  onEnd: (event) => {
+                    const oldIndex = Number(event?.oldIndex);
+                    const newIndex = Number(event?.newIndex);
+                    if (!Number.isInteger(oldIndex) || !Number.isInteger(newIndex) || oldIndex === newIndex) {
+                      return;
+                    }
+
+                    this[names.reorderFormArrayRow](tableScope, arrayPath, oldIndex, newIndex);
+                  },
+                });
+
+                this[names.ensureFormTableSortableStore]()[buildFormTableSortableKey(tableScope, arrayPath)] = sortable;
+                created.push(sortable);
+              });
+
+              return created;
+            },
+            [names.syncFormTableSortables](scope = null){
+              const targetScope = typeof scope === 'string' ? scope.trim() : '';
+              if (typeof this.$nextTick === 'function') {
+                return this.$nextTick().then(() => this[names.refreshFormTableSortables](targetScope));
+              }
+
+              return Promise.resolve(this[names.refreshFormTableSortables](targetScope));
             },
             [names.joinFormArrayFieldPath](arrayPath, rowIndex, fieldName){
               return [arrayPath, rowIndex, fieldName]
@@ -764,8 +872,52 @@
               });
               return rows;
             },
-            [names.moveFormArrayRow](scope, arrayPath, rowIndex, direction = 'up'){
+            [names.reorderFormArrayRow](scope, arrayPath, fromIndex, toIndex){
               const groupCfg = this[names.getFormArrayGroupConfig](scope, arrayPath) || {};
+              const rows = this[names.getFormArrayRows](scope, arrayPath);
+              if (!Array.isArray(rows) || rows.length <= 1) {
+                return rows;
+              }
+
+              const sourceIndex = Number(fromIndex);
+              const targetIndex = Number(toIndex);
+              if (!Number.isInteger(sourceIndex) || !Number.isInteger(targetIndex)) {
+                return rows;
+              }
+              if (sourceIndex < 0 || sourceIndex >= rows.length || targetIndex < 0 || targetIndex >= rows.length) {
+                return rows;
+              }
+              if (sourceIndex === targetIndex) {
+                return rows;
+              }
+
+              const [row] = rows.splice(sourceIndex, 1);
+              rows.splice(targetIndex, 0, row);
+              syncArrayGroupPickerRows(this, scope, arrayPath, (pickerRows) => {
+                if (sourceIndex < 0 || sourceIndex >= pickerRows.length) {
+                  return;
+                }
+
+                const [pickerRow] = pickerRows.splice(sourceIndex, 1);
+                pickerRows.splice(targetIndex, 0, pickerRow);
+              });
+              rebuildUploadFileState(this, scope);
+              this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
+              this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
+              syncFormStructureValidation(this, scope);
+              emitFormEvent(this, scope, 'arrayRowMove', {
+                arrayPath,
+                groupConfig: groupCfg,
+                row,
+                fromIndex: sourceIndex,
+                toIndex: targetIndex,
+                direction: targetIndex > sourceIndex ? 'down' : 'up',
+                rows
+              });
+
+              return rows;
+            },
+            [names.moveFormArrayRow](scope, arrayPath, rowIndex, direction = 'up'){
               const rows = this[names.getFormArrayRows](scope, arrayPath);
               if (!Array.isArray(rows) || rows.length <= 1) {
                 return rows;
@@ -777,34 +929,7 @@
               }
 
               const targetIndex = direction === 'down' ? index + 1 : index - 1;
-              if (targetIndex < 0 || targetIndex >= rows.length) {
-                return rows;
-              }
-
-              const [row] = rows.splice(index, 1);
-              rows.splice(targetIndex, 0, row);
-              syncArrayGroupPickerRows(this, scope, arrayPath, (pickerRows) => {
-                if (index < 0 || index >= pickerRows.length) {
-                  return;
-                }
-
-                const [pickerRow] = pickerRows.splice(index, 1);
-                pickerRows.splice(targetIndex, 0, pickerRow);
-              });
-              rebuildUploadFileState(this, scope);
-              this[names.syncFormArrayGroupRemoteState](scope, arrayPath);
-              this[names.initializeArrayGroupRemoteOptions](scope, arrayPath);
-              syncFormStructureValidation(this, scope);
-              emitFormEvent(this, scope, 'arrayRowMove', {
-                arrayPath,
-                groupConfig: groupCfg,
-                row,
-                fromIndex: index,
-                toIndex: targetIndex,
-                direction,
-                rows
-              });
-              return rows;
+              return this[names.reorderFormArrayRow](scope, arrayPath, index, targetIndex);
             },
             [names.getOptionState](scope){
               return getOptionState(this, scope) || {};

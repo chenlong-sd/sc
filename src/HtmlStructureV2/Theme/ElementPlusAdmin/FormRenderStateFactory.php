@@ -205,6 +205,7 @@ final class FormRenderStateFactory
             initializeUploadsOnMount: $initializeUploadsOnMount,
             renderOptions: FormRenderOptions::fromArray([
                 'mode' => $mode,
+                'formScope' => $scope->value(),
                 'ref' => $ref,
                 'rules' => $rules,
                 'submitMethod' => $submitMethod,

@@ -29,7 +29,7 @@
 - `Fields::*()` 字段工厂
 - `Tables::make()` / `Tables::column()` 表格和列
 - `Dialogs::make()` 弹窗
-- `Actions::*()` 动作按钮，当前支持 `create/edit/submit/close/refresh/request/custom`
+- `Actions::*()` 动作按钮，当前支持 `create/edit/delete/submit/close/refresh/save/resetForm/back/request/custom`
 - `Layouts::*()` 轻量布局容器
 - `Blocks::*()` 轻量标题/说明/分割线/提示块
 - `Displays::*()` 轻量详情展示块
@@ -205,23 +205,22 @@ use Sc\Util\HtmlStructureV2\Dsl\Layouts;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 $form = Forms::make('profile')->addNodes(
-    Forms::section('基础信息')->addNodes(
-        Forms::object(
-            'base',
+    Forms::section('基础信息')->addContent(
+        Forms::object('base')->addSchema(
             Fields::text('name', '名称')->span(12),
             Fields::text('code', '编码')->span(12)
         ),
-        Forms::tabs(
-            Forms::tab('高级配置')->addNodes(
-                Forms::collapse(
-                    Forms::collapseItem('同步设置')->addNodes(
+        Forms::tabs()->addTabs(
+            Forms::tab('高级配置')->addContent(
+                Forms::collapse()->addItems(
+                    Forms::collapseItem('同步设置')->addContent(
                         Fields::text('sync_key', '同步键')->span(12),
                         Fields::number('sync_sort', '同步排序')->span(12)
                     )
                 )->accordion()->span(24)
             )->lazy()
         )->type('border-card')->span(24),
-        Forms::inline(
+        Forms::inline()->addItems(
             Fields::text('city', '城市'),
             Fields::number('sort', '排序')
         ),
@@ -234,7 +233,7 @@ $form = Forms::make('profile')->addNodes(
     )->headerActions(
         Actions::custom('查看源数据', JsExpression::make("console.log('open source group')"))
     ),
-    Forms::grid(
+    Forms::grid()->addItems(
         Fields::text('source_id', '源数据')
             ->suffixContent('需要时可跳转查看原始记录')
             ->suffixActions(
@@ -243,14 +242,12 @@ $form = Forms::make('profile')->addNodes(
             ->span(24),
         Fields::textarea('remark', '备注')->span(24)
     )->gutter(20),
-    Forms::table(
-        'items',
-        Forms::section('商品')->addNodes(
+    Forms::table('items')->addColumns(
+        Forms::section('商品')->addContent(
             Fields::text('sku', 'SKU')->required(),
             Fields::number('qty', '数量')->default(1)
         ),
-        Forms::object(
-            'extra',
+        Forms::object('extra')->addSchema(
             Fields::text('note', '备注')
         )
     )->title('明细')->minRows(1)->reorderable()
@@ -265,11 +262,17 @@ $form = Forms::make('profile')->addNodes(
 - `Forms::arrayGroup()` 现在支持继续嵌套 `Forms::arrayGroup()` / `Forms::table()`；渲染时会按层级生成显式数组路径表达式和独立循环变量，避免嵌套作用域混淆。
 - `Forms::table()` 继续复用数组节点协议，行内现在也支持继续嵌套 `Forms::arrayGroup()` / `Forms::table()`；它们会作为单个单元格里的嵌套数组编辑器渲染，并沿用同一套数组路径和 runtime 协议。
 - `Forms::table()` 现在支持在行节点里继续使用 `object()`、`section()`、`grid()`、`inline()` 做结构组织；最终会在构建期展开成列。
+- `Forms::table()` 在 `->reorderable()` / `->removable()` 时会自动追加内置“操作”列；当前支持拖动排序和删除行。
 - `Forms::tabs()` / `Forms::collapse()` 属于纯结构节点，主要补“分标签布局 / 折叠分组”这类高级表单布局能力；它们继续复用表单树 walker，不单独引入 managed runtime。
-- `Forms::section()` / `Forms::tab()` / `Forms::collapseItem()` 现在都只接收标题参数；子节点统一通过 `->addNodes(...)` 继续追加。
+- `Forms::section()` / `Forms::tab()` / `Forms::collapseItem()` 当前推荐分别用 `->addContent(...)` 追加面板内容；旧 `->addNodes(...)` 仍保留兼容。
+- `Forms::inline()` / `Forms::grid()` 当前推荐用 `->addItems(...)` 追加布局项；旧 `->addNodes(...)` 仍保留兼容。
+- `Forms::object()` 当前推荐用 `->addSchema(...)` 追加对象作用域下的字段结构；旧 `->addNodes(...)` 仍保留兼容。
+- `Forms::arrayGroup()` 当前推荐用 `->addSchema(...)` 追加每一组的字段结构；旧 `->addNodes(...)` 仍保留兼容。
+- `Forms::table()` 当前推荐用 `->addColumns(...)` 追加表格列 schema；旧 `->addNodes(...)` 仍保留兼容。
+- `Forms::tabs()` / `Forms::collapse()` 也不再在构建入口里塞子节点，分别通过 `->addTabs(...)` / `->addItems(...)` 继续追加。
 - `Forms::table()` 里的 `section()` / `tab()` / `collapseItem()` 现在会按列数决定表头策略：如果某个结构节点下面最终展开出多列，会生成真正的分组表头；如果只展开出单列，则继续拍平成 `商品 / SKU` 这类可读列名，避免出现空白二级表头。
 - `Forms::tab()` / `Forms::collapseItem()` 的标题仍会参与单列路径标签推导，所以它们只包一列时，会自动形成类似 `基础信息 / 扩展信息 / 编码` 的平铺列标题；如果下面有多列，则会优先生成合并后的分组表头。
-- `Forms::table()` 现在支持 `custom()` 行内容节点，适合放按钮列、说明列、自定义展示块；可以直接用 `Forms::custom(...)->columnLabel('源数据')` 指定列标题，也可以继续配合 `Forms::section('操作')->addNodes(...)` / 其他结构节点参与分组表头。
+- `Forms::table()` 现在支持 `custom()` 行内容节点，适合放按钮列、说明列、自定义展示块；可以直接用 `Forms::custom(...)->columnLabel('源数据')` 指定列标题，也可以继续配合 `Forms::section('操作')->addContent(...)` / 其他结构节点参与分组表头。
 - `Forms::custom()` 现在支持三类内容：原始字符串、`AbstractHtmlElement`、轻组件树（`Layouts / Blocks / Displays`）。表单内部推荐优先放轻组件树，像标题、分割线、提示语、说明块、详情展示都走这条路径。
 - `Forms::custom()` 不允许混入 `Form / Table / ListWidget / Dialog / Action` 这类重组件；即使外层包了 `Layouts::stack()` 之类轻布局，也会在构建期直接拦截，避免把额外 runtime 和事件目标塞进表单节点树。
 - 字段右侧附加内容统一走 `suffixContent()` / `suffixActions()`，不要再把这类辅助按钮硬塞进表单布局容器。
@@ -652,6 +655,7 @@ V2 子页面默认可直接使用：
 - `"__SC_V2_PAGE__.cloneFormModel(scope = null)"`
 - `"__SC_V2_PAGE__.setFormModel(values)"` 或 `"__SC_V2_PAGE__.setFormModel('formKey', values)"`
 - `"__SC_V2_PAGE__.initializeFormModel(values)"` 或 `"__SC_V2_PAGE__.initializeFormModel('formKey', values)"`
+- `"__SC_V2_PAGE__.resetForm(scope = null)"`: 恢复到当前表单最近一次初始化快照
 - `"VueApp.submit(scope = null)"`: 兼容别名
 
 如果页面里只有一个可提交表单，`scope` 可以省略；否则应显式传表单 key。这个能力依赖宿主页直接访问 `iframe.contentWindow`，通常要求子页面与宿主页同源。
@@ -660,6 +664,13 @@ V2 子页面默认可直接使用：
 
 - `setFormModel()`：按 `defaults + 传入值` 回填，适合普通整表覆盖
 - `initializeFormModel()`：按表单 schema 回填，会剔除未声明字段；数组组会按行 schema 递归裁剪
+- `resetForm()`：恢复到“当前初始值快照”，不是单纯退回 schema defaults
+
+当前初始值快照来源：
+
+- 页面首次渲染时的 `Form::setData()` / 表单默认值
+- 独立表单页 `Form::load()` 最近一次成功加载后的数据
+- form 弹窗最近一次打开并初始化/加载后的数据
 
 如果你更希望配置就近写在按钮上，也可以直接在 action 上覆盖默认地址；优先级高于 dialog / table 默认配置：
 
@@ -1033,6 +1044,28 @@ Forms::make('profile')
 `Actions::save()` 触发提交；不要再手写 `ctx.vm.validateSimpleForm(...)` /
 `ctx.vm.getSimpleFormModel(...)` 这类内部运行时方法名。
 
+如果是常规表单页，希望像原版那样在表单底部直接放“重置 / 保存 / 取消”，可以把动作写在
+`Form::footerActions()` 上：
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
+
+$form = Forms::make('profile')
+    ->saveUrls('/admin/profile/create', '/admin/profile/update')
+    ->footerActions(
+        Actions::resetForm(),
+        Actions::save('保存')
+    )
+    ->addFields(
+        Fields::text('name', '名称')->required()
+    );
+```
+
+`footerActions()` 只作用于普通表单，不用于列表筛选表单；动作默认会优先绑定当前表单作用域，
+所以单表单页面通常不需要再手动写 `submitForm('profile')` / `Actions::resetForm('重置', 'profile')`。
+
 ```php
 use Sc\Util\HtmlStructureV2\Dsl\Actions;
 use Sc\Util\HtmlStructureV2\Dsl\Forms;
@@ -1059,10 +1092,12 @@ Actions::request('保存')
 
 - `submitForm("profile")` 等价于 `validateForm("profile")->payloadFromForm("profile")`
 - `Actions::save("保存")` 默认会对当前运行时里唯一可解析的表单执行提交；多表单页面请显式写 `->submitForm("profile")`
+- `Actions::resetForm("重置")` 默认会把目标表单恢复到最近一次初始值快照，而不是 schema 默认值
 - `Form::saveUrls("/create", "/update")` 会按当前表单的 `modeQueryKey()` 自动切换请求地址
 - `Form::saveUrls("/save")` 表示新建和编辑都走同一个保存地址
 - 不传表单 key 时，只会在当前运行时能唯一定位表单时自动解析
 - 自动解析优先当前 dialog 表单，其次页面内唯一的非 dialog 表单
+- 当前初始值快照默认来自 `Form::setData()` / 首次渲染值；独立表单页 `load()` 成功后、form 弹窗打开并初始化后，也会刷新这份快照
 - `payload()` 会覆盖 `payloadFromForm()`，适合你要完全自定义请求体时使用
 - `Form::returnTo("/list")` 等价于给表单 `submitSuccess` 事件追加 `Events::returnTo("/list")->hostTable()`
 - `Form::returnTo()` / `RequestAction::returnTo()` 的 `url` 现在可选；若当前不在宿主 iframe 弹窗中且又没传 URL，则静默跳过

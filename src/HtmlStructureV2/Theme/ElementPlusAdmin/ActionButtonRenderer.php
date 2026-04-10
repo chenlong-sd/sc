@@ -22,7 +22,8 @@ final class ActionButtonRenderer
         ?TableRenderBindings $tableBindings = null,
         ?RenderContext $renderContext = null,
         string $visualVariant = 'default',
-        ?string $contextDialogKey = null
+        ?string $contextDialogKey = null,
+        ?string $formScope = null
     ): AbstractHtmlElement
     {
         if (!$action->isAvailable()) {
@@ -82,7 +83,7 @@ final class ActionButtonRenderer
             $attrs[':disabled'] = $this->dialogStateExpression('dialogSubmitting', $action);
         }
 
-        $click = $this->resolveClick($action, $rowScoped, $target, $renderContext, $contextDialogKey);
+        $click = $this->resolveClick($action, $rowScoped, $target, $renderContext, $contextDialogKey, $formScope);
         if ($click !== null) {
             $attrs['@click'] = $click;
         }
@@ -145,11 +146,12 @@ final class ActionButtonRenderer
         bool $rowScoped,
         ActionRenderTarget $target,
         ?RenderContext $renderContext = null,
-        ?string $contextDialogKey = null
+        ?string $contextDialogKey = null,
+        ?string $formScope = null
     ): ?string
     {
-        $actionKey = $this->registerRuntimeActionConfig($action, $target, $renderContext, $contextDialogKey);
-        $actionConfig = $this->actionConfig($action, $target, $contextDialogKey);
+        $actionKey = $this->registerRuntimeActionConfig($action, $target, $renderContext, $contextDialogKey, $formScope);
+        $actionConfig = $this->actionConfig($action, $target, $contextDialogKey, $formScope);
 
         if ($action instanceof RequestAction) {
             if ($actionKey !== null) {
@@ -162,7 +164,7 @@ final class ActionButtonRenderer
 
             return sprintf(
                 'runRequestAction(%s, %s)',
-                $this->jsValue($this->requestActionConfig($action, $target, $contextDialogKey)),
+                $this->jsValue($this->requestActionConfig($action, $target, $contextDialogKey, $formScope)),
                 $rowScoped ? 'scope.row' : 'null'
             );
         }
@@ -243,7 +245,8 @@ final class ActionButtonRenderer
     private function requestActionConfig(
         RequestAction $action,
         ActionRenderTarget $target,
-        ?string $contextDialogKey = null
+        ?string $contextDialogKey = null,
+        ?string $formScope = null
     ): array
     {
         return [
@@ -252,6 +255,7 @@ final class ActionButtonRenderer
             'tableKey' => $target->tableKey(),
             'listKey' => $target->listKey(),
             'contextDialogKey' => $contextDialogKey,
+            'formScope' => $formScope,
             'confirmText' => $action->confirmText(),
             'events' => $action->getEventHandlers(),
             'successMessage' => $action->getSuccessMessage(),
@@ -309,7 +313,8 @@ final class ActionButtonRenderer
     private function actionConfig(
         Action $action,
         ActionRenderTarget $target,
-        ?string $contextDialogKey = null
+        ?string $contextDialogKey = null,
+        ?string $formScope = null
     ): array
     {
         return [
@@ -317,6 +322,7 @@ final class ActionButtonRenderer
             'tableKey' => $target->tableKey(),
             'listKey' => $target->listKey(),
             'contextDialogKey' => $contextDialogKey,
+            'formScope' => $formScope,
             'dialogTarget' => $action->targetName(),
             'confirmText' => $action->confirmText(),
             'events' => $action->getEventHandlers(),
@@ -358,7 +364,8 @@ final class ActionButtonRenderer
         Action $action,
         ActionRenderTarget $target,
         ?RenderContext $renderContext = null,
-        ?string $contextDialogKey = null
+        ?string $contextDialogKey = null,
+        ?string $formScope = null
     ): ?string {
         if ($renderContext === null) {
             return null;
@@ -366,8 +373,8 @@ final class ActionButtonRenderer
 
         $key = $this->actionLoadingKey($action, $target);
         $config = $action instanceof RequestAction
-            ? $this->requestActionConfig($action, $target, $contextDialogKey)
-            : $this->actionConfig($action, $target, $contextDialogKey);
+            ? $this->requestActionConfig($action, $target, $contextDialogKey, $formScope)
+            : $this->actionConfig($action, $target, $contextDialogKey, $formScope);
 
         return (new PageRuntimeRegistry($renderContext))->registerActionConfig($key, $config);
     }

@@ -30,9 +30,27 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     /**
      * 继续向当前折叠项追加子节点。
      */
-    public function addChildren(FormNode ...$children): self
+    public function addNodes(FormNode ...$children): self
     {
         return $this->appendFormNodeChildren(...$children);
+    }
+
+    /**
+     * 追加当前折叠项内容。
+     * 推荐使用这个方法表达“当前折叠项里放什么内容”，比通用 `addNodes()` 更直观。
+     */
+    public function addContent(FormNode ...$children): self
+    {
+        return $this->addNodes(...$children);
+    }
+
+    /**
+     * 继续向当前折叠项追加子节点。
+     * `addNodes()` 的兼容别名。
+     */
+    public function addChildren(FormNode ...$children): self
+    {
+        return $this->addNodes(...$children);
     }
 
     public function title(): string

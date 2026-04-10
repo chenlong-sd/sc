@@ -33,6 +33,7 @@ final class FormRenderer
 {
     use BuildsJsExpressions;
     use ResolvesClassMappedMethod;
+    private const DRAG_SORT_HANDLE_CLASS = 'sc-v2-table-drag-handle';
 
     private const NODE_RENDERERS = [
         Field::class => 'renderFieldNode',
@@ -92,6 +93,10 @@ final class FormRenderer
             $row = El::double('el-row')->setAttr(':gutter', 16);
             $this->appendRenderedChildren($row, $form->children(), $context->withInline(false));
             $element->append($row);
+        }
+
+        if (!$renderOptions->isFilterMode() && $form->getFooterActions() !== []) {
+            $element->append($this->renderFooterActions($form, $context));
         }
 
         if ($renderOptions->isFilterMode()) {
@@ -345,6 +350,10 @@ final class FormRenderer
             'row-key' => '__sc_v2_row_key',
             'empty-text' => $table->getEmptyText(),
             'class' => 'sc-v2-form-table__table',
+            'data-sc-form-table' => '1',
+            'data-sc-form-table-sortable' => $table->isReorderable() ? '1' : '0',
+            ':data-sc-form-scope' => $scopeLiteral,
+            ':data-sc-form-array-path' => $arrayPathExpression,
         ]);
 
         foreach ($columns as $columnSchema) {
@@ -518,8 +527,8 @@ final class FormRenderer
     ): AbstractHtmlElement {
         $column = El::double('el-table-column')->setAttrs([
             'label' => '操作',
-            'width' => $table->isReorderable() ? '180' : '120',
-            'fixed' => 'right',
+            'align' => 'center',
+            'width' => $table->isReorderable() && $table->isRemovable() ? '132' : '80',
         ]);
 
         $template = El::double('template')->setAttr('#default', $tableScopeVariable);
@@ -531,31 +540,14 @@ final class FormRenderer
                     'link' => '',
                     'type' => 'primary',
                     'size' => 'small',
-                    ':disabled' => sprintf('%s === 0', $rowIndexExpression),
-                    '@click' => sprintf(
-                        'moveFormArrayRow(%s, %s, %s, "up")',
-                        $scopeLiteral,
-                        $arrayPathExpression,
-                        $rowIndexExpression
-                    ),
-                ])->append('上移'),
-                El::double('el-button')->setAttrs([
-                    'link' => '',
-                    'type' => 'primary',
-                    'size' => 'small',
                     ':disabled' => sprintf(
-                        '%s >= getFormArrayRows(%s, %s).length - 1',
-                        $rowIndexExpression,
+                        'getFormArrayRows(%s, %s).length <= 1',
                         $scopeLiteral,
                         $arrayPathExpression
                     ),
-                    '@click' => sprintf(
-                        'moveFormArrayRow(%s, %s, %s, "down")',
-                        $scopeLiteral,
-                        $arrayPathExpression,
-                        $rowIndexExpression
-                    ),
-                ])->append('下移')
+                    'class' => self::DRAG_SORT_HANDLE_CLASS,
+                    'icon' => 'Rank',
+                ])->append('拖动')
             );
         }
 
@@ -905,6 +897,28 @@ final class FormRenderer
         return El::double('el-row')->append(
             El::double('el-col')->setAttr(':span', 24)->append($actionItem)
         );
+    }
+
+    private function renderFooterActions(Form $form, FormNodeRenderContext $context): AbstractHtmlElement
+    {
+        $footer = El::double('div')->addClass('sc-v2-form__footer');
+
+        foreach ($form->getFooterActions() as $action) {
+            $footer->append(
+                $this->actionButtonRenderer->render(
+                    $action,
+                    false,
+                    'default',
+                    null,
+                    $context->renderContext,
+                    'default',
+                    null,
+                    $context->options->formScope
+                )
+            );
+        }
+
+        return $footer;
     }
 
     private function resolveNodeRendererMethod(FormNode $node): ?string
