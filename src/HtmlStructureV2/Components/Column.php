@@ -68,6 +68,13 @@ final class Column
 
     /**
      * 直接创建一个表格列实例。
+     *
+     * @param string $label 列标题。
+     * @param string $prop 行数据字段路径。
+     * @return self 列实例。
+     *
+     * 示例：
+     * `Column::make('标题', 'title')`
      */
     public static function make(string $label, string $prop): self
     {
@@ -77,6 +84,13 @@ final class Column
     /**
      * 兼容原版 normal() 写法。
      * time/date 字段沿用原版默认宽度推断。
+     *
+     * @param string $label 列标题。
+     * @param string $prop 行数据字段路径，默认值为空字符串。
+     * @return self 普通列实例。
+     *
+     * 示例：
+     * `Column::normal('标题', 'title')`
      */
     public static function normal(string $label, string $prop = ''): self
     {
@@ -95,6 +109,11 @@ final class Column
 
     /**
      * 兼容原版 selection() 写法。
+     *
+     * @return self 勾选列实例。
+     *
+     * 示例：
+     * `Column::selection()`
      */
     public static function selection(): self
     {
@@ -106,6 +125,12 @@ final class Column
 
     /**
      * 兼容原版 index() 写法。
+     *
+     * @param string $title 列标题，默认值为 序号。
+     * @return self 序号列实例。
+     *
+     * 示例：
+     * `Column::index()`
      */
     public static function index(string $title = '序号'): self
     {
@@ -118,6 +143,12 @@ final class Column
 
     /**
      * 兼容原版 expand() 写法。
+     *
+     * @param string $title 列标题，默认值为空字符串。
+     * @return self 展开列实例。
+     *
+     * 示例：
+     * `Column::expand()`
      */
     public static function expand(string $title = ''): self
     {
@@ -127,6 +158,13 @@ final class Column
 
     /**
      * 兼容原版 event() 写法。
+     *
+     * @param string $title 列标题，默认值为 操作。
+     * @param string $prop 绑定字段名，默认值为空字符串。
+     * @return self 操作列实例。
+     *
+     * 示例：
+     * `Column::event('操作')`
      */
     public static function event(string $title = '操作', string $prop = ''): self
     {
@@ -141,6 +179,13 @@ final class Column
 
     /**
      * 设置列固定宽度。
+     *
+     * @param int|string $width 列宽。
+     * @param bool $showOverflowTooltip 是否显示溢出提示，默认值为 true。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->width(220)`
      */
     public function width(int|string $width, bool $showOverflowTooltip = true): self
     {
@@ -155,6 +200,12 @@ final class Column
 
     /**
      * 设置列最小宽度。
+     *
+     * @param int|string $minWidth 最小宽度。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->minWidth(180)`
      */
     public function minWidth(int|string $minWidth): self
     {
@@ -165,6 +216,12 @@ final class Column
 
     /**
      * 设置列对齐方式，例如 left / center / right。
+     *
+     * @param string $align 对齐方式。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('状态', 'status')->align('center')`
      */
     public function align(string $align): self
     {
@@ -175,6 +232,12 @@ final class Column
 
     /**
      * 设置列固定位置，例如 left / right。
+     *
+     * @param string $position 固定位置，默认值为 right。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('操作', 'id')->fixed('right')`
      */
     public function fixed(string $position = 'right'): self
     {
@@ -185,6 +248,12 @@ final class Column
 
     /**
      * 设置列类型，主要用于兼容原版静态构造方法。
+     *
+     * @param string $type 列类型。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Column::make('操作', '')->type('event')`
      */
     public function type(string $type): self
     {
@@ -199,6 +268,13 @@ final class Column
      * 若键名以 ":" 开头：
      * - 字符串值按原始前端表达式输出
      * - 数组/布尔/数字/null 会自动转成 JS 字面量
+     *
+     * @param string|array $attr 属性名或属性数组。
+     * @param mixed $value 属性值；当 $attr 为数组时忽略。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->setAttr('show-overflow-tooltip', true)`
      */
     public function setAttr(string|array $attr, mixed $value = ''): self
     {
@@ -219,6 +295,12 @@ final class Column
 
     /**
      * setAttr() 的批量别名。
+     *
+     * @param array $attrs 属性数组。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->props(['class-name' => 'title-column'])`
      */
     public function props(array $attrs): self
     {
@@ -227,6 +309,12 @@ final class Column
 
     /**
      * 控制列是否可排序，也可直接传真实排序字段名。
+     *
+     * @param string|bool $sortable 是否开启排序或真实排序字段名，默认值为 true。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('创建时间', 'create_time')->sortable('create_time')`
      */
     public function sortable(string|bool $sortable = true): self
     {
@@ -244,6 +332,12 @@ final class Column
 
     /**
      * 显式设置排序字段名。
+     *
+     * @param string $sortField 排序字段名。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('创建时间', 'create_time')->sortField('create_time')`
      */
     public function sortField(string $sortField): self
     {
@@ -261,6 +355,13 @@ final class Column
      * 当当前列放在 `List` 里且未显式调用 `filters()` 时，V2 会尝试基于 searchable()
      * 自动生成默认筛选 UI；这些自动生成的筛选项默认隐藏 label，只保留 placeholder，
      * `displayMapping()` / `displayTag()` / `displayBoolean*()` / `displaySwitch()` 会优先推成 select。
+     *
+     * @param string|bool $searchable 是否启用搜索或直接指定搜索操作符，默认值为 true。
+     * @param string|null $field 后端真实字段名；传 null 时默认使用当前列 prop。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->searchable('LIKE')`
      */
     public function searchable(
         #[ExpectedValues(self::SUPPORTED_SEARCH_TYPES)]
@@ -285,6 +386,12 @@ final class Column
 
     /**
      * 设置列搜索操作符类型。
+     *
+     * @param string $type 搜索操作符类型。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('状态', 'status')->searchType('IN')`
      */
     public function searchType(
         #[ExpectedValues(self::SUPPORTED_SEARCH_TYPES)]
@@ -299,6 +406,12 @@ final class Column
 
     /**
      * 设置列搜索映射到的真实字段名。
+     *
+     * @param string $field 后端真实字段名。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->searchField('qa_title')`
      */
     public function searchField(string $field): self
     {
@@ -311,6 +424,13 @@ final class Column
     /**
      * 兼容原版 addSearch() 写法。
      * 支持传 string 字段名、V2 Field、以及常见旧版 FormItem。
+     *
+     * @param string $type 旧版搜索类型，默认值为 =。
+     * @param Field|LegacyFormItemInterface|string|null $formItem 搜索字段配置。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->addSearch('like', Fields::text('keyword', '关键词'))`
      */
     public function addSearch(
         #[ExpectedValues(self::LEGACY_SEARCH_TYPES)]
@@ -346,6 +466,12 @@ final class Column
      * 设置通用展示格式字符串。
      * 会直接作为列插槽内容输出；可传原始 HTML/Vue 模板片段，当前行变量名是 `scope`，
      * 例如 `{{ scope.row.name }} / {{ scope.row.id }}`。
+     *
+     * @param string|\Stringable $format 展示模板字符串。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->displayFormat('{{ scope.row.title }}')`
      */
     public function displayFormat(string|\Stringable $format): self
     {
@@ -356,6 +482,12 @@ final class Column
 
     /**
      * displayFormat() 的兼容别名，保留原版 setFormat() 习惯。
+     *
+     * @param string|\Stringable|array $format 展示格式。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->setFormat('{{ scope.row.title }}')`
      */
     public function setFormat(string|\Stringable|array $format): self
     {
@@ -369,6 +501,13 @@ final class Column
      * 选项默认支持两种常见写法：
      * - `[1 => '是', 0 => '否']`
      * - `[['value' => 1, 'label' => '是'], ['value' => 0, 'label' => '否']]`
+     *
+     * @param array $options 映射选项。
+     * @param string $separator 多值拼接分隔符，默认值为 `, `。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('状态', 'status')->displayMapping([1 => '启用', 0 => '停用'])`
      */
     public function displayMapping(array $options, string $separator = ', '): self
     {
@@ -385,6 +524,13 @@ final class Column
      * 把值映射为标签展示，支持直接传入枚举 `::tagsMapping()` / `::tagMapping()`。
      * 每个选项可包含 `label` / `type` / `effect` / `theme`；
      * 当缺少 `type` 时会回退到 defaultType。
+     *
+     * @param array|ColumnTags $options 标签配置。
+     * @param string $defaultType 默认标签类型，默认值为 info。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('状态', 'status')->displayTag([1 => ['label' => '启用', 'type' => 'success']])`
      */
     public function displayTag(array|ColumnTags $options, string $defaultType = 'info'): self
     {
@@ -400,6 +546,14 @@ final class Column
     /**
      * 把字段按单张图片展示。
      * 默认把列值本身当作图片 URL。
+     *
+     * @param int $width 图片宽度，默认值为 60。
+     * @param int $height 图片高度，默认值为 60。
+     * @param string $fit 图片适配方式，默认值为 cover。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('封面', 'cover')->displayImage(80, 80)`
      */
     public function displayImage(
         int $width = 60,
@@ -419,6 +573,13 @@ final class Column
     /**
      * 把布尔值展示为是/否文案。
      * truthy/falsy 判断兼容 `true/false`、`1/0`、`yes/no`、`on/off` 等常见写法。
+     *
+     * @param string $truthyLabel 真值文案，默认值为 是。
+     * @param string $falsyLabel 假值文案，默认值为 否。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('启用', 'status')->displayBoolean('启用', '停用')`
      */
     public function displayBoolean(string $truthyLabel = '是', string $falsyLabel = '否'): self
     {
@@ -434,6 +595,15 @@ final class Column
     /**
      * 把布尔值展示为标签。
      * truthy/falsy 识别规则与 displayBoolean() 一致。
+     *
+     * @param string $truthyLabel 真值文案，默认值为 是。
+     * @param string $falsyLabel 假值文案，默认值为 否。
+     * @param string $truthyType 真值标签类型，默认值为 success。
+     * @param string $falsyType 假值标签类型，默认值为 info。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('启用', 'status')->displayBooleanTag('启用', '停用')`
      */
     public function displayBooleanTag(
         string $truthyLabel = '是',
@@ -456,6 +626,14 @@ final class Column
      * 把列渲染为可直接切换的开关，并按原版 showSwitch() 规则自动提交更新请求。
      * `options` 支持 `[1 => '开启', 0 => '关闭']` 或 `[['value' => 1, 'label' => '开启'], ...]`。
      * `openValue` 不传时默认取 options 第一项作为开启值。
+     *
+     * @param array $options 开关选项。
+     * @param string $requestUrl 更新请求地址。
+     * @param mixed $openValue 开启值；传 null 时自动取第一项。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('状态', 'status')->displaySwitch([1 => '启用', 0 => '停用'], '/admin/qa-info/status')`
      */
     public function displaySwitch(array $options, string $requestUrl, mixed $openValue = null): self
     {
@@ -478,6 +656,11 @@ final class Column
 
     /**
      * displaySwitch() 的兼容别名，方便从原版 showSwitch() 直接迁移。
+     *
+     * @param array $options 开关选项。
+     * @param string $requestUrl 更新请求地址。
+     * @param mixed $openValue 开启值；传 null 时自动取第一项。
+     * @return self 当前列实例。
      */
     public function showSwitch(array $options, string $requestUrl, mixed $openValue = null): self
     {
@@ -487,6 +670,12 @@ final class Column
     /**
      * 把值按日期格式展示。
      * 支持秒/毫秒时间戳以及常见日期字符串；无法识别时会回退显示原值。
+     *
+     * @param string $format 日期格式，默认值为 YYYY-MM-DD。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('创建日期', 'create_time')->displayDate()`
      */
     public function displayDate(string $format = 'YYYY-MM-DD'): self
     {
@@ -500,6 +689,12 @@ final class Column
 
     /**
      * 把值按日期时间格式展示。
+     *
+     * @param string $format 日期时间格式，默认值为 YYYY-MM-DD HH:mm:ss。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('创建时间', 'create_time')->displayDatetime()`
      */
     public function displayDatetime(string $format = 'YYYY-MM-DD HH:mm:ss'): self
     {
@@ -509,6 +704,16 @@ final class Column
     /**
      * 把数组值按多图列表展示。
      * 默认要求数组项形如 `['url' => '...']`；若数组本身就是 URL 列表，可把 srcPath 设为空字符串。
+     *
+     * @param int $previewNumber 预览数量，默认值为 3。
+     * @param string $srcPath 图片地址字段路径，默认值为 url。
+     * @param int $width 图片宽度，默认值为 60。
+     * @param int $height 图片高度，默认值为 60。
+     * @param string $fit 图片适配方式，默认值为 cover。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('图片', 'images')->displayImages(3, 'url')`
      */
     public function displayImages(
         int $previewNumber = 3,
@@ -532,6 +737,12 @@ final class Column
     /**
      * 设置空值占位文案。
      * 在原值为空、映射未命中、图片列表为空等场景下都会使用这个占位内容。
+     *
+     * @param string $placeholder 空值占位文案。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->displayPlaceholder('--')`
      */
     public function displayPlaceholder(string $placeholder): self
     {
@@ -542,6 +753,9 @@ final class Column
 
     /**
      * displayPlaceholder() 的兼容别名。
+     *
+     * @param string|\Stringable $content 空值占位内容。
+     * @return self 当前列实例。
      */
     public function emptyShow(string|\Stringable $content): self
     {
@@ -550,6 +764,9 @@ final class Column
 
     /**
      * sortable() 的兼容别名。
+     *
+     * @param string $sortField 排序字段名；传 null 时仅开启排序。
+     * @return self 当前列实例。
      */
     public function enableSort(string $sortField = null): self
     {
@@ -560,6 +777,9 @@ final class Column
 
     /**
      * displayMapping() 的兼容别名。
+     *
+     * @param array $mapping 映射配置。
+     * @return self 当前列实例。
      */
     public function showMapping(array $mapping): self
     {
@@ -568,6 +788,9 @@ final class Column
 
     /**
      * displayTag() 的兼容别名。
+     *
+     * @param array $options 标签配置。
+     * @return self 当前列实例。
      */
     public function showTag(array $options): self
     {
@@ -576,6 +799,9 @@ final class Column
 
     /**
      * displayTag() 的兼容别名。
+     *
+     * @param array|ColumnTags $tags 标签配置。
+     * @return self 当前列实例。
      */
     public function showTags(array|ColumnTags $tags): self
     {
@@ -584,6 +810,8 @@ final class Column
 
     /**
      * displayImage() 的兼容别名。
+     *
+     * @return self 当前列实例。
      */
     public function showImage(): self
     {
@@ -592,6 +820,10 @@ final class Column
 
     /**
      * displayImages() 的兼容别名。
+     *
+     * @param int $previewNumber 预览数量，默认值为 1。
+     * @param string $urlPath 图片地址字段路径，默认值为 url。
+     * @return self 当前列实例。
      */
     public function showImages(int $previewNumber = 1, string $urlPath = 'url'): self
     {
@@ -601,6 +833,16 @@ final class Column
     /**
      * 兼容原版 openPage() 写法。
      * 当前 V2 会按 url + params 生成链接，`tab` 走新标签页，`dialog` 走托管 iframe 弹窗。
+     *
+     * @param string $url 打开目标地址。
+     * @param array $config 打开配置。
+     * @param string $type 打开方式，可选 dialog 或 tab，默认值为 dialog。
+     * @param string|AbstractHtmlElement|\Stringable|null $element 自定义触发元素。
+     * @param array $params 附加参数。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->openPage('/admin/qa-info/form', ['title' => '编辑问答'], 'dialog')`
      */
     public function openPage(
         string $url,
@@ -682,6 +924,14 @@ final class Column
 
     /**
      * 兼容原版 addTip() 写法。
+     *
+     * @param string|\Stringable $tip 提示内容。
+     * @param string|\Stringable $icon 图标名，默认值为 WarningFilled。
+     * @param array $attrs 图标附加属性。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->addTip('点击标题可查看详情')`
      */
     public function addTip(string|\Stringable $tip, string|\Stringable $icon = 'WarningFilled', array $attrs = []): self
     {
@@ -696,6 +946,12 @@ final class Column
 
     /**
      * 在当前列渲染内容后追加额外内容。
+     *
+     * @param string|AbstractHtmlElement|\Stringable $content 附加内容。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->appendContent('<span class="ml-2 text-muted">新</span>')`
      */
     public function appendContent(string|AbstractHtmlElement|\Stringable $content): self
     {
@@ -706,6 +962,13 @@ final class Column
 
     /**
      * 设置导出元数据。
+     *
+     * @param bool $allow 是否允许导出，默认值为 true。
+     * @param float|null $sort 导出排序值。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('标题', 'title')->exportExcel(true, 10)`
      */
     public function exportExcel(bool $allow = true, float $sort = null): self
     {
@@ -719,6 +982,10 @@ final class Column
 
     /**
      * exportExcel() 的兼容别名。
+     *
+     * @param bool $allow 是否允许导出，默认值为 true。
+     * @param float|null $sort 导出排序值。
+     * @return self 当前列实例。
      */
     public function importExcel(bool $allow = true, float $sort = null): self
     {
@@ -727,6 +994,14 @@ final class Column
 
     /**
      * 隐藏当前列，并保留导出配置。
+     *
+     * @param bool $confirm 是否隐藏当前列，默认值为 true。
+     * @param bool $excelExport 是否仍参与导出，默认值为 false。
+     * @param float|null $excelSort 导出排序值。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('内部备注', 'remark')->notShow(true, true)`
      */
     public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): self
     {
@@ -739,6 +1014,9 @@ final class Column
 
     /**
      * onlyExportExcel() 的兼容别名。
+     *
+     * @param float|null $excelSort 导出排序值。
+     * @return self 当前列实例。
      */
     public function onlyImportExcel(float $excelSort = null): self
     {
@@ -747,6 +1025,12 @@ final class Column
 
     /**
      * 仅导出，不在页面展示。
+     *
+     * @param float|null $excelSort 导出排序值。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * `Tables::column('导出专用字段', 'export_only')->onlyExportExcel()`
      */
     public function onlyExportExcel(float $excelSort = null): self
     {

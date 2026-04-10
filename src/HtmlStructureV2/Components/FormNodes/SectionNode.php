@@ -27,6 +27,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 直接创建一个表单分组节点。
+     *
+     * @param string $title 分组标题。
+     * @return self 分组节点实例。
+     *
+     * 示例：
+     * `SectionNode::make('基础信息')`
      */
     public static function make(string $title): self
     {
@@ -35,6 +41,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 继续向当前分组追加子节点。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前分组节点。
+     *
+     * 示例：
+     * `Forms::section('基础信息')->addNodes(Fields::text('title', '标题'))`
      */
     public function addNodes(FormNode ...$children): self
     {
@@ -44,6 +56,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
     /**
      * 追加当前分组内容。
      * 推荐使用这个方法表达“这个 section 里放什么内容”，比通用 `addNodes()` 更直观。
+     *
+     * @param FormNode ...$children 要追加的内容节点。
+     * @return self 当前分组节点。
+     *
+     * 示例：
+     * `Forms::section('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public function addContent(FormNode ...$children): self
     {
@@ -53,6 +71,9 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
     /**
      * 继续向当前分组追加子节点。
      * `addNodes()` 的兼容别名。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前分组节点。
      */
     public function addChildren(FormNode ...$children): self
     {
@@ -61,6 +82,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 设置分组标题下方的说明文字。
+     *
+     * @param string|null $description 分组说明文案。
+     * @return self 当前分组节点。
+     *
+     * 示例：
+     * `Forms::section('基础信息')->description('请先填写标题和分类')`
      */
     public function description(?string $description): self
     {
@@ -71,6 +98,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 在分组头部右侧追加操作按钮。
+     *
+     * @param Action ...$actions 头部动作按钮。
+     * @return self 当前分组节点。
+     *
+     * 示例：
+     * `Forms::section('附件')->headerActions(Actions::make('新增附件'))`
      */
     public function headerActions(Action ...$actions): self
     {
@@ -81,6 +114,12 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 取消默认卡片外壳，仅保留分组头和内部布局。
+     *
+     * @param bool $plain 是否使用纯布局模式，默认值为 true。
+     * @return self 当前分组节点。
+     *
+     * 示例：
+     * `Forms::section('基础信息')->plain()`
      */
     public function plain(bool $plain = true): self
     {

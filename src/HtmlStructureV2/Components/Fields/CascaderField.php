@@ -17,6 +17,12 @@ final class CascaderField extends OptionField
      * 设置 cascader 选项。
      * 当传入树形节点数组时会保留原始结构，结合 cascaderProps() 指定 value/label/children 字段。
      * 仍兼容简单的 `value => label` 写法。
+     *
+     * @param array $options 级联选项。
+     * @return static 当前级联字段实例。
+     *
+     * 示例：
+     * `Fields::cascader('area', '地区')->options($areaOptions)`
      */
     public function options(array $options): static
     {
@@ -31,6 +37,12 @@ final class CascaderField extends OptionField
 
     /**
      * 设置 cascader 的原生 props 配置。
+     *
+     * @param array $props cascader 原生 props。
+     * @return static 当前级联字段实例。
+     *
+     * 示例：
+     * `Fields::cascader('area', '地区')->cascaderProps(['multiple' => true])`
      */
     public function cascaderProps(array $props): static
     {
@@ -46,6 +58,12 @@ final class CascaderField extends OptionField
 
     /**
      * 控制值是否返回完整路径。
+     *
+     * @param bool $emitPath 是否返回完整路径，默认值为 true。
+     * @return static 当前级联字段实例。
+     *
+     * 示例：
+     * `Fields::cascader('area', '地区')->emitPath(false)`
      */
     public function emitPath(bool $emitPath = true): static
     {
@@ -56,6 +74,12 @@ final class CascaderField extends OptionField
 
     /**
      * 开启严格模式，允许任意层级节点直接选择。
+     *
+     * @param bool $strict 是否开启严格模式，默认值为 true。
+     * @return static 当前级联字段实例。
+     *
+     * 示例：
+     * `Fields::cascader('area', '地区')->checkStrictly()`
      */
     public function checkStrictly(bool $strict = true): static
     {

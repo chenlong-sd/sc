@@ -21,6 +21,12 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
 
     /**
      * 直接创建一个折叠项节点。
+     *
+     * @param string $title 折叠项标题。
+     * @return self 折叠项实例。
+     *
+     * 示例：
+     * `CollapseItemNode::make('高级设置')`
      */
     public static function make(string $title): self
     {
@@ -29,6 +35,9 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
 
     /**
      * 继续向当前折叠项追加子节点。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前折叠项。
      */
     public function addNodes(FormNode ...$children): self
     {
@@ -38,6 +47,12 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     /**
      * 追加当前折叠项内容。
      * 推荐使用这个方法表达“当前折叠项里放什么内容”，比通用 `addNodes()` 更直观。
+     *
+     * @param FormNode ...$children 要追加的内容节点。
+     * @return self 当前折叠项。
+     *
+     * 示例：
+     * `Forms::collapseItem('高级设置')->addContent(Fields::text('remark', '备注'))`
      */
     public function addContent(FormNode ...$children): self
     {
@@ -47,6 +62,9 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     /**
      * 继续向当前折叠项追加子节点。
      * `addNodes()` 的兼容别名。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前折叠项。
      */
     public function addChildren(FormNode ...$children): self
     {

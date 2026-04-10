@@ -22,6 +22,12 @@ final class CustomNode implements FormNode
      * 直接创建一个自定义内容节点。
      * 若传入 Renderable，当前仅支持轻量 blocks/layouts/displays；
      * 其中事件型轻组件在表单场景下通常还能拿到 `model` 作为运行时 context。
+     *
+     * @param string|AbstractHtmlElement|Renderable $content 自定义内容。
+     * @return self 自定义节点实例。
+     *
+     * 示例：
+     * `CustomNode::make('<div class="help-text">请先填写基础信息</div>')`
      */
     public static function make(string|AbstractHtmlElement|Renderable $content): self
     {
@@ -36,6 +42,12 @@ final class CustomNode implements FormNode
     /**
      * 在表格场景中为当前自定义节点指定列标题。
      * 主要用于 Forms::table() 中的自定义列头文案。
+     *
+     * @param string|null $label 列标题。
+     * @return self 当前自定义节点。
+     *
+     * 示例：
+     * `Forms::custom('操作说明')->columnLabel('说明')`
      */
     public function columnLabel(?string $label): self
     {

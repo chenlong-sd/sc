@@ -13,6 +13,12 @@ final class PasswordField extends TextField
 
     /**
      * 控制是否显示密码可见性切换按钮。
+     *
+     * @param bool $showPassword 是否显示切换按钮，默认值为 true。
+     * @return static 当前密码字段实例。
+     *
+     * 示例：
+     * `Fields::password('password', '密码')->showPassword()`
      */
     public function showPassword(bool $showPassword = true): static
     {

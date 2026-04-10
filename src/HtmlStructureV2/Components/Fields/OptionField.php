@@ -31,6 +31,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * 设置静态选项列表，支持 value => label 或完整选项数组格式。
      * 完整选项数组至少包含 `value` / `label`，也可附带 `disabled` 或其它扩展字段，
      * 这些扩展字段可在 linkageUpdate() 中通过 "@option.xxx" 读取。
+     *
+     * @param array $options 选项列表。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('status', '状态')->options([1 => '启用', 0 => '停用'])`
      */
     public function options(array $options): static
     {
@@ -56,6 +62,15 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * `params` 中以 "@" 开头的顶层值会从当前表单 model 读取，
      * 例如 `['dept_id' => "@dept_id"]`。返回列表会按 valueField/labelField 归一化成标准选项。
      * 这里默认只有当前作用域下的 form model 可用，不会注入 row / tableKey / listKey / vm。
+     *
+     * @param string $url 远端选项接口地址。
+     * @param string $valueField 结果中作为值的字段名，默认值为 id。
+     * @param string $labelField 结果中作为文案的字段名，默认值为 name。
+     * @param array $params 远端请求参数。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('dept_id', '部门')->remoteOptions('/admin/dept/options', 'id', 'name')`
      */
     public function remoteOptions(
         string $url,
@@ -77,6 +92,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     /**
      * 设置远端选项加载请求方法。
      * 默认是 `get`，也可改成 `post` / `put` 等。
+     *
+     * @param string $method 请求方法。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('dept_id', '部门')->remoteOptionsMethod('post')`
      */
     public function remoteOptionsMethod(string $method): static
     {
@@ -93,6 +114,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * 声明远端选项依赖的表单字段，依赖变更时可重新拉取。
      * 字段路径相对当前表单作用域解析；在数组行里会自动映射到当前行上下文。
      * 依赖字段为空时，请求不会触发。
+     *
+     * @param string ...$fields 依赖字段路径。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('city_id', '城市')->remoteOptionsDependsOn('province_id')`
      */
     public function remoteOptionsDependsOn(string ...$fields): static
     {
@@ -111,6 +138,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     /**
      * 控制依赖字段变化时是否清空当前选中值。
      * 默认开启，避免旧值与新选项集不一致。
+     *
+     * @param bool $clear 是否自动清空，默认值为 true。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('city_id', '城市')->remoteOptionsClearOnChange(false)`
      */
     public function remoteOptionsClearOnChange(bool $clear = true): static
     {
@@ -135,6 +168,13 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * - option: 当前命中的标准化选项对象
      * - model: 当前作用域下的表单模型
      * 当前联动主要用于 select/radio 的 change 行为。
+     *
+     * @param string $targetField 要更新的目标字段路径。
+     * @param string|JsExpression $valueTemplate 更新模板，默认值为 @label。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('dept_id', '部门')->linkageUpdate('dept_name', '@label')`
      */
     public function linkageUpdate(string $targetField, string|JsExpression $valueTemplate = '@label'): static
     {
@@ -146,6 +186,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     /**
      * 批量配置联动更新规则。
      * 每条规则的模板语义与 linkageUpdate() 完全一致。
+     *
+     * @param array $updates 联动更新规则。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('dept_id', '部门')->linkageUpdates(['dept_name' => '@label', 'dept_code' => '@option.code'])`
      */
     public function linkageUpdates(array $updates): static
     {
@@ -167,6 +213,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     /**
      * 控制选项清空时是否同步清空联动目标字段。
      * 默认开启，适合“选择上级后自动填充下级字段”的场景。
+     *
+     * @param bool $clear 是否清空联动字段，默认值为 true。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * `Fields::select('dept_id', '部门')->linkageClearOnEmpty(false)`
      */
     public function linkageClearOnEmpty(bool $clear = true): static
     {

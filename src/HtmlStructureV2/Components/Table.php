@@ -83,6 +83,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 直接创建一个表格组件实例。
+     *
+     * @param string $key 表格唯一 key。
+     * @return self 表格实例。
+     *
+     * 示例：
+     * `Table::make('qa-info-table')`
      */
     public static function make(string $key): self
     {
@@ -91,6 +97,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 追加表格列定义。
+     *
+     * @param Column ...$columns 要追加的列定义。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->addColumns(Tables::column('标题', 'title'))`
      */
     public function addColumns(Column ...$columns): self
     {
@@ -101,6 +113,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置表格工具栏动作。
+     *
+     * @param Action ...$actions 工具栏动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->toolbar(Actions::create()->dialog('qa-info-dialog'))`
      */
     public function toolbar(Action ...$actions): self
     {
@@ -111,6 +129,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置每行的操作动作。
+     *
+     * @param Action ...$actions 行操作动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->rowActions(Actions::edit()->dialog('qa-info-dialog'))`
      */
     public function rowActions(Action ...$actions): self
     {
@@ -122,6 +146,12 @@ final class Table implements Renderable, EventAware
     /**
      * 设置行操作列固定宽度。
      * 仅影响右侧“操作”列本身；设置后会覆盖默认的自动宽度估算逻辑。
+     *
+     * @param int $width 操作列宽度。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->rowActionColumnWidth(220)`
      */
     public function rowActionColumnWidth(int $width): self
     {
@@ -135,6 +165,12 @@ final class Table implements Renderable, EventAware
      * 传正数时直接作为 el-table 的 max-height；
      * 传负数时按“窗口高度 - 表格顶部距离 + 该偏移”动态计算，
      * 用法与原版 Table::setMaxHeight() 保持一致，默认 -60。
+     *
+     * @param int $maxHeight 最大高度或动态偏移，默认值为 -60。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->maxHeight(-80)`
      */
     public function maxHeight(int $maxHeight = -60): self
     {
@@ -147,6 +183,12 @@ final class Table implements Renderable, EventAware
      * 设置表格行唯一键，对应 Element Plus `row-key`。
      * 树表和拖拽排序都会依赖这个键来识别当前行；通常传主键字段，如 `rowKey('id')`。
      * 支持点路径写法，例如 `rowKey('meta.id')`。
+     *
+     * @param string $rowKey 行唯一键字段名。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->rowKey('id')`
      */
     public function rowKey(string $rowKey): self
     {
@@ -159,6 +201,15 @@ final class Table implements Renderable, EventAware
      * 将当前表格声明为树表。
      * 会同时写入 Element Plus 的 `tree-props`，默认按 `children` 字段读取子节点。
      * 树表推荐配合 rowKey() 一起使用，否则运行时无法稳定识别节点。
+     *
+     * @param bool $enabled 是否启用树表，默认值为 true。
+     * @param string $childrenKey 子节点字段名，默认值为 children。
+     * @param bool $checkStrictly 是否严格关联父子勾选。
+     * @param string|null $hasChildrenKey 是否存在子节点的字段名。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->tree(true, 'children')->rowKey('id')`
      */
     public function tree(
         bool $enabled = true,
@@ -179,6 +230,14 @@ final class Table implements Renderable, EventAware
      * 细化树表的 `tree-props` 配置。
      * `childrenKey` 对应子节点字段；`checkStrictly` 会透传给 Element Plus；
      * `hasChildrenKey` 主要给后续懒加载/占位树节点预留，不传时不会输出。
+     *
+     * @param string $childrenKey 子节点字段名。
+     * @param bool $checkStrictly 是否严格关联父子勾选。
+     * @param string|null $hasChildrenKey 是否存在子节点的字段名。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->treeProps('children', false, 'has_children')`
      */
     public function treeProps(
         string $childrenKey = 'children',
@@ -213,6 +272,12 @@ final class Table implements Renderable, EventAware
      * - oldParentRow / newParentRow / sameParent: 树表时可读取的原父级与目标父级
      * - movedParentRow / anchorParentRow: oldParentRow / newParentRow 的兼容别名
      * - visibleRows / flatRows / rows / allRows / selection / filters / vm
+     *
+     * @param bool $enabled 是否启用拖拽排序，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dragSort()->rowKey('id')`
      */
     public function dragSort(bool $enabled = true): self
     {
@@ -224,6 +289,12 @@ final class Table implements Renderable, EventAware
     /**
      * 自定义拖拽手柄按钮文案。
      * 仅影响操作列里内置的拖拽手柄显示，不影响排序事件名和运行时行为。
+     *
+     * @param string $label 手柄文案，默认值为 排序。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dragSortLabel('拖动排序')`
      */
     public function dragSortLabel(string $label = '排序'): self
     {
@@ -235,6 +306,12 @@ final class Table implements Renderable, EventAware
     /**
      * 自定义拖拽手柄按钮类型，默认 `primary`。
      * 这里沿用 Element Plus 按钮 type，可传 `primary` / `success` / `danger` 等。
+     *
+     * @param string $type 按钮类型，默认值为 primary。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dragSortType('warning')`
      */
     public function dragSortType(string $type = 'primary'): self
     {
@@ -246,6 +323,12 @@ final class Table implements Renderable, EventAware
     /**
      * 自定义拖拽手柄按钮图标，默认 `Rank`。
      * 传 null 或空字符串可移除图标。
+     *
+     * @param string|null $icon 图标名；传 null 表示移除图标。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dragSortIcon('Sort')`
      */
     public function dragSortIcon(?string $icon = 'Rank'): self
     {
@@ -258,6 +341,12 @@ final class Table implements Renderable, EventAware
      * 追加 Sortable 的附加配置。
      * 适合设置 `group` / `ghostClass` / `fallbackOnBody` 等原生参数；
      * V2 会保留自己的 `handle` 和 `onEnd` 实现，避免把运行时主流程覆盖掉。
+     *
+     * @param array $config Sortable 附加配置。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dragSortConfig(['ghostClass' => 'sortable-ghost'])`
      */
     public function dragSortConfig(array $config): self
     {
@@ -271,6 +360,14 @@ final class Table implements Renderable, EventAware
      * 设置表格顶部的快速状态切换按钮组。
      * `name` 是筛选模型字段名；后端真实字段映射应通过 search()/searchSchema()/列 searchable() 定义。
      * 若当前表格还没有对应搜索协议，V2 会自动补一条 hidden 的 `=` 搜索项，真实字段默认同名。
+     *
+     * @param string $name 筛选模型字段名。
+     * @param array $options 状态切换选项。
+     * @param string|AbstractHtmlElement|\Stringable|null $label 按钮组标签。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->statusToggle('status', [1 => '启用', 0 => '停用'], '状态')`
      */
     public function statusToggle(
         string $name,
@@ -293,6 +390,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制多组状态切换按钮是否按换行模式展示。
+     *
+     * @param bool $newLine 是否换行展示，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->statusTogglesNewLine()`
      */
     public function statusTogglesNewLine(bool $newLine = true): self
     {
@@ -304,6 +407,14 @@ final class Table implements Renderable, EventAware
     /**
      * V1 `addStatusToggleButtons()` 的兼容别名。
      * 旧写法传的是后端搜索字段，这里会自动推断一个可用的筛选模型字段名。
+     *
+     * @param string $searchField 后端搜索字段名。
+     * @param array $mapping 状态映射。
+     * @param string|AbstractHtmlElement|\Stringable|null $label 按钮组标签。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->addStatusToggleButtons('status', [1 => '启用', 0 => '停用'])`
      */
     public function addStatusToggleButtons(
         string $searchField,
@@ -325,6 +436,9 @@ final class Table implements Renderable, EventAware
 
     /**
      * V1 `setStatusToggleButtonsNewLine()` 的兼容别名。
+     *
+     * @param bool $newLine 是否换行展示，默认值为 true。
+     * @return self 当前表格实例。
      */
     public function setStatusToggleButtonsNewLine(bool $newLine = true): self
     {
@@ -335,6 +449,12 @@ final class Table implements Renderable, EventAware
      * 启用表格导出能力。
      * 默认会在工具栏右侧补一个“导出Excel”按钮；远程表格会复用当前筛选/排序条件重新拉全量数据，
      * 并自动附加 `is_export=1`，方便沿用旧接口的导出分支。
+     *
+     * @param string $filename 导出文件名，不含扩展名，默认值为 export。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->export('qa-info')`
      */
     public function export(string $filename = 'export'): self
     {
@@ -345,6 +465,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置导出按钮文案。
+     *
+     * @param string $label 按钮文案，默认值为 导出Excel。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->exportLabel('导出问答')`
      */
     public function exportLabel(string $label = '导出Excel'): self
     {
@@ -356,6 +482,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置导出按钮类型。
+     *
+     * @param string $type 按钮类型，默认值为 success。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->exportType('primary')`
      */
     public function exportType(string $type = 'success'): self
     {
@@ -367,6 +499,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置导出按钮图标；传 null 或空字符串可移除图标。
+     *
+     * @param string|null $icon 图标名；传 null 表示移除图标。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->exportIcon('Download')`
      */
     public function exportIcon(?string $icon = 'Download'): self
     {
@@ -378,6 +516,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置导出文件名，不自动补扩展名。
+     *
+     * @param string $filename 导出文件名。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->exportFilename('qa-info-export')`
      */
     public function exportFilename(string $filename): self
     {
@@ -391,6 +535,12 @@ final class Table implements Renderable, EventAware
     /**
      * 设置导出请求要额外附带的查询参数。
      * 默认是 `['is_export' => 1]`，用于兼容旧接口的全量导出分支。
+     *
+     * @param array $query 额外查询参数。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->exportQuery(['is_export' => 1, 'with_detail' => 1])`
      */
     public function exportQuery(array $query): self
     {
@@ -403,6 +553,9 @@ final class Table implements Renderable, EventAware
     /**
      * export() 的旧版兼容别名。
      * 保留原版“文件名末尾自动追加当天日期”的习惯。
+     *
+     * @param string $filename 原版导出文件名，默认值为 export.xlsx。
+     * @return self 当前表格实例。
      */
     public function openExportExcel(string $filename = 'export.xlsx'): self
     {
@@ -411,6 +564,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 直接指定数据源对象。
+     *
+     * @param DataSourceInterface $dataSource 数据源对象。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dataSource(UrlDataSource::make('/admin/qa-info/list'))`
      */
     public function dataSource(DataSourceInterface $dataSource): self
     {
@@ -421,6 +580,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 用静态数组作为表格数据源。
+     *
+     * @param array $rows 静态行数据。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->rows([['id' => 1, 'title' => '示例']])`
      */
     public function rows(array $rows): self
     {
@@ -430,6 +595,13 @@ final class Table implements Renderable, EventAware
     /**
      * 用远端接口作为表格数据源。
      * 这里的 `query` 是基础查询参数；运行时会再自动合并当前筛选条件、分页和排序参数。
+     *
+     * @param string $url 远端数据接口地址。
+     * @param array $query 基础查询参数。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list', ['type' => 'normal'])`
      */
     public function dataUrl(string $url, array $query = []): self
     {
@@ -442,6 +614,14 @@ final class Table implements Renderable, EventAware
      * 例如 `search('keyword', 'LIKE', 'user_name')`。
      * 若当前表格被放进 `List` 且未显式提供 filters()，这类搜索协议也会参与默认筛选表单推导；
      * 但没有列展示信息时，只能按字段名做通用输入框/范围输入推断。
+     *
+     * @param string $name 筛选模型字段名。
+     * @param string $type 搜索操作符，默认值为 =。
+     * @param string|null $field 后端真实字段名；传 null 时默认同 $name。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->search('keyword', 'LIKE', 'title')`
      */
     public function search(
         string $name,
@@ -462,6 +642,12 @@ final class Table implements Renderable, EventAware
      * 批量设置搜索协议定义。
      * 常用于需要和外部 filters/form 显式对齐时一次性声明整张表的搜索协议。
      * 在 `List` 自动筛选模式下，未被列 searchable() 覆盖的字段也会尝试按这里的 name/type 推导默认输入控件。
+     *
+     * @param array $schema 搜索协议定义。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->searchSchema(['keyword' => ['type' => 'LIKE', 'field' => 'title']])`
      */
     public function searchSchema(array $schema): self
     {
@@ -478,6 +664,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制是否显示分页。
+     *
+     * @param bool $pagination 是否启用分页，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->pagination(false)`
      */
     public function pagination(bool $pagination = true): self
     {
@@ -488,6 +680,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置默认每页条数。
+     *
+     * @param int $pageSize 每页条数。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->pageSize(50)`
      */
     public function pageSize(int $pageSize): self
     {
@@ -498,6 +696,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置分页器可选页大小列表。
+     *
+     * @param array $pageSizes 可选页大小列表。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->pageSizes([20, 50, 100])`
      */
     public function pageSizes(array $pageSizes): self
     {
@@ -508,6 +712,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制是否启用斑马纹。
+     *
+     * @param bool $stripe 是否启用斑马纹，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->stripe()`
      */
     public function stripe(bool $stripe = true): self
     {
@@ -518,6 +728,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制是否显示边框。
+     *
+     * @param bool $border 是否显示边框，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->border()`
      */
     public function border(bool $border = true): self
     {
@@ -529,6 +745,12 @@ final class Table implements Renderable, EventAware
     /**
      * 控制是否启用原版风格的表格设置。
      * 启用后会在工具栏右侧提供“列设置”，支持调整斑马纹、边框、列显示、宽度、固定和对齐，并持久化到本地。
+     *
+     * @param bool $settings 是否启用表格设置，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->settings(false)`
      */
     public function settings(bool $settings = true): self
     {
@@ -539,6 +761,9 @@ final class Table implements Renderable, EventAware
 
     /**
      * settings() 的兼容别名。
+     *
+     * @param bool $settings 是否启用表格设置，默认值为 true。
+     * @return self 当前表格实例。
      */
     public function openSetting(bool $settings = true): self
     {
@@ -547,6 +772,12 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置空数据提示文案。
+     *
+     * @param string $emptyText 空数据提示文案。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->emptyText('暂无问答数据')`
      */
     public function emptyText(string $emptyText): self
     {
@@ -561,6 +792,12 @@ final class Table implements Renderable, EventAware
      * - `window.__scV2Selection`: 主表或默认表的选中结果
      * - `window.__scV2Selections[tableKey]`: 指定表格 key 的选中结果
      * 这样 iframe picker 指向 V2 列表页时，通常不需要再手写 `selectionPath()`。
+     *
+     * @param bool $selection 是否启用勾选列，默认值为 true。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->selection()`
      */
     public function selection(bool $selection = true): self
     {
@@ -572,6 +809,12 @@ final class Table implements Renderable, EventAware
     /**
      * 固定勾选列位置，默认固定到左侧。
      * 调用后会自动开启 selection()。
+     *
+     * @param string $position 固定位置，可选 left 或 right，默认值为 left。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->selectionFixed('left')`
      */
     public function selectionFixed(
         #[ExpectedValues(['left', 'right'])]
@@ -588,6 +831,12 @@ final class Table implements Renderable, EventAware
      * 内置 `Actions::delete()` 会向这里发起 POST，默认请求体形如 `{"ids": [selection[*][deleteKey]]}`。
      * 未被 `Actions::delete()->deleteUrl()` 显式覆盖时使用。
      * 若需要单条行删除，建议显式使用 `Actions::request()` 自行组织 payload。
+     *
+     * @param string|null $deleteUrl 批量删除接口地址；传 null 表示清空。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->deleteUrl('/admin/qa-info/delete')`
      */
     public function deleteUrl(?string $deleteUrl): self
     {
@@ -600,6 +849,12 @@ final class Table implements Renderable, EventAware
      * 设置删除接口中主键字段名。
      * 仅影响内置批量删除快捷从 selection 中提取主键时使用的字段名。
      * 未被 `Actions::delete()->deleteKey()` 显式覆盖时使用。
+     *
+     * @param string $deleteKey 主键字段名。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->deleteKey('id')`
      */
     public function deleteKey(string $deleteKey): self
     {
@@ -632,6 +887,13 @@ final class Table implements Renderable, EventAware
      * - dragSort: movedRow / anchorRow / previousRow / nextRow / visibleRows / flatRows / oldIndex / newIndex / isDown / isMoveDown / isMoveUp / isUp / oldParentRow / newParentRow / sameParent / event
      * - deleteSuccess: selection / ids / payload / response
      * - deleteFail: selection / ids / error
+     *
+     * @param string $event 事件名。
+     * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。
+     * @return static 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->on('loadSuccess', '({ rows }) => console.log(rows)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

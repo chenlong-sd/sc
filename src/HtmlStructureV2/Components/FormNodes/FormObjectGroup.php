@@ -25,6 +25,12 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
 
     /**
      * 直接创建一个对象作用域节点。
+     *
+     * @param string $name 对象字段名。
+     * @return self 对象作用域节点实例。
+     *
+     * 示例：
+     * `FormObjectGroup::make('profile')`
      */
     public static function make(string $name): self
     {
@@ -33,6 +39,9 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
 
     /**
      * 继续向当前对象作用域追加子节点。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前对象作用域节点。
      */
     public function addNodes(FormNode ...$children): self
     {
@@ -42,6 +51,12 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
     /**
      * 追加当前对象作用域下的 schema。
      * 推荐使用这个方法表达“这个对象下有哪些字段/结构”，比通用 `addNodes()` 更贴近数据语义。
+     *
+     * @param FormNode ...$children 要追加的 schema 节点。
+     * @return self 当前对象作用域节点。
+     *
+     * 示例：
+     * `Forms::object('profile')->addSchema(Fields::text('name', '姓名'))`
      */
     public function addSchema(FormNode ...$children): self
     {
@@ -51,6 +66,9 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
     /**
      * 继续向当前对象作用域追加子节点。
      * `addNodes()` 的兼容别名。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前对象作用域节点。
      */
     public function addChildren(FormNode ...$children): self
     {

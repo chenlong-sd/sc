@@ -21,6 +21,11 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
 
     /**
      * 直接创建一个折叠面板节点。
+     *
+     * @return self 折叠面板实例。
+     *
+     * 示例：
+     * `CollapseNode::make()`
      */
     public static function make(): self
     {
@@ -29,6 +34,9 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
 
     /**
      * 继续向当前折叠容器追加折叠项。
+     *
+     * @param CollapseItemNode ...$items 要追加的折叠项。
+     * @return self 当前折叠容器。
      */
     public function addNodes(CollapseItemNode ...$items): self
     {
@@ -37,6 +45,12 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
 
     /**
      * 继续向当前折叠容器追加折叠项。
+     *
+     * @param CollapseItemNode ...$items 要追加的折叠项。
+     * @return self 当前折叠容器。
+     *
+     * 示例：
+     * `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
      */
     public function addItems(CollapseItemNode ...$items): self
     {
@@ -45,6 +59,12 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
 
     /**
      * 开启手风琴模式，同一时间只展开一个折叠项。
+     *
+     * @param bool $accordion 是否开启手风琴模式，默认值为 true。
+     * @return self 当前折叠容器。
+     *
+     * 示例：
+     * `Forms::collapse()->accordion()`
      */
     public function accordion(bool $accordion = true): self
     {

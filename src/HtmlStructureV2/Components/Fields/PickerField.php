@@ -36,6 +36,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * 绑定选择器弹窗。
      * 当前 picker 默认面向 iframe 选择页；若弹窗未自定义 footer，会自动补“取消 / 确定”按钮，
      * “确定”会调用内置回填逻辑，把弹窗里的选择结果写回当前字段。
+     *
+     * @param Dialog $dialog 选择器弹窗。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->dialog(Dialogs::make('user-picker', '选择用户')->iframe('/admin/user/lists'))`
      */
     public function dialog(Dialog $dialog): static
     {
@@ -50,6 +56,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * 路径从 `dialogIframeRef.contentWindow` 开始解析。
      * V2 列表页在开启 `Table::selection()` 后会自动暴露 `"__scV2Selection"`，
      * 多表页可改用 `"__scV2Selections.tableKey"`；旧页面仍可显式传 `"selection"` 或 `"VueApp.xxxSelection"`。
+     *
+     * @param string $selectionPath 选择结果路径。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->selectionPath('__scV2Selections.user-table')`
      */
     public function selectionPath(string $selectionPath): static
     {
@@ -64,6 +76,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
     /**
      * 设置写回主字段时使用的值字段名，默认是 id。
      * 例如选择结果行为 `{ id, name }` 时，最终提交值会取 `item.id`。
+     *
+     * @param string $valueField 值字段名。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->valueField('user_id')`
      */
     public function valueField(string $valueField): static
     {
@@ -78,6 +96,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
     /**
      * 设置选择结果的主文案字段名，默认是 name。
      * 当 displayTemplate() 仍使用默认 "@label" 时，会直接展示这个字段。
+     *
+     * @param string $labelField 文案字段名。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->labelField('nickname')`
      */
     public function labelField(string $labelField): static
     {
@@ -96,6 +120,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * - "@value": 当前项按 valueField() 取到的值
      * - "@item.xxx": 当前选择结果对象上的任意字段
      * 例如 "@item.name（@item.dev_number）"。
+     *
+     * @param string $displayTemplate 展示模板。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->displayTemplate('@item.name（@item.mobile）')`
      */
     public function displayTemplate(string $displayTemplate): static
     {
@@ -108,6 +138,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
 
     /**
      * 设置打开选择弹窗的按钮文案。
+     *
+     * @param string $buttonLabel 按钮文案。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->buttonLabel('选择用户')`
      */
     public function buttonLabel(string $buttonLabel): static
     {
@@ -122,6 +158,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
     /**
      * 设置 picker 弹窗默认“确定”按钮文案。
      * 仅在 dialog() 绑定的弹窗未自定义 footer 时生效。
+     *
+     * @param string $confirmLabel 确定按钮文案。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->confirmLabel('确认选择')`
      */
     public function confirmLabel(string $confirmLabel): static
     {
@@ -136,6 +178,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
 
     /**
      * 设置无已选项时的提示文案。
+     *
+     * @param string $emptyText 空状态文案。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->emptyText('暂未选择用户')`
      */
     public function emptyText(string $emptyText): static
     {
@@ -150,6 +198,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
     /**
      * 控制是否多选，默认开启。
      * 关闭后主字段最终只会写入单个值，已选展示也只保留第一项。
+     *
+     * @param bool $multiple 是否多选，默认值为 true。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_id', '选择用户')->multiple(false)`
      */
     public function multiple(bool $multiple = true): static
     {
@@ -160,6 +214,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
 
     /**
      * 控制是否展示“清空”按钮，默认开启。
+     *
+     * @param bool $clearable 是否允许清空，默认值为 true。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->clearable(false)`
      */
     public function clearable(bool $clearable = true): static
     {
@@ -171,6 +231,12 @@ final class PickerField extends Field implements ValidatableFieldInterface
     /**
      * 设置选择器展示态的默认项。
      * 适合创建时预填已选数据；若主字段尚未显式 default()，这里只会维护展示态，不会自动改提交值。
+     *
+     * @param array $items 默认展示项。
+     * @return static 当前选择器字段实例。
+     *
+     * 示例：
+     * `Fields::picker('user_ids', '选择用户')->defaultItems([['id' => 1, 'name' => '张三']])`
      */
     public function defaultItems(array $items): static
     {

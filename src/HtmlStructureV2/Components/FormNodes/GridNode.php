@@ -21,6 +21,11 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 直接创建一个栅格布局节点。
+     *
+     * @return self 栅格布局节点实例。
+     *
+     * 示例：
+     * `GridNode::make()`
      */
     public static function make(): self
     {
@@ -29,6 +34,9 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 继续向当前栅格容器追加子节点。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前栅格布局节点。
      */
     public function addNodes(FormNode ...$children): self
     {
@@ -38,6 +46,12 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
     /**
      * 追加当前栅格布局项。
      * 推荐使用这个方法表达“这一组栅格里有哪些项”，比通用 `addNodes()` 更符合布局语义。
+     *
+     * @param FormNode ...$children 要追加的布局项。
+     * @return self 当前栅格布局节点。
+     *
+     * 示例：
+     * `Forms::grid()->addItems(Fields::text('title', '标题')->span(12))`
      */
     public function addItems(FormNode ...$children): self
     {
@@ -47,6 +61,9 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
     /**
      * 继续向当前栅格容器追加子节点。
      * `addNodes()` 的兼容别名。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前栅格布局节点。
      */
     public function addChildren(FormNode ...$children): self
     {
@@ -55,6 +72,12 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 设置栅格列间距，单位与 Element Plus 的 gutter 一致。
+     *
+     * @param int $gutter 栅格间距。
+     * @return self 当前栅格布局节点。
+     *
+     * 示例：
+     * `Forms::grid()->gutter(24)`
      */
     public function gutter(int $gutter): self
     {

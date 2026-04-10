@@ -43,6 +43,13 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     /**
      * 直接创建一个页面实例。
      * "$title" 用于 HTML "<title>"；页面头部展示建议通过 "->header(...)" 自定义。
+     *
+     * @param string $title 页面 HTML 标题。
+     * @param string|null $key 页面唯一 key；传 null 时自动由标题推导。
+     * @return static 页面实例。
+     *
+     * 示例：
+     * `Page::make('问答信息')->header('问答信息管理')`
      */
     public static function make(string $title, ?string $key = null): static
     {
@@ -52,6 +59,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     /**
      * 设置 HTML "<title>"。
      * 只影响浏览器标签标题和文档标题，不直接决定页面头部怎么展示。
+     *
+     * @param string $title HTML 标题。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->htmlTitle('问答信息管理')`
      */
     public function htmlTitle(string $title): static
     {
@@ -64,6 +77,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * 设置页面头部展示内容。
      * 支持轻组件树、原始字符串或 "AbstractHtmlElement"，推荐组合 "Blocks::title()"、"Blocks::text()"、"Layouts::stack()"。
      * 页面标题、说明文案等可见头部内容都应通过这里显式组合。
+     *
+     * @param string|AbstractHtmlElement|Renderable ...$content 页面头部内容。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->header('问答信息管理', '支持创建和编辑问答')`
      */
     public function header(string|AbstractHtmlElement|Renderable ...$content): static
     {
@@ -75,6 +94,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     /**
      * 设置页面根容器背景。
      * 支持任意 CSS "background" 值，例如颜色、渐变或图片。
+     *
+     * @param string $background CSS background 值。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->background('#f5f7fa')`
      */
     public function background(string $background): static
     {
@@ -87,6 +112,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     /**
      * 设置页面背景预设。
      * 当前支持："white"、"muted"、"transparent"。
+     *
+     * @param string $preset 背景预设名。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->backgroundPreset('muted')`
      */
     public function backgroundPreset(string $preset): static
     {
@@ -105,6 +136,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 设置页面默认渲染主题，显式传给 toHtml($theme) 时以 toHtml 参数为准。
+     *
+     * @param ThemeInterface $theme 渲染主题实例。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->theme(new ElementPlusAdminTheme())`
      */
     public function theme(ThemeInterface $theme): static
     {
@@ -115,6 +152,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 设置页面头部动作按钮。
+     *
+     * @param Action ...$actions 页面头部动作。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->actions(Actions::create()->dialog('qa-info-dialog'))`
      */
     public function actions(Action ...$actions): static
     {
@@ -125,6 +168,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 向页面主体追加一个或多个区块。
+     *
+     * @param Renderable ...$sections 页面主体区块。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->addSection($list, $dialog)`
      */
     public function addSection(Renderable ...$sections): static
     {
@@ -135,6 +184,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 显式挂载页面级托管弹窗。
+     *
+     * @param Dialog ...$dialogs 页面级弹窗。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * `Pages::make('问答信息')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
      */
     public function dialogs(Dialog ...$dialogs): static
     {

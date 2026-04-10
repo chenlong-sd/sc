@@ -71,6 +71,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 直接创建一个表单组件实例。
+     *
+     * @param string $key 表单唯一 key。
+     * @return self 表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')`
      */
     public static function make(string $key): self
     {
@@ -79,6 +85,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 追加字段叶子节点，适合简单表单直接堆字段。
+     *
+     * @param Field ...$fields 要追加的字段节点。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->addFields(Fields::text('title'), Fields::switch('status'))`
      */
     public function addFields(Field ...$fields): self
     {
@@ -87,6 +99,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 追加任意表单节点，支持字段、结构节点、作用域节点和数组节点混排。
+     *
+     * @param FormNode ...$nodes 要追加的表单节点。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->addNodes(Forms::section('基础信息')->schema(...))`
      */
     public function addNodes(FormNode ...$nodes): self
     {
@@ -97,6 +115,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 切换整个表单为行内模式，常用于筛选表单。
+     *
+     * @param bool $inline 是否启用行内模式，默认值为 true。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('filter-form')->inline()`
      */
     public function inline(bool $inline = true): self
     {
@@ -107,6 +131,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置表单标签宽度，例如 96px / 120px。
+     *
+     * @param string $labelWidth 标签宽度。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->labelWidth('120px')`
      */
     public function labelWidth(string $labelWidth): self
     {
@@ -118,6 +148,12 @@ final class Form implements Renderable, EventAware
     /**
      * 控制是否显示字段标签。
      * 适合紧凑型筛选条；关闭后会真正移除字段 label 输出，而不是只把宽度压成 0。
+     *
+     * @param bool $showLabels 是否显示标签，默认值为 true。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('filter-form')->showLabels(false)`
      */
     public function showLabels(bool $showLabels = true): self
     {
@@ -128,6 +164,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 隐藏字段标签，常用于想在一行里放更多筛选项的表单。
+     *
+     * @param bool $hideLabels 是否隐藏标签，默认值为 true。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('filter-form')->hideLabels()`
      */
     public function hideLabels(bool $hideLabels = true): self
     {
@@ -136,6 +178,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置筛选模式下提交按钮文案。
+     *
+     * @param string $submitLabel 提交按钮文案。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('filter-form')->submitLabel('搜索')`
      */
     public function submitLabel(string $submitLabel): self
     {
@@ -146,6 +194,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置筛选模式下重置按钮文案。
+     *
+     * @param string $resetLabel 重置按钮文案。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('filter-form')->resetLabel('清空')`
      */
     public function resetLabel(string $resetLabel): self
     {
@@ -158,6 +212,12 @@ final class Form implements Renderable, EventAware
      * 在普通表单底部追加动作按钮，适合常规 CRUD 页尾的“保存 / 重置 / 取消”。
      * 这些动作会在当前表单渲染作用域下运行；若动作依赖表单上下文，默认会优先命中当前表单。
      * 当前仅普通表单会渲染 footerActions()；筛选表单仍使用 submitLabel()/resetLabel() 那组内联按钮。
+     *
+     * @param Action ...$actions 要追加到表单底部的动作按钮。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->footerActions(Actions::save(), Actions::back('/admin/qa-info/lists'))`
      */
     public function footerActions(Action ...$actions): self
     {
@@ -174,6 +234,13 @@ final class Form implements Renderable, EventAware
      *
      * 若未显式设置 loadPayload()，会默认按 modeQueryKey() 当前值自动提交同名查询参数，
      * 例如默认等价于 `{ id: 当前页面 query.id }`。
+     *
+     * @param string $url 详情加载接口地址。
+     * @param string $method 请求方法，默认值为 get。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->load('/admin/qa-info/detail')`
      */
     public function load(string $url, string $method = 'get'): self
     {
@@ -199,6 +266,12 @@ final class Form implements Renderable, EventAware
      * 例如可写：
      * - `['id' => "@page.query.id"]`
      * - `"{ id: page.query.id, tab: query.tab }"`
+     *
+     * @param array|string|JsExpression $loadPayload 加载接口请求体配置。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->loadPayload(['id' => '@page.query.id'])`
      */
     public function loadPayload(array|string|JsExpression $loadPayload): self
     {
@@ -211,6 +284,12 @@ final class Form implements Renderable, EventAware
     /**
      * 设置从详情响应中取表单数据的路径。
      * 不设置时会自动尝试 `data` / `result` / `payload` 及响应对象本身里的对象结构。
+     *
+     * @param string|null $loadDataPath 响应数据路径，例如 data.info；传 null 表示使用自动推断。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->loadDataPath('data.info')`
      */
     public function loadDataPath(?string $loadDataPath): self
     {
@@ -222,6 +301,12 @@ final class Form implements Renderable, EventAware
     /**
      * 控制独立表单页详情加载时机，仅支持 always / create / edit。
      * `edit` 为默认值，表示只有当前页面 query 中存在 modeQueryKey() 对应值时才自动拉取详情。
+     *
+     * @param string $loadWhen 加载时机，可选 always、create、edit。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->loadWhen('edit')`
      */
     public function loadWhen(string $loadWhen): self
     {
@@ -241,6 +326,12 @@ final class Form implements Renderable, EventAware
      * - load() 默认生成的详情加载参数
      * - `Form::saveUrls()` 与 `RequestAction::saveUrls()` 的新建/编辑地址自动切换
      * - 动作/事件上下文中的 `mode` / `page.mode`
+     *
+     * @param string $queryKey 用于识别 create/edit 模式的查询参数名，默认值为 id。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->modeQueryKey('info_id')`
      */
     public function modeQueryKey(string $queryKey = self::DEFAULT_MODE_QUERY_KEY): self
     {
@@ -253,6 +344,13 @@ final class Form implements Renderable, EventAware
     /**
      * 配置表单保存地址；会按当前表单 modeQueryKey() 自动在 create/update 地址间切换。
      * 第二个参数为空时，新建和编辑都会复用同一个地址。
+     *
+     * @param string $createUrl 新建模式保存地址。
+     * @param string|null $updateUrl 编辑模式保存地址；传 null 时回退到 $createUrl。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
      */
     public function saveUrls(string $createUrl, ?string $updateUrl = null): self
     {
@@ -269,6 +367,12 @@ final class Form implements Renderable, EventAware
      * 直接设置表单初始数据，适合像 V1 一样在 PHP 层先查好数据再回填。
      * 传入数据会按当前表单 schema 初始化，只保留已声明字段；
      * array group / 嵌套对象也会递归裁剪。
+     *
+     * @param array $data 初始数据；会按当前表单 schema 递归裁剪不存在的字段。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->setData(['title' => '示例', 'content' => '<p>内容</p>'])`
      */
     public function setData(array $data): self
     {
@@ -279,6 +383,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置表单提交请求方法，默认值为 post。
+     *
+     * @param string $method 请求方法，默认值为 post。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->saveMethod('post')`
      */
     public function saveMethod(string $method = 'post'): self
     {
@@ -290,6 +400,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置表单提交中的 loading 文案；传 null 表示关闭 loading 文案。
+     *
+     * @param string|null $loadingText loading 文案；传 null 表示关闭文案。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->loadingText('正在保存，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): self
     {
@@ -300,6 +416,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置表单提交成功后的默认提示文案。
+     *
+     * @param string|null $successMessage 成功提示文案；传 null 表示不额外提示。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->successMessage('保存成功')`
      */
     public function successMessage(?string $successMessage): self
     {
@@ -310,6 +432,12 @@ final class Form implements Renderable, EventAware
 
     /**
      * 设置表单提交失败后的默认提示文案。
+     *
+     * @param string|null $errorMessage 失败提示文案；传 null 表示沿用默认错误提示。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): self
     {
@@ -321,6 +449,13 @@ final class Form implements Renderable, EventAware
     /**
      * 提交成功后执行“优先关闭宿主弹窗，否则跳转到指定 URL”的快捷方式。
      * 等价于给 submitSuccess 事件追加 `Events::returnTo($url)->hostTable($table)`。
+     *
+     * @param string|JsExpression|null $url 返回目标 URL；可为空，表示仅尝试关闭宿主弹窗。
+     * @param string|Table|null $table 宿主表格 key 或 Table 对象；用于返回前刷新宿主表格。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
      */
     public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): self
     {
@@ -360,6 +495,13 @@ final class Form implements Renderable, EventAware
      * - optionsLoadFail: fieldName / fieldConfig / error
      * - uploadSuccess: fieldName / fieldConfig / response / payload / uploadFile / uploadFiles
      * - uploadFail: fieldName / fieldConfig / error / response / uploadFile / uploadFiles
+     *
+     * @param string $event 事件名。
+     * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。
+     * @return static 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->on('submitSuccess', Events::returnTo('/admin/qa-info/lists'))`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

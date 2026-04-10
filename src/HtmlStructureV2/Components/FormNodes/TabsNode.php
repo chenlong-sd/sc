@@ -23,6 +23,11 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 直接创建一个标签页布局节点。
+     *
+     * @return self 标签页容器实例。
+     *
+     * 示例：
+     * `TabsNode::make()`
      */
     public static function make(): self
     {
@@ -31,6 +36,9 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 继续向当前标签页容器追加 tab。
+     *
+     * @param TabPaneNode ...$tabs 要追加的标签页。
+     * @return self 当前标签页容器。
      */
     public function addNodes(TabPaneNode ...$tabs): self
     {
@@ -39,6 +47,12 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 继续向当前标签页容器追加 tab。
+     *
+     * @param TabPaneNode ...$tabs 要追加的标签页。
+     * @return self 当前标签页容器。
+     *
+     * 示例：
+     * `Forms::tabs()->addTabs(Forms::tab('基础信息'))`
      */
     public function addTabs(TabPaneNode ...$tabs): self
     {
@@ -47,6 +61,12 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 设置标签页样式类型，例如 border-card / card。
+     *
+     * @param string $type 标签页类型。
+     * @return self 当前标签页容器。
+     *
+     * 示例：
+     * `Forms::tabs()->type('border-card')`
      */
     public function type(string $type): self
     {
@@ -57,6 +77,12 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 设置标签位置，例如 top / right / bottom / left。
+     *
+     * @param string $tabPosition 标签位置。
+     * @return self 当前标签页容器。
+     *
+     * 示例：
+     * `Forms::tabs()->tabPosition('left')`
      */
     public function tabPosition(string $tabPosition): self
     {
@@ -68,6 +94,12 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     /**
      * 让各个标签平均拉伸占满整行。
+     *
+     * @param bool $stretch 是否拉伸，默认值为 true。
+     * @return self 当前标签页容器。
+     *
+     * 示例：
+     * `Forms::tabs()->stretch()`
      */
     public function stretch(bool $stretch = true): self
     {

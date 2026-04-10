@@ -92,6 +92,13 @@ final class Dialog implements Renderable, EventAware
      * title 支持和 titleTemplate() 相同的模板语法；若包含动态占位符，会自动拆成：
      * - 静态兜底标题：用于按钮文案、关闭后回退态等场景
      * - 隐式标题模板：用于弹窗打开时按当前上下文动态解析
+     *
+     * @param string $key 弹窗唯一 key。
+     * @param string $title 弹窗标题，支持模板语法。
+     * @return self 弹窗实例。
+     *
+     * 示例：
+     * `Dialog::make('qa-info-dialog', '编辑 {title}')`
      */
     public static function make(string $key, string $title): self
     {
@@ -101,6 +108,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置弹窗宽度，例如 760px / 80vw。
      * 普通弹窗默认值为 760px；iframe 弹窗未显式设置时默认值为 1000px。
+     *
+     * @param string $width 弹窗宽度。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->width('960px')`
      */
     public function width(string $width): self
     {
@@ -113,6 +126,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置弹窗高度，例如 70vh；传 null 表示自动高度。
      * 未显式设置时，iframe 弹窗默认高度为 84vh，其它类型默认自动高度。
+     *
+     * @param string|null $height 弹窗高度；传 null 表示自动高度。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->height('84vh')`
      */
     public function height(?string $height): self
     {
@@ -128,6 +147,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制弹窗是否可拖拽。
      * 默认值为 false。
+     *
+     * @param bool $draggable 是否可拖拽，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->draggable()`
      */
     public function draggable(bool $draggable = true): self
     {
@@ -139,6 +164,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制弹窗是否全屏显示。
      * 默认值为 false。
+     *
+     * @param bool $fullscreen 是否全屏，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->fullscreen()`
      */
     public function fullscreen(bool $fullscreen = true): self
     {
@@ -151,6 +182,12 @@ final class Dialog implements Renderable, EventAware
      * 控制弹窗内容是否垂直居中。
      * 对 iframe 页面弹窗，如果未显式设置，默认会按原版行为自动开启；
      * 其它类型默认关闭。
+     *
+     * @param bool $alignCenter 是否垂直居中，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->alignCenter(false)`
      */
     public function alignCenter(bool $alignCenter = true): self
     {
@@ -162,6 +199,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制点击遮罩层时是否关闭弹窗。
      * 默认值为 false。
+     *
+     * @param bool $closeOnClickModal 是否允许点击遮罩关闭，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->closeOnClickModal()`
      */
     public function closeOnClickModal(bool $closeOnClickModal = true): self
     {
@@ -173,6 +216,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制关闭后是否销毁内部内容。
      * 默认值为 true。
+     *
+     * @param bool $destroyOnClose 是否关闭后销毁内容，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->destroyOnClose(false)`
      */
     public function destroyOnClose(bool $destroyOnClose = true): self
     {
@@ -191,6 +240,12 @@ final class Dialog implements Renderable, EventAware
      * - forms / filters / selection
      * - dialog / dialogs / vm
      * 例如可写 "@row.id"、"@dialogContext.currentId"、"@filters.keyword"。
+     *
+     * @param string|null $saveUrl 统一提交地址；传 null 表示清空。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->saveUrl('/admin/qa-info/save')`
      */
     public function saveUrl(?string $saveUrl): self
     {
@@ -204,6 +259,12 @@ final class Dialog implements Renderable, EventAware
      * 仅在 create 模式下使用；若未设置会回退到 saveUrl()。
      * 未被 `Actions::submit()->createUrl()/saveUrl()` 显式覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
+     *
+     * @param string|null $createUrl 新建模式提交地址；传 null 表示清空。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '新建')->createUrl('/admin/qa-info/create')`
      */
     public function createUrl(?string $createUrl): self
     {
@@ -217,6 +278,12 @@ final class Dialog implements Renderable, EventAware
      * 仅在 edit 模式下使用；若未设置会回退到 saveUrl()。
      * 未被 `Actions::submit()->updateUrl()/saveUrl()` 显式覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
+     *
+     * @param string|null $updateUrl 编辑模式提交地址；传 null 表示清空。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->updateUrl('/admin/qa-info/update')`
      */
     public function updateUrl(?string $updateUrl): self
     {
@@ -234,6 +301,12 @@ final class Dialog implements Renderable, EventAware
      * - dialogContext / data
      * - forms / filters / selection
      * 例如可写 `编辑 {name}`、`预览 "@dialogContext.sourceLabel"`、`"@filters.keyword" 结果`。
+     *
+     * @param string|null $titleTemplate 标题模板；传 null 表示取消显式模板。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->titleTemplate('编辑 {title}')`
      */
     public function titleTemplate(?string $titleTemplate): self
     {
@@ -265,6 +338,13 @@ final class Dialog implements Renderable, EventAware
      * 事件额外字段：
      * - submitSuccess: response / payload / submitData
      * - submitFail: error / submitData
+     *
+     * @param string $event 事件名，可选 beforeOpen / afterOpen / beforeClose / afterClose / submitSuccess / submitFail。
+     * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。
+     * @return static 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->on('afterOpen', '({ row }) => console.log(row)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -276,6 +356,12 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 把弹窗主体切换为表单。
+     *
+     * @param Form $form 要渲染在弹窗中的表单。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->form(Forms::make('qa-info-form'))`
      */
     public function form(Form $form): self
     {
@@ -295,6 +381,12 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 把弹窗主体切换为纯内容块。
+     *
+     * @param string|AbstractHtmlElement|null $content 纯内容块。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '提示')->content('<div>请确认操作</div>')`
      */
     public function content(string|AbstractHtmlElement|null $content): self
     {
@@ -324,6 +416,14 @@ final class Dialog implements Renderable, EventAware
      * - dialogComponentRef / dialogIframeRef / vm
      * - reloadTable() / closeDialog() / openDialog()
      * - setDialogTitle() / setDialogFullscreen() / toggleDialogFullscreen() / refreshDialogIframe()
+     *
+     * @param string $name 前端组件名。
+     * @param array|string|JsExpression $props 组件 props。
+     * @param array $attrs 组件 attrs。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->component('QaInfoPreview', ['id' => '@row.id'])`
      */
     public function component(
         string $name,
@@ -347,6 +447,12 @@ final class Dialog implements Renderable, EventAware
      * 会在弹窗打开时按当前 dialog context 重新解析，适合把 `row`、`dialogContext`
      * 或其它运行时数据传给组件。传字符串时会自动包装成 JsExpression。
      * 可用字段与 component() 的 props 解析上下文一致。
+     *
+     * @param array|string|JsExpression $props 组件 props。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->componentProps(['id' => '@row.id'])`
      */
     public function componentProps(array|string|JsExpression $props): self
     {
@@ -358,6 +464,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置组件弹窗的 attrs。
      * 这里更适合放静态 attrs；若需要动态值，优先放到 componentProps() 里处理。
+     *
+     * @param array $attrs 组件 attrs。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->componentAttrs(['class' => 'qa-info-dialog'])`
      */
     public function componentAttrs(array $attrs): self
     {
@@ -372,6 +484,12 @@ final class Dialog implements Renderable, EventAware
      * 常用字段与 beforeOpen/afterOpen hook 一致，例如 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm。
      * 默认值为 onShow。
+     *
+     * @param string|null $method 组件实例方法名；传 null 表示不调用。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->componentOpenMethod('onShow')`
      */
     public function componentOpenMethod(?string $method): self
     {
@@ -385,6 +503,12 @@ final class Dialog implements Renderable, EventAware
      * 关闭完成后会调用组件实例上的同名方法，并传入关闭时的 dialog context。
      * 常用字段与 beforeClose/afterClose hook 一致，例如 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm。
+     *
+     * @param string|null $method 组件实例方法名；传 null 表示不调用。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->componentCloseMethod('onHide')`
      */
     public function componentCloseMethod(?string $method): self
     {
@@ -404,6 +528,13 @@ final class Dialog implements Renderable, EventAware
      * 可再用 iframeSubmitHandler() 改成别的方法路径；
      * 若未显式设置 height()，默认高度为 70vh。
      * 可用字段与 component() 的 props 解析上下文一致。
+     *
+     * @param string $url iframe 页面地址。
+     * @param array|string|JsExpression $query iframe 查询参数。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => '@row.id'])`
      */
     public function iframe(string $url, array|string|JsExpression $query = []): self
     {
@@ -427,6 +558,12 @@ final class Dialog implements Renderable, EventAware
      * 控制 iframe 弹窗是否启用宿主桥接。
      * 开启后，iframe 子页面可通过宿主桥接请求关闭弹窗、刷新表格、再次打开弹窗、改标题等。
      * iframe() 默认值为 true。
+     *
+     * @param bool $enabled 是否启用宿主桥接，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeHost()`
      */
     public function iframeHost(bool $enabled = true): self
     {
@@ -438,6 +575,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制 iframe 弹窗是否显示头部全屏切换。
      * iframe() 默认值为 true。
+     *
+     * @param bool $enabled 是否显示全屏切换，默认值为 true。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeFullscreenToggle(false)`
      */
     public function iframeFullscreenToggle(bool $enabled = true): self
     {
@@ -454,6 +597,12 @@ final class Dialog implements Renderable, EventAware
      * 例如可写 `"__SC_V2_PAGE__.submit"`、`"VueApp.submit"`、`"submit"`、`"pageApi.submitForm"`。
      * 该方法应返回最终提交到 saveUrl()/createUrl()/updateUrl() 的数据，也可以直接返回 Promise。
      * 该能力依赖宿主页直接访问 iframe 子页面对象，通常要求子页面与宿主页同源。
+     *
+     * @param string|null $handlerPath 子页面提交方法路径；传 null 表示关闭该能力。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->iframeSubmitHandler('__SC_V2_PAGE__.submit')`
      */
     public function iframeSubmitHandler(?string $handlerPath = 'VueApp.submit'): self
     {
@@ -473,6 +622,13 @@ final class Dialog implements Renderable, EventAware
      * - dialogContext / data / forms / filters / selection
      * - dialog / dialogs / vm
      * 例如可写 "@row.id"、"@dialogContext.currentId"、"@filters.keyword"。
+     *
+     * @param string $url 详情加载接口地址。
+     * @param string $method 请求方法，默认值为 get。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->load('/admin/qa-info/detail')`
      */
     public function load(string $url, string $method = 'get'): self
     {
@@ -491,6 +647,12 @@ final class Dialog implements Renderable, EventAware
      * - dialog / dialogs / vm
      * - reloadTable() / closeDialog() / openDialog()
      * - setDialogTitle() / setDialogFullscreen() / toggleDialogFullscreen() / refreshDialogIframe()
+     *
+     * @param array|string|JsExpression $loadPayload 详情加载请求体配置。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->loadPayload(['id' => '@row.id'])`
      */
     public function loadPayload(array|string|JsExpression $loadPayload): self
     {
@@ -502,6 +664,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置从详情响应中取表单数据的路径。
      * 不设置时会自动尝试 `data` / `result` / `payload` 及响应对象本身里的对象结构。
+     *
+     * @param string|null $loadDataPath 响应数据路径；传 null 表示自动推断。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->loadDataPath('data.info')`
      */
     public function loadDataPath(?string $loadDataPath): self
     {
@@ -513,6 +681,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 控制详情加载时机，仅支持 always / create / edit。
      * `edit` 为默认值，表示只有带 row 打开时才自动拉取详情。
+     *
+     * @param string $loadWhen 加载时机，可选 always、create、edit。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->loadWhen('edit')`
      */
     public function loadWhen(string $loadWhen): self
     {
@@ -530,6 +704,12 @@ final class Dialog implements Renderable, EventAware
      * 传字符串时会自动包装成 JsExpression。
      * 常用字段与 beforeOpen 事件一致，可读取 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm 及弹窗辅助方法。
+     *
+     * @param string|JsExpression $beforeOpenHook 打开前钩子逻辑。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->beforeOpen('({ row }) => !!row')`
      */
     public function beforeOpen(string|JsExpression $beforeOpenHook): self
     {
@@ -546,6 +726,12 @@ final class Dialog implements Renderable, EventAware
      * 传字符串时会自动包装成 JsExpression。
      * 常用字段与 afterOpen 事件一致，可读取 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm 及弹窗辅助方法。
+     *
+     * @param string|JsExpression $afterOpenHook 打开后钩子逻辑。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->afterOpen('({ vm }) => vm.focusFirstField?.()')`
      */
     public function afterOpen(string|JsExpression $afterOpenHook): self
     {
@@ -562,6 +748,12 @@ final class Dialog implements Renderable, EventAware
      * 传字符串时会自动包装成 JsExpression。
      * 常用字段与 beforeClose 事件一致，可读取 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm 及弹窗辅助方法。
+     *
+     * @param string|JsExpression $beforeCloseHook 关闭前钩子逻辑。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->beforeClose('({ dialogSubmitting }) => !dialogSubmitting')`
      */
     public function beforeClose(string|JsExpression $beforeCloseHook): self
     {
@@ -578,6 +770,12 @@ final class Dialog implements Renderable, EventAware
      * 传字符串时会自动包装成 JsExpression。
      * 常用字段与 afterClose 事件一致，可读取 row / mode / dialogKey / tableKey /
      * dialogContext / data / forms / filters / selection / dialog / dialogs / vm 及弹窗辅助方法。
+     *
+     * @param string|JsExpression $afterCloseHook 关闭后钩子逻辑。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->afterClose('({ vm }) => vm.clearTempState?.()')`
      */
     public function afterClose(string|JsExpression $afterCloseHook): self
     {
@@ -603,6 +801,12 @@ final class Dialog implements Renderable, EventAware
      *
      * 注意：这里解析的是“生成 dialogContext 之前”的基础上下文，
      * 因此不能依赖本次 context() 刚准备生成的 `dialogContext` / `data` 自身。
+     *
+     * @param array|string|JsExpression $contextData 附加上下文数据。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->context(['source' => '@row.source'])`
      */
     public function context(array|string|JsExpression $contextData): self
     {
@@ -621,6 +825,12 @@ final class Dialog implements Renderable, EventAware
      * 透传额外弹窗属性。
      * 若键名以 ":" 开头，数组/布尔/数字/null 会自动转成 JS 字面量；
      * 字符串值仍按原始前端表达式输出。
+     *
+     * @param array $props 要透传到弹窗组件上的额外属性。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '详情')->props(['append-to-body' => true])`
      */
     public function props(array $props): self
     {
@@ -632,6 +842,12 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置弹窗底部动作按钮。
      * 这些动作运行时同样可获得当前 dialog context，因此可直接配合 close/reload/request 使用。
+     *
+     * @param Action ...$actions 底部动作按钮。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * `Dialogs::make('qa-info-dialog', '编辑')->footer(Actions::submit(), Actions::close())`
      */
     public function footer(Action ...$actions): self
     {

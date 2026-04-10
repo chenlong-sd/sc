@@ -22,6 +22,12 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 直接创建一个标签页面板节点。
+     *
+     * @param string $label 标签名称。
+     * @return self 标签面板实例。
+     *
+     * 示例：
+     * `TabPaneNode::make('基础信息')`
      */
     public static function make(string $label): self
     {
@@ -30,6 +36,9 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 继续向当前 tab 面板追加子节点。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前标签面板。
      */
     public function addNodes(FormNode ...$children): self
     {
@@ -39,6 +48,12 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
     /**
      * 追加当前 tab 面板内容。
      * 推荐使用这个方法表达“当前页签里放什么内容”，比通用 `addNodes()` 更直观。
+     *
+     * @param FormNode ...$children 要追加的内容节点。
+     * @return self 当前标签面板。
+     *
+     * 示例：
+     * `Forms::tab('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public function addContent(FormNode ...$children): self
     {
@@ -48,6 +63,9 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
     /**
      * 继续向当前 tab 面板追加子节点。
      * `addNodes()` 的兼容别名。
+     *
+     * @param FormNode ...$children 要追加的子节点。
+     * @return self 当前标签面板。
      */
     public function addChildren(FormNode ...$children): self
     {
@@ -56,6 +74,12 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
 
     /**
      * 仅在标签被激活时再渲染面板内容。
+     *
+     * @param bool $lazy 是否懒渲染，默认值为 true。
+     * @return self 当前标签面板。
+     *
+     * 示例：
+     * `Forms::tab('高级设置')->lazy()`
      */
     public function lazy(bool $lazy = true): self
     {

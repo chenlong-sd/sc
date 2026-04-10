@@ -38,6 +38,12 @@ final class ListWidget implements Renderable, EventAware
 
     /**
      * 直接创建一个复合列表组件实例。
+     *
+     * @param string $key 列表唯一 key。
+     * @return self 列表实例。
+     *
+     * 示例：
+     * `ListWidget::make('qa-info-list')`
      */
     public static function make(string $key): self
     {
@@ -53,6 +59,12 @@ final class ListWidget implements Renderable, EventAware
      * 显式传入时会保留这份 UI；若表格里还声明了
      * `Column::searchable()` / `Table::search()` / `Table::searchSchema()`，
      * V2 会继续自动补齐这份表单里尚未声明的筛选项，减少重复书写。
+     *
+     * @param Form|Field ...$filters 筛选表单或筛选字段。
+     * @return self 当前列表实例。
+     *
+     * 示例：
+     * `ListWidget::make('qa-info-list')->filters(Fields::text('keyword', '关键词'), Fields::select('status', '状态'))`
      */
     public function filters(Form|Field ...$filters): self
     {
@@ -69,6 +81,12 @@ final class ListWidget implements Renderable, EventAware
 
     /**
      * 设置列表主体表格。
+     *
+     * @param Table $table 列表主体表格。
+     * @return self 当前列表实例。
+     *
+     * 示例：
+     * `ListWidget::make('qa-info-list')->table(Tables::make('qa-info-table'))`
      */
     public function table(Table $table): self
     {
@@ -81,6 +99,12 @@ final class ListWidget implements Renderable, EventAware
 
     /**
      * 显式挂载当前列表需要托管的弹窗。
+     *
+     * @param Dialog ...$dialogs 列表内使用到的弹窗。
+     * @return self 当前列表实例。
+     *
+     * 示例：
+     * `ListWidget::make('qa-info-list')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
      */
     public function dialogs(Dialog ...$dialogs): self
     {
@@ -104,6 +128,13 @@ final class ListWidget implements Renderable, EventAware
      * - filterScope / formConfig
      * - filters: 当前筛选表单值
      * - vm: 当前 Vue 实例
+     *
+     * @param string $event 事件名，可选 reload / filterSubmit / filterReset。
+     * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。
+     * @return static 当前列表实例。
+     *
+     * 示例：
+     * `ListWidget::make('qa-info-list')->on('filterSubmit', '({ filters }) => console.log(filters)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

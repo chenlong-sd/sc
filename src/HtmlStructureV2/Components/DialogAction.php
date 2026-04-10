@@ -15,6 +15,12 @@ final class DialogAction extends Action
 
     /**
      * 直接绑定一个 Dialog 对象，页面构建时会自动收集。
+     *
+     * @param Dialog $dialog 要绑定的 Dialog 对象。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::create()->bindDialog(Dialog::make('qa-info-dialog'))`
      */
     public function bindDialog(Dialog $dialog): static
     {
@@ -27,6 +33,12 @@ final class DialogAction extends Action
     /**
      * dialog() 的 DialogAction 版本支持直接传 Dialog 对象。
      * 传字符串时与基类行为一致；传 Dialog 时会自动完成对象绑定和页面收集。
+     *
+     * @param string|Dialog $dialog Dialog key 或 Dialog 对象。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::edit()->dialog('qa-info-dialog')`
      */
     public function dialog(string|Dialog $dialog): static
     {
@@ -39,6 +51,12 @@ final class DialogAction extends Action
 
     /**
      * 指定 dialog key；如果与已绑定 Dialog 不一致，会解除对象绑定。
+     *
+     * @param string|null $target 目标 dialog key；传 null 表示清空目标。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::create()->target('qa-info-dialog')`
      */
     public function target(?string $target): static
     {

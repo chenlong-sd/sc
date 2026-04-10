@@ -43,6 +43,12 @@ final class RequestAction extends Action
 
     /**
      * 直接创建一个请求动作实例。
+     *
+     * @param string $label 按钮显示文案。
+     * @return static 请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('同步')->post('/admin/qa-info/sync')`
      */
     public static function make(string $label): static
     {
@@ -59,6 +65,13 @@ final class RequestAction extends Action
      * - vm
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel() / resetForm()
      * 例如可写 "@row.id"、"@dialogKey"、"@filters.keyword"、"@page.query.id"。
+     *
+     * @param string $url 请求地址，支持上下文 token。
+     * @param string $method 请求方法，默认值为 post。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('同步')->request('/admin/qa-info/sync', 'post')`
      */
     public function request(string $url, string $method = 'post'): static
     {
@@ -73,6 +86,12 @@ final class RequestAction extends Action
 
     /**
      * 以 GET 方式发起请求。
+     *
+     * @param string $url GET 请求地址。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('刷新统计')->get('/admin/qa-info/stats')`
      */
     public function get(string $url): static
     {
@@ -81,6 +100,12 @@ final class RequestAction extends Action
 
     /**
      * 以 POST 方式发起请求。
+     *
+     * @param string $url POST 请求地址。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('同步')->post('/admin/qa-info/sync')`
      */
     public function post(string $url): static
     {
@@ -89,6 +114,12 @@ final class RequestAction extends Action
 
     /**
      * 以 PUT 方式发起请求。
+     *
+     * @param string $url PUT 请求地址。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('更新排序')->put('/admin/qa-info/sort')`
      */
     public function put(string $url): static
     {
@@ -97,6 +128,12 @@ final class RequestAction extends Action
 
     /**
      * 以 PATCH 方式发起请求。
+     *
+     * @param string $url PATCH 请求地址。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('局部更新')->patch('/admin/qa-info/status')`
      */
     public function patch(string $url): static
     {
@@ -105,6 +142,12 @@ final class RequestAction extends Action
 
     /**
      * 以 DELETE 方式发起请求。
+     *
+     * @param string $url DELETE 请求地址。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('删除缓存')->deleteRequest('/admin/cache/qa-info')`
      */
     public function deleteRequest(string $url): static
     {
@@ -133,6 +176,12 @@ final class RequestAction extends Action
      * - "@page.query.id"
      * - "(ctx) => ctx.cloneFormModel('profile')"
      * - "{ id: row?.id, ids: selection?.map(item => item.id) ?? [] }"
+     *
+     * @param array|string|JsExpression $payload 请求体配置，可传数组、JS 表达式字符串或 JsExpression。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('批量审核')->payload(['ids' => '@selection'])`
      */
     public function payload(array|string|JsExpression $payload): static
     {
@@ -154,6 +203,12 @@ final class RequestAction extends Action
      * 推荐搭配：
      * - `payloadFromForm("profile")`
      * - `submitForm("profile")`
+     *
+     * @param string|null $scope 目标表单 scope；不传时仅在运行时能唯一定位表单时自动解析。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->validateForm('qa-info-form')`
      */
     public function validateForm(?string $scope = null): static
     {
@@ -176,6 +231,12 @@ final class RequestAction extends Action
      * - `payloadFromForm("profile")`
      * - `validateForm("profile")->payloadFromForm("profile")`
      * - `submitForm("profile")`
+     *
+     * @param string|null $scope 目标表单 scope；不传时仅在运行时能唯一定位表单时自动解析。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->payloadFromForm('qa-info-form')`
      */
     public function payloadFromForm(?string $scope = null): static
     {
@@ -192,6 +253,12 @@ final class RequestAction extends Action
      *
      * - 传表单 key 时，会同时用于校验和 payload 读取
      * - 不传时，仅在当前运行时能唯一定位表单时才会自动解析
+     *
+     * @param string|null $scope 目标表单 scope；不传时仅在运行时能唯一定位表单时自动解析。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->submitForm('qa-info-form')`
      */
     public function submitForm(?string $scope = null): static
     {
@@ -216,6 +283,14 @@ final class RequestAction extends Action
      *
      * 调用该方法会切换到“按页面模式选请求地址”模式，覆盖之前固定的 request()/get()/post()/put()/patch()/deleteRequest() 地址。
      * 请求方法仍复用当前动作上的 method 配置，默认值为 post。
+     *
+     * @param string $createUrl 新建模式请求地址。
+     * @param string|null $updateUrl 编辑模式请求地址；传 null 时回退到 $createUrl。
+     * @param string $queryKey 用于识别 edit/create 模式的查询参数名，默认值为 id。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
      */
     public function saveUrls(
         string $createUrl,
@@ -240,6 +315,13 @@ final class RequestAction extends Action
      * - 若未传 `url` 且当前不在宿主 iframe 弹窗中，则会静默跳过
      * - 若传了 `table`，关闭前会显式请求宿主刷新该表格
      * - 不传 `table` 时，会优先使用当前 success context 的 `tableKey`
+     *
+     * @param string|JsExpression|null $url 返回目标 URL；可为空，表示仅尝试关闭宿主弹窗。
+     * @param string|Table|null $table 宿主表格 key 或 Table 对象；用于返回前刷新宿主表格。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
      */
     public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): static
     {
@@ -250,6 +332,12 @@ final class RequestAction extends Action
 
     /**
      * 设置请求成功后的提示文案。
+     *
+     * @param string|null $successMessage 成功提示文案；传 null 表示不额外提示。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->successMessage('保存成功')`
      */
     public function successMessage(?string $successMessage): static
     {
@@ -260,6 +348,12 @@ final class RequestAction extends Action
 
     /**
      * 设置请求失败后的提示文案。
+     *
+     * @param string|null $errorMessage 失败提示文案；传 null 表示沿用默认错误提示。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): static
     {
@@ -270,6 +364,12 @@ final class RequestAction extends Action
 
     /**
      * 设置请求进行中的 loading 文案。
+     *
+     * @param string|null $loadingText loading 提示文案；传 null 表示关闭文案显示。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->loadingText('正在提交，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): static
     {
@@ -281,6 +381,12 @@ final class RequestAction extends Action
     /**
      * 请求成功后刷新当前表格。
      * 若当前动作实际绑定的是列表而未显式指定 tableKey，会优先走列表刷新。
+     *
+     * @param bool $reloadTable 是否开启成功后刷新，默认值为 true。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('批量审核')->reloadTable()`
      */
     public function reloadTable(bool $reloadTable = true): static
     {
@@ -291,6 +397,12 @@ final class RequestAction extends Action
 
     /**
      * 请求成功后刷新整页。
+     *
+     * @param bool $reloadPage 是否开启成功后整页刷新，默认值为 true。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('重建缓存')->reloadPage()`
      */
     public function reloadPage(bool $reloadPage = true): static
     {
@@ -302,6 +414,12 @@ final class RequestAction extends Action
     /**
      * 请求成功后自动关闭当前弹窗。
      * 仅当当前动作存在 dialog target 且运行时处于对应弹窗上下文时生效。
+     *
+     * @param bool $closeAfterSuccess 是否在成功后关闭弹窗，默认值为 true。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->dialog('qa-info-dialog')->closeAfterSuccess()`
      */
     public function closeAfterSuccess(bool $closeAfterSuccess = true): static
     {
@@ -322,6 +440,12 @@ final class RequestAction extends Action
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
      * - closeHostDialog() / reloadHostTable() / openHostDialog()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
+     *
+     * @param string|JsExpression|StructuredEventInterface $beforeHook 请求前钩子逻辑。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->before('({ payload }) => { if (!payload.title) return false }')`
      */
     public function before(string|JsExpression|StructuredEventInterface $beforeHook): static
     {
@@ -343,6 +467,12 @@ final class RequestAction extends Action
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     *
+     * @param string|JsExpression|StructuredEventInterface $afterSuccessHook 请求成功后的钩子逻辑。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->afterSuccess(Events::returnTo('/admin/qa-info/lists'))`
      */
     public function afterSuccess(string|JsExpression|StructuredEventInterface $afterSuccessHook): static
     {
@@ -364,6 +494,12 @@ final class RequestAction extends Action
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     *
+     * @param string|JsExpression|StructuredEventInterface $afterFailHook 请求失败后的钩子逻辑。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->afterFail('({ error, vm }) => vm.$message.error(error?.message ?? \"保存失败\")')`
      */
     public function afterFail(string|JsExpression|StructuredEventInterface $afterFailHook): static
     {
@@ -385,6 +521,12 @@ final class RequestAction extends Action
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     *
+     * @param string|JsExpression|StructuredEventInterface $afterFinallyHook 请求完成后的钩子逻辑。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->afterFinally('({ vm }) => vm.finishSaving?.()')`
      */
     public function afterFinally(string|JsExpression|StructuredEventInterface $afterFinallyHook): static
     {
@@ -420,6 +562,13 @@ final class RequestAction extends Action
      * - success: request / response / payload
      * - fail: request / error
      * - finally: request，以及可能存在的 response / payload / error
+     *
+     * @param string $event 事件名，可选 click / before / success / fail / finally。
+     * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('保存')->on('success', '({ response }) => console.log(response)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

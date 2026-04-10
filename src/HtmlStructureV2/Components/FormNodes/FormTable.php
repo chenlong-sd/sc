@@ -20,6 +20,12 @@ final class FormTable extends FormArrayGroup
     /**
      * 追加表格行 schema，并按列方式渲染。
      * 推荐使用这个方法表达“表格里有哪些列”，比通用 `addNodes()` 更符合使用侧认知。
+     *
+     * @param FormNode ...$columns 要追加的列表达式。
+     * @return static 当前表格节点。
+     *
+     * 示例：
+     * `Forms::table('items')->addColumns(Fields::text('name', '名称'))`
      */
     public function addColumns(FormNode ...$columns): static
     {
@@ -29,6 +35,12 @@ final class FormTable extends FormArrayGroup
     /**
      * 设置表格至少保留的行数。
      * 数据路径语义与 arrayGroup() 相同，只是 UI 改为表格化编辑。
+     *
+     * @param int $minRows 最少行数。
+     * @return static 当前表格节点。
+     *
+     * 示例：
+     * `Forms::table('items')->minRows(1)`
      */
     public function minRows(int $minRows): static
     {
@@ -39,6 +51,12 @@ final class FormTable extends FormArrayGroup
 
     /**
      * 设置表格最大行数，传 null 表示不限制。
+     *
+     * @param int|null $maxRows 最大行数；传 null 表示不限制。
+     * @return static 当前表格节点。
+     *
+     * 示例：
+     * `Forms::table('items')->maxRows(20)`
      */
     public function maxRows(?int $maxRows): static
     {
@@ -49,6 +67,12 @@ final class FormTable extends FormArrayGroup
 
     /**
      * 设置表格空数据时的占位文案。
+     *
+     * @param string $emptyText 空数据提示文案。
+     * @return static 当前表格节点。
+     *
+     * 示例：
+     * `Forms::table('items')->emptyText('暂无明细')`
      */
     public function emptyText(string $emptyText): static
     {
@@ -59,6 +83,12 @@ final class FormTable extends FormArrayGroup
 
     /**
      * 控制是否显示表格边框。
+     *
+     * @param bool $border 是否显示边框，默认值为 true。
+     * @return static 当前表格节点。
+     *
+     * 示例：
+     * `Forms::table('items')->border(false)`
      */
     public function border(bool $border = true): static
     {

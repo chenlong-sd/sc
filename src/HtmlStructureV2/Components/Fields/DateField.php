@@ -37,6 +37,12 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
     /**
      * 设置日期组件显示格式。
      * 使用 Element Plus / dayjs 风格格式字符串，只影响组件展示，不改变实际提交值。
+     *
+     * @param string $format 展示格式。
+     * @return static 当前日期字段实例。
+     *
+     * 示例：
+     * `Fields::date('publish_date', '发布日期')->format('YYYY/MM/DD')`
      */
     public function format(string $format): static
     {
@@ -46,6 +52,12 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
     /**
      * 设置提交到表单模型中的值格式。
      * 设置后，表单模型里存的是格式化后的字符串；不设置时通常保留原生 DatePicker 默认值。
+     *
+     * @param string $format 提交值格式。
+     * @return static 当前日期字段实例。
+     *
+     * 示例：
+     * `Fields::datetime('published_at', '发布时间')->valueFormat('YYYY-MM-DD HH:mm:ss')`
      */
     public function valueFormat(string $format): static
     {
