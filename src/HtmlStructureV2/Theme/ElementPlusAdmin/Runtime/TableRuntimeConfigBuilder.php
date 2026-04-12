@@ -35,6 +35,14 @@ final class TableRuntimeConfigBuilder
             'sortFieldMap' => $this->buildSortFieldMap($table),
             'deleteUrl' => $table->getDeleteUrl(),
             'deleteKey' => $table->getDeleteKey(),
+            'trash' => [
+                'enabled' => $table->useTrash(),
+                'dialogKey' => $table->getTrashDialogKey(),
+                'dialogTitle' => $table->getTrashDialogTitle(),
+                'queryKey' => $table->getTrashQueryKey(),
+                'queryValue' => $table->getTrashQueryValue(),
+                'recoverUrl' => $table->getTrashRecoverUrl(),
+            ],
             'maxHeight' => $table->getMaxHeight(),
             'settings' => [
                 'enabled' => $table->useSettings(),
@@ -87,6 +95,8 @@ final class TableRuntimeConfigBuilder
                 'width' => $column->getWidth(),
                 'fixed' => $column->getFixed(),
                 'align' => $column->getAlign(),
+                'export' => ($column->getExportExcel()['allow'] ?? true) === true,
+                'exportSort' => $column->getExportExcel()['sort'] ?? null,
             ];
         }
 

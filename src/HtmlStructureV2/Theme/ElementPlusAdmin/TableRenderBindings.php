@@ -138,6 +138,16 @@ final class TableRenderBindings
         );
     }
 
+    public function trashModeExpression(): string
+    {
+        return sprintf('isTableTrashMode(%s)', $this->tableKeyLiteral());
+    }
+
+    public function recoverSelectionExpression(): string
+    {
+        return sprintf('recoverTableSelection(%s)', $this->tableKeyLiteral());
+    }
+
     public function settingsVisibleExpression(): string
     {
         return sprintf('(%s?.settingsVisible || false)', $this->stateExpression());
@@ -146,6 +156,25 @@ final class TableRenderBindings
     public function settingsDraftColumnsExpression(): string
     {
         return sprintf('(%s?.settingsDraft?.columns || [])', $this->stateExpression());
+    }
+
+    public function settingsDraftTableDataExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'getTableSettingsDraftColumns(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
+    public function settingsTabModelExpression(): string
+    {
+        return sprintf('%s.settingsTab', $this->stateExpression());
+    }
+
+    public function renderColumnKeysExpression(): string
+    {
+        return sprintf('getTableRenderColumnKeys(%s)', $this->tableKeyLiteral());
     }
 
     public function stripeExpression(bool $fallback): string
@@ -220,6 +249,11 @@ final class TableRenderBindings
     public function resetSettingsDraftExpression(): string
     {
         return sprintf('resetTableSettingsDraft(%s)', $this->tableKeyLiteral());
+    }
+
+    public function syncSettingsSortExpression(): string
+    {
+        return sprintf('syncTableSettingsSort(%s)', $this->tableKeyLiteral());
     }
 
     public function openDialogExpression(string $dialogKey, ?string $rowExpression = null): string

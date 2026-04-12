@@ -6,6 +6,8 @@ use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
+use Sc\Util\HtmlStructureV2\Page\AbstractPage;
+use Sc\Util\HtmlStructureV2\Support\ImportColumnResolver;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 final class RequestAction extends Action
@@ -35,6 +37,17 @@ final class RequestAction extends Action
     private ?string $saveCreateUrl = null;
     private ?string $saveUpdateUrl = null;
     private ?string $saveModeQueryKey = null;
+    private bool $importEnabled = false;
+    private array $importColumns = [];
+    private string $importRowsKey = 'rows';
+    private ?string $importColumnInfoKey = 'import_column_info';
+    private string $importAccept = '.xlsx,.xls,.csv';
+    private int $importHeaderRow = 1;
+    private ?string $importDialogTitle = null;
+    private ?string $importTemplateFileName = null;
+    private bool $importJsonEnabled = true;
+    private bool $importAiPromptEnabled = true;
+    private ?string $importAiPromptText = null;
 
     public function __construct(string $label)
     {
@@ -64,7 +77,8 @@ final class RequestAction extends Action
      * - dialog / dialogKey: 当前动作运行在目标弹窗上下文时可用
      * - vm
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel() / resetForm()
-     * 例如可写 "@row.id"、"@dialogKey"、"@filters.keyword"、"@page.query.id"。
+     * 其中 `page` 里除了 `query` 外，还可直接读取 `url` / `path` / `search`。
+     * 例如可写 "@row.id"、"@dialogKey"、"@filters.keyword"、"@page.query.id"、"@page.url"。
      *
      * @param string $url 请求地址，支持上下文 token。
      * @param string $method 请求方法，默认值为 post。
@@ -164,6 +178,7 @@ final class RequestAction extends Action
      * - action / row / tableKey / listKey
      * - filters / forms / dialogs / selection / query / page / mode
      * - dialog / dialogKey: 当前动作运行在弹窗上下文时可用
+     * - import: 当前动作启用导入模式并完成文件解析后可用，可读取 rows / headers / fileName / sheetName
      * - vm
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
@@ -173,8 +188,10 @@ final class RequestAction extends Action
      * - "@row.id"
      * - "@filters.keyword"
      * - "@forms.profile.name"
+     * - "@import.rows"
      * - "@page.query.id"
-     * - "(ctx) => ctx.cloneFormModel('profile')"
+     * - "@page.url"
+     * - "(ctx) => ({ rows: ctx.import?.rows ?? [], source: ctx.import?.fileName ?? '' })"
      * - "{ id: row?.id, ids: selection?.map(item => item.id) ?? [] }"
      *
      * @param array|string|JsExpression $payload 请求体配置，可传数组、JS 表达式字符串或 JsExpression。
@@ -307,6 +324,307 @@ final class RequestAction extends Action
     }
 
     /**
+     * 启用带导入面板的导入模式。
+     * 点击动作后会打开导入面板，在浏览器中解析 `xlsx/xls/csv` 或 JSON，再把结果作为请求 payload 的一部分提交。
+     * 若未显式调用 payload()，默认会附带：
+     * - `"rows"`: 解析后的数据行
+     * - `"import_column_info"`: 当前导入列配置
+     *
+     * 如需改字段名，可继续链式调用 importRowsKey() / importColumnInfoKey()；
+     * 如需完全自定义请求体，可继续链式调用 payload()，并在 JS/context 里读取：
+     * - import.rows
+     * - import.headers
+     * - import.fileName
+     * - import.sheetName
+     *
+     * @param bool $enabled 是否启用导入模式，默认值为 true。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->post('/admin/qa-info/import')->enableImport()`
+     */
+    public function enableImport(bool $enabled = true): static
+    {
+        $this->importEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * 配置导入字段定义。
+     * 键名是提交给后端的字段名；值可写成标题字符串，或包含更多说明的数组。
+     * 当前前端主要使用 `"title"` 做 Excel 表头映射；其余信息会原样通过 `"import_column_info"` 带给后端。
+     *
+     * 支持写法：
+     * - `['name' => '名称']`
+     * - `['sex' => ['title' => '性别', 'options' => [1 => '男', 2 => '女']]]`
+     * - `['status' => ['title' => '状态', 'ai_data' => ['正常', '停用']]]`
+     *
+     * @param array $columns 导入字段配置。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importColumns(['name' => '名称', 'code' => '编码'])`
+     */
+    public function importColumns(array $columns): static
+    {
+        $this->importEnabled = true;
+        $this->importColumns = $columns;
+
+        return $this;
+    }
+
+    /**
+     * 从一个 V2 表单自动推导导入列配置。
+     * 适合“新增表单字段基本就是导入字段”的场景，减少重复维护 `importColumns([...])`。
+     *
+     * 当前默认规则：
+     * - 只自动收集顶层字段，不展开对象分组、数组分组、表格子列
+     * - 默认收集 text / textarea / number / select / radio / date / datetime / switch
+     * - `select` / `radio` 若配置了静态 `options()`，会自动转成导入列的 `options`
+     * - `switch` 会优先尝试读取 active/inactive 配置生成导入选项
+     * - 会跳过 hidden / password / editor / upload / picker / icon / checkbox / cascader 等不适合直接导入的字段
+     * - 静态 disabled 字段默认跳过
+     *
+     * `overrides` 可对同名字段做整体覆盖，适合补 `ai_data` 或修正标题。
+     *
+     * @param Form $form 导入列来源表单。
+     * @param array $overrides 按字段名覆盖自动推导结果。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importColumnsFromForm($form, ['status' => ['title' => '状态', 'ai_data' => ['启用', '停用']]])`
+     */
+    public function importColumnsFromForm(Form $form, array $overrides = []): static
+    {
+        return $this->importColumns(
+            (new ImportColumnResolver())->fromForm($form, $overrides)
+        );
+    }
+
+    /**
+     * 从一个 V2 页面中自动定位表单并推导导入列配置。
+     * 适合 iframe 子页或独立表单页已经先声明成 Page 对象的场景。
+     *
+     * 规则：
+     * - 若页面里只有一个表单，可省略 `formKey`
+     * - 若页面里有多个表单，必须显式传 `formKey`
+     * - 仅从页面主体 sections 中递归收集表单，不会去猜纯 URL iframe 的远端页面结构
+     *
+     * @param AbstractPage $page 导入列来源页面。
+     * @param string|null $formKey 目标表单 key；页面只有一个表单时可省略。
+     * @param array $overrides 按字段名覆盖自动推导结果。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importColumnsFromPage($formPage, 'profile-form')`
+     */
+    public function importColumnsFromPage(
+        AbstractPage $page,
+        ?string $formKey = null,
+        array $overrides = []
+    ): static {
+        return $this->importColumns(
+            (new ImportColumnResolver())->fromPage($page, $formKey, $overrides)
+        );
+    }
+
+    /**
+     * 从一个 V2 弹窗声明中自动推导导入列配置。
+     * 普通 form 弹窗会直接读取 dialog 内部表单；
+     * iframe 弹窗则必须显式传入 iframe 子页对应的 Form 或 Page，避免去猜纯 URL 页面结构。
+     *
+     * 常见写法：
+     * - form dialog：`importColumnsFromDialog($dialog)`
+     * - iframe dialog + 子页 Form：`importColumnsFromDialog($dialog, $childForm)`
+     * - iframe dialog + 子页 Page：`importColumnsFromDialog($dialog, $childPage, 'child-form')`
+     *
+     * @param Dialog $dialog 导入列来源弹窗。
+     * @param Form|AbstractPage|null $iframeSource iframe 子页表单或页面；普通 form 弹窗可省略。
+     * @param string|null $formKey 当 `$iframeSource` 是页面且包含多个表单时，用于显式指定表单 key。
+     * @param array $overrides 按字段名覆盖自动推导结果。
+     * @return static 当前请求动作实例。
+     */
+    public function importColumnsFromDialog(
+        Dialog $dialog,
+        Form|AbstractPage|null $iframeSource = null,
+        ?string $formKey = null,
+        array $overrides = []
+    ): static {
+        return $this->importColumns(
+            (new ImportColumnResolver())->fromDialog($dialog, $iframeSource, $formKey, $overrides)
+        );
+    }
+
+    /**
+     * 设置导入数据行在请求体中的字段名。
+     * 默认值为 `"rows"`。
+     *
+     * @param string $key 请求体中的数据行字段名。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importRowsKey('items')`
+     */
+    public function importRowsKey(string $key = 'rows'): static
+    {
+        $normalized = trim($key);
+        $this->importRowsKey = $normalized !== '' ? $normalized : 'rows';
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置导入字段说明在请求体中的字段名。
+     * 默认值为 `"import_column_info"`；传 null 可关闭该附带字段。
+     *
+     * @param string|null $key 请求体中的字段说明字段名；传 null 表示不自动附带列说明。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importColumnInfoKey('columnInfo')`
+     */
+    public function importColumnInfoKey(?string $key = 'import_column_info'): static
+    {
+        $normalized = is_string($key) ? trim($key) : null;
+        $this->importColumnInfoKey = $normalized !== '' ? $normalized : null;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置文件选择器允许的扩展名。
+     * 默认值为 `".xlsx,.xls,.csv"`。
+     *
+     * @param string $accept 文件选择器 accept 值。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importAccept('.xlsx,.xls')`
+     */
+    public function importAccept(string $accept): static
+    {
+        $normalized = trim($accept);
+        $this->importAccept = $normalized !== '' ? $normalized : '.xlsx,.xls,.csv';
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置 Excel 表头所在的行号，按 1 开始计数。
+     * 默认值为 1，表示第一行是表头。
+     *
+     * @param int $row 表头行号，最小值为 1。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importHeaderRow(2)`
+     */
+    public function importHeaderRow(int $row = 1): static
+    {
+        $this->importHeaderRow = max(1, $row);
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置导入弹窗标题。
+     * 不传时默认使用当前动作按钮文案。
+     *
+     * @param string|null $title 导入弹窗标题；传 null 表示回退到动作文案。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importDialogTitle('导入用户数据')`
+     */
+    public function importDialogTitle(?string $title): static
+    {
+        $normalized = is_string($title) ? trim($title) : null;
+        $this->importDialogTitle = $normalized !== '' ? $normalized : null;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置“下载模板”时的文件名。
+     * 传入时可带或不带 `.xlsx` 后缀；不传时默认按当前页面 `document.title` 推导。
+     *
+     * @param string|null $fileName 模板下载文件名；传 null 表示使用默认推导值。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importTemplateFileName('用户导入模板.xlsx')`
+     */
+    public function importTemplateFileName(?string $fileName): static
+    {
+        $normalized = is_string($fileName) ? trim($fileName) : null;
+        $this->importTemplateFileName = $normalized !== '' ? $normalized : null;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 是否启用 JSON 导入页签。
+     * 默认值为 true。
+     *
+     * @param bool $enabled 是否启用 JSON 导入。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->enableImportJson(false)`
+     */
+    public function enableImportJson(bool $enabled = true): static
+    {
+        $this->importJsonEnabled = $enabled;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 是否显示“复制 AI 测试数据提示词”按钮。
+     * 默认值为 true。
+     *
+     * @param bool $enabled 是否显示 AI 提示词按钮。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->enableImportAiPrompt(false)`
+     */
+    public function enableImportAiPrompt(bool $enabled = true): static
+    {
+        $this->importAiPromptEnabled = $enabled;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
+     * 设置自定义 AI 测试数据提示词文本。
+     * 不传时会根据 `importColumns()` 自动生成提示词；如需关闭按钮，请调用 `enableImportAiPrompt(false)`。
+     *
+     * @param string|null $prompt AI 提示词文本；传 null 表示使用默认自动生成内容。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * `RequestAction::make('导入')->importAiPromptText('请生成 10 条测试 JSON 数据...')`
+     */
+    public function importAiPromptText(?string $prompt): static
+    {
+        $normalized = is_string($prompt) ? trim($prompt) : null;
+        $this->importAiPromptText = $normalized !== '' ? $normalized : null;
+        $this->importEnabled = true;
+
+        return $this;
+    }
+
+    /**
      * 保存成功后执行“优先关闭宿主弹窗，否则跳转到指定 URL”的快捷方式。
      * 等价于 `afterSuccess(Events::returnTo($url)->hostTable($table))`。
      * 常用于独立表单页或 iframe 子表单页的保存成功返回。
@@ -434,6 +752,8 @@ final class RequestAction extends Action
      * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
      * 可用字段与 before 事件一致，常用有 action / row / tableKey / listKey / filters / forms /
      * dialogs / selection / query / page / mode / dialog / dialogKey / vm，以及已组装好的 request。
+     * 若当前请求动作启用了导入模式，还可读取：
+     * - import.rows / import.headers / import.fileName / import.sheetName
      * 若当前请求动作使用了 validateForm()/payloadFromForm()/submitForm()，还可读取：
      * - formScope
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
@@ -464,6 +784,7 @@ final class RequestAction extends Action
      * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
      * 可用字段与 success 事件一致，常用有 request / response / payload / row / filters /
      * forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
+     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
@@ -491,6 +812,7 @@ final class RequestAction extends Action
      * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
      * 可用字段与 fail 事件一致，常用有 request / error / row / filters / forms / dialogs /
      * selection / query / page / mode / dialog / dialogKey / vm。
+     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
@@ -518,6 +840,7 @@ final class RequestAction extends Action
      * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
      * 可用字段与 finally 事件一致，常用有 request，以及可能存在的 response / payload / error，
      * 同时也可读取 row / filters / forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
+     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
      * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
@@ -550,6 +873,7 @@ final class RequestAction extends Action
      * 公共上下文：
      * - action / row / tableKey / listKey / filters / forms / dialogs / selection / query / page / mode / vm
      * - dialog / dialogKey: 动作目标指向弹窗且运行时存在对应弹窗时可用
+     * - import: 当前动作启用导入模式并完成文件解析后可用，可读取 rows / headers / fileName / sheetName
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
@@ -676,6 +1000,61 @@ final class RequestAction extends Action
     public function getSaveModeQueryKey(): ?string
     {
         return $this->saveModeQueryKey;
+    }
+
+    public function usesImport(): bool
+    {
+        return $this->importEnabled;
+    }
+
+    public function getImportColumns(): array
+    {
+        return $this->importColumns;
+    }
+
+    public function getImportRowsKey(): string
+    {
+        return $this->importRowsKey;
+    }
+
+    public function getImportColumnInfoKey(): ?string
+    {
+        return $this->importColumnInfoKey;
+    }
+
+    public function getImportAccept(): string
+    {
+        return $this->importAccept;
+    }
+
+    public function getImportHeaderRow(): int
+    {
+        return $this->importHeaderRow;
+    }
+
+    public function getImportDialogTitle(): ?string
+    {
+        return $this->importDialogTitle;
+    }
+
+    public function getImportTemplateFileName(): ?string
+    {
+        return $this->importTemplateFileName;
+    }
+
+    public function isImportJsonEnabled(): bool
+    {
+        return $this->importJsonEnabled;
+    }
+
+    public function isImportAiPromptEnabled(): bool
+    {
+        return $this->importAiPromptEnabled;
+    }
+
+    public function getImportAiPromptText(): ?string
+    {
+        return $this->importAiPromptText;
     }
 
     /**

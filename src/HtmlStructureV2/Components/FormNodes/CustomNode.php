@@ -3,12 +3,16 @@
 namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 
 final class CustomNode implements FormNode
 {
+    use HasFormTableColumnAttributes;
+    use HasRenderAttributes;
     use HasSpan;
 
     private ?string $columnLabel = null;

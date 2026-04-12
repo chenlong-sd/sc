@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -11,6 +12,7 @@ use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 
 final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
 {
+    use HasRenderAttributes;
     use HasSpan;
     use HasFormNodeChildren;
 

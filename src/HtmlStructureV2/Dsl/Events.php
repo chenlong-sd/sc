@@ -20,6 +20,7 @@ final class Events
      * - Action / RequestAction: row / tableKey / listKey / filters / forms / dialogs / selection / vm
      * - Dialog hook: 额外还有 mode / dialogKey / dialogContext / data / dialog
      * - Form / Forms::custom(): 常见有 model / form / scope / fieldName / vm
+     * - 页面地址：`page.url` / `page.path` / `page.query`
      * `query` 传字符串时会自动包装成 JsExpression。
      * 返回的事件对象还可继续链式调用 `target()` / `newTab()` / `features()`。
      *

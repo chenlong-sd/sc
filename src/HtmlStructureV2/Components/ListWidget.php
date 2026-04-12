@@ -198,7 +198,13 @@ final class ListWidget implements Renderable, EventAware
         $dialogs = [];
 
         if ($this->table !== null) {
-            $this->collectDialogsFromActions($dialogs, $this->table->getToolbarActions());
+            $trashDialog = $this->table->getTrashDialog();
+            if ($trashDialog !== null) {
+                $dialogs[$trashDialog->key()] = $trashDialog;
+            }
+
+            $this->collectDialogsFromActions($dialogs, $this->table->getToolbarLeftActions());
+            $this->collectDialogsFromActions($dialogs, $this->table->getToolbarRightActions());
             $this->collectDialogsFromActions($dialogs, $this->table->getRowActions());
         }
 

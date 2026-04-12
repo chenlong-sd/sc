@@ -148,6 +148,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px}
     .sc-v2-table-settings__switches{display:flex;gap:12px;flex-wrap:wrap}
     .sc-v2-table-settings__switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--el-border-color-light);border-radius:8px;min-width:180px}
+    .sc-v2-table-settings-drag-handle{cursor:move;touch-action:none}
+    .sc-v2-table-settings-drag-handle .el-icon{cursor:move}
     .sc-v2-table-settings__footer{display:flex;justify-content:flex-end}
     .sc-v2-table-settings__footer-actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-stack{display:flex;flex-direction:column}
@@ -277,7 +279,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $this->runtimeRegistry($context),
             $table
         );
-        return $this->tableBlockRenderer()->render($table, $state->bindings, true, $context);
+        return $this->tableBlockRenderer()->render($table, $state->bindings, $context);
     }
 
     private function renderListWidgetComponent(ListWidget $list, RenderContext $context): AbstractHtmlElement

@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
@@ -10,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 abstract class Field implements FormNode
 {
+    use HasFormTableColumnAttributes;
     use HasSpan;
 
     protected mixed $default = null;
@@ -61,6 +63,25 @@ abstract class Field implements FormNode
      */
     public function prop(string $name, mixed $value): static
     {
+        $name = trim($name);
+        if ($name === '') {
+            return $this;
+        }
+
+        if ($value === null || (!str_starts_with($name, ':') && $value === false)) {
+            unset($this->props[$name]);
+
+            return $this;
+        }
+
+        if (!str_starts_with($name, ':') && $value === true) {
+            $value = '';
+        }
+
+        if (($name === 'class' || $name === 'style') && is_string($value)) {
+            $value = $this->mergeFieldPropString($name, $value);
+        }
+
         $this->props[$name] = $value;
 
         return $this;
@@ -79,9 +100,96 @@ abstract class Field implements FormNode
      */
     public function props(array $props): static
     {
-        $this->props = array_merge($this->props, $props);
+        foreach ($props as $name => $value) {
+            if (!is_string($name)) {
+                continue;
+            }
+
+            $this->prop($name, $value);
+        }
 
         return $this;
+    }
+
+    /**
+     * 设置字段组件根节点的单个属性。
+     * 这是 prop() 的语义化别名，便于与 Blocks / 布局节点 / 表单结构节点保持统一写法。
+     * 属性会直接透传到字段实际渲染的组件根节点，不作用于外层 form-item。
+     *
+     * @param string $name 属性名，可带 `":prop"` 或 `"@event"` 前缀。
+     * @param mixed $value 属性值。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->attr(':maxlength', 50)`
+     */
+    public function attr(string $name, mixed $value = ''): static
+    {
+        return $this->prop($name, $value);
+    }
+
+    /**
+     * 批量设置字段组件根节点属性。
+     * 这是 props() 的语义化别名，便于在使用侧统一使用 attrs 风格 API。
+     *
+     * @param array $attributes 属性集合。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->attrs(['clearable' => true, ':maxlength' => 50])`
+     */
+    public function attrs(array $attributes): static
+    {
+        return $this->props($attributes);
+    }
+
+    /**
+     * 追加字段组件根节点的 class。
+     * 多次调用会自动合并，等价于设置组件的 `class` 属性。
+     *
+     * @param string|null $className class 名称；传 null 可移除。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->className('title-input')`
+     */
+    public function className(?string $className): static
+    {
+        return $this->prop('class', $className);
+    }
+
+    /**
+     * 追加字段组件根节点的 style。
+     * 多次调用会自动合并，等价于设置组件的 `style` 属性。
+     *
+     * @param string|null $style 内联样式；传 null 可移除。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->style('max-width:320px')`
+     */
+    public function style(?string $style): static
+    {
+        return $this->prop('style', $style);
+    }
+
+    private function mergeFieldPropString(string $name, string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return (string)($this->props[$name] ?? '');
+        }
+
+        $current = trim((string)($this->props[$name] ?? ''));
+        if ($current === '') {
+            return $value;
+        }
+
+        if ($name === 'style') {
+            return rtrim($current, '; ') . '; ' . ltrim($value, '; ');
+        }
+
+        return trim($current . ' ' . $value);
     }
 
     /**

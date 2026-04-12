@@ -80,6 +80,27 @@ Outcome:
 - V2 tables can export without falling back to V1 rendering behavior
 - Existing V2 column export metadata is now connected to a real runtime feature
 
+### Done. V2-native import action
+
+This gap is also no longer pending planning work.
+
+Confirmed landing points:
+
+- `Actions::import()` now exists as the V2-native front-end Excel import entry
+- Import action stays on the public `RequestAction` path instead of adding a separate hidden runtime channel
+- V2 runtime now loads `xlsx` on demand for import actions and parses `xlsx/xls/csv` in the browser before submitting
+- Import action now opens a V2-native import panel instead of only choosing a file immediately
+- The import panel now includes template download, JSON import, AI 测试数据提示词复制, preview, and result/error display
+- Import actions can map Excel headers through `importColumns([...])`
+- Import actions can also derive columns from existing V2 `Form` / `Page` / `Dialog` declarations for reusable CRUD schemas
+- Default request payload now carries parsed `"rows"` and `"import_column_info"`, while `payload()` can still fully override/extend the request body through public `ctx.import.*`
+- README, docblocks, and tests now document and verify the richer import flow
+
+Outcome:
+
+- V2 pages can express common Excel/JSON import flows without falling back to V1 table theme helpers
+- Import remains discoverable from the normal action API surface and keeps the same request/hook/reload ergonomics as other V2 actions
+
 ### Done. V2-native status toggle button bar
 
 This gap is also no longer pending planning work.
@@ -97,6 +118,42 @@ Outcome:
 
 - V2 now has a first-class fast segmented filter bar for common enum/status fields
 - List pages can preserve this high-frequency filter UX during migration
+
+### Done. V2-native explicit table toolbar zones
+
+Real migration usage also confirmed that table toolbar actions need an explicit left/right model instead of only a single implicit action group.
+
+Confirmed landing points:
+
+- `Table::toolbar()` is kept as the compatibility entry and now maps to the left side
+- `Table::toolbarLeft()` and `Table::toolbarRight()` now expose explicit placement for usage-side code
+- Toolbar rendering now places custom right-side actions together with built-in export / column settings tools
+- Managed dialog collection and action target validation now cover both left and right toolbar action groups
+- README and tests now document and verify the explicit toolbar zoning behavior
+
+Outcome:
+
+- Usage-side code can decide action placement directly from the public API surface
+- Old `toolbar()` pages remain compatible without changing behavior
+
+### Done. V2-native table trash flow
+
+Real business pages also still rely on the original table trash / recover flow based on soft delete pages.
+
+Confirmed landing points:
+
+- `Table::trash()` now exists as the V2-native trash entry
+- `Table::enableTrash()` remains as a compatibility alias
+- Trash is still treated as table-owned behavior instead of a free-floating action because it changes toolbar visibility, row actions, and remote query mode together
+- The table now auto-generates a managed iframe dialog that opens the current page with `is_delete=1`
+- Trash mode now hides normal toolbar actions, export, settings, and row actions while keeping refresh available
+- When `recoverUrl()` is configured, trash mode exposes a native batch recover button that posts selected ids to the recover endpoint
+- README and tests now document and verify the full trash flow
+
+Outcome:
+
+- V2 pages can keep the original soft-delete recycle-bin workflow without falling back to V1 table rendering
+- Usage-side code only needs table-level configuration and does not need to hand-build the recycle-bin dialog
 - Native toggle API is now cleaner, while legacy search-field mapping remains isolated in the compatibility alias layer
 
 ### Done. Public CRUD form submission shortcuts

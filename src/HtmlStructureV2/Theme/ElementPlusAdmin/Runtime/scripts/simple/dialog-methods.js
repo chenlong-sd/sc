@@ -7,6 +7,7 @@
           resolveMessage
         }) => {
           const createManagedDialogMethods = globalThis.__SC_V2_CREATE_MANAGED_DIALOG_METHODS__;
+          const { readPageLocation, resolvePageMode } = globalThis.__SC_V2_RUNTIME_HELPERS__;
 
           return createManagedDialogMethods({
             clone,
@@ -19,9 +20,17 @@
                 || (typeof vm.getActiveDialogTableKey === 'function'
                   ? vm.getActiveDialogTableKey(dialogKey)
                   : null);
+              const location = readPageLocation();
+              const query = location.query || {};
 
               return {
                 forms: buildFormsContext(vm),
+                query,
+                page: Object.assign({}, location, {
+                  query,
+                  mode: resolvePageMode(query),
+                  formScope: null,
+                }),
                 selection: typeof vm.getTableSelection === 'function' ? vm.getTableSelection(tableKey) : [],
                 reloadTable: (target = tableKey) => {
                   if (!target) {

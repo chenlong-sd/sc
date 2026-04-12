@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class ActionButtonRenderer
@@ -28,6 +29,10 @@ final class ActionButtonRenderer
     {
         if (!$action->isAvailable()) {
             return El::double('template');
+        }
+
+        if ($action instanceof RequestAction && $action->usesImport()) {
+            $renderContext?->document()->assets()->addScript(StaticResource::XLSX);
         }
 
         $target = ActionRenderTarget::resolve($action, $tableBindings);
@@ -280,6 +285,19 @@ final class ActionButtonRenderer
                 'createUrl' => $action->getSaveCreateUrl(),
                 'updateUrl' => $action->getSaveUpdateUrl(),
                 'modeQueryKey' => $action->getSaveModeQueryKey(),
+            ],
+            'import' => [
+                'enabled' => $action->usesImport(),
+                'columns' => $action->getImportColumns(),
+                'rowsKey' => $action->getImportRowsKey(),
+                'columnInfoKey' => $action->getImportColumnInfoKey(),
+                'accept' => $action->getImportAccept(),
+                'headerRow' => $action->getImportHeaderRow(),
+                'dialogTitle' => $action->getImportDialogTitle(),
+                'templateFileName' => $action->getImportTemplateFileName(),
+                'jsonEnabled' => $action->isImportJsonEnabled(),
+                'aiPromptEnabled' => $action->isImportAiPromptEnabled(),
+                'aiPromptText' => $action->getImportAiPromptText(),
             ],
         ];
     }

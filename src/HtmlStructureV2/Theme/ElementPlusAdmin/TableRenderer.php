@@ -6,7 +6,9 @@ use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
+use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Table;
+use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
@@ -16,6 +18,7 @@ final class TableRenderer
     use EncodesJsValues;
 
     private const DRAG_SORT_HANDLE_CLASS = 'sc-v2-table-drag-handle';
+    private const SETTINGS_DRAG_HANDLE_CLASS = 'sc-v2-table-settings-drag-handle';
 
     public function __construct(
         private readonly ColumnRenderer $columnRenderer,
@@ -36,13 +39,45 @@ final class TableRenderer
         $toolbar = El::double('div')->addClass('sc-v2-toolbar');
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
         $right = El::double('div')->addClass('sc-v2-toolbar__tools');
+        $trashModeExpression = $bindings->trashModeExpression();
 
-        foreach ($table->getToolbarActions() as $action) {
-            $left->append($this->actionButtonRenderer->render($action, false, 'default', $bindings, $renderContext, 'page-header'));
+        foreach ($table->getToolbarLeftActions() as $action) {
+            $left->append($this->renderToolbarAction($table, $bindings, $action, $renderContext, $trashModeExpression));
         }
 
         if ($left->getChildren()) {
             $toolbar->append($left);
+        }
+
+        foreach ($table->getToolbarRightActions() as $action) {
+            $right->append($this->renderToolbarAction($table, $bindings, $action, $renderContext, $trashModeExpression));
+        }
+
+        if ($table->useTrash() && $table->getTrashDialog() !== null) {
+            $right->append(
+                El::double('el-button')->setAttrs([
+                    'type' => 'danger',
+                    'bg' => '',
+                    'text' => '',
+                    'icon' => 'Delete',
+                    'v-if' => sprintf('!%s', $trashModeExpression),
+                    '@click' => $bindings->openDialogExpression($table->getTrashDialogKey(), 'null'),
+                ])->append($table->getTrashDialogTitle())
+            );
+        }
+
+        if ($table->useTrash() && $table->getTrashRecoverUrl() !== null) {
+            $right->append(
+                El::double('el-button')->setAttrs([
+                    'type' => 'success',
+                    'bg' => '',
+                    'text' => '',
+                    'icon' => 'RefreshLeft',
+                    'v-if' => $trashModeExpression,
+                    ':disabled' => sprintf('(%s.length || 0) === 0', $bindings->selectionExpression()),
+                    '@click' => $bindings->recoverSelectionExpression(),
+                ])->append('恢复数据')
+            );
         }
 
         if ($table->useExport()) {
@@ -51,6 +86,7 @@ final class TableRenderer
                 'bg' => '',
                 'text' => '',
                 ':loading' => $bindings->exportLoadingExpression(),
+                'v-if' => sprintf('!%s', $trashModeExpression),
                 '@click' => $bindings->exportExpression(),
             ];
 
@@ -70,6 +106,7 @@ final class TableRenderer
                     'bg' => '',
                     'text' => '',
                     'icon' => 'Setting',
+                    'v-if' => sprintf('!%s', $trashModeExpression),
                     '@click' => $bindings->openSettingsExpression(),
                 ])->append('列设置')
             );
@@ -183,12 +220,38 @@ final class TableRenderer
             $element->append($selectionColumn);
         }
 
-        foreach ($table->columns() as $column) {
-            if (!$column->isRenderable()) {
-                continue;
+        $renderableColumns = array_values(array_filter(
+            $table->columns(),
+            static fn($column) => $column->isRenderable()
+        ));
+
+        if ($table->useSettings()) {
+            $firstSettingsColumnIndex = null;
+            $orderedColumns = [];
+
+            foreach ($renderableColumns as $index => $column) {
+                if ($column->supportsSettings()) {
+                    $firstSettingsColumnIndex ??= $index;
+                    $orderedColumns[] = $column;
+                    continue;
+                }
+
+                if ($firstSettingsColumnIndex !== null && $index === $firstSettingsColumnIndex + count($orderedColumns)) {
+                    $element->append($this->renderOrderedSettingsColumns($orderedColumns, $bindings));
+                    $firstSettingsColumnIndex = null;
+                    $orderedColumns = [];
+                }
+
+                $element->append($this->columnRenderer->render($column, $bindings, true));
             }
 
-            $element->append($this->columnRenderer->render($column, $bindings, $table->useSettings()));
+            if ($orderedColumns !== []) {
+                $element->append($this->renderOrderedSettingsColumns($orderedColumns, $bindings));
+            }
+        } else {
+            foreach ($renderableColumns as $column) {
+                $element->append($this->columnRenderer->render($column, $bindings, false));
+            }
         }
 
         if ($table->getRowActions() || $table->useDragSort()) {
@@ -202,7 +265,7 @@ final class TableRenderer
     {
         $dialog = El::double('el-dialog')->addClass('sc-v2-table-settings-dialog')->setAttrs([
             'title' => '列设置',
-            'width' => '760px',
+            'width' => $table->useExport() ? '980px' : '760px',
             'append-to-body' => '',
             ':model-value' => $bindings->settingsVisibleExpression(),
             '@close' => $bindings->closeSettingsExpression(),
@@ -224,26 +287,40 @@ final class TableRenderer
             )
         );
 
-        $settingsTable = El::double('el-table')->setAttrs([
-            ':data' => $bindings->settingsDraftColumnsExpression(),
-            'border' => '',
-            'size' => 'small',
-            'style' => 'width:100%',
-        ]);
+        if ($table->useExport()) {
+            $tabs = El::double('el-tabs')->setAttrs([
+                'v-model' => $bindings->settingsTabModelExpression(),
+                '@update:model-value' => $bindings->syncSettingsSortExpression(),
+            ]);
 
-        $settingsTable->append(
-            El::double('el-table-column')->setAttrs([
-                'label' => '列名称',
-                'prop' => 'label',
-                'min-width' => '160',
-            ]),
-            $this->renderSettingsShowColumn(),
-            $this->renderSettingsWidthColumn(),
-            $this->renderSettingsFixedColumn(),
-            $this->renderSettingsAlignColumn()
-        );
+            $displayPane = El::double('el-tab-pane')->setAttrs([
+                'label' => '展示设置',
+                'name' => 'display',
+            ])->append(
+                El::double('div')->addClass('sc-v2-table-settings__pane')->append(
+                    $switches,
+                    $this->renderSettingsTable($bindings, 'display', false)
+                )
+            );
 
-        $body->append($switches, $settingsTable);
+            $exportPane = El::double('el-tab-pane')->setAttrs([
+                'label' => '导出设置',
+                'name' => 'export',
+            ])->append(
+                El::double('div')->addClass('sc-v2-table-settings__pane')->append(
+                    $this->renderSettingsTable($bindings, 'export', true)
+                )
+            );
+
+            $tabs->append($displayPane, $exportPane);
+            $body->append($tabs);
+        } else {
+            $body->append(
+                $switches,
+                $this->renderSettingsTable($bindings, 'display', false)
+            );
+        }
+
         $dialog->append($body);
         $dialog->append(
             El::double('template')->setAttr('#footer')->append(
@@ -296,6 +373,10 @@ final class TableRenderer
             ),
         ]);
 
+        if ($table->useTrash()) {
+            $actionColumn->setAttr('v-if', sprintf('!%s', $bindings->trashModeExpression()));
+        }
+
         $template = El::double('template')->setAttr('#default', 'scope');
         $actions = El::double('div')->addClass('sc-v2-row-actions');
         if ($table->useDragSort()) {
@@ -326,6 +407,39 @@ final class TableRenderer
         return El::double('el-button')
             ->setAttrs($attrs)
             ->append($table->getDragSortLabel());
+    }
+
+    private function renderToolbarAction(
+        Table $table,
+        TableRenderBindings $bindings,
+        Action $action,
+        ?RenderContext $renderContext,
+        string $trashModeExpression
+    ): AbstractHtmlElement {
+        $button = $this->actionButtonRenderer->render($action, false, 'default', $bindings, $renderContext, 'page-header');
+
+        if ($table->useTrash() && !$this->keepToolbarActionVisibleInTrash($action)) {
+            $this->appendVisibilityCondition($button, sprintf('!%s', $trashModeExpression));
+        }
+
+        return $button;
+    }
+
+    private function keepToolbarActionVisibleInTrash(Action $action): bool
+    {
+        return $action->intent() === ActionIntent::REFRESH;
+    }
+
+    private function appendVisibilityCondition(AbstractHtmlElement $element, string $condition): void
+    {
+        $current = trim((string)$element->getAttr('v-if', ''));
+        if ($current === '') {
+            $element->setAttr('v-if', $condition);
+
+            return;
+        }
+
+        $element->setAttr('v-if', sprintf('(%s) && (%s)', $current, $condition));
     }
 
     private function renderStatusToggleButton(
@@ -380,6 +494,79 @@ final class TableRenderer
                     'placeholder' => '自动',
                     'style' => 'width:100px',
                 ])
+            )
+        );
+    }
+
+    private function renderSettingsTable(
+        TableRenderBindings $bindings,
+        string $mode,
+        bool $exportMode
+    ): AbstractHtmlElement {
+        $settingsTable = El::double('el-table')->setAttrs([
+            ':data' => $bindings->settingsDraftTableDataExpression($mode),
+            'border' => '',
+            'size' => 'small',
+            'style' => 'width:100%',
+            'row-key' => 'key',
+            'data-sc-table-settings-key' => $bindings->tableKey(),
+            'data-sc-table-settings-mode' => $mode,
+        ]);
+
+        $settingsTable->append(
+            $this->renderSettingsSortColumn(),
+            El::double('el-table-column')->setAttrs([
+                'label' => '列名称',
+                'prop' => 'label',
+                'min-width' => '160',
+            ])
+        );
+
+        if ($exportMode) {
+            $settingsTable->append(
+                $this->renderSettingsExportColumn()
+            );
+
+            return $settingsTable;
+        }
+
+        $settingsTable->append(
+            $this->renderSettingsShowColumn(),
+            $this->renderSettingsWidthColumn(),
+            $this->renderSettingsFixedColumn(),
+            $this->renderSettingsAlignColumn()
+        );
+
+        return $settingsTable;
+    }
+
+    private function renderSettingsSortColumn(): AbstractHtmlElement
+    {
+        return El::double('el-table-column')->setAttrs([
+            'label' => '排序',
+            'width' => '76',
+            'align' => 'center',
+        ])->append(
+            El::double('template')->setAttr('#default', 'scope')->append(
+                El::double('el-button')->setAttrs([
+                    'link' => '',
+                    'type' => 'primary',
+                    'icon' => 'Rank',
+                    'class' => self::SETTINGS_DRAG_HANDLE_CLASS,
+                ])
+            )
+        );
+    }
+
+    private function renderSettingsExportColumn(): AbstractHtmlElement
+    {
+        return El::double('el-table-column')->setAttrs([
+            'label' => '导出',
+            'width' => '100',
+            'align' => 'center',
+        ])->append(
+            El::double('template')->setAttr('#default', 'scope')->append(
+                El::double('el-switch')->setAttr('v-model', 'scope.row.export')
             )
         );
     }
@@ -440,5 +627,30 @@ final class TableRenderer
                 )
             )
         );
+    }
+
+    /**
+     * @param array<int, \Sc\Util\HtmlStructureV2\Components\Column> $columns
+     */
+    private function renderOrderedSettingsColumns(array $columns, TableRenderBindings $bindings): AbstractHtmlElement
+    {
+        $wrapper = El::double('template')->setAttrs([
+            'v-for' => sprintf('(renderColumnKey, renderColumnIndex) in %s', $bindings->renderColumnKeysExpression()),
+            ':key' => "'sc-v2-col-' + renderColumnKey + '-' + renderColumnIndex",
+        ]);
+
+        foreach ($columns as $index => $column) {
+            $branchDirective = $index === 0 ? 'v-if' : 'v-else-if';
+            $wrapper->append(
+                El::double('template')->setAttr(
+                    $branchDirective,
+                    sprintf('renderColumnKey === %s', $this->jsValue($column->prop()))
+                )->append(
+                    $this->columnRenderer->render($column, $bindings, true)
+                )
+            );
+        }
+
+        return $wrapper;
     }
 }

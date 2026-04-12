@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Components\Layout;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasElementEvents;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
@@ -11,6 +12,7 @@ use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 final class Card implements RenderableContainer, EventAware
 {
     use HasElementEvents;
+    use HasRenderAttributes;
     use RendersWithTheme;
 
     /** @var Renderable[] */

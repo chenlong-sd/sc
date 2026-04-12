@@ -16,6 +16,7 @@ final class FormTableColumnSchema
         private readonly string $path = '',
         private readonly string $modelPath = '',
         private string $label = '',
+        private readonly array $columnAttributes = [],
         array $children = [],
     ) {
         $this->children = array_values($children);
@@ -32,6 +33,7 @@ final class FormTableColumnSchema
             path: $path,
             modelPath: $modelPath,
             label: $label ?? $field->label(),
+            columnAttributes: $field->getFormTableColumnAttributes(),
         );
     }
 
@@ -46,6 +48,7 @@ final class FormTableColumnSchema
             path: $path,
             modelPath: $modelPath,
             label: $label ?? '',
+            columnAttributes: $customNode->getFormTableColumnAttributes(),
         );
     }
 
@@ -60,6 +63,7 @@ final class FormTableColumnSchema
             path: $path,
             modelPath: $modelPath,
             label: $label ?? $group->name(),
+            columnAttributes: $group->getFormTableColumnAttributes(),
         );
     }
 
@@ -71,6 +75,7 @@ final class FormTableColumnSchema
         return new self(
             node: null,
             label: $label,
+            columnAttributes: [],
             children: $children,
         );
     }
@@ -114,6 +119,7 @@ final class FormTableColumnSchema
             path: $this->path,
             modelPath: $this->modelPath,
             label: $label,
+            columnAttributes: $this->columnAttributes,
             children: $this->children,
         );
     }
@@ -128,6 +134,7 @@ final class FormTableColumnSchema
             path: $this->path,
             modelPath: $this->modelPath,
             label: $this->label,
+            columnAttributes: $this->columnAttributes,
             children: $children,
         );
     }
@@ -165,5 +172,10 @@ final class FormTableColumnSchema
     public function label(): string
     {
         return $this->label;
+    }
+
+    public function columnAttributes(): array
+    {
+        return $this->columnAttributes;
     }
 }

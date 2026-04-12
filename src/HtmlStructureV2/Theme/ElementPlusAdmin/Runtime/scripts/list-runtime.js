@@ -14,9 +14,11 @@
             makeRequest,
             postDialogHostMessage,
             pickRows,
+            readPageLocation,
             registerElementPlusIcons,
             registerScV2Components,
             resolveMessage,
+            resolvePageMode,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
           const lists = cfg.lists || {};
@@ -28,6 +30,15 @@
           const createListFilterMethods = globalThis.__SC_V2_CREATE_LIST_FILTER_METHODS__;
           const createListTableMethods = globalThis.__SC_V2_CREATE_LIST_TABLE_METHODS__;
           const createListDialogMethods = globalThis.__SC_V2_CREATE_LIST_DIALOG_METHODS__;
+          const buildCurrentPageContext = () => {
+            const location = readPageLocation();
+
+            return Object.assign({}, location, {
+              query: location.query || {},
+              mode: resolvePageMode(location.query || {}),
+              formScope: null,
+            });
+          };
 
           const pickTotal = (payload, depth = 0) => {
             if (depth > 4 || payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
@@ -236,6 +247,8 @@
                   forms: buildFormsContext(vm, forms),
                   filters: resolveFiltersForTable(vm, resolveActionTableKey(actionConfig)),
                   dialogs: vm.dialogForms || {},
+                  query: buildCurrentPageContext().query,
+                  page: buildCurrentPageContext(),
                   selection: typeof vm.getTableSelection === 'function'
                     ? vm.getTableSelection(resolveActionTableKey(actionConfig))
                     : [],

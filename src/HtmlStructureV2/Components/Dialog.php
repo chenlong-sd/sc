@@ -527,7 +527,8 @@ final class Dialog implements Renderable, EventAware
      * V2 子页面会自动暴露 `"__SC_V2_PAGE__.submit"`，并兼容映射到 `"VueApp.submit"`；
      * 可再用 iframeSubmitHandler() 改成别的方法路径；
      * 若未显式设置 height()，默认高度为 70vh。
-     * 可用字段与 component() 的 props 解析上下文一致。
+     * 可用字段与 component() 的 props 解析上下文一致；
+     * 当前页地址可直接读取 `@page.url` / `@page.path`。
      *
      * @param string $url iframe 页面地址。
      * @param array|string|JsExpression $query iframe 查询参数。

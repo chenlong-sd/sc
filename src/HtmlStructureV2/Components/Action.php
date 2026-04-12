@@ -176,27 +176,26 @@ class Action implements
      */
     public static function resetForm(string $label = '重置', ?string $scope = null): self
     {
-        return self::custom($label, Events::resetForm($scope))
+        return self::custom($label)
+            ->onClick(Events::resetForm($scope))
             ->type('default')
             ->icon('RefreshLeft');
     }
 
     /**
-     * 创建一个自定义动作，可绑定 JS 表达式或结构化事件。
-     * 若传 JS，handler 使用点击事件上下文，可读取 row / tableKey / listKey / filters /
-     * forms / dialogs / selection / vm；若动作渲染在 dialog footer 等弹窗上下文中，
-     * 还可直接读取当前 dialog 的 dialog / dialogKey / row / tableKey。
+     * 创建一个自定义动作。
+     * 点击逻辑请继续链式调用 onClick() / on('click', ...) 配置，
+     * 这样使用侧在 IDE 中能更直观看到“先创建动作，再配置点击行为”。
      *
      * @param string $label 按钮显示文案。
-     * @param string|JsExpression|StructuredEventInterface $handler 点击处理逻辑。
      * @return self 自定义动作实例。
      *
      * 示例：
-     * `Action::custom('查看', '({ row, vm }) => vm.openDetail?.(row)')`
+     * `Action::custom('查看')->onClick('({ row, vm }) => vm.openDetail?.(row)')`
      */
-    public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): self
+    public static function custom(string $label): self
     {
-        return (new self($label, ActionIntent::CUSTOM))->onClick($handler);
+        return new self($label, ActionIntent::CUSTOM);
     }
 
     /**

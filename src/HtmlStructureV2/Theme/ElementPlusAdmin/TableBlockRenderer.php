@@ -26,7 +26,7 @@ final class TableBlockRenderer
             $block->append($this->tableRenderer->renderStatusToggleBar($table, $bindings));
         }
 
-        if ($table->getToolbarActions() || $table->useExport() || $table->useSettings()) {
+        if ($table->getToolbarLeftActions() || $table->getToolbarRightActions() || $table->useTrash() || $table->useExport() || $table->useSettings()) {
             $block->append($this->tableRenderer->renderToolbar($table, $bindings, $renderContext));
         }
 

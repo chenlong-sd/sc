@@ -17,10 +17,12 @@ use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\AppliesRenderableAttributes;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class FieldRenderer
 {
+    use AppliesRenderableAttributes;
     use BuildsJsExpressions;
     use EncodesJsValues;
 
@@ -334,6 +336,8 @@ final class FieldRenderer
 
     private function applyFieldProps(AbstractHtmlElement $component, Field $field): void
     {
+        $props = [];
+
         foreach ($field->getProps() as $attr => $value) {
             if ($field->type() === FieldType::TEXTAREA && $attr === 'rows') {
                 continue;
@@ -342,8 +346,10 @@ final class FieldRenderer
                 continue;
             }
 
-            $component->setAttr($attr, $this->normalizeRenderableAttributeValue($attr, $value));
+            $props[$attr] = $value;
         }
+
+        $this->applyRenderableAttributes($component, $props);
     }
 
     private function applyDisabledState(AbstractHtmlElement $component, Field $field, ?string $disabledWhen): void

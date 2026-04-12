@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Components\Block;
 
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasElementEvents;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
@@ -10,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 final class Title implements Renderable, EventAware
 {
     use HasElementEvents;
+    use HasRenderAttributes;
     use RendersWithTheme;
 
     private ?string $description = null;

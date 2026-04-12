@@ -23,6 +23,7 @@
             isColumnTruthy,
             isObject,
             isSameValue,
+            readPageQuery,
             resolveContextValue,
             resolveColumnDisplayValue,
             resolveColumnMappingLabel,
@@ -231,18 +232,52 @@
           };
           const resolveTableExportColumns = (vm, tableKey, tableCfg = {}) => {
             const source = Array.isArray(tableCfg?.export?.columns) ? tableCfg.export.columns : [];
+            const settings = typeof vm?.getTableSettings === 'function'
+              ? vm.getTableSettings(tableKey)
+              : null;
+            const settingsMap = new Map(
+              (Array.isArray(settings?.columns) ? settings.columns : [])
+                .filter((item) => isObject(item) && typeof item.key === 'string' && item.key !== '')
+                .map((item) => [String(item.key), item])
+            );
 
-            return source.filter((item) => {
-              if (!isObject(item) || typeof item.key !== 'string' || item.key === '') {
-                return false;
-              }
+            return source
+              .map((item, index) => {
+                if (!isObject(item) || typeof item.key !== 'string' || item.key === '') {
+                  return null;
+                }
 
-              if (item.respectVisibility !== true || typeof vm?.getTableColumnVisible !== 'function') {
-                return true;
-              }
+                const key = String(item.key);
+                const setting = settingsMap.get(key) || null;
+                if (setting) {
+                  if (setting.export === false) {
+                    return null;
+                  }
+                } else if (item.respectVisibility === true && typeof vm?.getTableColumnVisible === 'function') {
+                  if (vm.getTableColumnVisible(tableKey, key) === false) {
+                    return null;
+                  }
+                }
 
-              return vm.getTableColumnVisible(tableKey, item.key) !== false;
-            });
+                return Object.assign({}, item, {
+                  key,
+                  sort: normalizeTableExportSort(setting?.exportSort, normalizeTableExportSort(item.sort)),
+                  _index: index,
+                });
+              })
+              .filter(Boolean)
+              .sort((left, right) => {
+                const leftSort = normalizeTableExportSort(left?.sort, left?._index ?? 0);
+                const rightSort = normalizeTableExportSort(right?.sort, right?._index ?? 0);
+
+                return leftSort - rightSort || ((left?._index ?? 0) - (right?._index ?? 0));
+              })
+              .map((item) => {
+                const nextItem = Object.assign({}, item);
+                delete nextItem._index;
+
+                return nextItem;
+              });
           };
           const buildRemoteTableRequest = (
             vm,
@@ -410,6 +445,39 @@
 
             return getCurrentPageQueryString();
           };
+          const resolveTableTrashQueryKey = (tableCfg = {}) => {
+            const queryKey = typeof tableCfg?.trash?.queryKey === 'string' ? tableCfg.trash.queryKey.trim() : '';
+            return queryKey !== '' ? queryKey : 'is_delete';
+          };
+          const normalizeComparableValue = (value) => {
+            if (value === null || value === undefined) {
+              return '';
+            }
+
+            return String(value).trim().toLowerCase();
+          };
+          const isTableTrashActive = (vm, tableKey = null, tableCfg = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            const resolvedTableCfg = tableCfg || (typeof vm?.getTableConfig === 'function' ? vm.getTableConfig(resolvedKey) : null);
+            if (resolvedTableCfg?.trash?.enabled !== true) {
+              return false;
+            }
+
+            const queryKey = resolveTableTrashQueryKey(resolvedTableCfg);
+            const query = typeof vm?.getPageQuery === 'function'
+              ? vm.getPageQuery()
+              : readPageQuery();
+            const currentValue = query?.[queryKey];
+            const expectedValue = normalizeComparableValue(resolvedTableCfg?.trash?.queryValue ?? 1);
+
+            if (Array.isArray(currentValue)) {
+              return currentValue.some((item) => normalizeComparableValue(item) === expectedValue);
+            }
+
+            return normalizeComparableValue(currentValue) === expectedValue;
+          };
           const normalizeTableWidth = (value, fallback = null) => {
             if (value === '' || value === null || value === undefined) {
               return fallback ?? null;
@@ -441,12 +509,38 @@
 
             return fallback ?? null;
           };
+          const normalizeTableExportSort = (value, fallback = null) => {
+            if (value === '' || value === null || value === undefined) {
+              return fallback ?? null;
+            }
+
+            const normalized = Number(value);
+            if (Number.isFinite(normalized)) {
+              return normalized;
+            }
+
+            return fallback ?? null;
+          };
+          const normalizeTableSettingsSortMode = (value, fallback = 'display') => {
+            const normalized = typeof value === 'string' ? value.trim() : '';
+
+            return normalized === 'export' || normalized === 'display'
+              ? normalized
+              : (fallback === 'export' ? 'export' : 'display');
+          };
           const normalizeTableSettingColumn = (column = {}, defaults = {}) => {
             const source = isObject(column) ? column : {};
             const fallback = isObject(defaults) ? defaults : {};
             const key = typeof fallback.key === 'string' && fallback.key !== ''
               ? fallback.key
               : (typeof source.key === 'string' ? source.key : '');
+            const fallbackExport = fallback.export !== false;
+            const hasSourceExport = typeof source.export === 'boolean';
+            const exportEnabled = hasSourceExport
+              ? source.export
+              : (fallbackExport === false
+                ? false
+                : (typeof source.show === 'boolean' ? source.show : true));
 
             return {
               key,
@@ -459,6 +553,8 @@
               width: normalizeTableWidth(source.width, fallback.width ?? null),
               fixed: normalizeTableFixed(source.fixed, normalizeTableFixed(fallback.fixed)),
               align: normalizeTableAlign(source.align, normalizeTableAlign(fallback.align)),
+              export: exportEnabled,
+              exportSort: normalizeTableExportSort(source.exportSort, normalizeTableExportSort(fallback.exportSort)),
             };
           };
           const normalizeTableSettingsState = (settings = {}, defaults = {}) => {
@@ -466,20 +562,60 @@
             const fallback = isObject(defaults) ? defaults : {};
             const fallbackColumns = Array.isArray(fallback.columns) ? fallback.columns : [];
             const persistedColumns = Array.isArray(source.columns) ? source.columns : [];
+            const fallbackMap = new Map(
+              fallbackColumns
+                .filter((item) => isObject(item) && typeof item.key === 'string' && item.key !== '')
+                .map((item) => [String(item.key), item])
+            );
             const persistedMap = new Map(
               persistedColumns
                 .filter((item) => isObject(item) && typeof item.key === 'string' && item.key !== '')
                 .map((item) => [String(item.key), item])
             );
+            const orderedKeys = [];
+
+            persistedColumns.forEach((item) => {
+              const key = typeof item?.key === 'string' ? String(item.key) : '';
+              if (key !== '' && fallbackMap.has(key) && !orderedKeys.includes(key)) {
+                orderedKeys.push(key);
+              }
+            });
+            fallbackColumns.forEach((item) => {
+              const key = typeof item?.key === 'string' ? String(item.key) : '';
+              if (key !== '' && !orderedKeys.includes(key)) {
+                orderedKeys.push(key);
+              }
+            });
 
             return {
               enabled: (fallback.enabled === true),
               stripe: typeof source.stripe === 'boolean' ? source.stripe : (fallback.stripe !== false),
               border: typeof source.border === 'boolean' ? source.border : (fallback.border !== false),
-              columns: fallbackColumns
-                .map((item) => normalizeTableSettingColumn(persistedMap.get(String(item?.key || '')) || item, item))
+              columns: orderedKeys
+                .map((key) => normalizeTableSettingColumn(
+                  persistedMap.get(key) || fallbackMap.get(key) || {},
+                  fallbackMap.get(key) || {}
+                ))
                 .filter((item) => item.key !== '')
             };
+          };
+          const orderTableSettingColumns = (columns = [], sortMode = 'display') => {
+            const list = Array.isArray(columns) ? columns : [];
+            const mode = normalizeTableSettingsSortMode(sortMode, 'display');
+            const decorated = list.map((item, index) => ({
+              item,
+              index,
+              exportSort: normalizeTableExportSort(item?.exportSort, index),
+            }));
+
+            if (mode === 'export') {
+              decorated.sort((left, right) => (
+                left.exportSort - right.exportSort
+                || (left.index - right.index)
+              ));
+            }
+
+            return decorated.map((entry) => entry.item);
           };
           const ensureGlobalSelectionStore = () => {
             const host = typeof globalThis !== 'undefined'
@@ -739,6 +875,53 @@
               || tableEl?.querySelector?.('table > tbody')
               || null;
           };
+          const ensureTableSettingsSortableStore = (vm) => {
+            if (!isObject(vm.__scV2TableSettingsSortables)) {
+              vm.__scV2TableSettingsSortables = {};
+            }
+
+            return vm.__scV2TableSettingsSortables;
+          };
+          const destroyTableSettingsSortable = (vm, tableKey = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            if (typeof resolvedKey !== 'string' || resolvedKey === '') {
+              return null;
+            }
+
+            const store = ensureTableSettingsSortableStore(vm);
+            const sortable = store[resolvedKey];
+            if (sortable && typeof sortable.destroy === 'function') {
+              sortable.destroy();
+            }
+
+            delete store[resolvedKey];
+
+            return null;
+          };
+          const getTableSettingsBodyElement = (vm, tableKey = null, mode = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            if (typeof resolvedKey !== 'string' || resolvedKey === '' || typeof document === 'undefined') {
+              return null;
+            }
+
+            const resolvedMode = normalizeTableSettingsSortMode(
+              mode,
+              normalizeTableSettingsSortMode(vm?.getTableState?.(resolvedKey)?.settingsTab, 'display')
+            );
+            const tables = Array.from(document.querySelectorAll('[data-sc-table-settings-key]'));
+            const target = tables.find((element) => (
+              String(element?.dataset?.scTableSettingsKey || '').trim() === resolvedKey
+              && String(element?.dataset?.scTableSettingsMode || '').trim() === resolvedMode
+            )) || null;
+
+            return target?.querySelector?.('.el-table__body-wrapper tbody')
+              || target?.querySelector?.('table > tbody')
+              || null;
+          };
 
           return {
             ensureTableConfigStore(){
@@ -789,6 +972,12 @@
             },
             getTableSelection(tableKey = null){
               return this.getTableState(tableKey)?.selection || [];
+            },
+            isTableTrashMode(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+
+              return isTableTrashActive(this, resolvedKey, tableCfg);
             },
             getTableStatusToggleValue(tableKey = null, name = ''){
               const resolvedKey = this.resolveTableKey(tableKey);
@@ -891,6 +1080,28 @@
 
               return this.ensureTableSettingsLoaded(tableKey) || state.settings || null;
             },
+            getTableRenderColumnKeys(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const settings = this.getTableSettings(resolvedKey);
+              const columns = Array.isArray(settings?.columns)
+                ? settings.columns
+                : (Array.isArray(this.getTableConfig(resolvedKey)?.settings?.columns) ? this.getTableConfig(resolvedKey).settings.columns : []);
+
+              return columns
+                .map((item) => (typeof item?.key === 'string' ? String(item.key) : ''))
+                .filter((key, index, list) => key !== '' && list.indexOf(key) === index);
+            },
+            getTableSettingsDraftColumns(tableKey = null, sortMode = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              const columns = Array.isArray(state?.settingsDraft?.columns) ? state.settingsDraft.columns : [];
+              const currentMode = normalizeTableSettingsSortMode(
+                sortMode,
+                normalizeTableSettingsSortMode(state?.settingsTab, 'display')
+              );
+
+              return orderTableSettingColumns(columns, currentMode);
+            },
             getTableColumnSetting(tableKey = null, columnKey = ''){
               const settings = this.getTableSettings(tableKey);
               if (typeof columnKey !== 'string' || columnKey === '' || !Array.isArray(settings?.columns)) {
@@ -932,6 +1143,96 @@
 
               return typeof settings?.border === 'boolean' ? settings.border : fallback;
             },
+            moveTableSettingsColumn(tableKey = null, oldIndex = -1, newIndex = -1){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              const columns = Array.isArray(state?.settingsDraft?.columns) ? state.settingsDraft.columns : null;
+              const sortMode = normalizeTableSettingsSortMode(state?.settingsTab, 'display');
+              const from = Number(oldIndex);
+              const to = Number(newIndex);
+              if (!columns || !Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from === to) {
+                return columns || [];
+              }
+              if (from >= columns.length || to >= columns.length) {
+                return columns;
+              }
+
+              if (sortMode === 'export') {
+                const ordered = orderTableSettingColumns(columns, 'export').slice();
+                const moved = ordered.splice(from, 1)[0];
+                if (!moved) {
+                  return columns;
+                }
+
+                ordered.splice(to, 0, moved);
+                ordered.forEach((item, index) => {
+                  if (isObject(item)) {
+                    item.exportSort = index + 1;
+                  }
+                });
+
+                return columns;
+              }
+
+              const moved = columns.splice(from, 1)[0];
+              if (!moved) {
+                return columns;
+              }
+
+              columns.splice(to, 0, moved);
+
+              return columns;
+            },
+            refreshTableSettingsSort(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              destroyTableSettingsSortable(this, resolvedKey);
+
+              if (!state || state.settingsVisible !== true || typeof Sortable !== 'function') {
+                return null;
+              }
+
+              const columns = Array.isArray(state.settingsDraft?.columns) ? state.settingsDraft.columns : [];
+              const sortMode = normalizeTableSettingsSortMode(state?.settingsTab, 'display');
+              if (columns.length <= 1) {
+                return null;
+              }
+
+              const tbody = getTableSettingsBodyElement(this, resolvedKey, sortMode);
+              if (!tbody) {
+                return null;
+              }
+
+              const sortable = new Sortable(tbody, {
+                animation: 150,
+                handle: '.sc-v2-table-settings-drag-handle',
+                onEnd: (event) => {
+                  const oldIndex = Number(event?.oldIndex);
+                  const newIndex = Number(event?.newIndex);
+                  if (!Number.isInteger(oldIndex) || !Number.isInteger(newIndex) || oldIndex === newIndex) {
+                    return;
+                  }
+
+                  this.moveTableSettingsColumn(resolvedKey, oldIndex, newIndex);
+                },
+              });
+
+              ensureTableSettingsSortableStore(this)[resolvedKey] = sortable;
+
+              return sortable;
+            },
+            syncTableSettingsSort(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              if (!resolvedKey) {
+                return Promise.resolve(null);
+              }
+
+              if (typeof this.$nextTick === 'function') {
+                return this.$nextTick().then(() => this.refreshTableSettingsSort(resolvedKey));
+              }
+
+              return Promise.resolve(this.refreshTableSettingsSort(resolvedKey));
+            },
             openTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const state = this.getTableState(resolvedKey);
@@ -941,8 +1242,16 @@
               }
 
               state.settingsDraft = clone(settings);
+              state.settingsTab = 'display';
               state.settingsVisible = true;
+              if (typeof this.$nextTick === 'function') {
+                return this.$nextTick().then(() => {
+                  this.refreshTableSettingsSort(resolvedKey);
+                  return state.settingsDraft;
+                });
+              }
 
+              this.refreshTableSettingsSort(resolvedKey);
               return state.settingsDraft;
             },
             closeTableSettings(tableKey = null){
@@ -952,8 +1261,10 @@
                 return null;
               }
 
+              destroyTableSettingsSortable(this, resolvedKey);
               state.settingsVisible = false;
               state.settingsDraft = clone(state.settings || state.settingsDefault || {});
+              state.settingsTab = 'display';
 
               return state.settingsDraft;
             },
@@ -972,8 +1283,8 @@
               }
 
               state.settingsDraft = clone(state.settingsDefault || {});
-
-              return state.settingsDraft;
+              state.settingsTab = 'display';
+              return this.syncTableSettingsSort(resolvedKey).then(() => state.settingsDraft);
             },
             persistTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
@@ -1000,6 +1311,8 @@
                     width: item.width ?? null,
                     fixed: item.fixed ?? null,
                     align: item.align ?? null,
+                    export: item.export !== false,
+                    exportSort: normalizeTableExportSort(item.exportSort),
                   })),
                 }));
 
@@ -1129,6 +1442,7 @@
                 return null;
               }
 
+              destroyTableSettingsSortable(this, resolvedKey);
               state.settings = normalizeTableSettingsState(
                 state.settingsDraft || {},
                 state.settingsDefault || {}
@@ -1636,6 +1950,67 @@
                 lockScroll: false
               })
                 .then(() => performDelete());
+            },
+            recoverTableSelection(tableKey = null, confirmText = '确认恢复当前选中数据？'){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              const deleteKey = tableCfg?.deleteKey || 'id';
+              const selection = Array.isArray(state?.selection) ? state.selection : [];
+              const ids = selection
+                .map((item) => deleteKey ? item?.[deleteKey] : undefined)
+                .filter((value) => value !== undefined && value !== null && value !== '');
+              const recoverUrl = resolveContextValue(
+                tableCfg?.trash?.recoverUrl || '',
+                buildTableEventContext(this, resolvedKey, tableCfg, state, {
+                  selection,
+                  ids,
+                  trashMode: isTableTrashActive(this, resolvedKey, tableCfg),
+                })
+              );
+
+              if (!resolvedKey || typeof recoverUrl !== 'string' || recoverUrl === '') {
+                return Promise.resolve(null);
+              }
+
+              if (ids.length <= 0) {
+                ElementPlus.ElMessage.error('请选择要恢复的数据');
+                return Promise.resolve(null);
+              }
+
+              const performRecover = () => {
+                return Promise.resolve()
+                  .then(() => axios.post(recoverUrl, { ids }))
+                  .then((response) => {
+                    const payload = ensureSuccess(extractPayload(response), '恢复失败');
+                    if ((tableCfg.pagination?.enabled !== false) && (state?.rows?.length || 0) <= 1 && (state?.page || 1) > 1) {
+                      state.page -= 1;
+                    }
+                    ElementPlus.ElMessage.success(resolveMessage(payload, '恢复成功'));
+
+                    return this.loadTableData(resolvedKey);
+                  })
+                  .catch((error) => {
+                    if (error === 'cancel' || error === 'close') {
+                      return null;
+                    }
+
+                    ElementPlus.ElMessage.error(
+                      error?.message || resolveMessage(error?.response?.data, '恢复失败')
+                    );
+
+                    return null;
+                  });
+              };
+
+              if (!confirmText) {
+                return performRecover();
+              }
+
+              return ElementPlus.ElMessageBox.confirm(confirmText, '提示', {
+                type: 'warning',
+                lockScroll: false
+              }).then(() => performRecover());
             }
           };
         };

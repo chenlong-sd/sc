@@ -35,9 +35,15 @@ final class Table implements Renderable, EventAware
         'deleteSuccess',
         'deleteFail',
     ];
+    private const DEFAULT_TRASH_DIALOG_TITLE = '回收站';
+    private const DEFAULT_TRASH_DIALOG_WIDTH = '90%';
+    private const DEFAULT_TRASH_DIALOG_HEIGHT = '90vh';
+    private const DEFAULT_TRASH_QUERY_KEY = 'is_delete';
+    private const DEFAULT_TRASH_QUERY_VALUE = 1;
 
     private array $columns = [];
-    private array $toolbarActions = [];
+    private array $toolbarLeftActions = [];
+    private array $toolbarRightActions = [];
     private array $rowActions = [];
     private ?DataSourceInterface $dataSource = null;
     private bool $pagination = true;
@@ -75,6 +81,9 @@ final class Table implements Renderable, EventAware
     private array $exportQuery = [
         'is_export' => 1,
     ];
+    private bool $trashEnabled = false;
+    private ?string $trashRecoverUrl = null;
+    private ?Dialog $trashDialog = null;
 
     public function __construct(
         private readonly string $key
@@ -112,7 +121,8 @@ final class Table implements Renderable, EventAware
     }
 
     /**
-     * 设置表格工具栏动作。
+     * 设置表格工具栏左侧动作。
+     * 这是兼容旧写法的默认入口，等价于 toolbarLeft()。
      *
      * @param Action ...$actions 工具栏动作。
      * @return self 当前表格实例。
@@ -122,7 +132,39 @@ final class Table implements Renderable, EventAware
      */
     public function toolbar(Action ...$actions): self
     {
-        $this->toolbarActions = array_merge($this->toolbarActions, $actions);
+        return $this->toolbarLeft(...$actions);
+    }
+
+    /**
+     * 追加表格工具栏左侧动作。
+     * 适合“新增 / 批量操作 / 主操作”这类放在左边的按钮。
+     *
+     * @param Action ...$actions 工具栏左侧动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->toolbarLeft(Actions::create()->dialog('qa-info-dialog'))`
+     */
+    public function toolbarLeft(Action ...$actions): self
+    {
+        $this->toolbarLeftActions = array_merge($this->toolbarLeftActions, $actions);
+
+        return $this;
+    }
+
+    /**
+     * 追加表格工具栏右侧动作。
+     * 适合“辅助操作 / 次级工具”这类放在右边的按钮；导出、列设置等内置工具也会继续展示在右侧。
+     *
+     * @param Action ...$actions 工具栏右侧动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->toolbarRight(Actions::refresh('刷新'))`
+     */
+    public function toolbarRight(Action ...$actions): self
+    {
+        $this->toolbarRightActions = array_merge($this->toolbarRightActions, $actions);
 
         return $this;
     }
@@ -744,7 +786,10 @@ final class Table implements Renderable, EventAware
 
     /**
      * 控制是否启用原版风格的表格设置。
-     * 启用后会在工具栏右侧提供“列设置”，支持调整斑马纹、边框、列显示、宽度、固定和对齐，并持久化到本地。
+     * 启用后会在工具栏右侧提供“列设置”，支持拖动调整列顺序，
+     * 并通过“展示设置 / 导出设置”两个 tab 分别维护展示顺序和导出顺序；
+     * 当前激活的 tab 仅作为界面状态使用，不会写入持久化配置；
+     * 同时继续控制斑马纹、边框、列显示、导出、导出顺序、宽度、固定和对齐，并持久化到本地。
      *
      * @param bool $settings 是否启用表格设置，默认值为 true。
      * @return self 当前表格实例。
@@ -864,6 +909,59 @@ final class Table implements Renderable, EventAware
     }
 
     /**
+     * 开启表格回收站能力。
+     * 仅对远程数据表格生效；启用后会在工具栏右侧自动补一个“回收站”入口，
+     * 点击会以 iframe 弹窗打开当前页，并自动追加 `is_delete=1`；
+     * 进入回收站模式后，普通工具栏动作和行操作会隐藏，只保留刷新和恢复。
+     *
+     * @param string|null $recoverUrl 批量恢复接口地址；传 null 表示只开回收站查看，不提供恢复动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list')->trash('/admin/qa-info/recover')`
+     */
+    public function trash(?string $recoverUrl = null): self
+    {
+        $this->trashEnabled = true;
+        $this->trashRecoverUrl = $this->normalizeNullableString($recoverUrl);
+
+        return $this;
+    }
+
+    /**
+     * trash() 的兼容别名。
+     * 便于旧用法迁移时继续沿用 `enableTrash()` 命名。
+     *
+     * @param string|null $recoverUrl 批量恢复接口地址；传 null 表示只开回收站查看。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->enableTrash('/admin/qa-info/recover')`
+     */
+    public function enableTrash(?string $recoverUrl = null): self
+    {
+        return $this->trash($recoverUrl);
+    }
+
+    /**
+     * 单独设置回收站批量恢复接口。
+     * 调用后会自动视为启用回收站能力。
+     *
+     * @param string|null $recoverUrl 批量恢复接口地址；传 null 表示关闭恢复动作。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * `Tables::make('qa-info-table')->trash()->recoverUrl('/admin/qa-info/recover')`
+     */
+    public function recoverUrl(?string $recoverUrl): self
+    {
+        $this->trashEnabled = true;
+        $this->trashRecoverUrl = $this->normalizeNullableString($recoverUrl);
+
+        return $this;
+    }
+
+    /**
      * 绑定表格运行时事件。
      * 可用事件：loadBefore / loadSuccess / loadFail / pageChange / pageSizeChange / sortChange / selectionChange / dragSort / deleteSuccess / deleteFail。
      *
@@ -913,20 +1011,43 @@ final class Table implements Renderable, EventAware
         return $this->columns;
     }
 
+    /**
+     * 获取当前表格全部工具栏动作。
+     * 返回值会合并左侧和右侧两组动作，主要给兼容层和动作收集逻辑使用。
+     *
+     * @return Action[]
+     */
     public function getToolbarActions(): array
     {
-        return array_values(array_filter(
-            $this->toolbarActions,
-            static fn (Action $action): bool => $action->isAvailable()
+        return array_values(array_merge(
+            $this->getToolbarLeftActions(),
+            $this->getToolbarRightActions()
         ));
+    }
+
+    /**
+     * 获取当前表格工具栏左侧动作。
+     *
+     * @return Action[]
+     */
+    public function getToolbarLeftActions(): array
+    {
+        return $this->filterAvailableActions($this->toolbarLeftActions);
+    }
+
+    /**
+     * 获取当前表格工具栏右侧动作。
+     *
+     * @return Action[]
+     */
+    public function getToolbarRightActions(): array
+    {
+        return $this->filterAvailableActions($this->toolbarRightActions);
     }
 
     public function getRowActions(): array
     {
-        return array_values(array_filter(
-            $this->rowActions,
-            static fn (Action $action): bool => $action->isAvailable()
-        ));
+        return $this->filterAvailableActions($this->rowActions);
     }
 
     public function getDataSource(): ?DataSourceInterface
@@ -1002,6 +1123,56 @@ final class Table implements Renderable, EventAware
     public function getDeleteKey(): string
     {
         return $this->deleteKey;
+    }
+
+    public function useTrash(): bool
+    {
+        return $this->trashEnabled && $this->hasRemoteDataSource();
+    }
+
+    public function getTrashRecoverUrl(): ?string
+    {
+        return $this->trashRecoverUrl;
+    }
+
+    public function getTrashDialogKey(): string
+    {
+        return $this->key . '-trash-dialog';
+    }
+
+    public function getTrashDialog(): ?Dialog
+    {
+        if (!$this->useTrash()) {
+            return null;
+        }
+
+        if ($this->trashDialog instanceof Dialog) {
+            return $this->trashDialog;
+        }
+
+        return $this->trashDialog = Dialog::make($this->getTrashDialogKey(), self::DEFAULT_TRASH_DIALOG_TITLE)
+            ->width(self::DEFAULT_TRASH_DIALOG_WIDTH)
+            ->height(self::DEFAULT_TRASH_DIALOG_HEIGHT)
+            ->alignCenter()
+            ->iframe('@page.url', [
+                self::DEFAULT_TRASH_QUERY_KEY => self::DEFAULT_TRASH_QUERY_VALUE,
+            ])
+            ->iframeHost(false);
+    }
+
+    public function getTrashDialogTitle(): string
+    {
+        return self::DEFAULT_TRASH_DIALOG_TITLE;
+    }
+
+    public function getTrashQueryKey(): string
+    {
+        return self::DEFAULT_TRASH_QUERY_KEY;
+    }
+
+    public function getTrashQueryValue(): int
+    {
+        return self::DEFAULT_TRASH_QUERY_VALUE;
     }
 
     public function getRowActionColumnWidth(): ?int
@@ -1131,6 +1302,18 @@ final class Table implements Renderable, EventAware
         ];
     }
 
+    /**
+     * @param Action[] $actions
+     * @return Action[]
+     */
+    private function filterAvailableActions(array $actions): array
+    {
+        return array_values(array_filter(
+            $actions,
+            static fn (Action $action): bool => $action->isAvailable()
+        ));
+    }
+
     private function buildColumnSearchSchema(): array
     {
         $schema = [];
@@ -1239,5 +1422,12 @@ final class Table implements Renderable, EventAware
         $normalized = $normalized !== '' ? $normalized : 'export';
 
         return $normalized . date('Y-m-d');
+    }
+
+    private function normalizeNullableString(?string $value): ?string
+    {
+        $normalized = is_string($value) ? trim($value) : null;
+
+        return $normalized !== '' ? $normalized : null;
     }
 }

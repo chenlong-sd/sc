@@ -5,7 +5,6 @@ namespace Sc\Util\HtmlStructureV2\Dsl;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\DialogAction;
 use Sc\Util\HtmlStructureV2\Components\RequestAction;
-use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 final class Actions
@@ -140,6 +139,44 @@ final class Actions
     }
 
     /**
+     * 创建一个带导入面板的导入动作。
+     * 默认按钮类型为 primary，图标为 Upload；
+     * 点击后会打开导入面板，默认支持：
+     * - Excel / CSV 文件解析
+     * - 模板下载
+     * - JSON 导入
+     * - AI 测试数据提示词复制
+     * - 导入预览和结果展示
+     *
+     * 最终仍按当前请求动作配置提交到后端。
+     * 默认会自动附带：
+     * - `"rows"`: 解析后的数据行
+     * - `"import_column_info"`: 当前导入列配置
+     *
+     * 可继续链式配置：
+     * - `post()/request()`：提交地址
+     * - `importColumns([...])`：导入表头与字段映射
+     * - `importColumnsFromForm()` / `importColumnsFromPage()` / `importColumnsFromDialog()`：从现有 V2 表单声明自动推导导入列
+     * - `importDialogTitle()` / `importTemplateFileName()`：调整导入面板标题和模板文件名
+     * - `enableImportJson()` / `enableImportAiPrompt()` / `importAiPromptText()`：控制 JSON 导入和 AI 提示词能力
+     * - `importRowsKey()` / `importColumnInfoKey()`：调整默认请求字段名
+     * - `payload()`：完全自定义请求体，JS/context 中可读取 `import.rows` / `import.headers` / `import.fileName`
+     * - `successMessage()` / `reloadTable()`：导入成功后的反馈和刷新
+     *
+     * @param string $label 按钮显示文案，默认值为“导入”。
+     * @return RequestAction 导入动作实例。
+     *
+     * 示例：
+     * `Actions::import()->post('/admin/qa-info/import')->importColumns(['name' => '名称'])`
+     */
+    public static function import(string $label = '导入'): RequestAction
+    {
+        return RequestAction::make($label)
+            ->icon('Upload')
+            ->enableImport();
+    }
+
+    /**
      * 创建“提交弹窗数据”动作。
      * 目标为 form 弹窗时直接提交表单；
      * 目标为 iframe 弹窗时，会先调用子页面提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
@@ -171,7 +208,8 @@ final class Actions
      */
     public static function back(string|JsExpression|null $url = null, string $label = '取消'): Action
     {
-        return Action::custom($label, Events::returnTo($url))
+        return Action::custom($label)
+            ->onClick(Events::returnTo($url))
             ->type('default');
     }
 
@@ -191,7 +229,8 @@ final class Actions
     }
 
     /**
-     * 创建一个自定义动作，可绑定 JS 表达式或结构化事件。
+     * 创建一个自定义动作。
+     * 点击逻辑请继续链式调用 onClick() / on('click', ...) 配置；
      * 若传 JS，handler 统一只接收一个 context 对象；
      * 常用可读字段与 Action::on('click', ...) 一致，例如 row / tableKey / listKey /
      * filters / forms / dialogs / selection / vm，以及目标弹窗上下文下的 dialog / dialogKey。
@@ -199,14 +238,13 @@ final class Actions
      * 默认按钮类型为 primary。
      *
      * @param string $label 按钮显示文案。
-     * @param string|JsExpression|StructuredEventInterface $handler 点击处理逻辑，可传 JS 表达式或结构化事件对象。
      * @return Action 自定义动作实例。
      *
      * 示例：
-     * `Actions::custom('查看日志', '({ row, vm }) => vm.openLogDialog?.(row)')`
+     * `Actions::custom('查看日志')->onClick('({ row, vm }) => vm.openLogDialog?.(row)')`
      */
-    public static function custom(string $label, string|JsExpression|StructuredEventInterface $handler): Action
+    public static function custom(string $label): Action
     {
-        return Action::custom($label, $handler);
+        return Action::custom($label);
     }
 }

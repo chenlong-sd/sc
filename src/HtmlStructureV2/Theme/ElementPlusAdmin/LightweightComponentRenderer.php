@@ -18,11 +18,13 @@ use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\RenderableContainer;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\AppliesRenderableAttributes;
 use Sc\Util\HtmlStructureV2\Support\ResolvesClassMappedMethod;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class LightweightComponentRenderer
 {
+    use AppliesRenderableAttributes;
     use EncodesJsValues;
     use ResolvesClassMappedMethod;
 
@@ -89,9 +91,12 @@ final class LightweightComponentRenderer
     {
         return $this->appendRenderedChildren(
             $this->applyComponentEvents(
-                El::double('div')
-                    ->addClass('sc-v2-stack')
-                    ->setAttr('style', sprintf('gap:%s', $stack->getGap())),
+                $this->applyComponentRootAttributes(
+                    El::double('div')
+                        ->addClass('sc-v2-stack')
+                        ->setAttr('style', sprintf('gap:%s', $stack->getGap())),
+                    $stack
+                ),
                 $stack,
                 $eventContextExpression,
                 $context
@@ -110,16 +115,19 @@ final class LightweightComponentRenderer
     {
         return $this->appendRenderedChildren(
             $this->applyComponentEvents(
-                El::double('div')
-                    ->addClass('sc-v2-grid')
-                    ->setAttr(
-                        'style',
-                        sprintf(
-                            'grid-template-columns:repeat(%d,minmax(0,1fr));gap:%s',
-                            $grid->getColumns(),
-                            $grid->getGap()
-                        )
-                    ),
+                $this->applyComponentRootAttributes(
+                    El::double('div')
+                        ->addClass('sc-v2-grid')
+                        ->setAttr(
+                            'style',
+                            sprintf(
+                                'grid-template-columns:repeat(%d,minmax(0,1fr));gap:%s',
+                                $grid->getColumns(),
+                                $grid->getGap()
+                            )
+                        ),
+                    $grid
+                ),
                 $grid,
                 $eventContextExpression,
                 $context
@@ -137,7 +145,10 @@ final class LightweightComponentRenderer
     ): AbstractHtmlElement
     {
         $element = $this->applyComponentEvents(
-            $this->sectionCardFactory->make($card->getTitle() ?? ''),
+            $this->applyComponentRootAttributes(
+                $this->sectionCardFactory->make($card->getTitle() ?? ''),
+                $card
+            ),
             $card,
             $eventContextExpression,
             $context
@@ -159,7 +170,12 @@ final class LightweightComponentRenderer
             $element->append(El::double('p')->append($title->getDescription()));
         }
 
-        return $this->applyComponentEvents($element, $title, $eventContextExpression, $context);
+        return $this->applyComponentEvents(
+            $this->applyComponentRootAttributes($element, $title),
+            $title,
+            $eventContextExpression,
+            $context
+        );
     }
 
     private function renderBlockDivider(
@@ -174,7 +190,12 @@ final class LightweightComponentRenderer
             $element->append($divider->text());
         }
 
-        return $this->applyComponentEvents($element, $divider, $eventContextExpression, $context);
+        return $this->applyComponentEvents(
+            $this->applyComponentRootAttributes($element, $divider),
+            $divider,
+            $eventContextExpression,
+            $context
+        );
     }
 
     private function renderBlockText(
@@ -188,7 +209,10 @@ final class LightweightComponentRenderer
             : 'sc-v2-block-text';
 
         return $this->applyComponentEvents(
-            El::double('p')->addClass($class)->append($text->content()),
+            $this->applyComponentRootAttributes(
+                El::double('p')->addClass($class)->append($text->content()),
+                $text
+            ),
             $text,
             $eventContextExpression,
             $context
@@ -201,13 +225,21 @@ final class LightweightComponentRenderer
         ?string $eventContextExpression = null
     ): AbstractHtmlElement
     {
-        return $this->applyComponentEvents(El::double('el-alert')->setAttrs(array_filter([
-            'title' => $alert->title(),
-            'description' => $alert->description(),
-            'type' => $alert->getType(),
-            'show-icon' => '',
-            ':closable' => 'false',
-        ], static fn(mixed $value): bool => $value !== null)), $alert, $eventContextExpression, $context);
+        return $this->applyComponentEvents(
+            $this->applyComponentRootAttributes(
+                El::double('el-alert')->setAttrs(array_filter([
+                    'title' => $alert->title(),
+                    'description' => $alert->description(),
+                    'type' => $alert->getType(),
+                    'show-icon' => '',
+                    ':closable' => 'false',
+                ], static fn(mixed $value): bool => $value !== null)),
+                $alert
+            ),
+            $alert,
+            $eventContextExpression,
+            $context
+        );
     }
 
     private function renderBlockButton(
@@ -216,12 +248,15 @@ final class LightweightComponentRenderer
         ?string $eventContextExpression = null
     ): AbstractHtmlElement
     {
-        $element = El::double('el-button')->setAttrs(array_filter([
-            'type' => $button->buttonType(),
-            'size' => $button->buttonSize(),
-            'plain' => $button->isPlain() ? '' : null,
-            'link' => $button->isLink() ? '' : null,
-        ], static fn(mixed $value): bool => $value !== null));
+        $element = $this->applyComponentRootAttributes(
+            El::double('el-button')->setAttrs(array_filter([
+                'type' => $button->buttonType(),
+                'size' => $button->buttonSize(),
+                'plain' => $button->isPlain() ? '' : null,
+                'link' => $button->isLink() ? '' : null,
+            ], static fn(mixed $value): bool => $value !== null)),
+            $button
+        );
         $element->append($button->label());
 
         return $this->applyComponentEvents($element, $button, $eventContextExpression, $context);
@@ -233,10 +268,13 @@ final class LightweightComponentRenderer
         ?string $eventContextExpression = null
     ): AbstractHtmlElement
     {
-        $element = El::double('el-descriptions')->setAttrs([
-            ':column' => (string) $descriptions->getColumns(),
-            'border' => '',
-        ]);
+        $element = $this->applyComponentRootAttributes(
+            El::double('el-descriptions')->setAttrs([
+                ':column' => (string) $descriptions->getColumns(),
+                'border' => '',
+            ]),
+            $descriptions
+        );
 
         if ($descriptions->getTitle()) {
             $element->setAttr('title', $descriptions->getTitle());
@@ -308,6 +346,18 @@ final class LightweightComponentRenderer
         }
 
         return $element;
+    }
+
+    private function applyComponentRootAttributes(AbstractHtmlElement $element, object $component): AbstractHtmlElement
+    {
+        if (!method_exists($component, 'getRenderAttributes')) {
+            return $element;
+        }
+
+        /** @var array<string, mixed> $attrs */
+        $attrs = $component->getRenderAttributes();
+
+        return $this->applyRenderableAttributes($element, $attrs);
     }
 
     private function resolveRendererMethod(Renderable $component): ?string

@@ -13,6 +13,7 @@
             makeRequest,
             postDialogHostMessage,
             pickRows,
+            readPageLocation,
             readPageQuery,
             registerElementPlusIcons,
             registerScV2Components,
@@ -164,6 +165,21 @@
           const createSimpleFormMethods = globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__;
           const createSimpleDialogMethods = globalThis.__SC_V2_CREATE_SIMPLE_DIALOG_METHODS__;
           const createSimpleTableMethods = globalThis.__SC_V2_CREATE_SIMPLE_TABLE_METHODS__;
+          const buildCurrentPageContext = (vm) => {
+            const location = readPageLocation();
+            const query = typeof vm?.getPageQuery === 'function'
+              ? vm.getPageQuery()
+              : clone(initialPageQuery);
+            const mode = typeof vm?.resolvePageMode === 'function'
+              ? vm.resolvePageMode()
+              : resolvePageMode(query);
+
+            return Object.assign({}, location, {
+              query,
+              mode,
+              formScope: null,
+            });
+          };
           const app = Vue.createApp({
             data(){
               return Object.assign({
@@ -207,11 +223,7 @@
                   forms: buildFormsContext(vm, forms),
                   dialogs: vm.dialogForms || {},
                   query: typeof vm.getPageQuery === 'function' ? vm.getPageQuery() : clone(initialPageQuery),
-                  page: {
-                    query: typeof vm.getPageQuery === 'function' ? vm.getPageQuery() : clone(initialPageQuery),
-                    mode: typeof vm.resolvePageMode === 'function' ? vm.resolvePageMode() : resolvePageMode(initialPageQuery),
-                    formScope: null,
-                  },
+                  page: buildCurrentPageContext(vm),
                   selection: typeof vm.getTableSelection === 'function'
                     ? vm.getTableSelection(actionConfig?.tableKey || null)
                     : [],

@@ -69,8 +69,12 @@ final class ListMetadataProvider implements MetadataProviderInterface
         $table = $component->getTable();
         if ($table !== null) {
             $collections[] = new ManagedActionCollection(
-                $table->getToolbarActions(),
-                sprintf('list [%s] toolbar', $component->key())
+                $table->getToolbarLeftActions(),
+                sprintf('list [%s] toolbar left', $component->key())
+            );
+            $collections[] = new ManagedActionCollection(
+                $table->getToolbarRightActions(),
+                sprintf('list [%s] toolbar right', $component->key())
             );
             $collections[] = new ManagedActionCollection(
                 $table->getRowActions(),

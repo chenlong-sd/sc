@@ -183,6 +183,26 @@
 
             return output;
           };
+          const readPageLocation = (locationLike = null) => {
+            const source = locationLike && typeof locationLike === 'object'
+              ? locationLike
+              : (typeof window !== 'undefined' ? window.location : null);
+            const href = typeof source?.href === 'string' ? source.href : '';
+            const pathname = typeof source?.pathname === 'string' ? source.pathname : '';
+            const search = typeof source?.search === 'string' ? source.search : '';
+            const hash = typeof source?.hash === 'string' ? source.hash : '';
+            const query = readPageQuery(search);
+
+            return {
+              url: href,
+              href,
+              path: pathname,
+              pathname,
+              search,
+              hash,
+              query,
+            };
+          };
           const resolvePageMode = (query = {}, queryKey = 'id') => {
             const normalizedKey = typeof queryKey === 'string' && queryKey.trim() !== ''
               ? queryKey.trim()
@@ -1701,7 +1721,9 @@
                   show: item.show !== false,
                   width: item.width ?? null,
                   fixed: typeof item.fixed === 'string' && item.fixed !== '' ? item.fixed : null,
-                  align: typeof item.align === 'string' && item.align !== '' ? item.align : null
+                  align: typeof item.align === 'string' && item.align !== '' ? item.align : null,
+                  export: item.export !== false,
+                  exportSort: Number.isFinite(Number(item.exportSort)) ? Number(item.exportSort) : null,
                 }))
               : [];
 
@@ -1740,6 +1762,7 @@
               settings: clone(settingsDefault),
               settingsDefault: clone(settingsDefault),
               settingsDraft: clone(settingsDefault),
+              settingsTab: 'display',
               settingsVisible: false,
               settingsLoaded: false
             };
@@ -1961,6 +1984,7 @@
             normalizeUploadFiles,
             pickRows,
             postDialogHostMessage,
+            readPageLocation,
             readPageQuery,
             resolveContextToken,
             resolveContextValue,

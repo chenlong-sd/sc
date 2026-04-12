@@ -3,6 +3,8 @@
 namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 
 use InvalidArgumentException;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -10,6 +12,8 @@ use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 
 class FormArrayGroup implements FormNode, FormNodeContainer
 {
+    use HasRenderAttributes;
+    use HasFormTableColumnAttributes;
     use HasSpan;
     use HasFormNodeChildren;
     private array $defaultRows = [];

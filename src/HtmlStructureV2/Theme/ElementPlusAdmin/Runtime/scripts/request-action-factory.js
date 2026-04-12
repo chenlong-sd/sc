@@ -8,7 +8,9 @@
             isObject,
             makeRequest,
             postDialogHostMessage,
+            readPageLocation,
             readPageQuery,
+            registerElementPlusIcons,
             resolveContextValue,
             resolvePageMode,
             resolveMessage,
@@ -25,6 +27,896 @@
             } catch (error) {
               return clone(value ?? {});
             }
+          };
+          const normalizeImportCellValue = (value) => {
+            if (value instanceof Date && !Number.isNaN(value.getTime())) {
+              const Y = value.getFullYear();
+              const M = String(value.getMonth() + 1).padStart(2, '0');
+              const D = String(value.getDate()).padStart(2, '0');
+              const hh = String(value.getHours()).padStart(2, '0');
+              const mm = String(value.getMinutes()).padStart(2, '0');
+              const ss = String(value.getSeconds()).padStart(2, '0');
+
+              return hh === '00' && mm === '00' && ss === '00'
+                ? `${Y}-${M}-${D}`
+                : `${Y}-${M}-${D} ${hh}:${mm}:${ss}`;
+            }
+
+            return value ?? '';
+          };
+          const isImportEmptyRow = (row = []) => {
+            if (!Array.isArray(row)) {
+              return true;
+            }
+
+            return row.every((cell) => {
+              if (cell === null || cell === undefined) {
+                return true;
+              }
+
+              return String(cell).trim() === '';
+            });
+          };
+          const normalizeImportColumns = (columns) => {
+            if (!isObject(columns)) {
+              return {};
+            }
+
+            const normalized = {};
+            Object.keys(columns).forEach((field) => {
+              const info = columns[field];
+              if (typeof info === 'string') {
+                normalized[field] = { title: info };
+                return;
+              }
+
+              if (isObject(info)) {
+                normalized[field] = Object.assign({}, info, {
+                  title: typeof info.title === 'string' && info.title.trim() !== ''
+                    ? info.title.trim()
+                    : field,
+                });
+                return;
+              }
+
+              normalized[field] = { title: field };
+            });
+
+            return normalized;
+          };
+          const normalizeImportOptionValue = (value) => {
+            if (typeof value !== 'string') {
+              return value;
+            }
+
+            const normalized = value.trim();
+            if (/^-?\d+$/.test(normalized)) {
+              return Number.parseInt(normalized, 10);
+            }
+            if (/^-?\d+\.\d+$/.test(normalized)) {
+              return Number.parseFloat(normalized);
+            }
+
+            return value;
+          };
+          const normalizeImportOptionsForPayload = (options) => {
+            if (Array.isArray(options)) {
+              return options.map((item) => isObject(item) ? Object.assign({}, item) : item);
+            }
+
+            if (!isObject(options)) {
+              return options;
+            }
+
+            return Object.keys(options).map((value) => ({
+              label: options[value],
+              value: normalizeImportOptionValue(value),
+            }));
+          };
+          const normalizeImportColumnsForPayload = (columns) => {
+            if (!isObject(columns)) {
+              return {};
+            }
+
+            const normalized = {};
+            Object.keys(columns).forEach((field) => {
+              const info = columns[field];
+              if (typeof info === 'string') {
+                normalized[field] = info;
+                return;
+              }
+
+              if (isObject(info)) {
+                const normalizedInfo = Object.assign({}, info);
+                if (Object.prototype.hasOwnProperty.call(normalizedInfo, 'options')) {
+                  normalizedInfo.options = normalizeImportOptionsForPayload(normalizedInfo.options);
+                }
+                normalized[field] = normalizedInfo;
+                return;
+              }
+
+              normalized[field] = field;
+            });
+
+            return normalized;
+          };
+          const normalizeImportTitle = (title) => {
+            const normalized = String(title ?? '').trim();
+            if (normalized === '') {
+              return '';
+            }
+
+            const baseTitle = normalized.split('；')[0];
+            return String(baseTitle ?? normalized).trim();
+          };
+          const buildImportFieldMap = (columns) => {
+            const map = {};
+            const normalizedColumns = normalizeImportColumns(columns);
+
+            Object.keys(normalizedColumns).forEach((field) => {
+              const info = normalizedColumns[field] || {};
+              const title = normalizeImportTitle(info.title || field);
+              if (title !== '') {
+                map[title] = field;
+              }
+            });
+
+            return map;
+          };
+          const pickImportFile = (accept = '.xlsx,.xls,.csv') => {
+            return new Promise((resolve) => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = typeof accept === 'string' && accept.trim() !== ''
+                ? accept
+                : '.xlsx,.xls,.csv';
+              input.style.display = 'none';
+
+              let settled = false;
+              const cleanup = () => {
+                window.removeEventListener('focus', handleFocus, true);
+                input.removeEventListener('change', handleChange);
+                input.removeEventListener('cancel', handleCancel);
+                if (input.parentNode) {
+                  input.parentNode.removeChild(input);
+                }
+              };
+              const finalize = (file = null) => {
+                if (settled) {
+                  return;
+                }
+
+                settled = true;
+                cleanup();
+                resolve(file || null);
+              };
+              const handleChange = () => finalize(input.files?.[0] || null);
+              const handleCancel = () => finalize(null);
+              const handleFocus = () => {
+                window.setTimeout(() => {
+                  if (!settled && (!input.files || input.files.length === 0)) {
+                    finalize(null);
+                  }
+                }, 300);
+              };
+
+              input.addEventListener('change', handleChange);
+              input.addEventListener('cancel', handleCancel);
+              window.addEventListener('focus', handleFocus, true);
+              document.body.appendChild(input);
+              input.click();
+            });
+          };
+          const parseImportFile = async (file, importConfig = {}) => {
+            const xlsx = globalThis.XLSX || (typeof window !== 'undefined' ? window?.XLSX : null);
+            if (!xlsx?.read || !xlsx?.utils) {
+              throw new Error('当前页面未加载 Excel 解析库');
+            }
+
+            const buffer = await file.arrayBuffer();
+            const workbook = xlsx.read(buffer, {
+              type: 'array',
+              cellDates: true,
+            });
+            const sheetNames = Array.isArray(workbook?.SheetNames) ? workbook.SheetNames : [];
+            const firstSheetName = sheetNames[0] || '';
+            if (firstSheetName === '') {
+              throw new Error('Excel 文件中没有可读取的工作表');
+            }
+
+            const worksheet = workbook?.Sheets?.[firstSheetName];
+            if (!worksheet) {
+              throw new Error('Excel 文件解析失败');
+            }
+
+            const rawHeaderRow = Number(importConfig?.headerRow || 1);
+            const headerRow = Number.isFinite(rawHeaderRow) && rawHeaderRow > 0
+              ? Math.floor(rawHeaderRow)
+              : 1;
+            const aoa = xlsx.utils.sheet_to_json(worksheet, {
+              header: 1,
+              defval: '',
+              raw: false,
+              blankrows: false,
+            });
+            const normalizedRows = Array.isArray(aoa)
+              ? aoa.map((row) => Array.isArray(row) ? row.map((cell) => normalizeImportCellValue(cell)) : [])
+              : [];
+            const headerIndex = Math.max(0, headerRow - 1);
+            const headers = Array.isArray(normalizedRows[headerIndex])
+              ? normalizedRows[headerIndex].map((cell, index) => {
+                const title = normalizeImportTitle(cell);
+                return title !== '' ? title : `column_${index + 1}`;
+              })
+              : [];
+
+            if (headers.length === 0) {
+              throw new Error('未识别到导入表头');
+            }
+
+            const bodyRows = normalizedRows
+              .slice(headerIndex + 1)
+              .filter((row) => !isImportEmptyRow(row));
+            const importColumns = normalizeImportColumns(importConfig?.columns || {});
+            const importColumnPayload = normalizeImportColumnsForPayload(importConfig?.columns || {});
+            const titleFieldMap = buildImportFieldMap(importColumns);
+            const hasColumnMapping = Object.keys(titleFieldMap).length > 0;
+            const rows = bodyRows.map((cells, index) => {
+              const row = {
+                _row: headerIndex + index + 2,
+              };
+
+              headers.forEach((header, index) => {
+                const value = cells[index] ?? '';
+                const field = hasColumnMapping ? titleFieldMap[normalizeImportTitle(header)] : header;
+                if (!field) {
+                  return;
+                }
+
+                row[field] = value;
+              });
+
+              return row;
+            }).filter((row) => Object.keys(row || {}).length > 0);
+
+            return {
+              rows,
+              headers,
+              file,
+              fileName: file?.name || '',
+              fileSize: Number(file?.size || 0),
+              fileType: file?.type || '',
+              sheetName: firstSheetName,
+              columns: importColumnPayload,
+            };
+          };
+          const parseImportJsonText = (jsonText, importConfig = {}) => {
+            const normalizedText = typeof jsonText === 'string' ? jsonText.trim() : '';
+            if (normalizedText === '') {
+              throw new Error('请输入 JSON 数据');
+            }
+
+            let parsed;
+            try {
+              parsed = JSON.parse(normalizedText);
+            } catch (error) {
+              throw new Error(`JSON 解析失败: ${error?.message || '格式错误'}`);
+            }
+
+            if (!Array.isArray(parsed)) {
+              throw new Error('JSON 数据必须是数组格式');
+            }
+            if (parsed.length === 0) {
+              throw new Error('JSON 数据为空');
+            }
+
+            const importColumns = normalizeImportColumns(importConfig?.columns || {});
+            const importColumnPayload = normalizeImportColumnsForPayload(importConfig?.columns || {});
+            const fields = Object.keys(importColumns);
+            const rows = parsed.map((item, index) => {
+              const source = isObject(item) ? item : {};
+              const row = {
+                _row: index + 1,
+              };
+
+              if (fields.length > 0) {
+                fields.forEach((field) => {
+                  row[field] = source[field] !== undefined ? normalizeImportCellValue(source[field]) : '';
+                });
+                return row;
+              }
+
+              Object.keys(source).forEach((field) => {
+                row[field] = normalizeImportCellValue(source[field]);
+              });
+
+              return row;
+            });
+            const headers = fields.length > 0
+              ? fields.map((field) => importColumns[field]?.title || field)
+              : Object.keys(rows[0] || {}).filter((field) => field !== '_row');
+
+            return {
+              rows,
+              headers,
+              file: null,
+              fileName: 'json',
+              fileSize: normalizedText.length,
+              fileType: 'application/json',
+              sheetName: '',
+              columns: importColumnPayload,
+            };
+          };
+          const normalizeImportResultErrors = (errors) => {
+            if (!Array.isArray(errors)) {
+              return [];
+            }
+
+            return errors.map((item, index) => {
+              if (isObject(item)) {
+                const row = item.row ?? item._row ?? item.line ?? item.index ?? index + 1;
+                const message = item.message ?? item.msg ?? item.error ?? JSON.stringify(item);
+                return { row, message };
+              }
+
+              return {
+                row: index + 1,
+                message: item == null ? '' : String(item),
+              };
+            });
+          };
+          const normalizeImportResultPayload = (payload, ok = false) => {
+            let candidate = null;
+            if (isObject(payload?.data)) {
+              candidate = payload.data;
+            } else if (
+              isObject(payload)
+              && (
+                Object.prototype.hasOwnProperty.call(payload, 'success_count')
+                || Object.prototype.hasOwnProperty.call(payload, 'fail_count')
+                || Array.isArray(payload.errors)
+              )
+            ) {
+              candidate = payload;
+            }
+
+            if (!isObject(candidate)) {
+              return ok
+                ? { success_count: 0, fail_count: 0, errors: [] }
+                : null;
+            }
+
+            return {
+              success_count: Number(candidate.success_count ?? candidate.successCount ?? 0),
+              fail_count: Number(candidate.fail_count ?? candidate.failCount ?? 0),
+              errors: normalizeImportResultErrors(
+                candidate.errors
+                ?? candidate.error_rows
+                ?? candidate.fail_rows
+                ?? []
+              ),
+            };
+          };
+          const buildImportPreviewColumns = (importConfig = {}, rows = []) => {
+            const columns = normalizeImportColumns(importConfig?.columns || {});
+            const fields = Object.keys(columns);
+            const output = [
+              { prop: '_row', label: '行号', width: 72 },
+            ];
+
+            if (fields.length > 0) {
+              fields.forEach((field) => {
+                output.push({
+                  prop: field,
+                  label: columns[field]?.title || field,
+                });
+              });
+
+              return output;
+            }
+
+            const firstRow = Array.isArray(rows) && rows.length > 0 && isObject(rows[0]) ? rows[0] : {};
+            Object.keys(firstRow)
+              .filter((field) => field !== '_row')
+              .forEach((field) => {
+                output.push({
+                  prop: field,
+                  label: field,
+                });
+              });
+
+            return output;
+          };
+          const normalizeImportTemplateFileName = (fileName = null, fallbackTitle = '导入模板') => {
+            let normalized = typeof fileName === 'string' ? fileName.trim() : '';
+            if (normalized === '') {
+              normalized = String(fallbackTitle || '').trim();
+            }
+            if (normalized === '') {
+              normalized = '导入模板';
+            }
+
+            normalized = normalized
+              .replace(/列表|添加|编辑/g, '')
+              .replace(/[\\/:*?"<>|]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            if (normalized === '') {
+              normalized = '导入模板';
+            }
+            if (!/\.xlsx$/i.test(normalized)) {
+              normalized += '.xlsx';
+            }
+
+            return normalized;
+          };
+          const downloadImportTemplate = (importConfig = {}, fallbackTitle = '导入') => {
+            const xlsx = globalThis.XLSX || (typeof window !== 'undefined' ? window?.XLSX : null);
+            if (!xlsx?.utils || typeof xlsx.writeFile !== 'function') {
+              throw new Error('当前页面未加载 Excel 导出库');
+            }
+
+            const columns = normalizeImportColumns(importConfig?.columns || {});
+            const headers = Object.keys(columns).map((field) => columns[field]?.title || field);
+            const worksheet = xlsx.utils.aoa_to_sheet([headers]);
+            worksheet['!cols'] = headers.map((header) => ({
+              wch: Math.max(String(header || '').length * 2.5, 12),
+            }));
+
+            const workbook = xlsx.utils.book_new();
+            xlsx.utils.book_append_sheet(workbook, worksheet, 'sheet1');
+            xlsx.writeFile(
+              workbook,
+              normalizeImportTemplateFileName(importConfig?.templateFileName, fallbackTitle || document.title || '导入模板')
+            );
+          };
+          const buildImportAiPromptText = (importConfig = {}) => {
+            if (typeof importConfig?.aiPromptText === 'string' && importConfig.aiPromptText.trim() !== '') {
+              return importConfig.aiPromptText.trim();
+            }
+
+            const columns = normalizeImportColumnsForPayload(importConfig?.columns || {});
+            const fields = Object.keys(columns);
+            if (fields.length === 0) {
+              return '';
+            }
+
+            const lines = ['请生成10条测试数据，返回JSON数组，每个元素是一个对象。字段说明如下：', ''];
+            const example = {};
+
+            fields.forEach((field) => {
+              const info = columns[field];
+              if (typeof info === 'string') {
+                lines.push(`- ${field}（${info}）`);
+                example[field] = `${info}示例`;
+                return;
+              }
+
+              const title = info?.title || field;
+              if (Array.isArray(info?.ai_data) && info.ai_data.length > 0) {
+                lines.push(`- ${field}（${title}）：参考数据为 ${JSON.stringify(info.ai_data)}`);
+                example[field] = info.ai_data[0] ?? `${title}示例`;
+                return;
+              }
+
+              if (Array.isArray(info?.options) && info.options.length > 0) {
+                const labels = info.options
+                  .map((item) => item?.label ?? item?.value ?? '')
+                  .filter((item) => item !== '');
+                if (labels.length > 0) {
+                  lines.push(`- ${field}（${title}）：可选值为 ${labels.join('、')}`);
+                  example[field] = labels[0];
+                  return;
+                }
+              }
+
+              lines.push(`- ${field}（${title}）`);
+              example[field] = `${title}示例`;
+            });
+
+            lines.push('');
+            lines.push('返回格式示例：');
+            lines.push(JSON.stringify([example], null, 2));
+            lines.push('');
+            lines.push('请直接返回JSON数组，不要有多余文字。');
+
+            return lines.join('\n');
+          };
+          const copyTextToClipboard = (text) => {
+            const normalizedText = typeof text === 'string' ? text : String(text ?? '');
+            if (normalizedText === '') {
+              return Promise.resolve(false);
+            }
+
+            if (navigator?.clipboard?.writeText) {
+              return navigator.clipboard.writeText(normalizedText).then(() => true);
+            }
+
+            return new Promise((resolve, reject) => {
+              try {
+                const textarea = document.createElement('textarea');
+                textarea.value = normalizedText;
+                textarea.setAttribute('readonly', 'readonly');
+                textarea.style.position = 'fixed';
+                textarea.style.top = '-9999px';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const success = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                if (!success) {
+                  reject(new Error('copy failed'));
+                  return;
+                }
+
+                resolve(true);
+              } catch (error) {
+                reject(error);
+              }
+            });
+          };
+          const openImportDialog = ({
+            actionLabel = '导入',
+            importConfig = {},
+            submitAction = async () => null,
+          } = {}) => {
+            if (!globalThis.Vue?.createApp) {
+              ElementPlus.ElMessage.error('当前页面未加载 Vue 运行时');
+              return Promise.resolve(null);
+            }
+
+            const mountNode = document.createElement('div');
+            document.body.appendChild(mountNode);
+
+            return new Promise((resolve) => {
+              let vueApp = null;
+              let settled = false;
+              const dialogTitle = (() => {
+                const configuredTitle = typeof importConfig?.dialogTitle === 'string'
+                  ? importConfig.dialogTitle.trim()
+                  : '';
+                return configuredTitle !== '' ? configuredTitle : (String(actionLabel || '导入').trim() || '导入');
+              })();
+              const cleanup = (value = null) => {
+                if (settled) {
+                  return;
+                }
+
+                settled = true;
+                try {
+                  if (vueApp && typeof vueApp.unmount === 'function') {
+                    vueApp.unmount();
+                  }
+                } catch (error) {
+                }
+
+                if (mountNode.parentNode) {
+                  mountNode.parentNode.removeChild(mountNode);
+                }
+
+                resolve(value);
+              };
+              const dialogApp = Vue.createApp({
+                data() {
+                  return {
+                    visible: true,
+                    activeMode: 'excel',
+                    excelFileList: [],
+                    previewRows: [],
+                    previewMeta: {},
+                    currentImportData: null,
+                    jsonText: '',
+                    submitting: false,
+                    result: null,
+                    lastSubmitOutcome: null,
+                  };
+                },
+                computed: {
+                  previewColumns() {
+                    return buildImportPreviewColumns(importConfig, this.previewRows);
+                  },
+                  previewCount() {
+                    return Array.isArray(this.previewRows) ? this.previewRows.length : 0;
+                  },
+                  previewLabel() {
+                    const count = this.previewCount;
+                    const fileName = this.previewMeta?.fileName ? `，来源：${this.previewMeta.fileName}` : '';
+                    const sheetName = this.previewMeta?.sheetName ? ` / ${this.previewMeta.sheetName}` : '';
+                    return `数据预览（共 ${count} 条${fileName}${sheetName}）`;
+                  },
+                  allowJsonImport() {
+                    return importConfig?.jsonEnabled !== false;
+                  },
+                  aiPromptText() {
+                    return buildImportAiPromptText(importConfig);
+                  },
+                  showAiPromptButton() {
+                    return importConfig?.aiPromptEnabled !== false && this.aiPromptText !== '';
+                  },
+                  resultErrors() {
+                    return Array.isArray(this.result?.errors) ? this.result.errors : [];
+                  },
+                  resultTitle() {
+                    if (!isObject(this.result)) {
+                      return '';
+                    }
+
+                    return `导入完成：成功 ${this.result.success_count || 0} 条，失败 ${this.result.fail_count || 0} 条`;
+                  },
+                  resultType() {
+                    return Number(this.result?.fail_count || 0) > 0 ? 'warning' : 'success';
+                  },
+                  resolvedTemplateFileName() {
+                    return normalizeImportTemplateFileName(
+                      importConfig?.templateFileName,
+                      dialogTitle || document.title || '导入模板'
+                    );
+                  },
+                },
+                watch: {
+                  activeMode(newValue, oldValue) {
+                    if (newValue !== oldValue) {
+                      this.resetImportState();
+                    }
+                  },
+                },
+                methods: {
+                  handleClosed() {
+                    cleanup(this.lastSubmitOutcome);
+                  },
+                  closeDialog() {
+                    this.visible = false;
+                  },
+                  resetImportState() {
+                    this.previewRows = [];
+                    this.previewMeta = {};
+                    this.currentImportData = null;
+                    this.result = null;
+                    this.excelFileList = [];
+                    this.jsonText = '';
+                  },
+                  handleExcelFileRemove(file, fileList) {
+                    this.excelFileList = Array.isArray(fileList) ? fileList.slice(-1) : [];
+                    if (this.excelFileList.length === 0) {
+                      this.previewRows = [];
+                      this.previewMeta = {};
+                      this.currentImportData = null;
+                      this.result = null;
+                    }
+                  },
+                  handleExcelFileChange(file, fileList) {
+                    const currentFile = Array.isArray(fileList) && fileList.length > 0
+                      ? fileList[fileList.length - 1]
+                      : file;
+
+                    this.excelFileList = currentFile ? [currentFile] : [];
+                    this.previewRows = [];
+                    this.previewMeta = {};
+                    this.currentImportData = null;
+                    this.result = null;
+
+                    const rawFile = currentFile?.raw || currentFile;
+                    if (!rawFile) {
+                      return;
+                    }
+
+                    parseImportFile(rawFile, importConfig)
+                      .then((importData) => {
+                        this.currentImportData = importData;
+                        this.previewRows = Array.isArray(importData?.rows) ? importData.rows : [];
+                        this.previewMeta = {
+                          fileName: importData?.fileName || rawFile?.name || '',
+                          sheetName: importData?.sheetName || '',
+                          headers: Array.isArray(importData?.headers) ? importData.headers : [],
+                        };
+
+                        if (this.previewRows.length === 0) {
+                          ElementPlus.ElMessage.warning('导入文件中没有可提交的数据');
+                        }
+                      })
+                      .catch((error) => {
+                        this.previewRows = [];
+                        this.previewMeta = {};
+                        this.currentImportData = null;
+                        const message = error?.message || '文件解析失败';
+                        if (message) {
+                          ElementPlus.ElMessage.error(message);
+                        }
+                      });
+                  },
+                  handleDownloadTemplate() {
+                    try {
+                      downloadImportTemplate(importConfig, dialogTitle || document.title || '导入模板');
+                    } catch (error) {
+                      const message = error?.message || '模板下载失败';
+                      if (message) {
+                        ElementPlus.ElMessage.error(message);
+                      }
+                    }
+                  },
+                  handleCopyAiPrompt() {
+                    const text = this.aiPromptText;
+                    if (!text) {
+                      ElementPlus.ElMessage.warning('当前导入列尚未生成可复制的 AI 提示词');
+                      return;
+                    }
+
+                    copyTextToClipboard(text)
+                      .then(() => {
+                        ElementPlus.ElMessage.success('AI提示词已复制到剪贴板');
+                      })
+                      .catch(() => {
+                        ElementPlus.ElMessage.error('AI提示词复制失败');
+                      });
+                  },
+                  handleParseJson() {
+                    try {
+                      const importData = parseImportJsonText(this.jsonText, importConfig);
+                      this.currentImportData = importData;
+                      this.previewRows = Array.isArray(importData?.rows) ? importData.rows : [];
+                      this.previewMeta = {
+                        fileName: 'json',
+                        sheetName: '',
+                        headers: Array.isArray(importData?.headers) ? importData.headers : [],
+                      };
+                      this.result = null;
+                    } catch (error) {
+                      this.previewRows = [];
+                      this.previewMeta = {};
+                      this.currentImportData = null;
+                      const message = error?.message || 'JSON 解析失败';
+                      if (message) {
+                        ElementPlus.ElMessage.error(message);
+                      }
+                    }
+                  },
+                  handleSubmitImport() {
+                    if (!Array.isArray(this.currentImportData?.rows) || this.currentImportData.rows.length === 0) {
+                      ElementPlus.ElMessage.warning('没有可导入的数据');
+                      return Promise.resolve(null);
+                    }
+
+                    this.submitting = true;
+                    return Promise.resolve(submitAction(this.currentImportData))
+                      .then((outcome) => {
+                        if (!outcome) {
+                          return null;
+                        }
+
+                        this.lastSubmitOutcome = outcome;
+                        this.result = isObject(outcome.result) ? outcome.result : null;
+
+                        if (outcome.ok) {
+                          this.previewRows = [];
+                          this.previewMeta = {};
+                          this.currentImportData = null;
+                          this.excelFileList = [];
+                          this.jsonText = '';
+                        }
+
+                        return outcome;
+                      })
+                      .finally(() => {
+                        this.submitting = false;
+                      });
+                  },
+                },
+                template: `
+                  <el-dialog
+                    v-model="visible"
+                    :title="dialogTitle"
+                    width="920px"
+                    append-to-body
+                    destroy-on-close
+                    :close-on-click-modal="false"
+                    :lock-scroll="false"
+                    @closed="handleClosed"
+                  >
+                    <el-tabs v-model="activeMode" class="sc-v2-import-dialog__tabs">
+                      <el-tab-pane label="Excel导入" name="excel">
+                        <div style="display:flex;gap:12px;align-items:flex-start;">
+                          <el-upload
+                            drag
+                            action="#"
+                            :auto-upload="false"
+                            :show-file-list="true"
+                            :file-list="excelFileList"
+                            :accept="importConfig.accept || '.xlsx,.xls,.csv'"
+                            :on-change="handleExcelFileChange"
+                            :on-remove="handleExcelFileRemove"
+                            style="flex:1;"
+                          >
+                            <div style="padding:10px 0;">
+                              <div style="color:#606266;font-size:13px;">将文件拖到此处，或点击选择</div>
+                              <div style="color:#909399;font-size:12px;margin-top:4px;">支持 .xlsx / .xls / .csv</div>
+                              <div style="color:#e14a26;font-size:12px;margin-top:8px;">下载的模板标题不要随意更改，否则将无法导入</div>
+                            </div>
+                          </el-upload>
+                          <div style="display:flex;flex-direction:column;gap:8px;min-width:120px;">
+                            <el-button size="small" @click="handleDownloadTemplate">下载模板</el-button>
+                            <el-text size="small" type="info">模板文件：{{ resolvedTemplateFileName }}</el-text>
+                          </div>
+                        </div>
+                      </el-tab-pane>
+                      <el-tab-pane v-if="allowJsonImport" label="JSON导入" name="json">
+                        <el-input
+                          v-model="jsonText"
+                          type="textarea"
+                          :rows="8"
+                          placeholder="请输入 JSON 数组，例如：[{&quot;name&quot;:&quot;张三&quot;}]"
+                        />
+                        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+                          <el-button v-if="showAiPromptButton" size="small" @click="handleCopyAiPrompt">复制AI提示词</el-button>
+                          <el-button size="small" @click="handleParseJson">解析JSON</el-button>
+                        </div>
+                      </el-tab-pane>
+                    </el-tabs>
+
+                    <div v-if="previewCount > 0" style="margin-top:16px;">
+                      <div style="margin-bottom:8px;color:#606266;font-size:13px;">{{ previewLabel }}</div>
+                      <el-table
+                        :data="previewRows"
+                        size="small"
+                        max-height="260"
+                        border
+                      >
+                        <el-table-column
+                          v-for="column in previewColumns"
+                          :key="column.prop"
+                          :prop="column.prop"
+                          :label="column.label"
+                          :width="column.width"
+                          min-width="120"
+                          show-overflow-tooltip
+                        />
+                      </el-table>
+                    </div>
+
+                    <el-alert
+                      v-if="result"
+                      :title="resultTitle"
+                      :type="resultType"
+                      :closable="false"
+                      show-icon
+                      style="margin-top:16px;"
+                    />
+
+                    <div v-if="resultErrors.length > 0" style="margin-top:8px;max-height:180px;overflow-y:auto;">
+                      <el-table :data="resultErrors" size="small">
+                        <el-table-column prop="row" label="行号" width="72" />
+                        <el-table-column prop="message" label="错误信息" min-width="200" show-overflow-tooltip />
+                      </el-table>
+                    </div>
+
+                    <template #footer>
+                      <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <el-button :disabled="submitting" @click="closeDialog">关闭</el-button>
+                        <el-button
+                          type="primary"
+                          :loading="submitting"
+                          :disabled="previewCount === 0"
+                          @click="handleSubmitImport"
+                        >
+                          开始导入
+                        </el-button>
+                      </div>
+                    </template>
+                  </el-dialog>
+                `,
+                setup() {
+                  return {
+                    dialogTitle,
+                    importConfig,
+                  };
+                },
+              });
+
+              dialogApp.use(ElementPlus);
+              registerElementPlusIcons(dialogApp);
+              vueApp = dialogApp;
+              dialogApp.mount(mountNode);
+            });
           };
           const confirmAction = (confirmText, executor) => {
             if (!confirmText) {
@@ -111,6 +1003,7 @@
               const pageQuery = typeof this.getPageQuery === 'function'
                 ? cloneRequestValue(this.getPageQuery())
                 : cloneRequestValue(readPageQuery());
+              const pageLocation = readPageLocation();
               const normalizeModeQueryKey = (queryKey) => {
                 const normalized = typeof queryKey === 'string' ? queryKey.trim() : '';
                 return normalized !== '' ? normalized : 'id';
@@ -138,10 +1031,17 @@
                 forms: {},
                 dialogs: {},
                 selection: [],
+                import: null,
                 formScope: explicitActionFormScope,
                 query: pageQuery,
                 mode: resolveRuntimePageMode(),
                 page: {
+                  url: pageLocation.url || '',
+                  href: pageLocation.href || '',
+                  path: pageLocation.path || '',
+                  pathname: pageLocation.pathname || '',
+                  search: pageLocation.search || '',
+                  hash: pageLocation.hash || '',
                   query: pageQuery,
                   mode: resolveRuntimePageMode(),
                   formScope: explicitActionFormScope,
@@ -585,6 +1485,10 @@
               const resolveActionFormConfig = () => {
                 return isObject(resolvedActionConfig.form) ? resolvedActionConfig.form : {};
               };
+              const resolveImportConfig = () => {
+                return isObject(resolvedActionConfig.import) ? resolvedActionConfig.import : {};
+              };
+              const usesImportFlow = () => resolveImportConfig().enabled === true;
               const shouldValidateForm = () => resolveActionFormConfig().validate === true;
               const usesFormPayload = () => resolveActionFormConfig().payloadSource === 'form';
               const usesFormSubmitFlow = () => shouldValidateForm() || usesFormPayload();
@@ -736,6 +1640,10 @@
                   return submitFormState.submitConfig.loadingText;
                 }
 
+                if (usesImportFlow()) {
+                  return '正在导入，请稍后...';
+                }
+
                 if (usesFormSubmitFlow() || hasSaveUrls || hasFormSaveUrls) {
                   return '请稍后...';
                 }
@@ -767,22 +1675,62 @@
 
                 return context.validateForm(resolveConfiguredFormScope('validateScope'));
               };
-              const resolveRequestPayload = () => {
-                if (usesFormPayload()) {
-                  return context.cloneFormModel(resolveConfiguredFormScope('payloadScope'));
+              const buildDefaultImportPayload = () => {
+                if (!usesImportFlow() || !isObject(context.import)) {
+                  return {};
                 }
 
-                return resolveContextValue(resolvedActionConfig.request.query || {}, context);
-              };
+                const importConfig = resolveImportConfig();
+                const payload = {};
+                const rowsKey = typeof importConfig.rowsKey === 'string' && importConfig.rowsKey.trim() !== ''
+                  ? importConfig.rowsKey.trim()
+                  : 'rows';
+                payload[rowsKey] = Array.isArray(context.import.rows)
+                  ? cloneRequestValue(context.import.rows)
+                  : [];
 
-              const perform = () => {
+                const columnInfoKey = typeof importConfig.columnInfoKey === 'string' && importConfig.columnInfoKey.trim() !== ''
+                  ? importConfig.columnInfoKey.trim()
+                  : null;
+                if (columnInfoKey) {
+                  payload[columnInfoKey] = cloneRequestValue(context.import.columns || {});
+                }
+
+                return payload;
+              };
+              const resolveRequestPayload = () => {
+                const payload = usesFormPayload()
+                  ? context.cloneFormModel(resolveConfiguredFormScope('payloadScope'))
+                  : resolveContextValue(resolvedActionConfig.request.query || {}, context);
+
+                if (!usesImportFlow()) {
+                  return payload;
+                }
+
+                const isDefaultEmptyCustomPayload = Array.isArray(resolvedActionConfig.request?.query)
+                  && resolvedActionConfig.request.query.length === 0;
+                if (isObject(payload)) {
+                  return Object.assign({}, buildDefaultImportPayload(), payload);
+                }
+                if (payload === null || payload === undefined || isDefaultEmptyCustomPayload) {
+                  return buildDefaultImportPayload();
+                }
+
+                return payload;
+              };
+              const perform = ({ importData = null, suppressGlobalLoading = false } = {}) => {
                 if (actionLoading[resolvedActionConfig.key]) {
                   return Promise.resolve(null);
                 }
 
+                context.import = usesImportFlow() && isObject(importData) ? importData : null;
+                context.response = null;
+                context.payload = null;
+                context.error = null;
+
                 let loadingInstance = null;
                 actionLoading[resolvedActionConfig.key] = true;
-                const loadingText = resolveLoadingText();
+                const loadingText = suppressGlobalLoading ? null : resolveLoadingText();
                 if (loadingText) {
                   loadingInstance = ElementPlus.ElLoading.service({
                     lock: true,
@@ -835,12 +1783,20 @@
 
                         return makeRequest(request)
                           .then((response) => {
-                            const payload = ensureSuccess(
-                              extractPayload(response),
-                              resolveErrorMessage(extractPayload(response))
-                            );
-
                             context.response = response;
+                            const responsePayload = extractPayload(response);
+                            let payload = null;
+                            try {
+                              payload = ensureSuccess(
+                                responsePayload,
+                                resolveErrorMessage(responsePayload)
+                              );
+                            } catch (error) {
+                              error.response = response;
+                              error.responsePayload = responsePayload;
+                              throw error;
+                            }
+
                             context.payload = payload;
 
                             const successMessage = resolveSuccessMessage(payload);
@@ -873,9 +1829,10 @@
                           })
                           .catch((error) => {
                             context.error = error;
+                            const failurePayload = error?.responsePayload ?? extractPayload(error?.response);
                             const message = error?.message || resolveMessage(
-                              error?.response?.data,
-                              resolveErrorMessage(error?.response?.data)
+                              failurePayload,
+                              resolveErrorMessage(failurePayload)
                             );
 
                             if (message) {
@@ -914,6 +1871,29 @@
                     }
                   });
               };
+              const submitImportFromDialog = (importData) => {
+                return confirmAction(resolvedActionConfig.confirmText, () => {
+                  return perform({
+                    importData,
+                    suppressGlobalLoading: true,
+                  }).then((payload) => {
+                    const responsePayload = context?.error?.responsePayload ?? extractPayload(context?.response);
+                    const ok = payload !== null && !context.error;
+
+                    if (!ok && !context.error && !context.response) {
+                      return null;
+                    }
+
+                    const normalizedPayload = payload ?? responsePayload ?? null;
+                    return {
+                      ok,
+                      payload: normalizedPayload,
+                      result: normalizeImportResultPayload(normalizedPayload, ok),
+                      error: context.error,
+                    };
+                  });
+                });
+              };
 
               return emitConfiguredEvent(resolvedActionConfig, 'click', context)
                 .then((results) => {
@@ -921,7 +1901,15 @@
                     return null;
                   }
 
-                  return confirmAction(resolvedActionConfig.confirmText, perform);
+                  if (usesImportFlow()) {
+                    return openImportDialog({
+                      actionLabel: resolvedActionConfig.label || '导入',
+                      importConfig: resolveImportConfig(),
+                      submitAction: submitImportFromDialog,
+                    });
+                  }
+
+                  return confirmAction(resolvedActionConfig.confirmText, () => perform());
                 })
                 .catch((error) => {
                   const message = error?.message || '操作失败';
