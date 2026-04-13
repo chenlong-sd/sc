@@ -513,6 +513,20 @@ final class StructuredEvent implements StructuredEventInterface
         return array_values(array_unique($this->tableKeys));
     }
 
+    /**
+     * 宿主桥相关事件允许引用当前页面之外的 table key，
+     * 例如 iframe 子页通过 hostTable()/reloadHostTable() 刷新宿主列表。
+     */
+    public function allowsUnknownTableTargets(): bool
+    {
+        if ($this->type === 'reloadHostTable') {
+            return true;
+        }
+
+        return $this->type === 'returnTo'
+            && (($this->payload['reloadHostTable'] ?? false) === true);
+    }
+
     public function referencedListKeys(): array
     {
         return array_values(array_unique($this->listKeys));

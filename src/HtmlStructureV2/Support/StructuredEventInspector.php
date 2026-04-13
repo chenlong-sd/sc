@@ -90,7 +90,14 @@ final class StructuredEventInspector
                 continue;
             }
 
+            $allowsUnknownTableTargets = $handler instanceof StructuredEvent
+                && $handler->allowsUnknownTableTargets();
+
             foreach ($handler->referencedTableKeys() as $tableKey) {
+                if ($allowsUnknownTableTargets && !in_array($tableKey, $knownTableKeys, true)) {
+                    continue;
+                }
+
                 $this->assertKnownTarget('table', $tableKey, $knownTableKeys, $owner, $eventName);
             }
 

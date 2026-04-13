@@ -266,6 +266,7 @@ final class TableRenderer
         $dialog = El::double('el-dialog')->addClass('sc-v2-table-settings-dialog')->setAttrs([
             'title' => '列设置',
             'width' => $table->useExport() ? '980px' : '760px',
+            'top' => '4vh',
             'append-to-body' => '',
             ':model-value' => $bindings->settingsVisibleExpression(),
             '@close' => $bindings->closeSettingsExpression(),
@@ -508,6 +509,7 @@ final class TableRenderer
             'border' => '',
             'size' => 'small',
             'style' => 'width:100%',
+            'max-height' => $exportMode ? 'calc(100vh - 270px)' : 'calc(100vh - 320px)',
             'row-key' => 'key',
             'data-sc-table-settings-key' => $bindings->tableKey(),
             'data-sc-table-settings-mode' => $mode,

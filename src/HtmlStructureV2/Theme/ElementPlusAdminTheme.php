@@ -145,7 +145,13 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-event-column .el-button+.el-button{margin-left:0}
     .sc-v2-filters__actions{display:flex;gap:10px;flex-wrap:wrap}
     .sc-v2-table__images{display:flex;gap:8px;flex-wrap:wrap}
-    .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px}
+    .sc-v2-table-settings-dialog{max-height:92vh;display:flex;flex-direction:column}
+    .sc-v2-table-settings-dialog .el-dialog__body{padding-top:16px;padding-bottom:16px;overflow:hidden}
+    .sc-v2-table-settings-dialog .el-dialog__footer{padding-top:0}
+    .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px;min-height:0}
+    .sc-v2-table-settings .el-tabs{display:flex;flex-direction:column;min-height:0}
+    .sc-v2-table-settings .el-tabs__content{min-height:0}
+    .sc-v2-table-settings__pane{display:flex;flex-direction:column;gap:16px;min-height:0}
     .sc-v2-table-settings__switches{display:flex;gap:12px;flex-wrap:wrap}
     .sc-v2-table-settings__switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--el-border-color-light);border-radius:8px;min-width:180px}
     .sc-v2-table-settings-drag-handle{cursor:move;touch-action:none}
