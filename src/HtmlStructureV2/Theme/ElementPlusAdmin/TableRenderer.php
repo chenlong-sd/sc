@@ -263,16 +263,6 @@ final class TableRenderer
 
     public function renderSettingsDialog(Table $table, TableRenderBindings $bindings): DoubleLabel
     {
-        $dialog = El::double('el-dialog')->addClass('sc-v2-table-settings-dialog')->setAttrs([
-            'title' => '列设置',
-            'width' => $table->useExport() ? '980px' : '760px',
-            'top' => '4vh',
-            'append-to-body' => '',
-            ':model-value' => $bindings->settingsVisibleExpression(),
-            '@close' => $bindings->closeSettingsExpression(),
-            '@update:model-value' => $bindings->updateSettingsVisibleExpression(),
-        ]);
-
         $body = El::double('div')->addClass('sc-v2-table-settings');
         $switches = El::double('div')->addClass('sc-v2-table-settings__switches');
         $stateExpression = $bindings->stateExpression();
@@ -307,6 +297,7 @@ final class TableRenderer
             $exportPane = El::double('el-tab-pane')->setAttrs([
                 'label' => '导出设置',
                 'name' => 'export',
+                'lazy' => '',
             ])->append(
                 El::double('div')->addClass('sc-v2-table-settings__pane')->append(
                     $this->renderSettingsTable($bindings, 'export', true)
@@ -322,23 +313,42 @@ final class TableRenderer
             );
         }
 
-        $dialog->append($body);
-        $dialog->append(
-            El::double('template')->setAttr('#footer')->append(
-                El::double('div')->addClass('sc-v2-table-settings__footer')->append(
-                    El::double('div')->addClass('sc-v2-table-settings__footer-actions')->append(
-                        El::double('el-button')->setAttr('@click', $bindings->closeSettingsExpression())->append('取消'),
-                        El::double('el-button')->setAttr('@click', $bindings->resetSettingsDraftExpression())->append('恢复默认'),
-                        El::double('el-button')->setAttrs([
-                            'type' => 'primary',
-                            '@click' => $bindings->saveSettingsExpression(),
-                        ])->append('保存设置')
-                    )
-                )
+        $footer = El::double('div')->addClass('sc-v2-table-settings__footer')->append(
+            El::double('div')->addClass('sc-v2-table-settings__footer-actions')->append(
+                El::double('el-button')->setAttr('@click', $bindings->closeSettingsExpression())->append('取消'),
+                El::double('el-button')->setAttr('@click', $bindings->resetSettingsDraftExpression())->append('恢复默认'),
+                El::double('el-button')->setAttrs([
+                    'type' => 'primary',
+                    '@click' => $bindings->saveSettingsExpression(),
+                ])->append('保存设置')
             )
         );
 
-        return $dialog;
+        $panel = El::double('div')
+            ->addClass('sc-v2-table-settings-modal__panel')
+            ->addClass($table->useExport() ? 'sc-v2-table-settings-modal__panel--wide' : 'sc-v2-table-settings-modal__panel--normal')
+            ->append(
+                El::double('div')->addClass('sc-v2-table-settings-modal__header')->append(
+                    El::double('div')->addClass('sc-v2-table-settings-modal__title')->append('列设置'),
+                    El::double('el-button')->setAttrs([
+                        'link' => '',
+                        'type' => 'info',
+                        'icon' => 'Close',
+                        '@click' => $bindings->closeSettingsExpression(),
+                    ])
+                ),
+                El::double('div')->addClass('sc-v2-table-settings-modal__body')->append($body),
+                El::double('div')->addClass('sc-v2-table-settings-modal__footer')->append($footer)
+            );
+
+        return El::double('teleport')->setAttr('to', 'body')->append(
+            El::double('transition')->setAttr('name', 'dialog-fade')->append(
+                El::double('div')->addClass('sc-v2-table-settings-modal')->setAttrs([
+                    'v-show' => $bindings->settingsVisibleExpression(),
+                    '@click.self' => $bindings->closeSettingsExpression(),
+                ])->append($panel)
+            )
+        );
     }
 
     public function renderPagination(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
@@ -468,124 +478,164 @@ final class TableRenderer
         return El::double('el-button')->setAttrs($attrs)->append($label);
     }
 
-    private function renderSettingsShowColumn(): AbstractHtmlElement
-    {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '展示',
-            'width' => '100',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
-                El::double('el-switch')->setAttr('v-model', 'scope.row.show')
-            )
-        );
-    }
-
-    private function renderSettingsWidthColumn(): AbstractHtmlElement
-    {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '宽度',
-            'width' => '140',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
-                El::double('el-input')->setAttrs([
-                    'v-model' => 'scope.row.width',
-                    'clearable' => '',
-                    'placeholder' => '自动',
-                    'style' => 'width:100px',
-                ])
-            )
-        );
-    }
-
     private function renderSettingsTable(
         TableRenderBindings $bindings,
         string $mode,
         bool $exportMode
     ): AbstractHtmlElement {
-        $settingsTable = El::double('el-table')->setAttrs([
-            ':data' => $bindings->settingsDraftTableDataExpression($mode),
-            'border' => '',
-            'size' => 'small',
-            'style' => 'width:100%',
-            'max-height' => $exportMode ? 'calc(100vh - 270px)' : 'calc(100vh - 320px)',
-            'row-key' => 'key',
-            'data-sc-table-settings-key' => $bindings->tableKey(),
-            'data-sc-table-settings-mode' => $mode,
-        ]);
+        $list = El::double('div')
+            ->addClass('sc-v2-table-settings-list')
+            ->addClass($exportMode ? 'sc-v2-table-settings-list--export' : 'sc-v2-table-settings-list--display')
+            ->setAttrs([
+                'style' => 'width:100%',
+                'data-sc-table-settings-key' => $bindings->tableKey(),
+                'data-sc-table-settings-mode' => $mode,
+            ]);
 
-        $settingsTable->append(
-            $this->renderSettingsSortColumn(),
-            El::double('el-table-column')->setAttrs([
-                'label' => '列名称',
-                'prop' => 'label',
-                'min-width' => '160',
-            ])
-        );
-
-        if ($exportMode) {
-            $settingsTable->append(
-                $this->renderSettingsExportColumn()
+        $header = El::double('div')
+            ->addClass('sc-v2-table-settings-list__header')
+            ->append(
+                $this->renderSettingsListHeaderCell('排序', 'sort'),
+                $this->renderSettingsListHeaderCell('列名称', 'name')
             );
 
-            return $settingsTable;
+        $row = El::double('div')
+            ->addClass('sc-v2-table-settings-list__row')
+            ->setAttrs([
+                'v-for' => sprintf('(row, settingsIndex) in %s', $bindings->settingsVirtualRowsExpression($mode)),
+                ':key' => sprintf("(row?.key || ('sc-v2-table-settings-row-' + (%s + settingsIndex)))", $bindings->settingsVirtualStartExpression($mode)),
+            ])
+            ->append(
+                $this->renderSettingsSortCell(),
+                $this->renderSettingsLabelCell()
+            );
+
+        if ($exportMode) {
+            $header->append(
+                $this->renderSettingsListHeaderCell('导出', 'toggle')
+            );
+            $row->append(
+                $this->renderSettingsExportCell()
+            );
+        } else {
+            $header->append(
+                $this->renderSettingsListHeaderCell('展示', 'toggle'),
+                $this->renderSettingsListHeaderCell('宽度', 'width'),
+                $this->renderSettingsListHeaderCell('固定位置', 'fixed'),
+                $this->renderSettingsListHeaderCell('对齐', 'align')
+            );
+            $row->append(
+                $this->renderSettingsShowCell(),
+                $this->renderSettingsWidthCell(),
+                $this->renderSettingsFixedCell(),
+                $this->renderSettingsAlignCell()
+            );
         }
 
-        $settingsTable->append(
-            $this->renderSettingsShowColumn(),
-            $this->renderSettingsWidthColumn(),
-            $this->renderSettingsFixedColumn(),
-            $this->renderSettingsAlignColumn()
-        );
+        $rows = El::double('div')
+            ->addClass('sc-v2-table-settings-list__rows')
+            ->setAttr('data-sc-table-settings-body', '')
+            ->append($row);
 
-        return $settingsTable;
+        $body = El::double('div')
+            ->addClass('sc-v2-table-settings-list__body')
+            ->setAttrs([
+                'style' => sprintf('max-height:%s', $exportMode ? 'calc(100vh - 270px)' : 'calc(100vh - 320px)'),
+                'data-sc-table-settings-scroll' => '',
+                '@scroll.passive' => $bindings->settingsVirtualScrollExpression($mode),
+            ])
+            ->append(
+                El::double('div')->addClass('sc-v2-table-settings-list__spacer')->setAttr(
+                    ':style',
+                    sprintf("{ height: (%s + 'px') }", $bindings->settingsVirtualTopPaddingExpression($mode))
+                ),
+                $rows,
+                El::double('div')->addClass('sc-v2-table-settings-list__spacer')->setAttr(
+                    ':style',
+                    sprintf("{ height: (%s + 'px') }", $bindings->settingsVirtualBottomPaddingExpression($mode))
+                )
+            );
+
+        return $list->append($header, $body);
     }
 
-    private function renderSettingsSortColumn(): AbstractHtmlElement
+    private function renderSettingsListHeaderCell(string $label, string $modifier): AbstractHtmlElement
     {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '排序',
-            'width' => '76',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--' . $modifier)
+            ->append($label);
+    }
+
+    private function renderSettingsSortCell(): AbstractHtmlElement
+    {
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--sort')
+            ->append(
                 El::double('el-button')->setAttrs([
                     'link' => '',
                     'type' => 'primary',
                     'icon' => 'Rank',
                     'class' => self::SETTINGS_DRAG_HANDLE_CLASS,
                 ])
-            )
-        );
+            );
     }
 
-    private function renderSettingsExportColumn(): AbstractHtmlElement
+    private function renderSettingsLabelCell(): AbstractHtmlElement
     {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '导出',
-            'width' => '100',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
-                El::double('el-switch')->setAttr('v-model', 'scope.row.export')
-            )
-        );
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--name')
+            ->append(
+                El::double('span')->append('{{ row.label }}')
+            );
     }
 
-    private function renderSettingsFixedColumn(): AbstractHtmlElement
+    private function renderSettingsShowCell(): AbstractHtmlElement
     {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '固定位置',
-            'width' => '140',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--toggle')
+            ->append(
+                El::double('el-switch')->setAttr('v-model', 'row.show')
+            );
+    }
+
+    private function renderSettingsWidthCell(): AbstractHtmlElement
+    {
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--width')
+            ->append(
+                El::double('el-input')->setAttrs([
+                    'v-model' => 'row.width',
+                    'clearable' => '',
+                    'placeholder' => '自动',
+                ])
+            );
+    }
+
+    private function renderSettingsExportCell(): AbstractHtmlElement
+    {
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--toggle')
+            ->append(
+                El::double('el-switch')->setAttr('v-model', 'row.export')
+            );
+    }
+
+    private function renderSettingsFixedCell(): AbstractHtmlElement
+    {
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--fixed')
+            ->append(
                 El::double('el-select')->setAttrs([
-                    'v-model' => 'scope.row.fixed',
+                    'v-model' => 'row.fixed',
                     'clearable' => '',
                     'placeholder' => '默认',
-                    'style' => 'width:110px',
                 ])->append(
                     El::double('el-option')->setAttrs([
                         'label' => '左侧',
@@ -596,23 +646,19 @@ final class TableRenderer
                         'value' => 'right',
                     ])
                 )
-            )
-        );
+            );
     }
 
-    private function renderSettingsAlignColumn(): AbstractHtmlElement
+    private function renderSettingsAlignCell(): AbstractHtmlElement
     {
-        return El::double('el-table-column')->setAttrs([
-            'label' => '对齐',
-            'width' => '140',
-            'align' => 'center',
-        ])->append(
-            El::double('template')->setAttr('#default', 'scope')->append(
+        return El::double('div')
+            ->addClass('sc-v2-table-settings-list__cell')
+            ->addClass('sc-v2-table-settings-list__cell--align')
+            ->append(
                 El::double('el-select')->setAttrs([
-                    'v-model' => 'scope.row.align',
+                    'v-model' => 'row.align',
                     'clearable' => '',
                     'placeholder' => '默认',
-                    'style' => 'width:110px',
                 ])->append(
                     El::double('el-option')->setAttrs([
                         'label' => '左对齐',
@@ -627,8 +673,7 @@ final class TableRenderer
                         'value' => 'right',
                     ])
                 )
-            )
-        );
+            );
     }
 
     /**

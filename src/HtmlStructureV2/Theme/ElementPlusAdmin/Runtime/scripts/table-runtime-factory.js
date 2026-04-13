@@ -573,16 +573,19 @@
                 .map((item) => [String(item.key), item])
             );
             const orderedKeys = [];
+            const orderedKeySet = Object.create(null);
 
             persistedColumns.forEach((item) => {
               const key = typeof item?.key === 'string' ? String(item.key) : '';
-              if (key !== '' && fallbackMap.has(key) && !orderedKeys.includes(key)) {
+              if (key !== '' && fallbackMap.has(key) && orderedKeySet[key] !== true) {
+                orderedKeySet[key] = true;
                 orderedKeys.push(key);
               }
             });
             fallbackColumns.forEach((item) => {
               const key = typeof item?.key === 'string' ? String(item.key) : '';
-              if (key !== '' && !orderedKeys.includes(key)) {
+              if (key !== '' && orderedKeySet[key] !== true) {
+                orderedKeySet[key] = true;
                 orderedKeys.push(key);
               }
             });
@@ -616,6 +619,59 @@
             }
 
             return decorated.map((entry) => entry.item);
+          };
+          const buildTableSettingsColumnCache = (columns = []) => {
+            const list = Array.isArray(columns) ? columns : [];
+            const columnsByKey = Object.create(null);
+            const renderColumnKeys = [];
+
+            list.forEach((item) => {
+              const key = typeof item?.key === 'string' ? String(item.key) : '';
+              if (key === '' || columnsByKey[key] !== undefined) {
+                return;
+              }
+
+              columnsByKey[key] = item;
+              renderColumnKeys.push(key);
+            });
+
+            return {
+              columnsByKey,
+              renderColumnKeys,
+            };
+          };
+          const refreshTableSettingsCacheState = (state = null) => {
+            if (!isObject(state)) {
+              return state;
+            }
+
+            const settingsColumns = Array.isArray(state.settings?.columns) ? state.settings.columns : [];
+            const draftColumns = Array.isArray(state.settingsDraft?.columns) ? state.settingsDraft.columns : [];
+            const settingsCache = buildTableSettingsColumnCache(settingsColumns);
+
+            state.settingsColumnsByKey = settingsCache.columnsByKey;
+            state.renderColumnKeys = settingsCache.renderColumnKeys;
+            state.settingsDraftDisplayColumns = draftColumns;
+            state.settingsDraftExportColumns = orderTableSettingColumns(draftColumns, 'export');
+            syncTableSettingsVirtualStates(state);
+
+            return state;
+          };
+          const ensureTableSettingsCacheState = (state = null) => {
+            if (!isObject(state)) {
+              return state;
+            }
+
+            if (
+              !isObject(state.settingsColumnsByKey)
+              || !Array.isArray(state.renderColumnKeys)
+              || !Array.isArray(state.settingsDraftDisplayColumns)
+              || !Array.isArray(state.settingsDraftExportColumns)
+            ) {
+              return refreshTableSettingsCacheState(state);
+            }
+
+            return state;
           };
           const ensureGlobalSelectionStore = () => {
             const host = typeof globalThis !== 'undefined'
@@ -900,7 +956,86 @@
 
             return null;
           };
-          const getTableSettingsBodyElement = (vm, tableKey = null, mode = null) => {
+          const ensureTableSettingsViewportObserverStore = (vm) => {
+            if (!isObject(vm.__scV2TableSettingsViewportObservers)) {
+              vm.__scV2TableSettingsViewportObservers = {};
+            }
+
+            return vm.__scV2TableSettingsViewportObservers;
+          };
+          const destroyTableSettingsViewportObservers = (vm, tableKey = null) => {
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            if (typeof resolvedKey !== 'string' || resolvedKey === '') {
+              return null;
+            }
+
+            const store = ensureTableSettingsViewportObserverStore(vm);
+            const observers = isObject(store[resolvedKey]) ? store[resolvedKey] : {};
+
+            Object.keys(observers).forEach((mode) => {
+              const observer = observers?.[mode]?.observer;
+              if (observer && typeof observer.disconnect === 'function') {
+                observer.disconnect();
+              }
+            });
+
+            delete store[resolvedKey];
+
+            return null;
+          };
+          const observeTableSettingsViewport = (vm, tableKey = null, mode = null) => {
+            if (typeof ResizeObserver !== 'function') {
+              return null;
+            }
+
+            const resolvedKey = typeof vm?.resolveTableKey === 'function'
+              ? vm.resolveTableKey(tableKey)
+              : tableKey;
+            if (typeof resolvedKey !== 'string' || resolvedKey === '') {
+              return null;
+            }
+
+            const state = typeof vm?.getTableState === 'function'
+              ? vm.getTableState(resolvedKey)
+              : null;
+            const resolvedMode = normalizeTableSettingsSortMode(
+              mode,
+              normalizeTableSettingsSortMode(state?.settingsTab, 'display')
+            );
+            const scrollElement = getTableSettingsScrollElement(vm, resolvedKey, resolvedMode);
+            if (!scrollElement) {
+              return null;
+            }
+
+            const store = ensureTableSettingsViewportObserverStore(vm);
+            if (!isObject(store[resolvedKey])) {
+              store[resolvedKey] = {};
+            }
+
+            const current = store[resolvedKey]?.[resolvedMode] || null;
+            if (current?.element === scrollElement && current?.observer) {
+              return current.observer;
+            }
+
+            if (current?.observer && typeof current.observer.disconnect === 'function') {
+              current.observer.disconnect();
+            }
+
+            const observer = new ResizeObserver(() => {
+              vm.updateTableSettingsVirtualViewport(resolvedKey, resolvedMode);
+            });
+
+            observer.observe(scrollElement);
+            store[resolvedKey][resolvedMode] = {
+              observer,
+              element: scrollElement,
+            };
+
+            return observer;
+          };
+          const getTableSettingsRootElement = (vm, tableKey = null, mode = null) => {
             const resolvedKey = typeof vm?.resolveTableKey === 'function'
               ? vm.resolveTableKey(tableKey)
               : tableKey;
@@ -913,16 +1048,162 @@
               normalizeTableSettingsSortMode(vm?.getTableState?.(resolvedKey)?.settingsTab, 'display')
             );
             const tables = Array.from(document.querySelectorAll('[data-sc-table-settings-key]'));
-            const target = tables.find((element) => (
+
+            return tables.find((element) => (
               String(element?.dataset?.scTableSettingsKey || '').trim() === resolvedKey
               && String(element?.dataset?.scTableSettingsMode || '').trim() === resolvedMode
             )) || null;
+          };
+          const getTableSettingsBodyElement = (vm, tableKey = null, mode = null) => {
+            const target = getTableSettingsRootElement(vm, tableKey, mode);
 
-            return target?.querySelector?.('.el-table__body-wrapper tbody')
+            return target?.querySelector?.('[data-sc-table-settings-body]')
+              || target?.querySelector?.('.el-table__body-wrapper tbody')
               || target?.querySelector?.('table > tbody')
               || null;
           };
+          const getTableSettingsScrollElement = (vm, tableKey = null, mode = null) => {
+            const target = getTableSettingsRootElement(vm, tableKey, mode);
 
+            return target?.querySelector?.('[data-sc-table-settings-scroll]')
+              || target?.querySelector?.('[data-sc-table-settings-body]')
+              || null;
+          };
+          const runAfterTableSettingsLayout = (vm, callback = null) => {
+            const execute = () => {
+              if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                return new Promise((resolve) => {
+                  window.requestAnimationFrame(() => {
+                    resolve(typeof callback === 'function' ? callback() : null);
+                  });
+                });
+              }
+
+              return Promise.resolve(typeof callback === 'function' ? callback() : null);
+            };
+
+            if (typeof vm?.$nextTick === 'function') {
+              return Promise.resolve(vm.$nextTick()).then(() => execute());
+            }
+
+            return execute();
+          };
+          const SETTINGS_VIRTUAL_ROW_HEIGHT = 50;
+          const SETTINGS_VIRTUAL_OVERSCAN = 6;
+          const SETTINGS_VIRTUAL_THRESHOLD = 40;
+          const SETTINGS_VIRTUAL_DEFAULT_VIEWPORT = {
+            display: 420,
+            export: 470,
+          };
+          const buildTableSettingsVirtualModeState = (mode = 'display') => {
+            const resolvedMode = normalizeTableSettingsSortMode(mode, 'display');
+
+            return {
+              mode: resolvedMode,
+              scrollTop: 0,
+              viewportHeight: SETTINGS_VIRTUAL_DEFAULT_VIEWPORT[resolvedMode] || SETTINGS_VIRTUAL_DEFAULT_VIEWPORT.display,
+              rowHeight: SETTINGS_VIRTUAL_ROW_HEIGHT,
+              overscan: SETTINGS_VIRTUAL_OVERSCAN,
+              threshold: SETTINGS_VIRTUAL_THRESHOLD,
+              enabled: false,
+              start: 0,
+              end: 0,
+              topPadding: 0,
+              bottomPadding: 0,
+              totalHeight: 0,
+            };
+          };
+          const ensureTableSettingsVirtualStateStore = (state = null) => {
+            if (!isObject(state)) {
+              return null;
+            }
+            if (!isObject(state.settingsVirtual)) {
+              state.settingsVirtual = {};
+            }
+
+            const store = state.settingsVirtual;
+            ['display', 'export'].forEach((mode) => {
+              if (!isObject(store[mode])) {
+                store[mode] = buildTableSettingsVirtualModeState(mode);
+              }
+            });
+
+            return store;
+          };
+          const getTableSettingsVirtualColumns = (state = null, mode = 'display') => {
+            if (!isObject(state)) {
+              return [];
+            }
+
+            return normalizeTableSettingsSortMode(mode, 'display') === 'export'
+              ? (Array.isArray(state.settingsDraftExportColumns) ? state.settingsDraftExportColumns : [])
+              : (Array.isArray(state.settingsDraftDisplayColumns) ? state.settingsDraftDisplayColumns : []);
+          };
+          const syncTableSettingsVirtualModeState = (state = null, mode = 'display') => {
+            if (!isObject(state)) {
+              return null;
+            }
+
+            const resolvedMode = normalizeTableSettingsSortMode(mode, 'display');
+            const store = ensureTableSettingsVirtualStateStore(state);
+            const virtual = store?.[resolvedMode];
+            const rows = getTableSettingsVirtualColumns(state, resolvedMode);
+            if (!virtual) {
+              return null;
+            }
+
+            const rowCount = Array.isArray(rows) ? rows.length : 0;
+            const rowHeight = Math.max(1, Number(virtual.rowHeight) || SETTINGS_VIRTUAL_ROW_HEIGHT);
+            const threshold = Math.max(0, Number(virtual.threshold) || SETTINGS_VIRTUAL_THRESHOLD);
+            const overscan = Math.max(0, Number(virtual.overscan) || SETTINGS_VIRTUAL_OVERSCAN);
+            const viewportHeight = Math.max(
+              1,
+              Number(virtual.viewportHeight) || SETTINGS_VIRTUAL_DEFAULT_VIEWPORT[resolvedMode] || SETTINGS_VIRTUAL_DEFAULT_VIEWPORT.display
+            );
+            const totalHeight = rowCount * rowHeight;
+            const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+            const scrollTop = Math.max(0, Math.min(Number(virtual.scrollTop) || 0, maxScrollTop));
+
+            virtual.mode = resolvedMode;
+            virtual.scrollTop = scrollTop;
+            virtual.viewportHeight = viewportHeight;
+            virtual.rowHeight = rowHeight;
+            virtual.overscan = overscan;
+            virtual.threshold = threshold;
+            virtual.totalHeight = totalHeight;
+            virtual.enabled = rowCount > threshold;
+
+            if (virtual.enabled !== true) {
+              virtual.start = 0;
+              virtual.end = rowCount;
+              virtual.topPadding = 0;
+              virtual.bottomPadding = 0;
+              return virtual;
+            }
+
+            const visibleCount = Math.max(1, Math.ceil(viewportHeight / rowHeight) + (overscan * 2));
+            const maxStart = Math.max(0, rowCount - visibleCount);
+            const rawStart = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+            const start = Math.min(rawStart, maxStart);
+            const end = Math.min(rowCount, start + visibleCount);
+
+            virtual.start = start;
+            virtual.end = end;
+            virtual.topPadding = start * rowHeight;
+            virtual.bottomPadding = Math.max(0, (rowCount - end) * rowHeight);
+
+            return virtual;
+          };
+          const syncTableSettingsVirtualStates = (state = null) => {
+            if (!isObject(state)) {
+              return null;
+            }
+
+            syncTableSettingsVirtualModeState(state, 'display');
+            syncTableSettingsVirtualModeState(state, 'export');
+
+            return state.settingsVirtual || null;
+          };
           return {
             ensureTableConfigStore(){
               if (!isObject(this.tableConfigs)) {
@@ -1047,6 +1328,7 @@
               }
 
               if (state.settingsLoaded === true) {
+                ensureTableSettingsCacheState(state);
                 return state.settings || null;
               }
 
@@ -1069,6 +1351,7 @@
               state.settings = clone(nextSettings);
               state.settingsDraft = clone(nextSettings);
               state.settingsLoaded = true;
+              refreshTableSettingsCacheState(state);
 
               return state.settings;
             },
@@ -1081,34 +1364,119 @@
               return this.ensureTableSettingsLoaded(tableKey) || state.settings || null;
             },
             getTableRenderColumnKeys(tableKey = null){
-              const resolvedKey = this.resolveTableKey(tableKey);
-              const settings = this.getTableSettings(resolvedKey);
-              const columns = Array.isArray(settings?.columns)
-                ? settings.columns
-                : (Array.isArray(this.getTableConfig(resolvedKey)?.settings?.columns) ? this.getTableConfig(resolvedKey).settings.columns : []);
+              this.getTableSettings(tableKey);
+              const state = this.getTableState(tableKey);
+              ensureTableSettingsCacheState(state);
 
-              return columns
-                .map((item) => (typeof item?.key === 'string' ? String(item.key) : ''))
-                .filter((key, index, list) => key !== '' && list.indexOf(key) === index);
+              return Array.isArray(state?.renderColumnKeys) ? state.renderColumnKeys : [];
             },
             getTableSettingsDraftColumns(tableKey = null, sortMode = null){
               const resolvedKey = this.resolveTableKey(tableKey);
+              this.getTableSettings(resolvedKey);
               const state = this.getTableState(resolvedKey);
-              const columns = Array.isArray(state?.settingsDraft?.columns) ? state.settingsDraft.columns : [];
               const currentMode = normalizeTableSettingsSortMode(
                 sortMode,
                 normalizeTableSettingsSortMode(state?.settingsTab, 'display')
               );
+              ensureTableSettingsCacheState(state);
 
-              return orderTableSettingColumns(columns, currentMode);
+              return currentMode === 'export'
+                ? (Array.isArray(state?.settingsDraftExportColumns) ? state.settingsDraftExportColumns : [])
+                : (Array.isArray(state?.settingsDraftDisplayColumns) ? state.settingsDraftDisplayColumns : []);
             },
-            getTableColumnSetting(tableKey = null, columnKey = ''){
-              const settings = this.getTableSettings(tableKey);
-              if (typeof columnKey !== 'string' || columnKey === '' || !Array.isArray(settings?.columns)) {
+            getTableSettingsVirtualState(tableKey = null, mode = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              this.getTableSettings(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              const resolvedMode = normalizeTableSettingsSortMode(
+                mode,
+                normalizeTableSettingsSortMode(state?.settingsTab, 'display')
+              );
+              ensureTableSettingsCacheState(state);
+              syncTableSettingsVirtualModeState(state, resolvedMode);
+
+              return ensureTableSettingsVirtualStateStore(state)?.[resolvedMode] || null;
+            },
+            getTableSettingsVirtualRows(tableKey = null, mode = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const resolvedMode = normalizeTableSettingsSortMode(mode, 'display');
+              const rows = this.getTableSettingsDraftColumns(resolvedKey, resolvedMode);
+              const virtual = this.getTableSettingsVirtualState(resolvedKey, resolvedMode);
+              if (!Array.isArray(rows)) {
+                return [];
+              }
+              if (virtual?.enabled !== true) {
+                return rows;
+              }
+
+              return rows.slice(Number(virtual.start) || 0, Number(virtual.end) || rows.length);
+            },
+            getTableSettingsVirtualStart(tableKey = null, mode = null){
+              return Number(this.getTableSettingsVirtualState(tableKey, mode)?.start || 0);
+            },
+            getTableSettingsVirtualTopPadding(tableKey = null, mode = null){
+              return Number(this.getTableSettingsVirtualState(tableKey, mode)?.topPadding || 0);
+            },
+            getTableSettingsVirtualBottomPadding(tableKey = null, mode = null){
+              return Number(this.getTableSettingsVirtualState(tableKey, mode)?.bottomPadding || 0);
+            },
+            updateTableSettingsVirtualViewport(tableKey = null, mode = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              if (!state) {
                 return null;
               }
 
-              return settings.columns.find((item) => item?.key === columnKey) || null;
+              const resolvedMode = normalizeTableSettingsSortMode(
+                mode,
+                normalizeTableSettingsSortMode(state?.settingsTab, 'display')
+              );
+              const virtual = ensureTableSettingsVirtualStateStore(state)?.[resolvedMode] || null;
+              const scrollElement = getTableSettingsScrollElement(this, resolvedKey, resolvedMode);
+              if (virtual && scrollElement) {
+                const nextHeight = Math.max(0, Number(scrollElement.clientHeight || scrollElement.offsetHeight) || 0);
+                if (nextHeight > 0) {
+                  virtual.viewportHeight = nextHeight;
+                }
+                virtual.scrollTop = Math.max(0, Number(scrollElement.scrollTop || 0));
+              }
+
+              return syncTableSettingsVirtualModeState(state, resolvedMode);
+            },
+            handleTableSettingsScroll(tableKey = null, mode = null, event = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              if (!state) {
+                return null;
+              }
+
+              const resolvedMode = normalizeTableSettingsSortMode(
+                mode,
+                normalizeTableSettingsSortMode(state?.settingsTab, 'display')
+              );
+              const virtual = ensureTableSettingsVirtualStateStore(state)?.[resolvedMode] || null;
+              const target = event?.target || getTableSettingsScrollElement(this, resolvedKey, resolvedMode);
+              if (!virtual || !target) {
+                return syncTableSettingsVirtualModeState(state, resolvedMode);
+              }
+
+              virtual.scrollTop = Math.max(0, Number(target.scrollTop || 0));
+              const nextHeight = Math.max(0, Number(target.clientHeight || target.offsetHeight) || 0);
+              if (nextHeight > 0) {
+                virtual.viewportHeight = nextHeight;
+              }
+
+              return syncTableSettingsVirtualModeState(state, resolvedMode);
+            },
+            getTableColumnSetting(tableKey = null, columnKey = ''){
+              this.getTableSettings(tableKey);
+              const state = this.getTableState(tableKey);
+              if (typeof columnKey !== 'string' || columnKey === '') {
+                return null;
+              }
+              ensureTableSettingsCacheState(state);
+
+              return state?.settingsColumnsByKey?.[columnKey] || null;
             },
             getTableColumnVisible(tableKey = null, columnKey = ''){
               const setting = this.getTableColumnSetting(tableKey, columnKey);
@@ -1170,6 +1538,7 @@
                     item.exportSort = index + 1;
                   }
                 });
+                refreshTableSettingsCacheState(state);
 
                 return columns;
               }
@@ -1180,6 +1549,7 @@
               }
 
               columns.splice(to, 0, moved);
+              refreshTableSettingsCacheState(state);
 
               return columns;
             },
@@ -1209,11 +1579,12 @@
                 onEnd: (event) => {
                   const oldIndex = Number(event?.oldIndex);
                   const newIndex = Number(event?.newIndex);
+                  const indexOffset = this.getTableSettingsVirtualStart(resolvedKey, sortMode);
                   if (!Number.isInteger(oldIndex) || !Number.isInteger(newIndex) || oldIndex === newIndex) {
                     return;
                   }
 
-                  this.moveTableSettingsColumn(resolvedKey, oldIndex, newIndex);
+                  this.moveTableSettingsColumn(resolvedKey, oldIndex + indexOffset, newIndex + indexOffset);
                 },
               });
 
@@ -1227,11 +1598,12 @@
                 return Promise.resolve(null);
               }
 
-              if (typeof this.$nextTick === 'function') {
-                return this.$nextTick().then(() => this.refreshTableSettingsSort(resolvedKey));
-              }
+              return runAfterTableSettingsLayout(this, () => {
+                this.updateTableSettingsVirtualViewport(resolvedKey);
+                observeTableSettingsViewport(this, resolvedKey);
 
-              return Promise.resolve(this.refreshTableSettingsSort(resolvedKey));
+                return this.refreshTableSettingsSort(resolvedKey);
+              });
             },
             openTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
@@ -1241,18 +1613,11 @@
                 return null;
               }
 
-              state.settingsDraft = clone(settings);
               state.settingsTab = 'display';
               state.settingsVisible = true;
-              if (typeof this.$nextTick === 'function') {
-                return this.$nextTick().then(() => {
-                  this.refreshTableSettingsSort(resolvedKey);
-                  return state.settingsDraft;
-                });
-              }
+              refreshTableSettingsCacheState(state);
 
-              this.refreshTableSettingsSort(resolvedKey);
-              return state.settingsDraft;
+              return this.syncTableSettingsSort(resolvedKey).then(() => state.settingsDraft);
             },
             closeTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
@@ -1262,9 +1627,11 @@
               }
 
               destroyTableSettingsSortable(this, resolvedKey);
+              destroyTableSettingsViewportObservers(this, resolvedKey);
               state.settingsVisible = false;
               state.settingsDraft = clone(state.settings || state.settingsDefault || {});
               state.settingsTab = 'display';
+              refreshTableSettingsCacheState(state);
 
               return state.settingsDraft;
             },
@@ -1284,6 +1651,7 @@
 
               state.settingsDraft = clone(state.settingsDefault || {});
               state.settingsTab = 'display';
+              refreshTableSettingsCacheState(state);
               return this.syncTableSettingsSort(resolvedKey).then(() => state.settingsDraft);
             },
             persistTableSettings(tableKey = null){
@@ -1443,12 +1811,14 @@
               }
 
               destroyTableSettingsSortable(this, resolvedKey);
+              destroyTableSettingsViewportObservers(this, resolvedKey);
               state.settings = normalizeTableSettingsState(
                 state.settingsDraft || {},
                 state.settingsDefault || {}
               );
               state.settingsDraft = clone(state.settings);
               state.settingsVisible = false;
+              refreshTableSettingsCacheState(state);
               this.persistTableSettings(resolvedKey);
 
               if (typeof this.$nextTick === 'function') {

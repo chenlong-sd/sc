@@ -101,7 +101,7 @@ final class Document implements DocumentRenderable
         }
 
         foreach ($this->assets->scripts() as $src) {
-            $this->head()->append(
+            $this->body()->append(
                 El::double('script')->setAttr('src', $src)
             );
         }

@@ -167,6 +167,51 @@ final class TableRenderBindings
         );
     }
 
+    public function settingsVirtualRowsExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'getTableSettingsVirtualRows(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
+    public function settingsVirtualStartExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'getTableSettingsVirtualStart(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
+    public function settingsVirtualTopPaddingExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'getTableSettingsVirtualTopPadding(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
+    public function settingsVirtualBottomPaddingExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'getTableSettingsVirtualBottomPadding(%s, %s)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
+    public function settingsVirtualScrollExpression(?string $mode = null): string
+    {
+        return sprintf(
+            'handleTableSettingsScroll(%s, %s, $event)',
+            $this->tableKeyLiteral(),
+            $this->jsValue($mode)
+        );
+    }
+
     public function settingsTabModelExpression(): string
     {
         return sprintf('%s.settingsTab', $this->stateExpression());
