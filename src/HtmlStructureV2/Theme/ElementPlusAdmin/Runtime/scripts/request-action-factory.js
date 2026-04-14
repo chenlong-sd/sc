@@ -7,6 +7,7 @@
             isEventCanceled,
             isObject,
             makeRequest,
+            openHostTab: openHostTabBridge,
             postDialogHostMessage,
             readPageLocation,
             readPageQuery,
@@ -1137,6 +1138,13 @@
                   }
 
                   return notifyHost(payload);
+                },
+                openHostTab: (target, title = '', index = null) => {
+                  if (typeof this.openHostTab === 'function') {
+                    return this.openHostTab(target, title, index);
+                  }
+
+                  return openHostTabBridge(target, title, index);
                 },
                 setHostDialogTitle: (title, dialogKey = null) => {
                   if (typeof this.setHostDialogTitle === 'function') {

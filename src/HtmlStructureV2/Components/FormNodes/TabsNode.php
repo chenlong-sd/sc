@@ -41,24 +41,13 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      *
      * @param TabPaneNode ...$tabs 要追加的标签页。
      * @return self 当前标签页容器。
-     */
-    public function addNodes(TabPaneNode ...$tabs): self
-    {
-        return $this->appendFormNodeChildren(...$tabs);
-    }
-
-    /**
-     * 继续向当前标签页容器追加 tab。
-     *
-     * @param TabPaneNode ...$tabs 要追加的标签页。
-     * @return self 当前标签页容器。
      *
      * 示例：
      * `Forms::tabs()->addTabs(Forms::tab('基础信息'))`
      */
     public function addTabs(TabPaneNode ...$tabs): self
     {
-        return $this->addNodes(...$tabs);
+        return $this->appendFormNodeChildren(...$tabs);
     }
 
     /**

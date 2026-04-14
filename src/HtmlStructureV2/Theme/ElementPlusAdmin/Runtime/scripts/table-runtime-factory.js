@@ -65,6 +65,19 @@
 
               return null;
             };
+          const applyRemoteTablePayloadHandle = (handler, context = {}) => {
+            const fallbackPayload = context?.payload ?? null;
+            if (typeof handler !== 'function') {
+              return Promise.resolve(fallbackPayload);
+            }
+
+            return Promise.resolve(handler(context))
+              .then((payload) => payload === undefined ? fallbackPayload : payload)
+              .catch((error) => {
+                console.error('[SC V2] table remoteDataHandle failed', error);
+                return fallbackPayload;
+              });
+          };
           const sanitizeExportFilename = (filename, fallback = 'export') => {
             const normalized = typeof filename === 'string' ? filename.trim() : '';
             const baseName = normalized.replace(/\.(xlsx|xls)$/i, '').trim() || fallback;
@@ -278,6 +291,95 @@
 
                 return nextItem;
               });
+          };
+          const normalizeExportHeaderLabel = (value, fallback = '') => {
+            const text = stripExportHtml(value === null || value === undefined || value === '' ? fallback : value)
+              .replace(/\n+/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            if (text !== '') {
+              return text;
+            }
+
+            const fallbackText = stripExportHtml(fallback)
+              .replace(/\n+/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            return fallbackText || '未命名列';
+          };
+          const resolveExportSheetTitle = (filename, fallback = '导出数据') => {
+            const normalized = typeof filename === 'string' ? filename.trim() : '';
+            const baseName = normalized.replace(/\.(xlsx|xls)$/i, '').trim();
+
+            return baseName || fallback;
+          };
+          const sanitizeExportSheetName = (value, fallback = 'Sheet1') => {
+            const normalized = String(value || fallback)
+              .replace(/[\\\/?*\[\]:]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 31);
+
+            return normalized || fallback;
+          };
+          const measureExportTextWidth = (value) => {
+            const source = value === null || value === undefined ? '' : String(value);
+
+            return source
+              .replace(/\r/g, '')
+              .split('\n')
+              .reduce((max, line) => {
+                const width = Array.from(line).reduce((length, character) => (
+                  /[\u1100-\u11ff\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\ufe10-\ufe6f\uff00-\uffef]/.test(character)
+                    ? length + 2
+                    : length + 1
+                ), 0);
+
+                return Math.max(max, width);
+              }, 0);
+          };
+          const buildExportColumnWidths = (headers = [], rows = []) => headers.map((header, columnIndex) => {
+            let maxWidth = Math.max(measureExportTextWidth(header), 10);
+            const sampleSize = Math.min(rows.length, 200);
+
+            for (let index = 0; index < sampleSize; index += 1) {
+              maxWidth = Math.max(maxWidth, measureExportTextWidth(rows[index]?.[columnIndex] ?? ''));
+            }
+
+            return {
+              wch: Math.min(Math.max(maxWidth + 2, 12), 40),
+            };
+          });
+          const buildExportWorksheet = (xlsx, columns, rows, filename) => {
+            const headers = columns.map((column) => normalizeExportHeaderLabel(column.label, column.key));
+            const dataRows = rows.map((row) => columns.map((column) => resolveExportCellValue(row, column)));
+            const title = resolveExportSheetTitle(filename, '导出数据');
+            const worksheet = xlsx.utils.aoa_to_sheet([
+              headers,
+              ...dataRows,
+            ]);
+            const lastColumnIndex = Math.max(headers.length - 1, 0);
+
+            worksheet['!rows'] = [
+              { hpx: 22 },
+            ];
+
+            if (headers.length > 0) {
+              worksheet['!cols'] = buildExportColumnWidths(headers, dataRows);
+              worksheet['!autofilter'] = {
+                ref: xlsx.utils.encode_range({
+                  s: { r: 0, c: 0 },
+                  e: { r: 0, c: lastColumnIndex },
+                }),
+              };
+            }
+
+            return {
+              worksheet,
+              sheetName: sanitizeExportSheetName(title, 'Sheet1'),
+            };
           };
           const buildRemoteTableRequest = (
             vm,
@@ -852,7 +954,7 @@
 
             return false;
           };
-          const moveTreeTableRow = (rows, tableCfg = {}, movedKey = '', anchorKey = '', isUp = false) => {
+          const moveTreeTableRow = (rows, tableCfg = {}, movedKey = '', anchorKey = '', insertBeforeAnchor = false) => {
             const entryMap = buildTableRowEntryMap(rows, tableCfg);
             const movedEntry = entryMap.get(movedKey);
             if (!movedEntry) {
@@ -879,7 +981,7 @@
 
             if (anchorEntry) {
               const anchorIndex = targetSiblings.findIndex((item) => getTableRowKeyValue(item, tableCfg) === anchorKey);
-              insertIndex = anchorIndex < 0 ? targetSiblings.length : (isUp ? anchorIndex : anchorIndex + 1);
+              insertIndex = anchorIndex < 0 ? targetSiblings.length : (insertBeforeAnchor ? anchorIndex : anchorIndex + 1);
             } else if (sourceSiblings === targetSiblings) {
               insertIndex = Math.min(sourceIndex, targetSiblings.length);
             }
@@ -1921,14 +2023,11 @@
                 flatRows: flatAfter,
                 oldIndex,
                 newIndex: effectiveIndex >= 0 ? effectiveIndex : newIndex,
-                isUp: isMoveDown,
                 isDown: isMoveDown,
                 isMoveDown,
                 isMoveUp: !isMoveDown,
                 oldParentRow: moveMeta.oldParentRow || null,
                 newParentRow: moveMeta.newParentRow || null,
-                movedParentRow: moveMeta.oldParentRow || null,
-                anchorParentRow: moveMeta.newParentRow || null,
                 sameParent: moveMeta.sameParent !== false,
               }).then(() => this.syncTableDragSort(resolvedKey));
             },
@@ -1984,19 +2083,31 @@
 
                   return makeRequest(request)
                     .then((response) => {
-                      const payload = ensureSuccess(extractPayload(response), '数据加载失败');
-                      const rows = pickRows(payload);
-                      state.rows = rows;
-                      state.allRows = clone(rows);
-                      state.total = resolveTotal(payload) ?? rows.length;
-                      state.selection = normalizeActiveTableSelection(state, tableCfg);
-                      syncGlobalTableSelection(this, resolvedKey);
+                      const rawPayload = ensureSuccess(extractPayload(response), '数据加载失败');
 
-                      return emitTableEvent(this, resolvedKey, tableCfg, state, 'loadSuccess', {
+                      return applyRemoteTablePayloadHandle(tableCfg?.remoteDataHandle, {
                         response,
-                        payload,
-                        rows,
-                      }).then(() => this.syncTableDragSort(resolvedKey).then(() => rows));
+                        payload: rawPayload,
+                        tableKey: resolvedKey,
+                        tableConfig: tableCfg,
+                        state,
+                        request,
+                        vm: this,
+                      }).then((payload) => {
+                        const rows = pickRows(payload);
+                        state.rows = rows;
+                        state.allRows = clone(rows);
+                        state.total = resolveTotal(payload) ?? resolveTotal(rawPayload) ?? rows.length;
+                        state.selection = normalizeActiveTableSelection(state, tableCfg);
+                        syncGlobalTableSelection(this, resolvedKey);
+
+                        return emitTableEvent(this, resolvedKey, tableCfg, state, 'loadSuccess', {
+                          response,
+                          payload,
+                          rawPayload,
+                          rows,
+                        }).then(() => this.syncTableDragSort(resolvedKey).then(() => rows));
+                      });
                     })
                     .catch((error) => {
                       const message = error?.message || resolveMessage(error?.response?.data, '数据加载失败');
@@ -2047,14 +2158,27 @@
               const rowsPromise = selection.length > 0
                 ? Promise.resolve(clone(selection))
                 : (tableCfg.dataSource?.type === 'remote' && tableCfg.dataSource?.url
-                  ? makeRequest(buildRemoteTableRequest(this, resolvedKey, tableCfg, state, {
-                      includePagination: false,
-                      extraQuery: tableCfg.export?.query || {},
-                    }))
-                    .then((response) => {
-                      const payload = ensureSuccess(extractPayload(response), '导出数据加载失败');
-                      return pickRows(payload);
-                    })
+                  ? (() => {
+                      const request = buildRemoteTableRequest(this, resolvedKey, tableCfg, state, {
+                        includePagination: false,
+                        extraQuery: tableCfg.export?.query || {},
+                      });
+
+                      return makeRequest(request)
+                        .then((response) => {
+                          const rawPayload = ensureSuccess(extractPayload(response), '导出数据加载失败');
+
+                          return applyRemoteTablePayloadHandle(tableCfg?.remoteDataHandle, {
+                            response,
+                            payload: rawPayload,
+                            tableKey: resolvedKey,
+                            tableConfig: tableCfg,
+                            state,
+                            request,
+                            vm: this,
+                          }).then((payload) => pickRows(payload));
+                        });
+                    })()
                   : Promise.resolve(clone(state.allRows || [])));
 
               return rowsPromise
@@ -2065,17 +2189,19 @@
                     return null;
                   }
 
-                  const sheetData = [
-                    exportColumns.map((column) => column.label || column.key),
-                    ...exportRows.map((row) => exportColumns.map((column) => resolveExportCellValue(row, column)))
-                  ];
-                  const worksheet = xlsx.utils.aoa_to_sheet(sheetData);
+                  const exportFilename = sanitizeExportFilename(tableCfg.export?.filename || resolvedKey);
                   const workbook = xlsx.utils.book_new();
+                  const { worksheet, sheetName } = buildExportWorksheet(
+                    xlsx,
+                    exportColumns,
+                    exportRows,
+                    exportFilename
+                  );
 
-                  xlsx.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+                  xlsx.utils.book_append_sheet(workbook, worksheet, sheetName);
                   xlsx.writeFile(
                     workbook,
-                    sanitizeExportFilename(tableCfg.export?.filename || resolvedKey),
+                    exportFilename,
                     { compression: true }
                   );
 

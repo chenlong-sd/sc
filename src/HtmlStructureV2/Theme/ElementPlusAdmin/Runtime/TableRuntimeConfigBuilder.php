@@ -12,6 +12,7 @@ final class TableRuntimeConfigBuilder
             'key' => $table->key(),
             'initialRows' => $table->getDataSource()?->initialRows() ?? [],
             'dataSource' => $table->getDataSource()?->toClientConfig(),
+            'remoteDataHandle' => $table->getRemoteDataHandle(),
             'rowKey' => $table->getRowKey(),
             'tree' => [
                 'enabled' => $table->isTree(),

@@ -84,7 +84,7 @@ final class EditorField extends TextField
     }
 
     /**
-     * 兼容旧编辑器事件写法。
+     * 设置编辑器事件处理函数。
      * contentChanged/focus/blur 会自动映射到 SimpleRichEditor 的 onChange/onFocus/onBlur。
      *
      * @param string $event 事件名。

@@ -19,7 +19,7 @@ final class FormTable extends FormArrayGroup
 
     /**
      * 追加表格行 schema，并按列方式渲染。
-     * 推荐使用这个方法表达“表格里有哪些列”，比通用 `addNodes()` 更符合使用侧认知。
+     * 推荐使用这个方法表达“表格里有哪些列”。
      *
      * @param FormNode ...$columns 要追加的列表达式。
      * @return static 当前表格节点。
@@ -29,7 +29,7 @@ final class FormTable extends FormArrayGroup
      */
     public function addColumns(FormNode ...$columns): static
     {
-        return $this->addNodes(...$columns);
+        return $this->appendFormNodeChildren(...$columns);
     }
 
     /**

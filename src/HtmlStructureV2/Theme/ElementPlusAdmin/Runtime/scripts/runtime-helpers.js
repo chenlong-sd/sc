@@ -1092,18 +1092,36 @@
               };
             }
 
+            const valueField = typeof fieldCfg?.valueField === 'string' && fieldCfg.valueField !== ''
+              ? fieldCfg.valueField
+              : 'value';
+            const labelField = typeof fieldCfg?.labelField === 'string' && fieldCfg.labelField !== ''
+              ? fieldCfg.labelField
+              : 'label';
+            const childrenField = typeof fieldCfg?.childrenField === 'string' && fieldCfg.childrenField !== ''
+              ? fieldCfg.childrenField
+              : 'children';
+            const disabledField = typeof fieldCfg?.disabledField === 'string' && fieldCfg.disabledField !== ''
+              ? fieldCfg.disabledField
+              : 'disabled';
             const value = item.value !== undefined
               ? item.value
-              : getByPath(item, fieldCfg?.valueField || 'value');
+              : getByPath(item, valueField);
             const label = item.label !== undefined
               ? item.label
-              : getByPath(item, fieldCfg?.labelField || 'label');
-
-            return Object.assign({}, item, {
+              : getByPath(item, labelField);
+            const disabledValue = getByPath(item, disabledField);
+            const normalized = Object.assign({}, item, {
               value: value ?? index,
               label: label ?? String(value ?? ''),
-              disabled: item.disabled === true
+              disabled: item.disabled === true || disabledValue === true || disabledValue === 1 || disabledValue === '1'
             });
+            const children = getByPath(item, childrenField);
+            if (Array.isArray(children) && children.length > 0) {
+              normalized[childrenField] = children.map((child, childIndex) => normalizeOption(child, fieldCfg, childIndex));
+            }
+
+            return normalized;
           };
           const resolvePickerDisplayTemplate = (template, item, label, value) => {
             const rawTemplate = typeof template === 'string' && template !== ''
@@ -1271,6 +1289,139 @@
             }, '*');
 
             return true;
+          };
+          const buildHostTabIndex = (value) => {
+            const source = String(value || '');
+            let hash = 0;
+            for (let index = 0; index < source.length; index += 1) {
+              hash = ((hash << 5) - hash) + source.charCodeAt(index);
+              hash |= 0;
+            }
+
+            return `sc-tab-${Math.abs(hash)}`;
+          };
+          const normalizeHostTabTarget = (target, title = '', index = null) => {
+            const config = isObject(target)
+              ? target
+              : { route: target, title, index };
+            const route = typeof config?.route === 'string' ? config.route.trim() : '';
+            if (route === '') {
+              return null;
+            }
+
+            const resolvedTitle = typeof config?.title === 'string' && config.title.trim() !== ''
+              ? config.title.trim()
+              : '新页面';
+            const resolvedIndex = typeof config?.index === 'string' && config.index.trim() !== ''
+              ? config.index.trim()
+              : buildHostTabIndex(route);
+            const normalized = {
+              index: resolvedIndex,
+              title: resolvedTitle,
+              route,
+            };
+
+            if (typeof config?.icon === 'string' && config.icon.trim() !== '') {
+              normalized.icon = config.icon.trim();
+            }
+
+            return normalized;
+          };
+          const buildLegacyMainTabsBridge = (mainTabs) => {
+            if (!mainTabs || typeof mainTabs.add !== 'function') {
+              return null;
+            }
+
+            return {
+              open(target) {
+                const normalized = normalizeHostTabTarget(target);
+                if (!normalized) {
+                  return false;
+                }
+
+                mainTabs.add(normalized);
+                return true;
+              }
+            };
+          };
+          const resolveHostTabBridge = () => {
+            const candidates = [];
+            if (typeof globalThis !== 'undefined') {
+              candidates.push(globalThis);
+            }
+            if (typeof window !== 'undefined') {
+              candidates.push(window);
+              try {
+                if (window.parent) {
+                  candidates.push(window.parent);
+                }
+              } catch (error) {}
+              try {
+                if (window.top) {
+                  candidates.push(window.top);
+                }
+              } catch (error) {}
+            }
+
+            const visited = new Set();
+            for (const candidate of candidates) {
+              if (!candidate || (typeof candidate !== 'object' && typeof candidate !== 'function') || visited.has(candidate)) {
+                continue;
+              }
+
+              visited.add(candidate);
+              try {
+                const bridge = candidate.__SC_V2_HOST_TAB_BRIDGE__;
+                if (typeof bridge === 'function') {
+                  return {
+                    open(target) {
+                      const normalized = normalizeHostTabTarget(target);
+                      if (!normalized) {
+                        return false;
+                      }
+
+                      return bridge(normalized);
+                    }
+                  };
+                }
+                if (bridge && typeof bridge.open === 'function') {
+                  return bridge;
+                }
+              } catch (error) {}
+              try {
+                const legacyBridge = buildLegacyMainTabsBridge(candidate.VueApp?.$refs?.['main-tabs']);
+                if (legacyBridge) {
+                  return legacyBridge;
+                }
+              } catch (error) {}
+            }
+
+            return null;
+          };
+          const openHostTab = (target, title = '', index = null) => {
+            const normalized = normalizeHostTabTarget(target, title, index);
+            if (!normalized) {
+              return false;
+            }
+
+            const bridge = resolveHostTabBridge();
+            if (bridge && typeof bridge.open === 'function') {
+              try {
+                const result = bridge.open(normalized);
+                if (result !== false) {
+                  return normalized.route;
+                }
+              } catch (error) {}
+            }
+
+            const targetWindow = typeof window !== 'undefined'
+              ? window
+              : globalThis;
+            if (targetWindow && typeof targetWindow.open === 'function') {
+              targetWindow.open(normalized.route, '_blank');
+            }
+
+            return normalized.route;
           };
           const isDialogScope = (scope) => {
             return typeof scope === 'string' && scope.startsWith(dialogScopePrefix);
@@ -2012,6 +2163,7 @@
             serializeUploadFile,
             normalizeUploadFile,
             normalizeUploadFiles,
+            openHostTab,
             pickRows,
             postDialogHostMessage,
             readPageLocation,

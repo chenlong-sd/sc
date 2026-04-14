@@ -749,7 +749,7 @@ final class RequestAction extends Action
      * - formScope
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
-     * - closeHostDialog() / reloadHostTable() / openHostDialog()
+     * - closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
      *
      * @param string|JsExpression|StructuredEventInterface $beforeHook 请求前钩子逻辑。
@@ -778,7 +778,7 @@ final class RequestAction extends Action
      * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
      *
      * @param string|JsExpression|StructuredEventInterface $afterSuccessHook 请求成功后的钩子逻辑。
      * @return static 当前请求动作实例。
@@ -806,7 +806,7 @@ final class RequestAction extends Action
      * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
      *
      * @param string|JsExpression|StructuredEventInterface $afterFailHook 请求失败后的钩子逻辑。
      * @return static 当前请求动作实例。
@@ -834,7 +834,7 @@ final class RequestAction extends Action
      * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
      * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
      * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() 等宿主桥方法。
+     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
      *
      * @param string|JsExpression|StructuredEventInterface $afterFinallyHook 请求完成后的钩子逻辑。
      * @return static 当前请求动作实例。
@@ -868,7 +868,7 @@ final class RequestAction extends Action
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData()
-     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog()
+     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
      *
      * 事件额外字段：

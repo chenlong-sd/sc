@@ -48,19 +48,8 @@ class FormArrayGroup implements FormNode, FormNodeContainer
     }
 
     /**
-     * 继续向当前重复分组追加子节点。
-     *
-     * @param FormNode ...$children 要追加的子节点。
-     * @return static 当前重复分组节点。
-     */
-    public function addNodes(FormNode ...$children): static
-    {
-        return $this->appendFormNodeChildren(...$children);
-    }
-
-    /**
      * 追加当前数组分组的“每一行 schema”。
-     * 推荐使用这个方法表达“这一组数据有哪些字段/结构节点”，比通用 `addNodes()` 更直观。
+     * 推荐使用这个方法表达“这一组数据有哪些字段/结构节点”。
      *
      * @param FormNode ...$children 每一行的 schema 节点。
      * @return static 当前重复分组节点。
@@ -70,19 +59,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      */
     public function addSchema(FormNode ...$children): static
     {
-        return $this->addNodes(...$children);
-    }
-
-    /**
-     * 继续向当前重复分组追加子节点。
-     * `addNodes()` 的兼容别名。
-     *
-     * @param FormNode ...$children 要追加的子节点。
-     * @return static 当前重复分组节点。
-     */
-    public function addChildren(FormNode ...$children): static
-    {
-        return $this->addNodes(...$children);
+        return $this->appendFormNodeChildren(...$children);
     }
 
     /**

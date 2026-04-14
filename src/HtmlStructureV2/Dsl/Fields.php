@@ -287,7 +287,7 @@ final class Fields
      * - dialog(): 绑定选择弹窗，通常传 Dialogs::make(...)->iframe(...)
      * - selectionPath(): 指定 iframe 页里保存选中结果的变量路径；V2 列表页通常可省略，默认读取 "__scV2Selection"
      * - selectionPath("__scV2Selections.userTable"): 指定 V2 多表页里的某个表格选中结果
-     * - selectionPath("VueApp.userSelection"): 指向旧页面里自行维护的选中结果变量
+     * - selectionPath("customSelection.items"): 指向自定义选择页里自行维护的选中结果变量
      * - valueField()/labelField(): 指定提交值和主文案字段
      * - displayTemplate(): 自定义已选项展示文本
      * 当前主字段默认值：多选为 `[]`，单选为 `null`。

@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Support;
 
 use Sc\Util\HtmlStructureV2\Components\Field;
+use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
@@ -151,6 +152,27 @@ final class FormSchemaWalker
     {
         $config = $field->getRemoteOptions() ?? [];
 
+        if ($field instanceof CascaderField) {
+            $cascaderProps = $field->getCascaderProps();
+            $valueField = $this->normalizeCascaderPropName($cascaderProps['value'] ?? null);
+            $labelField = $this->normalizeCascaderPropName($cascaderProps['label'] ?? null);
+            $childrenField = $this->normalizeCascaderPropName($cascaderProps['children'] ?? null);
+            $disabledField = $this->normalizeCascaderPropName($cascaderProps['disabled'] ?? null);
+
+            if ($valueField !== null && (($config['valueField'] ?? 'id') === 'id')) {
+                $config['valueField'] = $valueField;
+            }
+            if ($labelField !== null && (($config['labelField'] ?? 'name') === 'name')) {
+                $config['labelField'] = $labelField;
+            }
+            if ($childrenField !== null) {
+                $config['childrenField'] = $childrenField;
+            }
+            if ($disabledField !== null) {
+                $config['disabledField'] = $disabledField;
+            }
+        }
+
         $config['dependencies'] = array_values(array_unique(array_map(
             fn(string $path) => FormPath::resolve($prefix, $path),
             array_values(array_filter(
@@ -215,5 +237,12 @@ final class FormSchemaWalker
             static fn(array $matches) => '@model.' . FormPath::resolve($prefix, $matches[1] ?? ''),
             $template
         ) ?? $template;
+    }
+
+    private function normalizeCascaderPropName(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== ''
+            ? trim($value)
+            : null;
     }
 }

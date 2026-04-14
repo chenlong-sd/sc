@@ -23,13 +23,6 @@ final class ListAutoFilterFormFactory
             }
 
             $searchName = $column->getSearchName();
-            $customField = $column->getSearchFormField();
-            if ($customField !== null) {
-                $fields[] = $customField;
-                $resolvedNames[$searchName] = true;
-                continue;
-            }
-
             $field = $this->buildField(
                 $searchName,
                 $column->label(),

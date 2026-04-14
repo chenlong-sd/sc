@@ -41,7 +41,7 @@ final class UploadField extends Field implements ValidatableFieldInterface
     /**
      * 控制是否允许多文件上传。
      * 开启后字段默认值会切为数组；
-     * V2 默认兼容原版上传值格式：单图存字符串路径，普通文件/多图存
+     * 字段值约定为：单图存字符串路径，普通文件/多图存
      * `[{"uid":"...","url":"...","name":"...","status":"success"}]` 数组。
      *
      * @param bool $multiple 是否多文件，默认值为 true。

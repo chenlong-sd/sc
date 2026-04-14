@@ -330,7 +330,7 @@ class Action implements
      * 常用可读字段：row / tableKey / listKey / filters / forms / dialogs / selection / vm，
      * 若动作运行在 dialog footer 等弹窗上下文中，还可读取当前 dialog 的 dialog / dialogKey。
      * 运行在 iframe 子页面时，还可调用：
-     * - closeHostDialog() / reloadHostTable() / openHostDialog()
+     * - closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab()
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
      *
      * @param string|JsExpression|StructuredEventInterface $handler 点击处理逻辑。
@@ -419,7 +419,7 @@ class Action implements
      * - dialog / dialogKey: 当前 dialog 上下文存在时可用；动作显式指向目标弹窗时也会补齐
      * - vm: 当前 Vue 实例
      * - reloadTable() / reloadList() / reloadPage() / closeDialog() / openDialog(): 常用运行时辅助方法
-     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog(): iframe 子页面常用宿主桥接方法
+     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab(): iframe 子页面常用宿主桥接方法
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
      *
      * @param string $event 事件名，目前仅支持 click。

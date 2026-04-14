@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Enums\FieldType;
 final class CascaderField extends OptionField
 {
     private array $cascaderProps = [];
+    private bool $closeAfterSelection = false;
 
     public function __construct(string $name, string $label)
     {
@@ -16,7 +17,7 @@ final class CascaderField extends OptionField
     /**
      * 设置 cascader 选项。
      * 当传入树形节点数组时会保留原始结构，结合 cascaderProps() 指定 value/label/children 字段。
-     * 仍兼容简单的 `value => label` 写法。
+     * 同时也支持简单的 `value => label` 选项数组。
      *
      * @param array $options 级联选项。
      * @return static 当前级联字段实例。
@@ -88,6 +89,23 @@ final class CascaderField extends OptionField
         ]);
     }
 
+    /**
+     * 选择完成后自动收起下拉面板。
+     * 适合单选级联场景，避免每次选择后仍停留在展开状态。
+     *
+     * @param bool $closeAfterSelection 是否自动收起，默认值为 true。
+     * @return static 当前级联字段实例。
+     *
+     * 示例：
+     * `Fields::cascader('dept_id', '处置部门')->closeAfterSelection()`
+     */
+    public function closeAfterSelection(bool $closeAfterSelection = true): static
+    {
+        $this->closeAfterSelection = $closeAfterSelection;
+
+        return $this;
+    }
+
     public function getDefault(): mixed
     {
         if ($this->default !== null) {
@@ -95,6 +113,16 @@ final class CascaderField extends OptionField
         }
 
         return ($this->cascaderProps['multiple'] ?? false) ? [] : null;
+    }
+
+    public function getCascaderProps(): array
+    {
+        return $this->cascaderProps;
+    }
+
+    public function shouldCloseAfterSelection(): bool
+    {
+        return $this->closeAfterSelection;
     }
 
     private function shouldKeepRawOptions(array $options): bool

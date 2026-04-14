@@ -94,7 +94,9 @@ final class Form implements Renderable, EventAware
      */
     public function addFields(Field ...$fields): self
     {
-        return $this->addNodes(...$fields);
+        $this->children = array_merge($this->children, $fields);
+
+        return $this;
     }
 
     /**
@@ -104,9 +106,9 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->addNodes(Forms::section('基础信息')->schema(...))`
+     * `Form::make('qa-info-form')->addContent(Forms::section('基础信息')->addContent(...))`
      */
-    public function addNodes(FormNode ...$nodes): self
+    public function addContent(FormNode ...$nodes): self
     {
         $this->children = array_merge($this->children, $nodes);
 
@@ -160,20 +162,6 @@ final class Form implements Renderable, EventAware
         $this->showLabels = $showLabels;
 
         return $this;
-    }
-
-    /**
-     * 隐藏字段标签，常用于想在一行里放更多筛选项的表单。
-     *
-     * @param bool $hideLabels 是否隐藏标签，默认值为 true。
-     * @return self 当前表单实例。
-     *
-     * 示例：
-     * `Form::make('filter-form')->hideLabels()`
-     */
-    public function hideLabels(bool $hideLabels = true): self
-    {
-        return $this->showLabels(!$hideLabels);
     }
 
     /**
@@ -261,7 +249,7 @@ final class Form implements Renderable, EventAware
      * - form / model / forms / dialogs / selection
      * - vm
      * - getPageQuery() / resolvePageMode() / resolveFormMode() / loadFormData() / setFormModel() / initializeFormModel() / resetForm()
-     * - closeHostDialog() / reloadHostTable() / openHostDialog()
+     * - closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab()
      *
      * 例如可写：
      * - `['id' => "@page.query.id"]`

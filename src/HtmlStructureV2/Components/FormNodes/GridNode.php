@@ -35,19 +35,8 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
     }
 
     /**
-     * 继续向当前栅格容器追加子节点。
-     *
-     * @param FormNode ...$children 要追加的子节点。
-     * @return self 当前栅格布局节点。
-     */
-    public function addNodes(FormNode ...$children): self
-    {
-        return $this->appendFormNodeChildren(...$children);
-    }
-
-    /**
      * 追加当前栅格布局项。
-     * 推荐使用这个方法表达“这一组栅格里有哪些项”，比通用 `addNodes()` 更符合布局语义。
+     * 推荐使用这个方法表达“这一组栅格里有哪些项”。
      *
      * @param FormNode ...$children 要追加的布局项。
      * @return self 当前栅格布局节点。
@@ -57,19 +46,7 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      */
     public function addItems(FormNode ...$children): self
     {
-        return $this->addNodes(...$children);
-    }
-
-    /**
-     * 继续向当前栅格容器追加子节点。
-     * `addNodes()` 的兼容别名。
-     *
-     * @param FormNode ...$children 要追加的子节点。
-     * @return self 当前栅格布局节点。
-     */
-    public function addChildren(FormNode ...$children): self
-    {
-        return $this->addNodes(...$children);
+        return $this->appendFormNodeChildren(...$children);
     }
 
     /**

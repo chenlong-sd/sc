@@ -7,6 +7,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Field;
+use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
@@ -439,7 +440,73 @@ final class FieldRenderer
                         : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
                     : $this->jsValue($optionField->getOptions())
             );
+
+            if ($optionField instanceof CascaderField && $optionField->shouldCloseAfterSelection()) {
+                $this->applyCascaderCloseAfterSelection($component, $fieldPath, $fieldPathExpression);
+            }
         }
+    }
+
+    private function applyCascaderCloseAfterSelection(
+        AbstractHtmlElement $component,
+        string $fieldPath,
+        ?string $fieldPathExpression = null
+    ): void {
+        $refExpression = $this->resolveCascaderRefExpression($component, $fieldPath, $fieldPathExpression);
+        $existingHandler = $component->getAttr('@change');
+
+        $component->setAttr(
+            '@change',
+            $this->buildCascaderCloseHandler(
+                $refExpression,
+                is_string($existingHandler) ? $existingHandler : null
+            )
+        );
+    }
+
+    private function resolveCascaderRefExpression(
+        AbstractHtmlElement $component,
+        string $fieldPath,
+        ?string $fieldPathExpression = null
+    ): string {
+        $dynamicRef = $component->getAttr(':ref');
+        if (is_string($dynamicRef) && trim($dynamicRef) !== '') {
+            return $dynamicRef;
+        }
+
+        $staticRef = $component->getAttr('ref');
+        if (is_string($staticRef) && trim($staticRef) !== '') {
+            return $this->jsValue($staticRef);
+        }
+
+        if ($fieldPathExpression !== null) {
+            $refExpression = sprintf("('sc-v2-cascader:' + (%s))", $fieldPathExpression);
+            $component->setAttr(':ref', $refExpression);
+
+            return $refExpression;
+        }
+
+        $refName = 'sc-v2-cascader:' . $fieldPath;
+        $component->setAttr('ref', $refName);
+
+        return $this->jsValue($refName);
+    }
+
+    private function buildCascaderCloseHandler(string $refExpression, ?string $existingHandler = null): string
+    {
+        $existingLogic = '';
+        if (is_string($existingHandler) && trim($existingHandler) !== '') {
+            $existingLogic = sprintf(
+                'const __scExisting = (%s); if (typeof __scExisting === "function") { __scExisting(...args); } ',
+                $existingHandler
+            );
+        }
+
+        return sprintf(
+            '(...args) => { const $event = args[0]; const __scRefKey = %s; %sconst __scRefRaw = $refs[__scRefKey]; const __scRef = Array.isArray(__scRefRaw) ? __scRefRaw[0] : __scRefRaw; if (__scRef && typeof __scRef.togglePopperVisible === "function") { __scRef.togglePopperVisible(false); } }',
+            $refExpression,
+            $existingLogic
+        );
     }
 
     private function buildPickerComponent(

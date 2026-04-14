@@ -11,6 +11,7 @@
             initializeConfiguredForms,
             isObject,
             makeRequest,
+            openHostTab: openHostTabBridge,
             postDialogHostMessage,
             pickRows,
             readPageLocation,
@@ -153,6 +154,7 @@
               closeHostDialog: (...args) => vm.closeHostDialog(...args),
               reloadHostTable: (...args) => vm.reloadHostTable(...args),
               openHostDialog: (...args) => vm.openHostDialog(...args),
+              openHostTab: (...args) => vm.openHostTab(...args),
               setHostDialogTitle: (...args) => vm.setHostDialogTitle(...args),
               setHostDialogFullscreen: (...args) => vm.setHostDialogFullscreen(...args),
               toggleHostDialogFullscreen: (...args) => vm.toggleHostDialogFullscreen(...args),
@@ -333,6 +335,7 @@
                     closeHostDialog: (...args) => this.closeHostDialog(...args),
                     reloadHostTable: (...args) => this.reloadHostTable(...args),
                     openHostDialog: (...args) => this.openHostDialog(...args),
+                    openHostTab: (...args) => this.openHostTab(...args),
                     setHostDialogTitle: (...args) => this.setHostDialogTitle(...args),
                     setHostDialogFullscreen: (...args) => this.setHostDialogFullscreen(...args),
                     toggleHostDialogFullscreen: (...args) => this.toggleHostDialogFullscreen(...args),
@@ -551,6 +554,9 @@
 
                   return this.notifyDialogHost(payload);
                 },
+                openHostTab(target, title = '', index = null){
+                  return openHostTabBridge(target, title, index);
+                },
                 setHostDialogTitle(title, dialogKey = null){
                   const payload = {
                     action: 'setTitle',
@@ -659,12 +665,7 @@
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
           const pageApi = createPublicPageApi(vm);
-          const currentVueApp = globalThis.VueApp && typeof globalThis.VueApp === 'object'
-            ? globalThis.VueApp
-            : {};
-
           globalThis.__SC_V2_PAGE__ = pageApi;
-          globalThis.VueApp = Object.assign(currentVueApp, pageApi, { submit: pageApi.submit });
 
           return vm;
         };

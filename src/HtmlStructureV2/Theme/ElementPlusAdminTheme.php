@@ -76,42 +76,17 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private const BASE_CSS = <<<CSS
     #app[v-cloak]{display:none}
-    #app[v-cloak]+.sc-v2-app-skeleton{display:flex}
-    #app:not([v-cloak])+.sc-v2-app-skeleton{display:none!important}
+    #app[v-cloak]+.sc-v2-app-loading-shell{display:flex}
+    #app:not([v-cloak])+.sc-v2-app-loading-shell{display:none!important}
     html,body{height:100%}
     body{margin:0;background:#ffffff;color:#1f2937;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif}
     #app{min-height:100%;box-sizing:border-box;padding:10px 10px 8px}
-    .sc-v2-app-skeleton{--el-skeleton-color:#e8eef8;--el-skeleton-to-color:#d7e3f5;display:none;align-items:center;justify-content:center;min-height:100%;box-sizing:border-box;padding:10px 10px 8px;background:#ffffff}
-    .sc-v2-app-skeleton--loading .sc-v2-app-skeleton__page{display:none}
+    .sc-v2-app-loading-shell{display:none;align-items:center;justify-content:center;min-height:100%;box-sizing:border-box;padding:10px 10px 8px;background:#ffffff}
     .sc-v2-app-loading{display:flex;align-items:center;justify-content:center;flex:1 1 auto;width:100%;min-height:calc(100vh - 18px)}
-    .sc-v2-app-loading__panel{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0;background:transparent;box-shadow:none;border:none}
-    .sc-v2-app-loading__spinner{width:26px;height:26px;border-radius:50%;border:2px solid rgba(64,158,255,.16);border-top-color:#409eff;animation:sc-v2-app-loading-spin .8s linear infinite}
-    .sc-v2-app-loading__title{font-size:14px;line-height:20px;font-weight:500;color:#303133}
-    .sc-v2-app-loading__text{font-size:12px;line-height:18px;color:#909399;text-align:center}
-    .sc-v2-app-loading__bar{display:none}
+    .sc-v2-app-loading__panel{display:flex;align-items:center;gap:8px;padding:8px 0}
+    .sc-v2-app-loading__spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(64,158,255,.16);border-top-color:#409eff;animation:sc-v2-app-loading-spin .8s linear infinite}
+    .sc-v2-app-loading__title{font-size:13px;line-height:18px;font-weight:400;color:#606266}
     @keyframes sc-v2-app-loading-spin{to{transform:rotate(360deg)}}
-    .sc-v2-app-skeleton__page{display:flex;flex-direction:column;gap:15px;min-height:calc(100vh - 18px);position:relative}
-    .sc-v2-app-skeleton__block{position:relative;padding:18px;border:1px solid rgba(191,204,217,.42);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(248,251,255,.92) 100%);box-shadow:0 14px 36px rgba(15,23,42,.06),inset 0 1px 0 rgba(255,255,255,.72);overflow:hidden}
-    .sc-v2-app-skeleton__block::before{content:'';position:absolute;left:0;top:0;right:0;height:3px;background:linear-gradient(90deg,rgba(64,158,255,.08),rgba(64,158,255,.34),rgba(64,158,255,.08))}
-    .sc-v2-app-skeleton__header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
-    .sc-v2-app-skeleton__title{display:flex;flex-direction:column;gap:12px;flex:1 1 auto;max-width:460px}
-    .sc-v2-app-skeleton__title .el-skeleton__h1{width:236px;height:30px;border-radius:12px}
-    .sc-v2-app-skeleton__title .el-skeleton__text{width:336px;height:14px;border-radius:999px}
-    .sc-v2-app-skeleton__actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .sc-v2-app-skeleton__actions .el-skeleton__button{width:98px;height:38px;border-radius:999px}
-    .sc-v2-app-skeleton__filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-    .sc-v2-app-skeleton__field{padding:14px 14px 12px;border:1px solid rgba(206,216,230,.62);border-radius:14px;background:rgba(255,255,255,.78);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);display:flex;flex-direction:column;gap:10px}
-    .sc-v2-app-skeleton__field-label{width:68px;height:11px;border-radius:999px}
-    .sc-v2-app-skeleton__field-control{height:34px;border-radius:10px}
-    .sc-v2-app-skeleton__table-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
-    .sc-v2-app-skeleton__table-left,.sc-v2-app-skeleton__table-tools{display:flex;gap:8px;flex-wrap:wrap}
-    .sc-v2-app-skeleton__table-left .el-skeleton__button,.sc-v2-app-skeleton__table-tools .el-skeleton__button{width:86px;height:30px;border-radius:999px}
-    .sc-v2-app-skeleton__table-head,.sc-v2-app-skeleton__table-row{display:grid;grid-template-columns:96px minmax(160px,1.4fr) repeat(4,minmax(92px,1fr));gap:12px;align-items:center}
-    .sc-v2-app-skeleton__table-head{padding:10px 14px;margin-bottom:12px;border:1px solid rgba(208,218,231,.78);border-radius:14px;background:rgba(247,250,254,.92)}
-    .sc-v2-app-skeleton__table-row{padding:14px 14px;margin-top:10px;border:1px solid rgba(214,223,235,.72);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.94) 0%,rgba(246,249,253,.9) 100%)}
-    .sc-v2-app-skeleton__table-row:nth-child(odd){transform:translateX(4px)}
-    .sc-v2-app-skeleton__table-head .el-skeleton__item{height:11px;border-radius:999px}
-    .sc-v2-app-skeleton__table-row .el-skeleton__item{height:14px;border-radius:999px}
     .sc-v2-page{display:flex;flex-direction:column;gap:15px}
     .sc-v2-list{display:flex;flex-direction:column;gap:0}
     .sc-v2-table-block{display:flex;flex-direction:column;gap:10px}
@@ -186,20 +161,21 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-table-settings-modal__panel--wide{width:min(96vw,980px)}
     .sc-v2-table-settings-modal__header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px 14px;border-bottom:1px solid var(--el-border-color-lighter)}
     .sc-v2-table-settings-modal__title{font-size:18px;font-weight:600;color:var(--el-text-color-primary)}
-    .sc-v2-table-settings-modal__body{padding:16px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-    .sc-v2-table-settings-modal__footer{padding:0 16px 16px}
-    .sc-v2-table-settings{display:flex;flex-direction:column;gap:16px;min-height:0}
-    .sc-v2-table-settings .el-tabs{display:flex;flex-direction:column;min-height:0}
-    .sc-v2-table-settings .el-tabs__content{min-height:0}
-    .sc-v2-table-settings__pane{display:flex;flex-direction:column;gap:16px;min-height:0}
+    .sc-v2-table-settings-modal__body{padding:16px;overflow:hidden;display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+    .sc-v2-table-settings-modal__footer{flex:0 0 auto;padding:0 16px 16px}
+    .sc-v2-table-settings{display:flex;flex:1 1 auto;flex-direction:column;gap:16px;min-height:0}
+    .sc-v2-table-settings .el-tabs{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+    .sc-v2-table-settings .el-tabs__content{display:flex;flex:1 1 auto;min-height:0}
+    .sc-v2-table-settings .el-tab-pane{display:flex;flex:1 1 auto;flex-direction:column;min-height:0}
+    .sc-v2-table-settings__pane{display:flex;flex:1 1 auto;flex-direction:column;gap:16px;min-height:0}
     .sc-v2-table-settings__switches{display:flex;gap:12px;flex-wrap:wrap}
     .sc-v2-table-settings__switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--el-border-color-light);border-radius:8px;min-width:180px}
-    .sc-v2-table-settings-list{display:flex;flex-direction:column;min-height:0;border:1px solid var(--el-border-color-light);border-radius:10px;background:#fff;overflow:hidden}
+    .sc-v2-table-settings-list{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;border:1px solid var(--el-border-color-light);border-radius:10px;background:#fff;overflow:hidden}
     .sc-v2-table-settings-list__header,.sc-v2-table-settings-list__row{display:grid;align-items:center;column-gap:12px;padding:0 12px;box-sizing:border-box}
     .sc-v2-table-settings-list--display .sc-v2-table-settings-list__header,.sc-v2-table-settings-list--display .sc-v2-table-settings-list__row{grid-template-columns:76px minmax(180px,1fr) 92px 132px 132px 132px}
     .sc-v2-table-settings-list--export .sc-v2-table-settings-list__header,.sc-v2-table-settings-list--export .sc-v2-table-settings-list__row{grid-template-columns:76px minmax(180px,1fr) 92px}
     .sc-v2-table-settings-list__header{min-height:40px;background:var(--el-fill-color-light);border-bottom:1px solid var(--el-border-color-light);font-size:13px;font-weight:600;color:var(--el-text-color-secondary);flex:0 0 auto}
-    .sc-v2-table-settings-list__body{overflow:auto;min-height:0;overscroll-behavior:contain;overflow-anchor:none;contain:content}
+    .sc-v2-table-settings-list__body{flex:1 1 auto;overflow:auto;min-height:0;overscroll-behavior:contain;overflow-anchor:none;contain:content}
     .sc-v2-table-settings-list__rows{display:flex;flex-direction:column}
     .sc-v2-table-settings-list__spacer{flex:0 0 auto;height:0}
     .sc-v2-table-settings-list__row{min-height:50px;border-bottom:1px solid var(--el-border-color-lighter)}
@@ -260,23 +236,10 @@ final class ElementPlusAdminTheme implements ThemeInterface
     .sc-v2-form-table__item{margin-bottom:0}
     @media (max-width: 768px){
       #app{padding:8px 8px 6px}
-      .sc-v2-app-skeleton{padding:8px 8px 6px}
+      .sc-v2-app-loading-shell{padding:8px 8px 6px}
       .sc-v2-app-loading{min-height:calc(100vh - 14px)}
-      .sc-v2-app-loading__panel{padding:8px 0}
-      .sc-v2-app-loading__spinner{width:24px;height:24px}
-      .sc-v2-app-loading__text{max-width:220px}
-      .sc-v2-app-skeleton__page{min-height:calc(100vh - 14px)}
-      .sc-v2-app-skeleton__block{padding:14px;border-radius:16px}
-      .sc-v2-app-skeleton__header,.sc-v2-app-skeleton__table-toolbar{flex-direction:column;align-items:stretch}
-      .sc-v2-app-skeleton__title .el-skeleton__h1{width:164px;height:26px}
-      .sc-v2-app-skeleton__title .el-skeleton__text{width:228px}
-      .sc-v2-app-skeleton__actions,.sc-v2-app-skeleton__table-left,.sc-v2-app-skeleton__table-tools{width:100%}
-      .sc-v2-app-skeleton__actions .el-skeleton__button,.sc-v2-app-skeleton__table-left .el-skeleton__button,.sc-v2-app-skeleton__table-tools .el-skeleton__button{width:auto;flex:1 1 96px}
-      .sc-v2-app-skeleton__filters{grid-template-columns:minmax(0,1fr)}
-      .sc-v2-app-skeleton__field{padding:12px}
-      .sc-v2-app-skeleton__table-head{display:none}
-      .sc-v2-app-skeleton__table-row{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:10px;padding:12px;margin-top:8px;transform:none}
-      .sc-v2-app-skeleton__table-row .el-skeleton__item:first-child{grid-column:1/-1}
+      .sc-v2-app-loading__panel{padding:6px 0}
+      .sc-v2-app-loading__spinner{width:18px;height:18px}
       .sc-v2-page__header{flex-direction:column;align-items:stretch}
       .sc-v2-actions,.sc-v2-toolbar,.sc-v2-toolbar__actions,.sc-v2-filters__actions,.sc-v2-status-toggles{width:100%}
       .sc-v2-form__control{flex-direction:column;align-items:stretch}
@@ -308,7 +271,7 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $assets->addScript(StaticResource::AXIOS);
         $assets->addScript(StaticResource::SORTABLE);
         $assets->addInlineStyle(self::BASE_CSS);
-        $context->document()->appendToBody($this->createAppSkeleton());
+        $context->document()->appendToBody($this->createAppLoadingShell());
     }
 
     public function render(Renderable $component, RenderContext $context): AbstractHtmlElement
@@ -452,142 +415,19 @@ final class ElementPlusAdminTheme implements ThemeInterface
         );
     }
 
-    private function createAppSkeleton(): AbstractHtmlElement
+    private function createAppLoadingShell(): AbstractHtmlElement
     {
         return El::div()
-            ->addClass('sc-v2-app-skeleton')
-            ->addClass('sc-v2-app-skeleton--loading')
+            ->addClass('sc-v2-app-loading-shell')
             ->setAttr('aria-hidden', 'true')
             ->append(
-                $this->createAppLoadingIndicator(),
-                El::div()->addClass('sc-v2-app-skeleton__page')->append(
-                    $this->createAppSkeletonHeader(),
-                    $this->createAppSkeletonFilters(),
-                    $this->createAppSkeletonTable()
-                )
-            );
-    }
-
-    private function createAppLoadingIndicator(): AbstractHtmlElement
-    {
-        return El::div()->addClass('sc-v2-app-loading')->append(
-            El::div()->addClass('sc-v2-app-loading__panel')->append(
-                El::div()->addClass('sc-v2-app-loading__spinner'),
-                El::div()->addClass('sc-v2-app-loading__title')->append('页面加载中'),
-                El::div()->addClass('sc-v2-app-loading__text')->append('正在准备筛选项和表格配置，请稍候…'),
-                El::div()->addClass('sc-v2-app-loading__bar')
-            )
-        );
-    }
-
-    private function createAppSkeletonHeader(): AbstractHtmlElement
-    {
-        return El::div()->addClass('sc-v2-app-skeleton__block')->append(
-            El::div()->addClass('sc-v2-app-skeleton__header')->append(
-                El::div()->addClass('el-skeleton')->addClass('is-animated')->addClass('sc-v2-app-skeleton__title')->append(
-                    $this->createSkeletonItem('el-skeleton__h1'),
-                    $this->createSkeletonItem('el-skeleton__text')
-                ),
-                El::div()->addClass('el-skeleton')->addClass('is-animated')->addClass('sc-v2-app-skeleton__actions')->append(
-                    $this->createSkeletonItem('el-skeleton__button'),
-                    $this->createSkeletonItem('el-skeleton__button')
-                )
-            )
-        );
-    }
-
-    private function createAppSkeletonFilters(): AbstractHtmlElement
-    {
-        $filters = El::div()->addClass('el-skeleton')->addClass('is-animated')->addClass('sc-v2-app-skeleton__filters');
-        for ($index = 0; $index < 4; $index++) {
-            $filters->append(
-                El::div()->addClass('sc-v2-app-skeleton__field')->append(
-                    $this->createSkeletonItem('sc-v2-app-skeleton__field-label'),
-                    $this->createSkeletonItem('sc-v2-app-skeleton__field-control')
-                )
-            );
-        }
-
-        return El::div()->addClass('sc-v2-app-skeleton__block')->append($filters);
-    }
-
-    private function createAppSkeletonTable(): AbstractHtmlElement
-    {
-        return El::div()->addClass('sc-v2-app-skeleton__block')->append(
-            El::div()->addClass('el-skeleton')->addClass('is-animated')->append(
-                El::div()->addClass('sc-v2-app-skeleton__table-toolbar')->append(
-                    El::div()->addClass('sc-v2-app-skeleton__table-left')->append(
-                        $this->createSkeletonItem('el-skeleton__button'),
-                        $this->createSkeletonItem('el-skeleton__button')
-                    ),
-                    El::div()->addClass('sc-v2-app-skeleton__table-tools')->append(
-                        $this->createSkeletonItem('el-skeleton__button'),
-                        $this->createSkeletonItem('el-skeleton__button')
+                El::div()->addClass('sc-v2-app-loading')->append(
+                    El::div()->addClass('sc-v2-app-loading__panel')->append(
+                        El::div()->addClass('sc-v2-app-loading__spinner'),
+                        El::div()->addClass('sc-v2-app-loading__title')->append('加载中')
                     )
-                ),
-                $this->createAppSkeletonTableRow('sc-v2-app-skeleton__table-head', [
-                    'width:56px',
-                    'width:40%',
-                    'width:72px',
-                    'width:64px',
-                    'width:68px',
-                    'width:70px',
-                ]),
-                $this->createAppSkeletonTableRow('sc-v2-app-skeleton__table-row', [
-                    'width:72px',
-                    'width:78%',
-                    'width:64px',
-                    'width:72px',
-                    'width:68px',
-                    'width:70px',
-                ]),
-                $this->createAppSkeletonTableRow('sc-v2-app-skeleton__table-row', [
-                    'width:68px',
-                    'width:70%',
-                    'width:72px',
-                    'width:60px',
-                    'width:74px',
-                    'width:68px',
-                ]),
-                $this->createAppSkeletonTableRow('sc-v2-app-skeleton__table-row', [
-                    'width:74px',
-                    'width:82%',
-                    'width:58px',
-                    'width:70px',
-                    'width:64px',
-                    'width:76px',
-                ]),
-                $this->createAppSkeletonTableRow('sc-v2-app-skeleton__table-row', [
-                    'width:70px',
-                    'width:76%',
-                    'width:66px',
-                    'width:72px',
-                    'width:62px',
-                    'width:68px',
-                ])
-            )
-        );
-    }
-
-    private function createAppSkeletonTableRow(string $className, array $widths): AbstractHtmlElement
-    {
-        $row = El::div()->addClass($className);
-
-        foreach ($widths as $style) {
-            $row->append($this->createSkeletonItem('el-skeleton__p', $style));
-        }
-
-        return $row;
-    }
-
-    private function createSkeletonItem(string $className, ?string $style = null): AbstractHtmlElement
-    {
-        $item = El::div()->addClass('el-skeleton__item')->addClass($className);
-        if ($style !== null && $style !== '') {
-            $item->setStyle($style);
-        }
-
-        return $item;
+                )
+            );
     }
 
     private function appendSimpleRuntime(RenderContext $context): void

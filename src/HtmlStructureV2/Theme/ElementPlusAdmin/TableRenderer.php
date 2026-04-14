@@ -11,12 +11,27 @@ use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\AppliesRenderableAttributes;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
 final class TableRenderer
 {
+    use AppliesRenderableAttributes;
     use EncodesJsValues;
 
+    private const RESERVED_TABLE_ROOT_ATTRS = [
+        'ref',
+        ':data',
+        'v-loading',
+        ':stripe',
+        ':border',
+        'empty-text',
+        '@selection-change',
+        '@sort-change',
+        'row-key',
+        ':tree-props',
+        ':max-height',
+    ];
     private const DRAG_SORT_HANDLE_CLASS = 'sc-v2-table-drag-handle';
     private const SETTINGS_DRAG_HANDLE_CLASS = 'sc-v2-table-settings-drag-handle';
 
@@ -206,6 +221,11 @@ final class TableRenderer
         if ($table->getMaxHeight() !== 0) {
             $element->setAttr(':max-height', $bindings->maxHeightExpression());
         }
+
+        $element = $this->applyRenderableAttributes(
+            $element,
+            $this->filterRenderableTableRootAttributes($table->getRenderAttributes())
+        );
 
         if ($table->hasSelection() && !$table->hasExplicitSelectionColumn()) {
             $selectionColumn = El::double('el-table-column')->setAttrs([
@@ -420,6 +440,26 @@ final class TableRenderer
             ->append($table->getDragSortLabel());
     }
 
+    /**
+     * @param array<string, mixed> $attrs
+     * @return array<string, mixed>
+     */
+    private function filterRenderableTableRootAttributes(array $attrs): array
+    {
+        $filtered = [];
+
+        foreach ($attrs as $attr => $value) {
+            $name = is_string($attr) ? trim($attr) : '';
+            if ($name === '' || in_array($name, self::RESERVED_TABLE_ROOT_ATTRS, true)) {
+                continue;
+            }
+
+            $filtered[$name] = $value;
+        }
+
+        return $filtered;
+    }
+
     private function renderToolbarAction(
         Table $table,
         TableRenderBindings $bindings,
@@ -540,7 +580,6 @@ final class TableRenderer
         $body = El::double('div')
             ->addClass('sc-v2-table-settings-list__body')
             ->setAttrs([
-                'style' => sprintf('max-height:%s', $exportMode ? 'calc(100vh - 270px)' : 'calc(100vh - 320px)'),
                 'data-sc-table-settings-scroll' => '',
                 '@scroll.passive' => $bindings->settingsVirtualScrollExpression($mode),
             ])

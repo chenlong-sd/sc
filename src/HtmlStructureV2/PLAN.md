@@ -20,7 +20,7 @@ After re-checking real usage and current V2 code, the following are **not** the 
 
 Reason:
 
-- V2 already has `Table::toolbar()`
+- V2 already has `Table::toolbarLeft()` / `Table::toolbarRight()`
 - V2 already has `Table::rowActions()`
 - V2 already has `ListWidget::filters()`
 - V2 already has `Table::search()` / `Table::searchSchema()`
@@ -35,7 +35,7 @@ So the next phase should focus on missing feature bodies, not on re-creating old
 - Work outside `sc/` may be used as validation input, but should not become planned delivery unless explicitly requested by the user.
 - Do not break original V1 pages.
 - Prefer V2-native capabilities first.
-- Add compatibility aliases only when they can map cleanly onto a real V2-native feature.
+- Do not keep migration aliases in V2 unless a current real page strictly depends on them.
 - Keep page authoring direct and readable; avoid building heavy abstraction just to mimic V1.
 
 ## Recently Completed
@@ -71,7 +71,6 @@ This gap is no longer pending planning work.
 Confirmed landing points:
 
 - `Table::export()` now exists as the V2-native export entry
-- Old `openExportExcel()` can already map onto the same export pipeline as a thin compatibility alias
 - Table/list runtime now consumes column export metadata and can export current selection or filtered full data
 - Export respects `onlyExportExcel()` and current column visibility settings consistently
 
@@ -109,7 +108,6 @@ Confirmed landing points:
 
 - `Table::statusToggle()` now exists as the V2-native quick toggle entry
 - Native `Table::statusToggle()` has been simplified back to `name + options + label`; backend field mapping stays in `search()` / `searchSchema()` / `Column::searchable()`
-- Old `addStatusToggleButtons()` / `setStatusToggleButtonsNewLine()` can already map onto the same capability as thin compatibility aliases
 - Toggle clicks now reuse the existing table search pipeline instead of introducing a parallel query path
 - When a table lives inside `ListWidget`, toggle state syncs into the list filter model
 - The labeled toggle-bar presentation has been aligned back to the original V1 visual structure during real-page migration
@@ -125,7 +123,6 @@ Real migration usage also confirmed that table toolbar actions need an explicit 
 
 Confirmed landing points:
 
-- `Table::toolbar()` is kept as the compatibility entry and now maps to the left side
 - `Table::toolbarLeft()` and `Table::toolbarRight()` now expose explicit placement for usage-side code
 - Toolbar rendering now places custom right-side actions together with built-in export / column settings tools
 - Managed dialog collection and action target validation now cover both left and right toolbar action groups
@@ -134,7 +131,6 @@ Confirmed landing points:
 Outcome:
 
 - Usage-side code can decide action placement directly from the public API surface
-- Old `toolbar()` pages remain compatible without changing behavior
 
 ### Done. V2-native table trash flow
 
@@ -143,7 +139,6 @@ Real business pages also still rely on the original table trash / recover flow b
 Confirmed landing points:
 
 - `Table::trash()` now exists as the V2-native trash entry
-- `Table::enableTrash()` remains as a compatibility alias
 - Trash is still treated as table-owned behavior instead of a free-floating action because it changes toolbar visibility, row actions, and remote query mode together
 - The table now auto-generates a managed iframe dialog that opens the current page with `is_delete=1`
 - Trash mode now hides normal toolbar actions, export, settings, and row actions while keeping refresh available
@@ -154,7 +149,7 @@ Outcome:
 
 - V2 pages can keep the original soft-delete recycle-bin workflow without falling back to V1 table rendering
 - Usage-side code only needs table-level configuration and does not need to hand-build the recycle-bin dialog
-- Native toggle API is now cleaner, while legacy search-field mapping remains isolated in the compatibility alias layer
+- Native toggle API stays focused on filter-name binding; backend field mapping remains in the search schema itself
 
 ### Done. Public CRUD form submission shortcuts
 
@@ -203,7 +198,6 @@ Confirmed landing points:
 
 - V2 simple pages now automatically expose `"__SC_V2_PAGE__.submit(scope = null)"`
 - Public page API also exposes `"validateForm()"` / `"getFormModel()"` / `"cloneFormModel()"`
-- `"VueApp.submit"` remains available as a compatibility alias for existing host-side defaults
 - README and runtime tests now document and verify this public child-page submit contract
 
 Outcome:
@@ -243,7 +237,7 @@ Confirmed observations:
 - `RequestAction::payload()` already exposes `forms` in public context, so form model reading can be a first-class API instead of forcing runtime-internal `vm` calls
 - `Actions::submit()` already gives dialog-footer submission a relatively clear public shortcut, and standalone page forms now also have public `submitForm()` / `saveUrls()` / `Form::load()` flow
 - Real standalone form-page usage still tends to fall back to internal runtime names such as `validateSimpleForm(...)` / `getSimpleFormModel(...)`
-- iframe child pages can already coordinate with the host, but current usage still leans on raw `window.parent.postMessage(...)` and magic strings such as `"VueApp.submit"`
+- iframe child pages can already coordinate with the host, but current usage still leans on raw `window.parent.postMessage(...)` and implicit global submit entry
 - Page-form CRUD flows still duplicate cancel / return / host-close / host-reload handling more often than they should
 - Current comments expose context nouns such as `forms` / `vm`, but they still do not provide one obvious public recipe for “how to save a V2 form page” without reading runtime source
 
@@ -274,14 +268,13 @@ Core close/reload/return and child submit entry are now public, but iframe child
 
 Evidence:
 
-- Backward compatibility still keeps the host-side default handler path at `"VueApp.submit"`
 - Host close / reload / return now have public helpers, and child pages now expose `"__SC_V2_PAGE__.submit()"`, but the end-to-end host/child recipe can still be tightened further
 - V2-to-V2 iframe form flows still do not have one highest-level public shortcut for “host opens child page, child validates/submits, host saves/refreshes”
 
 Target:
 
 - Keep the newly landed public host-return helpers as the baseline
-- Prefer the newly landed `"__SC_V2_PAGE__.submit()"` contract in docs/examples, while keeping `"VueApp.submit"` only as compatibility fallback
+- Prefer the newly landed `"__SC_V2_PAGE__.submit()"` contract in docs/examples and runtime defaults
 - Decide whether that contract should land as runtime-injected JS helper(s), PHP-side public DSL, or both, but make the usage-side entry obvious and documented
 - Ensure V2-to-V2 iframe flows can rely on stronger defaults, including submit entry, host bridge, and selection-path behavior, instead of forcing per-page glue
 - Keep same-origin assumptions and fallback behavior explicit in docs
@@ -307,7 +300,7 @@ Target:
 - Clearly distinguish public form/request contexts from runtime-internal helpers
 - Add IDE-visible method comments for any new CRUD shortcuts and bridge helpers
 - In method comments, explicitly state handler signature, execution order, default behavior, and the available context fields for common form-save scenarios
-- When comments mention special strings such as `"@forms.profile.name"` or `"VueApp.submit"`, keep them quoted so IDE popups can show the full text cleanly
+- When comments mention special strings such as `"@forms.profile.name"` or `"__SC_V2_PAGE__.submit"`, keep them quoted so IDE popups can show the full text cleanly
 - Expand README with focused form CRUD examples:
   - standalone page form save
   - dialog form save
@@ -351,7 +344,6 @@ These items should not be treated as the current next-step priority:
 
 - Broad compatibility work for `setHeaderEvent()`
 - Broad compatibility work for `setRowEvent()`
-- Broad compatibility work for `addSearch()`
 
 Reason:
 

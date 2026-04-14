@@ -3,8 +3,10 @@
 namespace Sc\Util\HtmlStructureV2\Components;
 
 use JetBrains\PhpStorm\ExpectedValues;
+use Stringable;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
+use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\DataSource\ArrayDataSource;
 use Sc\Util\HtmlStructureV2\DataSource\DataSourceInterface;
@@ -20,6 +22,7 @@ final class Table implements Renderable, EventAware
     use HasEvents {
         on as private bindTableEventHandler;
     }
+    use HasRenderAttributes;
     use Conditionable;
     use RendersWithTheme;
 
@@ -84,6 +87,7 @@ final class Table implements Renderable, EventAware
     private bool $trashEnabled = false;
     private ?string $trashRecoverUrl = null;
     private ?Dialog $trashDialog = null;
+    private ?JsExpression $remoteDataHandle = null;
 
     public function __construct(
         private readonly string $key
@@ -118,21 +122,6 @@ final class Table implements Renderable, EventAware
         $this->columns = array_merge($this->columns, $columns);
 
         return $this;
-    }
-
-    /**
-     * 设置表格工具栏左侧动作。
-     * 这是兼容旧写法的默认入口，等价于 toolbarLeft()。
-     *
-     * @param Action ...$actions 工具栏动作。
-     * @return self 当前表格实例。
-     *
-     * 示例：
-     * `Tables::make('qa-info-table')->toolbar(Actions::create()->dialog('qa-info-dialog'))`
-     */
-    public function toolbar(Action ...$actions): self
-    {
-        return $this->toolbarLeft(...$actions);
     }
 
     /**
@@ -310,9 +299,7 @@ final class Table implements Renderable, EventAware
      * - previousRow / nextRow: 拖拽完成后，被拖动行前后相邻的可见行
      * - oldIndex / newIndex: Sortable 的索引信息
      * - isDown / isMoveDown / isMoveUp: 更直观的拖拽方向标记
-     * - isUp: 为兼容原版 `setDraw()` 语义保留，等价于 isMoveDown
      * - oldParentRow / newParentRow / sameParent: 树表时可读取的原父级与目标父级
-     * - movedParentRow / anchorParentRow: oldParentRow / newParentRow 的兼容别名
      * - visibleRows / flatRows / rows / allRows / selection / filters / vm
      *
      * @param bool $enabled 是否启用拖拽排序，默认值为 true。
@@ -447,47 +434,6 @@ final class Table implements Renderable, EventAware
     }
 
     /**
-     * V1 `addStatusToggleButtons()` 的兼容别名。
-     * 旧写法传的是后端搜索字段，这里会自动推断一个可用的筛选模型字段名。
-     *
-     * @param string $searchField 后端搜索字段名。
-     * @param array $mapping 状态映射。
-     * @param string|AbstractHtmlElement|\Stringable|null $label 按钮组标签。
-     * @return self 当前表格实例。
-     *
-     * 示例：
-     * `Tables::make('qa-info-table')->addStatusToggleButtons('status', [1 => '启用', 0 => '停用'])`
-     */
-    public function addStatusToggleButtons(
-        string $searchField,
-        array $mapping,
-        string|AbstractHtmlElement|\Stringable|null $label = null
-    ): self {
-        $name = $this->normalizeStatusToggleName($searchField);
-
-        if (!isset($this->searchSchema[$name])) {
-            $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, [
-                'type' => '=',
-                'field' => $searchField,
-                'hidden' => true,
-            ]);
-        }
-
-        return $this->statusToggle($name, $mapping, $label);
-    }
-
-    /**
-     * V1 `setStatusToggleButtonsNewLine()` 的兼容别名。
-     *
-     * @param bool $newLine 是否换行展示，默认值为 true。
-     * @return self 当前表格实例。
-     */
-    public function setStatusToggleButtonsNewLine(bool $newLine = true): self
-    {
-        return $this->statusTogglesNewLine($newLine);
-    }
-
-    /**
      * 启用表格导出能力。
      * 默认会在工具栏右侧补一个“导出Excel”按钮；远程表格会复用当前筛选/排序条件重新拉全量数据，
      * 并自动附加 `is_export=1`，方便沿用旧接口的导出分支。
@@ -590,18 +536,6 @@ final class Table implements Renderable, EventAware
         $this->exportQuery = $query;
 
         return $this;
-    }
-
-    /**
-     * export() 的旧版兼容别名。
-     * 保留原版“文件名末尾自动追加当天日期”的习惯。
-     *
-     * @param string $filename 原版导出文件名，默认值为 export.xlsx。
-     * @return self 当前表格实例。
-     */
-    public function openExportExcel(string $filename = 'export.xlsx'): self
-    {
-        return $this->export($this->normalizeLegacyExportFilename($filename));
     }
 
     /**
@@ -805,17 +739,6 @@ final class Table implements Renderable, EventAware
     }
 
     /**
-     * settings() 的兼容别名。
-     *
-     * @param bool $settings 是否启用表格设置，默认值为 true。
-     * @return self 当前表格实例。
-     */
-    public function openSetting(bool $settings = true): self
-    {
-        return $this->settings($settings);
-    }
-
-    /**
      * 设置空数据提示文案。
      *
      * @param string $emptyText 空数据提示文案。
@@ -908,6 +831,29 @@ final class Table implements Renderable, EventAware
         return $this;
     }
 
+
+    /**
+     * 为远程表格配置响应数据二次处理逻辑。
+     * 推荐传函数表达式，例如：({ payload }) => payload?.data || payload
+     *
+     * 若传入旧版语句体，框架会自动包成 (ctx) => { ...; return data; }。
+     *
+     * @param string|\Stringable|JsExpression|null $handler 处理逻辑；传 null 表示清空。
+     * @return self 当前表格实例。
+     */
+    public function remoteDataHandle(string|\Stringable|JsExpression|null $handler): self
+    {
+        if ($handler === null) {
+            $this->remoteDataHandle = null;
+
+            return $this;
+        }
+
+        $this->remoteDataHandle = $this->normalizeRemoteDataHandleExpression($handler);
+
+        return $this;
+    }
+
     /**
      * 开启表格回收站能力。
      * 仅对远程数据表格生效；启用后会在工具栏右侧自动补一个“回收站”入口，
@@ -926,21 +872,6 @@ final class Table implements Renderable, EventAware
         $this->trashRecoverUrl = $this->normalizeNullableString($recoverUrl);
 
         return $this;
-    }
-
-    /**
-     * trash() 的兼容别名。
-     * 便于旧用法迁移时继续沿用 `enableTrash()` 命名。
-     *
-     * @param string|null $recoverUrl 批量恢复接口地址；传 null 表示只开回收站查看。
-     * @return self 当前表格实例。
-     *
-     * 示例：
-     * `Tables::make('qa-info-table')->enableTrash('/admin/qa-info/recover')`
-     */
-    public function enableTrash(?string $recoverUrl = null): self
-    {
-        return $this->trash($recoverUrl);
     }
 
     /**
@@ -982,7 +913,7 @@ final class Table implements Renderable, EventAware
      * - pageChange: page
      * - pageSizeChange: pageSize
      * - sortChange: sort / payload
-     * - dragSort: movedRow / anchorRow / previousRow / nextRow / visibleRows / flatRows / oldIndex / newIndex / isDown / isMoveDown / isMoveUp / isUp / oldParentRow / newParentRow / sameParent / event
+     * - dragSort: movedRow / anchorRow / previousRow / nextRow / visibleRows / flatRows / oldIndex / newIndex / isDown / isMoveDown / isMoveUp / oldParentRow / newParentRow / sameParent / event
      * - deleteSuccess: selection / ids / payload / response
      * - deleteFail: selection / ids / error
      *
@@ -1013,7 +944,7 @@ final class Table implements Renderable, EventAware
 
     /**
      * 获取当前表格全部工具栏动作。
-     * 返回值会合并左侧和右侧两组动作，主要给兼容层和动作收集逻辑使用。
+     * 返回值会合并左侧和右侧两组动作，主要给动作收集逻辑使用。
      *
      * @return Action[]
      */
@@ -1053,6 +984,11 @@ final class Table implements Renderable, EventAware
     public function getDataSource(): ?DataSourceInterface
     {
         return $this->dataSource;
+    }
+
+    public function getRemoteDataHandle(): ?JsExpression
+    {
+        return $this->remoteDataHandle;
     }
 
     public function hasRemoteDataSource(): bool
@@ -1283,6 +1219,68 @@ final class Table implements Renderable, EventAware
         return false;
     }
 
+    private function normalizeRemoteDataHandleExpression(string|\Stringable|JsExpression $handler): JsExpression
+    {
+        $source = trim($handler instanceof JsExpression ? $handler->expression() : (string)$handler);
+        if ($source === '') {
+            return JsExpression::make('(ctx) => ctx?.payload ?? null');
+        }
+
+        if ($this->looksLikeFunctionExpression($source)) {
+            return JsExpression::make($source);
+        }
+
+        return JsExpression::make($this->wrapStatementAsCallable(
+            $source,
+            'return data === undefined ? payload : data;'
+        ));
+    }
+
+    private function wrapStatementAsCallable(string $source, string $tail = ''): string
+    {
+        $body = trim(sprintf(<<<'JS'
+const event = ctx?.event ?? null;
+const evt = event;
+const response = ctx?.response ?? null;
+const request = ctx?.request ?? null;
+const row = ctx?.row ?? null;
+const tableKey = ctx?.tableKey ?? null;
+const tableConfig = ctx?.tableConfig ?? null;
+const state = ctx?.state ?? null;
+const selection = Array.isArray(ctx?.selection) ? ctx.selection : [];
+const rows = Array.isArray(ctx?.rows) ? ctx.rows : [];
+const allRows = Array.isArray(ctx?.allRows) ? ctx.allRows : [];
+let payload = ctx?.payload ?? null;
+let data = payload;
+const movedRow = ctx?.movedRow ?? row;
+const anchorRow = ctx?.anchorRow ?? null;
+const previousRow = ctx?.previousRow ?? null;
+const nextRow = ctx?.nextRow ?? null;
+const oldIndex = ctx?.oldIndex ?? -1;
+const newIndex = ctx?.newIndex ?? -1;
+const isDown = ctx?.isDown ?? false;
+const isMoveDown = ctx?.isMoveDown ?? false;
+const isMoveUp = ctx?.isMoveUp ?? false;
+const oldParentRow = ctx?.oldParentRow ?? null;
+const newParentRow = ctx?.newParentRow ?? null;
+const sameParent = ctx?.sameParent ?? true;
+const scope = ctx?.scope ?? { row };
+%s
+%s
+JS, $source, trim($tail)));
+
+        return sprintf(
+            "(ctx) => { const vm = ctx?.vm ?? null; const executor = Function('ctx', %s); return executor.call(vm, ctx); }",
+            json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    private function looksLikeFunctionExpression(string $source): bool
+    {
+        return str_contains($source, '=>')
+            || preg_match('/^(async\s+)?function\b/', $source) === 1;
+    }
+
     /**
      * @return array<string, string>
      */
@@ -1296,7 +1294,7 @@ final class Table implements Renderable, EventAware
             'pageSizeChange' => '分页每页条数变更后触发，可读取 pageSize。',
             'sortChange' => '排序变化后触发，可读取 sort / payload。',
             'selectionChange' => '勾选项变化后触发，可读取 selection。',
-            'dragSort' => '拖拽排序完成后触发，可读取 movedRow / anchorRow / previousRow / nextRow / oldIndex / newIndex / isDown / isUp / oldParentRow / newParentRow。',
+            'dragSort' => '拖拽排序完成后触发，可读取 movedRow / anchorRow / previousRow / nextRow / oldIndex / newIndex / isDown / isMoveDown / isMoveUp / oldParentRow / newParentRow。',
             'deleteSuccess' => '批量删除成功后触发，可读取 selection / ids / payload / response。',
             'deleteFail' => '批量删除失败后触发，可读取 selection / ids / error。',
         ];
@@ -1377,22 +1375,6 @@ final class Table implements Renderable, EventAware
         return $item;
     }
 
-    private function normalizeStatusToggleName(string $searchField): string
-    {
-        $normalized = trim($searchField);
-        if ($normalized === '') {
-            return 'status';
-        }
-
-        $segments = preg_split('/[.]+/', $normalized);
-        $candidate = trim((string)end($segments));
-        if ($candidate !== '') {
-            return $candidate;
-        }
-
-        return preg_replace('/[^A-Za-z0-9_$]+/', '_', $normalized) ?: 'status';
-    }
-
     private function normalizeStatusToggleOptions(array $options): array
     {
         $normalized = [];
@@ -1414,14 +1396,6 @@ final class Table implements Renderable, EventAware
         }
 
         return $normalized;
-    }
-
-    private function normalizeLegacyExportFilename(string $filename): string
-    {
-        $normalized = trim((string)preg_replace('/\.(xlsx|xls)$/i', '', $filename));
-        $normalized = $normalized !== '' ? $normalized : 'export';
-
-        return $normalized . date('Y-m-d');
     }
 
     private function normalizeNullableString(?string $value): ?string

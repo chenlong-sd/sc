@@ -39,24 +39,13 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
      *
      * @param CollapseItemNode ...$items 要追加的折叠项。
      * @return self 当前折叠容器。
-     */
-    public function addNodes(CollapseItemNode ...$items): self
-    {
-        return $this->appendFormNodeChildren(...$items);
-    }
-
-    /**
-     * 继续向当前折叠容器追加折叠项。
-     *
-     * @param CollapseItemNode ...$items 要追加的折叠项。
-     * @return self 当前折叠容器。
      *
      * 示例：
      * `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
      */
     public function addItems(CollapseItemNode ...$items): self
     {
-        return $this->addNodes(...$items);
+        return $this->appendFormNodeChildren(...$items);
     }
 
     /**

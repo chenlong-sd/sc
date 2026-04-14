@@ -63,7 +63,7 @@ final class Dialog implements Renderable, EventAware
     private ?string $iframeUrl = null;
     private bool $iframeHostEnabled = false;
     private bool $iframeFullscreenToggle = false;
-    private ?string $iframeSubmitHandler = 'VueApp.submit';
+    private ?string $iframeSubmitHandler = '__SC_V2_PAGE__.submit';
     private ?string $loadUrl = null;
     private string $loadMethod = self::DEFAULT_LOAD_METHOD;
     private array|JsExpression $loadPayload = [];
@@ -523,8 +523,7 @@ final class Dialog implements Renderable, EventAware
      * 传字符串时会自动包装成 JsExpression；
      * 默认同时开启宿主桥接和头部全屏切换；
      * 若底部动作使用 `Actions::submit()` 且配置了 saveUrl()/createUrl()/updateUrl()，
-     * runtime 默认会先调用子页面的 `"VueApp.submit"` 取提交数据；
-     * V2 子页面会自动暴露 `"__SC_V2_PAGE__.submit"`，并兼容映射到 `"VueApp.submit"`；
+     * runtime 默认会先调用子页面的 `"__SC_V2_PAGE__.submit"` 取提交数据；
      * 可再用 iframeSubmitHandler() 改成别的方法路径；
      * 若未显式设置 height()，默认高度为 70vh。
      * 可用字段与 component() 的 props 解析上下文一致；
@@ -550,7 +549,7 @@ final class Dialog implements Renderable, EventAware
         $this->componentAttrs = [];
         $this->componentOpenMethod = self::DEFAULT_COMPONENT_OPEN_METHOD;
         $this->componentCloseMethod = null;
-        $this->iframeSubmitHandler = 'VueApp.submit';
+        $this->iframeSubmitHandler = '__SC_V2_PAGE__.submit';
 
         return $this;
     }
@@ -592,10 +591,8 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 设置 iframe 弹窗点击 `Actions::submit()` 时在子页面调用的提交方法路径。
-     * 路径从 `iframe.contentWindow` 开始解析，默认值为 `"VueApp.submit"`。
-     * V2 子页面默认也会自动暴露 `"__SC_V2_PAGE__.submit"`，推荐优先使用它；
-     * `"VueApp.submit"` 仅作为兼容别名保留。
-     * 例如可写 `"__SC_V2_PAGE__.submit"`、`"VueApp.submit"`、`"submit"`、`"pageApi.submitForm"`。
+     * 路径从 `iframe.contentWindow` 开始解析，默认值为 `"__SC_V2_PAGE__.submit"`。
+     * 例如可写 `"__SC_V2_PAGE__.submit"`、`"submit"`、`"pageApi.submitForm"`。
      * 该方法应返回最终提交到 saveUrl()/createUrl()/updateUrl() 的数据，也可以直接返回 Promise。
      * 该能力依赖宿主页直接访问 iframe 子页面对象，通常要求子页面与宿主页同源。
      *
@@ -605,7 +602,7 @@ final class Dialog implements Renderable, EventAware
      * 示例：
      * `Dialogs::make('qa-info-dialog', '编辑')->iframeSubmitHandler('__SC_V2_PAGE__.submit')`
      */
-    public function iframeSubmitHandler(?string $handlerPath = 'VueApp.submit'): self
+    public function iframeSubmitHandler(?string $handlerPath = '__SC_V2_PAGE__.submit'): self
     {
         $handlerPath = is_string($handlerPath) ? trim($handlerPath) : null;
         $this->iframeSubmitHandler = $handlerPath !== '' ? $handlerPath : null;

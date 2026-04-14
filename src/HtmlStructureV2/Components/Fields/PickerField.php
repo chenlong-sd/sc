@@ -55,7 +55,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * 设置在 picker 弹窗 iframe 页面里读取选择结果的路径。
      * 路径从 `dialogIframeRef.contentWindow` 开始解析。
      * V2 列表页在开启 `Table::selection()` 后会自动暴露 `"__scV2Selection"`，
-     * 多表页可改用 `"__scV2Selections.tableKey"`；旧页面仍可显式传 `"selection"` 或 `"VueApp.xxxSelection"`。
+     * 多表页可改用 `"__scV2Selections.tableKey"`；若选择页是自定义实现，也可显式传自己的结果路径。
      *
      * @param string $selectionPath 选择结果路径。
      * @return static 当前选择器字段实例。

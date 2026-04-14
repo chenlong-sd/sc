@@ -159,7 +159,7 @@
             },
             resolveDialogIframeSubmitHandler(dialogKey, iframeWindow){
               const dialogCfg = cfg.dialogs?.[dialogKey];
-              const handlerPath = String(dialogCfg?.iframe?.submitHandler || 'VueApp.submit').trim();
+              const handlerPath = String(dialogCfg?.iframe?.submitHandler || '__SC_V2_PAGE__.submit').trim();
               if (handlerPath === '') {
                 return {
                   handler: null,

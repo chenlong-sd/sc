@@ -12,6 +12,7 @@
             isEventCanceled,
             isBlank,
             makeRequest,
+            openHostTab: openHostTabBridge,
             postDialogHostMessage,
             pickRows,
             readPageLocation,
@@ -298,6 +299,9 @@
                   }
 
                   return this.notifyDialogHost(payload);
+                },
+                openHostTab(target, title = '', index = null){
+                  return openHostTabBridge(target, title, index);
                 },
                 setHostDialogTitle(title, dialogKey = null){
                   const payload = {

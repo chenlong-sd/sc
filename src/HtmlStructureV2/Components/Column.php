@@ -5,21 +5,11 @@ namespace Sc\Util\HtmlStructureV2\Components;
 use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
-use Sc\Util\HtmlStructure\Form\FormItemDatetime as LegacyDatetimeFormItem;
-use Sc\Util\HtmlStructure\Form\FormItemInterface as LegacyFormItemInterface;
-use Sc\Util\HtmlStructure\Form\FormItemSelect as LegacySelectFormItem;
-use Sc\Util\HtmlStructure\Form\FormItemText as LegacyTextFormItem;
 use Sc\Util\HtmlStructure\Table\ColumnTags;
-use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
-use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
-use Sc\Util\HtmlStructureV2\Components\Fields\TextField;
-use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
-use Sc\Util\HtmlStructureV2\Enums\FieldType;
 
 final class Column
 {
     public const SUPPORTED_SEARCH_TYPES = ['=', '!=', '<>', '>', '>=', '<', '<=', 'LIKE', 'LIKE_RIGHT', 'IN', 'BETWEEN'];
-    private const LEGACY_SEARCH_TYPES = ['=', 'like', 'in', 'between', 'like_right'];
     private const COLUMN_TYPE_NORMAL = 'normal';
     private const COLUMN_TYPE_SELECTION = 'selection';
     private const COLUMN_TYPE_INDEX = 'index';
@@ -47,8 +37,6 @@ final class Column
     private ?string $format = null;
     private ?array $display = null;
     private ?array $search = null;
-    private ?Field $searchFormField = null;
-    private ?string $searchName = null;
     private array $attrs = [];
     private array $tip = [];
     private array $appendContent = [];
@@ -82,8 +70,8 @@ final class Column
     }
 
     /**
-     * 兼容原版 normal() 写法。
-     * time/date 字段沿用原版默认宽度推断。
+     * 创建普通列。
+     * time/date 字段会沿用常见列表页的默认宽度推断。
      *
      * @param string $label 列标题。
      * @param string $prop 行数据字段路径，默认值为空字符串。
@@ -108,7 +96,7 @@ final class Column
     }
 
     /**
-     * 兼容原版 selection() 写法。
+     * 创建勾选列。
      *
      * @return self 勾选列实例。
      *
@@ -124,7 +112,7 @@ final class Column
     }
 
     /**
-     * 兼容原版 index() 写法。
+     * 创建序号列。
      *
      * @param string $title 列标题，默认值为 序号。
      * @return self 序号列实例。
@@ -142,7 +130,7 @@ final class Column
     }
 
     /**
-     * 兼容原版 expand() 写法。
+     * 创建展开列。
      *
      * @param string $title 列标题，默认值为空字符串。
      * @return self 展开列实例。
@@ -157,7 +145,7 @@ final class Column
     }
 
     /**
-     * 兼容原版 event() 写法。
+     * 创建事件列。
      *
      * @param string $title 列标题，默认值为 操作。
      * @param string $prop 绑定字段名，默认值为空字符串。
@@ -170,7 +158,7 @@ final class Column
     {
         return (new self($title, $prop))
             ->type(self::COLUMN_TYPE_EVENT)
-            ->setAttr([
+            ->props([
                 'mark-event' => 'true',
                 'class-name' => 'sc-v2-event-column',
                 ':show-overflow-tooltip' => 'false',
@@ -247,7 +235,7 @@ final class Column
     }
 
     /**
-     * 设置列类型，主要用于兼容原版静态构造方法。
+     * 设置列类型，主要用于内部特殊列构造。
      *
      * @param string $type 列类型。
      * @return self 当前列实例。
@@ -269,19 +257,14 @@ final class Column
      * - 字符串值按原始前端表达式输出
      * - 数组/布尔/数字/null 会自动转成 JS 字面量
      *
-     * @param string|array $attr 属性名或属性数组。
-     * @param mixed $value 属性值；当 $attr 为数组时忽略。
+     * @param array $attrs 属性数组。
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->setAttr('show-overflow-tooltip', true)`
+     * `Tables::column('标题', 'title')->props(['class-name' => 'title-column'])`
      */
-    public function setAttr(string|array $attr, mixed $value = ''): self
+    public function props(array $attrs): self
     {
-        $attrs = is_string($attr)
-            ? ($value === '' ? El::getAttrFromStr($attr) : [$attr => $value])
-            : $attr;
-
         foreach ($attrs as $key => &$item) {
             if (is_bool($item)) {
                 $item = $item ? 'true' : 'false';
@@ -291,20 +274,6 @@ final class Column
         $this->attrs = array_merge($this->attrs, $attrs);
 
         return $this;
-    }
-
-    /**
-     * setAttr() 的批量别名。
-     *
-     * @param array $attrs 属性数组。
-     * @return self 当前列实例。
-     *
-     * 示例：
-     * `Tables::column('标题', 'title')->props(['class-name' => 'title-column'])`
-     */
-    public function props(array $attrs): self
-    {
-        return $this->setAttr($attrs);
     }
 
     /**
@@ -371,8 +340,6 @@ final class Column
     {
         if ($searchable === false) {
             $this->search = null;
-            $this->searchFormField = null;
-            $this->searchName = null;
 
             return $this;
         }
@@ -422,47 +389,6 @@ final class Column
     }
 
     /**
-     * 兼容原版 addSearch() 写法。
-     * 支持传 string 字段名、V2 Field、以及常见旧版 FormItem。
-     *
-     * @param string $type 旧版搜索类型，默认值为 =。
-     * @param Field|LegacyFormItemInterface|string|null $formItem 搜索字段配置。
-     * @return self 当前列实例。
-     *
-     * 示例：
-     * `Tables::column('标题', 'title')->addSearch('like', Fields::text('keyword', '关键词'))`
-     */
-    public function addSearch(
-        #[ExpectedValues(self::LEGACY_SEARCH_TYPES)]
-        string $type = '=',
-        Field|LegacyFormItemInterface|string|null $formItem = null
-    ): self {
-        $searchType = $this->normalizeLegacySearchType($type);
-        $searchField = null;
-        $searchName = $this->prop;
-        $searchFormField = null;
-
-        if (is_string($formItem) && $formItem !== '') {
-            $searchField = $formItem;
-        } elseif ($formItem instanceof Field) {
-            $searchFormField = $formItem;
-            $searchName = $formItem->name();
-            $searchField = $formItem->name();
-            $this->applySearchFieldPlaceholder($searchFormField);
-        } elseif ($formItem instanceof LegacyFormItemInterface) {
-            $searchFormField = $this->convertLegacySearchFormItem($formItem, $searchType);
-            $searchName = $searchFormField->name();
-            $searchField = $this->resolveLegacySearchFieldName($formItem, $searchName);
-        }
-
-        $this->searchable($searchType, $searchField);
-        $this->searchName = $searchName;
-        $this->searchFormField = $searchFormField;
-
-        return $this;
-    }
-
-    /**
      * 设置通用展示格式字符串。
      * 会直接作为列插槽内容输出；可传原始 HTML/Vue 模板片段，当前行变量名是 `scope`，
      * 例如 `{{ scope.row.name }} / {{ scope.row.id }}`。
@@ -478,20 +404,6 @@ final class Column
         $this->format = (string)$format;
 
         return $this;
-    }
-
-    /**
-     * displayFormat() 的兼容别名，保留原版 setFormat() 习惯。
-     *
-     * @param string|\Stringable|array $format 展示格式。
-     * @return self 当前列实例。
-     *
-     * 示例：
-     * `Tables::column('标题', 'title')->setFormat('{{ scope.row.title }}')`
-     */
-    public function setFormat(string|\Stringable|array $format): self
-    {
-        return $this->displayFormat(is_array($format) ? $this->arrayFormat($format) : $format);
     }
 
     /**
@@ -655,19 +567,6 @@ final class Column
     }
 
     /**
-     * displaySwitch() 的兼容别名，方便从原版 showSwitch() 直接迁移。
-     *
-     * @param array $options 开关选项。
-     * @param string $requestUrl 更新请求地址。
-     * @param mixed $openValue 开启值；传 null 时自动取第一项。
-     * @return self 当前列实例。
-     */
-    public function showSwitch(array $options, string $requestUrl, mixed $openValue = null): self
-    {
-        return $this->displaySwitch($options, $requestUrl, $openValue);
-    }
-
-    /**
      * 把值按日期格式展示。
      * 支持秒/毫秒时间戳以及常见日期字符串；无法识别时会回退显示原值。
      *
@@ -752,87 +651,8 @@ final class Column
     }
 
     /**
-     * displayPlaceholder() 的兼容别名。
-     *
-     * @param string|\Stringable $content 空值占位内容。
-     * @return self 当前列实例。
-     */
-    public function emptyShow(string|\Stringable $content): self
-    {
-        return $this->displayPlaceholder((string)$content);
-    }
-
-    /**
-     * sortable() 的兼容别名。
-     *
-     * @param string $sortField 排序字段名；传 null 时仅开启排序。
-     * @return self 当前列实例。
-     */
-    public function enableSort(string $sortField = null): self
-    {
-        return $sortField !== null && $sortField !== ''
-            ? $this->sortable($sortField)
-            : $this->sortable();
-    }
-
-    /**
-     * displayMapping() 的兼容别名。
-     *
-     * @param array $mapping 映射配置。
-     * @return self 当前列实例。
-     */
-    public function showMapping(array $mapping): self
-    {
-        return $this->displayMapping($mapping);
-    }
-
-    /**
-     * displayTag() 的兼容别名。
-     *
-     * @param array $options 标签配置。
-     * @return self 当前列实例。
-     */
-    public function showTag(array $options): self
-    {
-        return $this->displayTag($options);
-    }
-
-    /**
-     * displayTag() 的兼容别名。
-     *
-     * @param array|ColumnTags $tags 标签配置。
-     * @return self 当前列实例。
-     */
-    public function showTags(array|ColumnTags $tags): self
-    {
-        return $this->displayTag($tags);
-    }
-
-    /**
-     * displayImage() 的兼容别名。
-     *
-     * @return self 当前列实例。
-     */
-    public function showImage(): self
-    {
-        return $this->displayImage();
-    }
-
-    /**
-     * displayImages() 的兼容别名。
-     *
-     * @param int $previewNumber 预览数量，默认值为 1。
-     * @param string $urlPath 图片地址字段路径，默认值为 url。
-     * @return self 当前列实例。
-     */
-    public function showImages(int $previewNumber = 1, string $urlPath = 'url'): self
-    {
-        return $this->displayImages($previewNumber, $urlPath);
-    }
-
-    /**
-     * 兼容原版 openPage() 写法。
-     * 当前 V2 会按 url + params 生成链接，`tab` 走新标签页，`dialog` 走托管 iframe 弹窗。
+     * 配置点击后打开页面。
+     * 当前 V2 会按 url + params 生成链接，`tab` 优先走宿主 tab，兜底回退浏览器新标签页，`dialog` 走托管 iframe 弹窗。
      *
      * @param string $url 打开目标地址。
      * @param array $config 打开配置。
@@ -923,7 +743,7 @@ final class Column
     }
 
     /**
-     * 兼容原版 addTip() 写法。
+     * 为当前列追加提示信息。
      *
      * @param string|\Stringable $tip 提示内容。
      * @param string|\Stringable $icon 图标名，默认值为 WarningFilled。
@@ -981,18 +801,6 @@ final class Column
     }
 
     /**
-     * exportExcel() 的兼容别名。
-     *
-     * @param bool $allow 是否允许导出，默认值为 true。
-     * @param float|null $sort 导出排序值。
-     * @return self 当前列实例。
-     */
-    public function importExcel(bool $allow = true, float $sort = null): self
-    {
-        return $this->exportExcel($allow, $sort);
-    }
-
-    /**
      * 隐藏当前列，并保留导出配置。
      *
      * @param bool $confirm 是否隐藏当前列，默认值为 true。
@@ -1009,18 +817,7 @@ final class Column
             $this->hidden = true;
         }
 
-        return $this->importExcel($excelExport, $excelSort);
-    }
-
-    /**
-     * onlyExportExcel() 的兼容别名。
-     *
-     * @param float|null $excelSort 导出排序值。
-     * @return self 当前列实例。
-     */
-    public function onlyImportExcel(float $excelSort = null): self
-    {
-        return $this->onlyExportExcel($excelSort);
+        return $this->exportExcel($excelExport, $excelSort);
     }
 
     /**
@@ -1204,12 +1001,7 @@ final class Column
 
     public function getSearchName(): string
     {
-        return $this->searchName ?: $this->prop;
-    }
-
-    public function getSearchFormField(): ?Field
-    {
-        return $this->searchFormField;
+        return $this->prop;
     }
 
     public function getSortField(): ?string
@@ -1237,190 +1029,6 @@ final class Column
         }
 
         return $normalized;
-    }
-
-    private function normalizeLegacySearchType(string $type): string
-    {
-        return match (strtolower($type)) {
-            'like' => 'LIKE',
-            'like_right' => 'LIKE_RIGHT',
-            'in' => 'IN',
-            'between' => 'BETWEEN',
-            default => strtoupper($type),
-        };
-    }
-
-    private function resolveLegacySearchFieldName(LegacyFormItemInterface $formItem, string $fallback): string
-    {
-        $name = $this->legacyGetter($formItem, 'getName');
-        if (!is_string($name) || $name === '') {
-            return $fallback;
-        }
-
-        return $name;
-    }
-
-    private function convertLegacySearchFormItem(LegacyFormItemInterface $formItem, string $searchType): Field
-    {
-        $legacyName = (string)($this->legacyGetter($formItem, 'getName') ?: $this->prop);
-        $fieldName = $this->normalizeLegacySearchName($legacyName);
-        $label = (string)($this->legacyGetter($formItem, 'getLabel') ?: '');
-
-        $field = match (true) {
-            $formItem instanceof LegacySelectFormItem => $this->convertLegacySelectField($formItem, $fieldName, $label, $searchType),
-            $formItem instanceof LegacyDatetimeFormItem => $this->convertLegacyDateField($formItem, $fieldName, $label, $searchType),
-            $formItem instanceof LegacyTextFormItem => $this->convertLegacyTextField($formItem, $fieldName, $label, $searchType),
-            default => $this->convertLegacyTextField($formItem, $fieldName, $label, $searchType),
-        };
-
-        $default = $this->legacyGetter($formItem, 'getDefault');
-        if ($default !== null) {
-            $field->default($default);
-        }
-
-        $this->applyLegacyPlaceholder($field, $formItem);
-        $this->applyLegacyFieldProps($field, (array)$this->legacyGetter($formItem, 'getVAttrs', []));
-
-        return $field;
-    }
-
-    private function convertLegacyTextField(
-        LegacyFormItemInterface $formItem,
-        string $fieldName,
-        string $label,
-        string $searchType
-    ): Field {
-        $options = (array)$this->legacyGetter($formItem, 'getOptions', []);
-        if ($options !== []) {
-            $field = new OptionField($fieldName, $label, FieldType::SELECT);
-            $field->options($options);
-            if ($searchType === 'IN') {
-                $field->default([])
-                    ->prop('multiple', '')
-                    ->prop('filterable', '')
-                    ->prop('collapse-tags', '');
-            }
-
-            return $field;
-        }
-
-        return new TextField($fieldName, $label, FieldType::TEXT);
-    }
-
-    private function convertLegacySelectField(
-        LegacySelectFormItem $formItem,
-        string $fieldName,
-        string $label,
-        string $searchType
-    ): Field {
-        $field = new OptionField($fieldName, $label, FieldType::SELECT);
-        $field->options((array)$this->legacyGetter($formItem, 'getOptions', []));
-
-        if ((bool)$this->legacyGetter($formItem, 'getMultiple', false) || $searchType === 'IN') {
-            $field->default([])
-                ->prop('multiple', '')
-                ->prop('filterable', '')
-                ->prop('collapse-tags', '');
-        }
-
-        return $field;
-    }
-
-    private function convertLegacyDateField(
-        LegacyDatetimeFormItem $formItem,
-        string $fieldName,
-        string $label,
-        string $searchType
-    ): Field {
-        $timeType = strtolower((string)$this->legacyGetter($formItem, 'getTimeType', ''));
-        $field = new DateField(
-            $fieldName,
-            $label,
-            in_array($timeType, ['datetimerange', 'daterange', 'monthrange'], true)
-                ? FieldType::DATE_RANGE
-                : (str_contains($timeType, 'time') ? FieldType::DATETIME : FieldType::DATE)
-        );
-
-        if ($timeType !== '') {
-            $field->prop('type', $timeType);
-        } elseif ($searchType === 'BETWEEN') {
-            $field->prop('type', str_contains($fieldName, 'time') ? 'datetimerange' : 'daterange');
-        }
-
-        return $field;
-    }
-
-    private function applyLegacyPlaceholder(Field $field, LegacyFormItemInterface $formItem): void
-    {
-        if (!$field instanceof PlaceholderFieldInterface) {
-            return;
-        }
-
-        $legacyPlaceholder = $this->legacyGetter($formItem, 'getPlaceholder');
-        if (is_string($legacyPlaceholder) && $legacyPlaceholder !== '') {
-            $field->placeholder($legacyPlaceholder);
-            return;
-        }
-
-        if ($this->label !== '') {
-            $field->placeholder($this->label);
-        }
-    }
-
-    private function applySearchFieldPlaceholder(Field $field): void
-    {
-        if (!$field instanceof PlaceholderFieldInterface || !method_exists($field, 'placeholder')) {
-            return;
-        }
-
-        $currentPlaceholder = trim($field->getPlaceholder());
-        $fieldLabel = trim($field->label());
-        $defaultPlaceholders = array_filter([
-            '请输入',
-            '请选择',
-            $fieldLabel !== '' ? '请输入' . $fieldLabel : null,
-            $fieldLabel !== '' ? '请选择' . $fieldLabel : null,
-        ], static fn ($item) => is_string($item) && $item !== '');
-
-        if ($this->label !== '' && in_array($currentPlaceholder, $defaultPlaceholders, true)) {
-            $field->placeholder($this->label);
-        }
-    }
-
-    private function applyLegacyFieldProps(Field $field, array $attrs): void
-    {
-        foreach ($attrs as $key => $value) {
-            if ($key === 'placeholder' || $key === 'label') {
-                continue;
-            }
-
-            $field->prop($key, $value);
-        }
-    }
-
-    private function normalizeLegacySearchName(string $name): string
-    {
-        $normalized = trim($name);
-        if ($normalized === '') {
-            return $this->prop;
-        }
-
-        if (!str_contains($normalized, '.')) {
-            return $normalized;
-        }
-
-        return $this->prop !== ''
-            ? $this->prop
-            : (preg_replace('/[^a-zA-Z0-9_$]+/', '_', $normalized) ?: 'search');
-    }
-
-    private function legacyGetter(LegacyFormItemInterface $formItem, string $method, mixed $default = null): mixed
-    {
-        try {
-            return $formItem->{$method}();
-        } catch (\Throwable) {
-            return $default;
-        }
     }
 
     private function normalizeBooleanAttr(mixed $value): bool

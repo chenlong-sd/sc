@@ -21,11 +21,6 @@ trait HasFormNodeChildren
         return $this;
     }
 
-    public function addNodes(FormNode ...$children): static
-    {
-        return $this->appendFormNodeChildren(...$children);
-    }
-
     /**
      * @return FormNode[]
      */
