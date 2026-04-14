@@ -11,6 +11,7 @@ final class Dialogs
      * 该 key 也会用于 Events::openDialog()/closeDialog()，
      * 以及 `Actions::create('新建')->dialog(...)` / `edit('编辑')->dialog(...)` /
      * `submit('保存')->dialog(...)` / `close('取消')->dialog(...)` 这类目标绑定。
+     * 若 submit/close 已经写在当前 dialog 的 footer(...) 中，则可省略 `->dialog(...)`。
      *
      * @param string $key 弹窗唯一 key。
      * @param string $title 弹窗标题；支持模板语法。

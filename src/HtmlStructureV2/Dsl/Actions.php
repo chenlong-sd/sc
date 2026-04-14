@@ -180,7 +180,10 @@ final class Actions
      * 创建“提交弹窗数据”动作。
      * 目标为 form 弹窗时直接提交表单；
      * 目标为 iframe 弹窗时，会先调用子页面提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
-     * 目标 dialog 请继续链式调用 dialog()；如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
+     * 若动作放在 dialog footer 中，会默认使用当前 dialog；
+     * 其它位置如需显式指定目标 dialog，请继续链式调用 dialog()；
+     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()；
+     * 也可继续链式调用 successMessage()/errorMessage()/loadingText() 覆盖默认提示。
      *
      * @param string $label 按钮显示文案，默认值为“保存”。
      * @return Action 弹窗提交动作实例。
@@ -215,7 +218,8 @@ final class Actions
 
     /**
      * 创建“关闭弹窗”动作。
-     * 目标 dialog 请继续链式调用 dialog()。
+     * 若动作放在 dialog footer 中，会默认关闭当前 dialog；
+     * 其它位置如需显式指定目标 dialog，请继续链式调用 dialog()。
      *
      * @param string $label 按钮显示文案，默认值为“取消”。
      * @return Action 关闭弹窗动作实例。

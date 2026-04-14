@@ -34,6 +34,9 @@ class Action implements
     private ?string $saveUrl = null;
     private ?string $createUrl = null;
     private ?string $updateUrl = null;
+    private ?string $successMessage = null;
+    private ?string $errorMessage = null;
+    private ?string $loadingText = null;
     private ?string $deleteUrl = null;
     private ?string $deleteKey = null;
     private array $props = [];
@@ -132,7 +135,10 @@ class Action implements
      * 创建“提交弹窗数据”动作。
      * 目标为 form 弹窗时会直接提交表单；
      * 目标为 iframe 弹窗时，会先调用子页面的提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
-     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()。
+     * 若动作放在 dialog footer 中，会默认使用当前 dialog；
+     * 其它位置如需显式指定目标 dialog，再链式调用 dialog()。
+     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()；
+     * 也可继续链式调用 successMessage()/errorMessage()/loadingText() 覆盖默认提示。
      *
      * @param string $label 按钮显示文案，默认值为“保存”。
      * @return self 弹窗提交动作实例。
@@ -148,6 +154,8 @@ class Action implements
 
     /**
      * 创建“关闭弹窗”动作。
+     * 若动作放在 dialog footer 中，会默认关闭当前 dialog；
+     * 其它位置如需显式指定目标 dialog，再链式调用 dialog()。
      *
      * @param string $label 按钮显示文案，默认值为“取消”。
      * @return self 关闭动作实例。
@@ -250,6 +258,7 @@ class Action implements
      * 指定动作目标，通常用于绑定 dialog key。
      * 对 submit/close/create/edit 这类依赖弹窗目标的动作，最终会基于这个 target 运行。
      * 其中 submit 若命中 iframe 弹窗，还会继续读取该 dialog 配置的 iframe 提交入口。
+     * 若当前动作已经处于 dialog footer，上述 submit/close 默认可省略 target。
      *
      * @param string|null $target 目标弹窗 key；传 null 表示清空目标。
      * @return static 当前动作实例。
@@ -266,6 +275,7 @@ class Action implements
 
     /**
      * target() 的语义化别名，用于显式绑定 dialog key。
+     * 若动作已经位于 dialog footer，submit/close 通常可省略该调用。
      *
      * @param string $dialog 目标弹窗 key。
      * @return static 当前动作实例。
@@ -496,6 +506,57 @@ class Action implements
     }
 
     /**
+     * 设置当前动作成功后的提示文案。
+     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     *
+     * @param string|null $successMessage 成功提示文案；传 null 表示沿用默认成功提示。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::submit()->successMessage('保存成功')`
+     */
+    public function successMessage(?string $successMessage): static
+    {
+        $this->successMessage = $this->normalizeNullableString($successMessage);
+
+        return $this;
+    }
+
+    /**
+     * 设置当前动作失败后的提示文案。
+     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     *
+     * @param string|null $errorMessage 失败提示文案；传 null 表示沿用默认失败提示。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::submit()->errorMessage('保存失败，请重试')`
+     */
+    public function errorMessage(?string $errorMessage): static
+    {
+        $this->errorMessage = $this->normalizeNullableString($errorMessage);
+
+        return $this;
+    }
+
+    /**
+     * 设置当前动作进行中的 loading 文案。
+     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     *
+     * @param string|null $loadingText loading 提示文案；传 null 表示沿用默认文案。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::submit()->loadingText('正在提交，请稍后...')`
+     */
+    public function loadingText(?string $loadingText = '请稍后...'): static
+    {
+        $this->loadingText = $this->normalizeNullableString($loadingText);
+
+        return $this;
+    }
+
+    /**
      * 为 `Actions::delete()` 就近设置删除接口地址。
      * 优先级高于目标 table/list 默认的 deleteUrl()。
      *
@@ -620,6 +681,21 @@ class Action implements
     public function getUpdateUrl(): ?string
     {
         return $this->updateUrl;
+    }
+
+    public function getSuccessMessage(): ?string
+    {
+        return $this->successMessage;
+    }
+
+    public function getErrorMessage(): ?string
+    {
+        return $this->errorMessage;
+    }
+
+    public function getLoadingText(): ?string
+    {
+        return $this->loadingText;
     }
 
     public function getDeleteUrl(): ?string

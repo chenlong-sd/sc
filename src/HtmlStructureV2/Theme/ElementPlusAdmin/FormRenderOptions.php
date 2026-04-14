@@ -24,7 +24,9 @@ final class FormRenderOptions
         public readonly ?string $uploadFilesState = null,
         public readonly ?string $uploadScope = null,
         public readonly string $uploadFileListUpdateMethod = 'setUploadFileList',
+        public readonly string $uploadBeforeMethod = 'handleUploadBefore',
         public readonly string $uploadSuccessMethod = 'handleUploadSuccess',
+        public readonly string $uploadErrorMethod = 'handleUploadError',
         public readonly string $uploadRemoveMethod = 'handleUploadRemove',
         public readonly string $uploadExceedMethod = 'handleUploadExceed',
         public readonly string $uploadPreviewMethod = 'handleUploadPreview',
@@ -56,7 +58,9 @@ final class FormRenderOptions
             uploadFilesState: self::stringOrNull($options, 'uploadFilesState'),
             uploadScope: self::stringOrNull($options, 'uploadScope'),
             uploadFileListUpdateMethod: self::stringOrDefault($options, 'uploadFileListUpdateMethod', 'setUploadFileList'),
+            uploadBeforeMethod: self::stringOrDefault($options, 'uploadBeforeMethod', 'handleUploadBefore'),
             uploadSuccessMethod: self::stringOrDefault($options, 'uploadSuccessMethod', 'handleUploadSuccess'),
+            uploadErrorMethod: self::stringOrDefault($options, 'uploadErrorMethod', 'handleUploadError'),
             uploadRemoveMethod: self::stringOrDefault($options, 'uploadRemoveMethod', 'handleUploadRemove'),
             uploadExceedMethod: self::stringOrDefault($options, 'uploadExceedMethod', 'handleUploadExceed'),
             uploadPreviewMethod: self::stringOrDefault($options, 'uploadPreviewMethod', 'handleUploadPreview'),
@@ -262,6 +266,46 @@ final class FormRenderOptions
         return sprintf(
             "(response, uploadFile, uploadFiles) => %s('%s', %s, response, uploadFile, uploadFiles)",
             $this->uploadSuccessMethod,
+            $this->uploadScope,
+            $fieldPathExpression
+        );
+    }
+
+    public function uploadBeforeHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(uploadRawFile) => %s('%s', '%s', uploadRawFile)",
+            $this->uploadBeforeMethod,
+            $this->uploadScope,
+            $fieldName
+        );
+    }
+
+    public function uploadBeforeHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(uploadRawFile) => %s('%s', %s, uploadRawFile)",
+            $this->uploadBeforeMethod,
+            $this->uploadScope,
+            $fieldPathExpression
+        );
+    }
+
+    public function uploadErrorHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(error, uploadFile, uploadFiles) => %s('%s', '%s', error, uploadFile, uploadFiles)",
+            $this->uploadErrorMethod,
+            $this->uploadScope,
+            $fieldName
+        );
+    }
+
+    public function uploadErrorHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(error, uploadFile, uploadFiles) => %s('%s', %s, error, uploadFile, uploadFiles)",
+            $this->uploadErrorMethod,
             $this->uploadScope,
             $fieldPathExpression
         );

@@ -105,11 +105,54 @@
             initializeFormOptions: 'initializeManagedFormOptions',
             loadFormFieldOptions: 'loadManagedFormFieldOptions',
             initializeUploadFiles: 'initializeManagedUploadFiles',
+            handleUploadBefore: 'handleManagedUploadBefore',
             handleUploadSuccess: 'handleManagedUploadSuccess',
+            handleUploadError: 'handleManagedUploadError',
             handleUploadRemove: 'handleManagedUploadRemove',
             handleUploadExceed: 'handleManagedUploadExceed',
             handleUploadPreview: 'handleManagedUploadPreview'
           }, methodNames);
+          const uploadNoticeStoreKey = '__scV2UploadNoticeStore';
+          const getUploadNoticeStore = (vm) => {
+            if (!isObject(vm[uploadNoticeStoreKey])) {
+              vm[uploadNoticeStoreKey] = {};
+            }
+
+            return vm[uploadNoticeStoreKey];
+          };
+          const openUploadNotice = (vm, uploadFile) => {
+            const uid = uploadFile?.uid;
+            if (!uid) {
+              return;
+            }
+
+            const store = getUploadNoticeStore(vm);
+            if (typeof store[uid]?.close === 'function') {
+              store[uid].close();
+            }
+
+            if (typeof ElementPlus.ElNotification === 'function') {
+              store[uid] = ElementPlus.ElNotification({
+                title: '提示',
+                message: '文件上传中,请稍后...',
+                type: 'warning',
+                duration: 0,
+                showClose: false
+              });
+            }
+          };
+          const closeUploadNotice = (vm, uploadFile) => {
+            const uid = uploadFile?.uid;
+            if (!uid) {
+              return;
+            }
+
+            const store = getUploadNoticeStore(vm);
+            if (typeof store[uid]?.close === 'function') {
+              store[uid].close();
+            }
+            delete store[uid];
+          };
           const buildFormEventContext = (vm, scope, overrides = {}) => {
             const model = getFormModel(vm, scope) || {};
 
@@ -510,11 +553,14 @@
             const uploadPaths = getUploadPaths(scope, vm) || [];
 
             uploadPaths.forEach((fieldName) => {
+              const fieldCfg = getByPath(uploadConfigs, fieldName) || {};
+              const normalizedFiles = normalizeUploadFiles(getByPath(model, fieldName), fieldCfg);
               setByPath(
                 nextState,
                 fieldName,
-                normalizeUploadFiles(getByPath(model, fieldName), getByPath(uploadConfigs, fieldName) || {})
+                normalizedFiles
               );
+              syncUploadModelValue(model, fieldName, fieldCfg, normalizedFiles);
             });
 
             visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
@@ -524,11 +570,14 @@
               rows.forEach((_, rowIndex) => {
                 rowUploadPaths.forEach((rowFieldPath) => {
                   const fieldName = contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath);
+                  const fieldCfg = getByPath(rowUploads, rowFieldPath) || {};
+                  const normalizedFiles = normalizeUploadFiles(getByPath(model, fieldName), fieldCfg);
                   setByPath(
                     nextState,
                     fieldName,
-                    normalizeUploadFiles(getByPath(model, fieldName), getByPath(rowUploads, rowFieldPath) || {})
+                    normalizedFiles
                   );
+                  syncUploadModelValue(model, fieldName, fieldCfg, normalizedFiles);
                 });
               });
             });
@@ -1381,6 +1430,10 @@
             [names.initializeUploadFiles](scope){
               rebuildUploadFileState(this, scope);
             },
+            [names.handleUploadBefore](scope, fieldName, uploadRawFile){
+              openUploadNotice(this, uploadRawFile);
+              return true;
+            },
             [names.handleUploadSuccess](scope, fieldName, response, uploadFile, uploadFiles){
               const fieldCfg = resolveScopedFieldConfig(
                 this,
@@ -1389,6 +1442,18 @@
                 getUploadsMap(scope, this) || {},
                 'rowUploads'
               ) || {};
+              const currentUploadFiles = getByPath(this[names.getUploadFileState](scope), fieldName) || [];
+              const sourceUploadFiles = (Array.isArray(uploadFiles) && uploadFiles.length > 0
+                ? uploadFiles
+                : currentUploadFiles.concat(uploadFile ? [uploadFile] : [])
+              ).filter((file, index, files) => {
+                if (!file || file.uid === undefined || file.uid === null || file.uid === '') {
+                  return true;
+                }
+
+                return files.findIndex((candidate) => candidate?.uid === file.uid) === index;
+              });
+              closeUploadNotice(this, uploadFile);
 
               try {
                 const payload = ensureSuccess(response, '上传失败');
@@ -1398,10 +1463,13 @@
                 }
 
                 const nextFiles = normalizeUploadFiles(
-                  (uploadFiles || []).map((file) => {
+                  sourceUploadFiles.map((file) => {
                     if (file.uid === uploadFile.uid) {
                       return Object.assign({}, file, {
+                        name: uploadFile.name || file.name,
+                        status: uploadFile.status || 'success',
                         url: typeof storedValue === 'string' ? storedValue : (file.url || ''),
+                        response: response,
                         responseValue: storedValue
                       });
                     }
@@ -1413,7 +1481,7 @@
 
                 setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
                 syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
-                ElementPlus.ElMessage.success(resolveMessage(payload, '上传成功'));
+                ElementPlus.ElMessage.success((uploadFile?.name || '文件') + ' 上传成功');
                 emitFormEvent(this, scope, 'uploadSuccess', {
                   fieldName,
                   fieldConfig: fieldCfg,
@@ -1429,7 +1497,7 @@
                 );
                 setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
                 syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
-                ElementPlus.ElMessage.error(error?.message || '上传失败');
+                ElementPlus.ElMessage.error((uploadFile?.name || '文件') + ' ' + (error?.message || '上传失败'));
                 emitFormEvent(this, scope, 'uploadFail', {
                   fieldName,
                   fieldConfig: fieldCfg,
@@ -1440,6 +1508,31 @@
                 });
               }
             },
+            [names.handleUploadError](scope, fieldName, error, uploadFile, uploadFiles){
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
+              closeUploadNotice(this, uploadFile);
+              const nextFiles = normalizeUploadFiles(
+                (uploadFiles || []).filter((file) => file.uid !== uploadFile.uid),
+                fieldCfg
+              );
+              setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
+              syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
+              const message = resolveMessage(error, '上传失败');
+              ElementPlus.ElMessage.error((uploadFile?.name || '文件') + ' ' + message);
+              emitFormEvent(this, scope, 'uploadFail', {
+                fieldName,
+                fieldConfig: fieldCfg,
+                error,
+                uploadFile,
+                uploadFiles: nextFiles
+              });
+            },
             [names.handleUploadRemove](scope, fieldName, uploadFile, uploadFiles){
               const fieldCfg = resolveScopedFieldConfig(
                 this,
@@ -1448,6 +1541,7 @@
                 getUploadsMap(scope, this) || {},
                 'rowUploads'
               ) || {};
+              closeUploadNotice(this, uploadFile);
               const nextFiles = normalizeUploadFiles(uploadFiles || [], fieldCfg);
               setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
               syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);

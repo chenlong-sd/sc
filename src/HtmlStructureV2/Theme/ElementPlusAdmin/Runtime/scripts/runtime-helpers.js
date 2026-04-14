@@ -1000,13 +1000,13 @@
                 .then((response) => {
                   const payload = ensureSuccess(
                     extractPayload(response),
-                    handler.errorMessage || '操作失败'
+                    handler.errorMessage || '失败'
                   );
 
                   context.response = response;
                   context.payload = payload;
 
-                  const successMessage = handler.successMessage ?? resolveMessage(payload, '');
+                  const successMessage = handler.successMessage ?? resolveMessage(payload, '成功');
                   if (successMessage) {
                     ElementPlus.ElMessage.success(String(successMessage));
                   }
@@ -1017,7 +1017,7 @@
                   context.error = error;
                   const message = error?.message || resolveMessage(
                     error?.response?.data,
-                    handler.errorMessage || '操作失败'
+                    handler.errorMessage || '失败'
                   );
 
                   if (message) {
@@ -1570,7 +1570,18 @@
               ?? resolveUploadValue(item.response, fieldCfg)
               ?? resolveUploadValue(item, fieldCfg);
             const url = item.url || item.value || item.src || responseValue;
+            const status = item.status || 'success';
             if (isBlank(url)) {
+              if (status === 'ready' || status === 'uploading') {
+                return Object.assign({}, item, {
+                  uid: item.uid || ('file-' + index),
+                  name: item.name || ('file-' + (index + 1)),
+                  url: '',
+                  responseValue: null,
+                  status
+                });
+              }
+
               return null;
             }
 
@@ -1579,7 +1590,7 @@
               name: item.name || extractFileName(String(url), 'file-' + (index + 1)),
               url,
               responseValue: responseValue || url,
-              status: item.status || 'success'
+              status
             });
           };
           const normalizeUploadFiles = (value, fieldCfg) => {
@@ -1591,6 +1602,23 @@
               .filter(Boolean);
 
             return fieldCfg?.multiple ? files : files.slice(0, 1);
+          };
+          const serializeUploadFile = (file, index = 0) => {
+            if (!isObject(file)) {
+              return null;
+            }
+
+            const url = file.responseValue || file.url || resolveUploadValue(file.response || file, {});
+            if (isBlank(url)) {
+              return null;
+            }
+
+            return {
+              uid: file.uid || ('file-' + index),
+              url,
+              name: file.name || extractFileName(String(url), 'file-' + (index + 1)),
+              status: file.status || 'success'
+            };
           };
           const buildUploadFileState = (configs, model, fieldPaths = []) => {
             const state = {};
@@ -1921,11 +1949,12 @@
           };
           const syncUploadModelValue = (model, fieldName, fieldCfg, files) => {
             const normalized = normalizeUploadFiles(files, fieldCfg);
-            const values = normalized
-              .map((file) => file.responseValue || file.url)
-              .filter((value) => !isBlank(value));
+            const storedFiles = normalized
+              .map((file, index) => serializeUploadFile(file, index))
+              .filter(Boolean);
+            const isSingleImage = (fieldCfg?.kind || 'file') === 'image' && !fieldCfg?.multiple;
 
-            setByPath(model, fieldName, fieldCfg?.multiple ? values : (values[0] ?? ''));
+            setByPath(model, fieldName, isSingleImage ? (storedFiles[0]?.url ?? '') : storedFiles);
 
             return normalized;
           };
@@ -1980,6 +2009,7 @@
             normalizePickerItems,
             registerElementPlusIcons,
             registerScV2Components,
+            serializeUploadFile,
             normalizeUploadFile,
             normalizeUploadFiles,
             pickRows,

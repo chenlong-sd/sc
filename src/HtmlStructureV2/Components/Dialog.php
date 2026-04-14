@@ -843,6 +843,8 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置弹窗底部动作按钮。
      * 这些动作运行时同样可获得当前 dialog context，因此可直接配合 close/reload/request 使用。
+     * 其中 `Actions::submit()` / `Actions::close()` 放在 footer 里时，会默认作用到当前 dialog，
+     * 一般不再需要额外写 `->dialog($this->key())`。
      *
      * @param Action ...$actions 底部动作按钮。
      * @return self 当前弹窗实例。

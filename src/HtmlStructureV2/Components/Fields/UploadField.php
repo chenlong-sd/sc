@@ -12,6 +12,7 @@ final class UploadField extends Field implements ValidatableFieldInterface
     use HasValidation;
 
     private array $upload = [];
+    private bool $uploadLimitCustomized = false;
 
     public function __construct(string $name, string $label)
     {
@@ -39,7 +40,9 @@ final class UploadField extends Field implements ValidatableFieldInterface
 
     /**
      * 控制是否允许多文件上传。
-     * 开启后字段默认值会切为数组；关闭时默认按单值字符串处理。
+     * 开启后字段默认值会切为数组；
+     * V2 默认兼容原版上传值格式：单图存字符串路径，普通文件/多图存
+     * `[{"uid":"...","url":"...","name":"...","status":"success"}]` 数组。
      *
      * @param bool $multiple 是否多文件，默认值为 true。
      * @return static 当前上传字段实例。
@@ -54,6 +57,9 @@ final class UploadField extends Field implements ValidatableFieldInterface
 
         if ($multiple) {
             $this->default ??= [];
+            if (!$this->uploadLimitCustomized && ($this->upload['limit'] ?? null) === 1) {
+                $this->upload['limit'] = null;
+            }
         } elseif ($this->upload['limit'] === null) {
             $this->upload['limit'] = 1;
         }
@@ -101,6 +107,7 @@ final class UploadField extends Field implements ValidatableFieldInterface
     public function uploadLimit(int $limit): static
     {
         $this->initializeUploadConfig();
+        $this->uploadLimitCustomized = true;
         $this->upload['limit'] = $limit;
 
         return $this;
@@ -264,7 +271,10 @@ final class UploadField extends Field implements ValidatableFieldInterface
             return $this->default;
         }
 
-        return ($this->upload['multiple'] ?? false) ? [] : '';
+        $isSingleImage = ($this->upload['kind'] ?? 'file') === 'image'
+            && !($this->upload['multiple'] ?? false);
+
+        return $isSingleImage ? '' : [];
     }
 
     protected function validationPromptPrefix(): string

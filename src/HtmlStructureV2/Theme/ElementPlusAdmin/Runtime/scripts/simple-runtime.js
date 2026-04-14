@@ -613,8 +613,14 @@
                 setUploadFileList(...args){
                   return this.setSimpleUploadFileList(...args);
                 },
+                handleUploadBefore(...args){
+                  return this.handleSimpleUploadBefore(...args);
+                },
                 handleUploadSuccess(...args){
                   return this.handleSimpleUploadSuccess(...args);
+                },
+                handleUploadError(...args){
+                  return this.handleSimpleUploadError(...args);
                 },
                 handleUploadRemove(...args){
                   return this.handleSimpleUploadRemove(...args);

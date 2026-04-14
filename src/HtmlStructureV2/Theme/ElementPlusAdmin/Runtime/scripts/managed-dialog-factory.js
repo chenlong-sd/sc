@@ -763,6 +763,15 @@
               }
 
               let loadingInstance = null;
+              const resolveSubmitLoadingText = () => actionConfig?.loadingText ?? defaultSubmitLoadingText;
+              const resolveSubmitSuccessMessage = (payload) => resolveMessage(
+                payload,
+                actionConfig?.successMessage ?? '成功'
+              );
+              const resolveSubmitErrorMessage = (error) => error?.message || resolveMessage(
+                error?.response?.data,
+                actionConfig?.errorMessage ?? '失败'
+              );
               const beginSubmitting = () => {
                 if (this.dialogSubmitting?.[dialogKey]) {
                   return false;
@@ -771,7 +780,7 @@
                 this.dialogSubmitting[dialogKey] = true;
                 loadingInstance = ElementPlus.ElLoading.service({
                   lock: true,
-                  text: defaultSubmitLoadingText,
+                  text: resolveSubmitLoadingText(),
                   background: 'rgba(255,255,255,0.35)',
                 });
 
@@ -811,8 +820,8 @@
                     query: submitData
                   })
                     .then((response) => {
-                      const payload = ensureSuccess(extractPayload(response), '保存失败');
-                      ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
+                      const payload = ensureSuccess(extractPayload(response), '失败');
+                      ElementPlus.ElMessage.success(resolveSubmitSuccessMessage(payload));
                       const context = this.buildDialogSubmitContext(dialogKey, submitData, {
                         response,
                         payload,
@@ -833,7 +842,7 @@
                         });
                     })
                     .catch((error) => {
-                      const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
+                      const message = resolveSubmitErrorMessage(error);
                       ElementPlus.ElMessage.error(message);
 
                       return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogSubmitContext(dialogKey, submitData, {
@@ -842,7 +851,7 @@
                     });
                 })
                   .catch((error) => {
-                    const message = error?.message || '保存失败';
+                    const message = resolveSubmitErrorMessage(error);
                     ElementPlus.ElMessage.error(message);
 
                     return null;
@@ -868,6 +877,10 @@
 
               this.invokeDialogIframeSubmit(dialogKey, submitContext)
                 .then((data) => {
+                  if (data === null || data === false) {
+                    return null;
+                  }
+
                   submitData = data ?? {};
                   return makeRequest({
                     method: 'post',
@@ -876,8 +889,12 @@
                   });
                 })
                 .then((response) => {
-                  const payload = ensureSuccess(extractPayload(response), '保存失败');
-                  ElementPlus.ElMessage.success(resolveMessage(payload, '保存成功'));
+                  if (response === null) {
+                    return null;
+                  }
+
+                  const payload = ensureSuccess(extractPayload(response), '失败');
+                  ElementPlus.ElMessage.success(resolveSubmitSuccessMessage(payload));
                   const context = this.buildDialogSubmitContext(dialogKey, submitData, {
                     response,
                     payload,
@@ -898,7 +915,7 @@
                     });
                 })
                 .catch((error) => {
-                  const message = error?.message || resolveMessage(error?.response?.data, '保存失败');
+                  const message = resolveSubmitErrorMessage(error);
                   ElementPlus.ElMessage.error(message);
 
                   return emitConfiguredEvent(dialogCfg, 'submitFail', this.buildDialogSubmitContext(dialogKey, submitData, {

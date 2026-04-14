@@ -24,9 +24,6 @@ final class RequestAction extends Action
     private ?string $payloadFormScope = null;
     private bool $validateForm = false;
     private ?string $validateFormScope = null;
-    private ?string $successMessage = null;
-    private ?string $errorMessage = null;
-    private ?string $loadingText = null;
     private bool $reloadTable = false;
     private bool $reloadPage = false;
     private bool $closeAfterSuccess = false;
@@ -659,9 +656,7 @@ final class RequestAction extends Action
      */
     public function successMessage(?string $successMessage): static
     {
-        $this->successMessage = $successMessage;
-
-        return $this;
+        return parent::successMessage($successMessage);
     }
 
     /**
@@ -675,9 +670,7 @@ final class RequestAction extends Action
      */
     public function errorMessage(?string $errorMessage): static
     {
-        $this->errorMessage = $errorMessage;
-
-        return $this;
+        return parent::errorMessage($errorMessage);
     }
 
     /**
@@ -691,9 +684,7 @@ final class RequestAction extends Action
      */
     public function loadingText(?string $loadingText = '请稍后...'): static
     {
-        $this->loadingText = $loadingText;
-
-        return $this;
+        return parent::loadingText($loadingText);
     }
 
     /**
@@ -939,17 +930,17 @@ final class RequestAction extends Action
 
     public function getSuccessMessage(): ?string
     {
-        return $this->successMessage;
+        return parent::getSuccessMessage();
     }
 
     public function getErrorMessage(): ?string
     {
-        return $this->errorMessage;
+        return parent::getErrorMessage();
     }
 
     public function getLoadingText(): ?string
     {
-        return $this->loadingText;
+        return parent::getLoadingText();
     }
 
     public function shouldReloadTable(): bool

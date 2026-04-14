@@ -577,10 +577,22 @@ final class FieldRenderer
                     : $options->uploadFileListUpdateHandlerByPathExpression($fieldPathExpression)
             );
             $component->setAttr(
+                ':before-upload',
+                $fieldPathExpression === null
+                    ? $options->uploadBeforeHandler($fieldPath)
+                    : $options->uploadBeforeHandlerByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
                 ':on-success',
                 $fieldPathExpression === null
                     ? $options->uploadSuccessHandler($fieldPath)
                     : $options->uploadSuccessHandlerByPathExpression($fieldPathExpression)
+            );
+            $component->setAttr(
+                ':on-error',
+                $fieldPathExpression === null
+                    ? $options->uploadErrorHandler($fieldPath)
+                    : $options->uploadErrorHandlerByPathExpression($fieldPathExpression)
             );
             $component->setAttr(
                 ':on-remove',

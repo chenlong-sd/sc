@@ -80,12 +80,12 @@ final class ActionButtonRenderer
         }
 
         if ($action->intent() === ActionIntent::SUBMIT) {
-            $attrs[':loading'] = $this->dialogStateExpression('dialogSubmitting', $action);
-            $attrs[':disabled'] = $this->dialogStateExpression('dialogLoading', $action);
+            $attrs[':loading'] = $this->dialogStateExpression('dialogSubmitting', $action, $contextDialogKey);
+            $attrs[':disabled'] = $this->dialogStateExpression('dialogLoading', $action, $contextDialogKey);
         }
 
         if ($action->intent() === ActionIntent::CLOSE) {
-            $attrs[':disabled'] = $this->dialogStateExpression('dialogSubmitting', $action);
+            $attrs[':disabled'] = $this->dialogStateExpression('dialogSubmitting', $action, $contextDialogKey);
         }
 
         $click = $this->resolveClick($action, $rowScoped, $target, $renderContext, $contextDialogKey, $formScope);
@@ -198,14 +198,14 @@ final class ActionButtonRenderer
                 $rowScoped,
                 sprintf(
                     'submitDialog(%s, context.action, context)',
-                    $this->jsString($action->targetName() ?: 'editor')
+                    $this->jsString($this->resolveDialogTarget($action, $contextDialogKey))
                 ),
                 $actionKey !== null
             ),
             ActionIntent::CLOSE => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                sprintf('closeDialog(%s)', $this->jsString($action->targetName() ?: 'editor')),
+                sprintf('closeDialog(%s)', $this->jsString($this->resolveDialogTarget($action, $contextDialogKey))),
                 $actionKey !== null
             ),
             ActionIntent::REFRESH => $this->wrapActionExecution(
@@ -269,7 +269,7 @@ final class ActionButtonRenderer
             'reloadTable' => $action->shouldReloadTable(),
             'reloadPage' => $action->shouldReloadPage(),
             'closeDialog' => $action->shouldCloseAfterSuccess(),
-            'dialogTarget' => $action->targetName(),
+            'dialogTarget' => $this->resolveActionDialogTarget($action, $contextDialogKey),
             'form' => [
                 'validate' => $action->shouldValidateForm(),
                 'validateScope' => $action->getValidateFormScope(),
@@ -341,8 +341,11 @@ final class ActionButtonRenderer
             'listKey' => $target->listKey(),
             'contextDialogKey' => $contextDialogKey,
             'formScope' => $formScope,
-            'dialogTarget' => $action->targetName(),
+            'dialogTarget' => $this->resolveActionDialogTarget($action, $contextDialogKey),
             'confirmText' => $action->confirmText(),
+            'successMessage' => $action->getSuccessMessage(),
+            'errorMessage' => $action->getErrorMessage(),
+            'loadingText' => $action->getLoadingText(),
             'events' => $action->getEventHandlers(),
             'submit' => [
                 'saveUrl' => $action->getSaveUrl(),
@@ -378,6 +381,35 @@ final class ActionButtonRenderer
         );
     }
 
+    private function resolveActionDialogTarget(Action $action, ?string $contextDialogKey = null): ?string
+    {
+        if (
+            in_array($action->intent(), [ActionIntent::SUBMIT, ActionIntent::CLOSE], true)
+            || $action instanceof RequestAction
+        ) {
+            return $this->resolveDialogTarget($action, $contextDialogKey);
+        }
+
+        $target = trim((string) ($action->targetName() ?? ''));
+
+        return $target !== '' ? $target : null;
+    }
+
+    private function resolveDialogTarget(Action $action, ?string $contextDialogKey = null): string
+    {
+        $target = trim((string) ($action->targetName() ?? ''));
+        if ($target !== '') {
+            return $target;
+        }
+
+        $contextTarget = trim((string) ($contextDialogKey ?? ''));
+        if ($contextTarget !== '') {
+            return $contextTarget;
+        }
+
+        return 'editor';
+    }
+
     private function registerRuntimeActionConfig(
         Action $action,
         ActionRenderTarget $target,
@@ -397,12 +429,12 @@ final class ActionButtonRenderer
         return (new PageRuntimeRegistry($renderContext))->registerActionConfig($key, $config);
     }
 
-    private function dialogStateExpression(string $stateName, Action $action): string
+    private function dialogStateExpression(string $stateName, Action $action, ?string $contextDialogKey = null): string
     {
         return sprintf(
             '%s[%s] || false',
             $stateName,
-            $this->jsString($action->targetName() ?: 'editor')
+            $this->jsString($this->resolveDialogTarget($action, $contextDialogKey))
         );
     }
 }

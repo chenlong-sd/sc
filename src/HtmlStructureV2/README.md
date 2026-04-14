@@ -380,7 +380,7 @@ $form = Forms::make('profile')->addNodes(
 
 V2 的 `Dialog` 不再只是“一个表单弹窗”，现在支持三类弹窗体：
 
-推荐先决定“弹窗里放什么”，再决定“由哪个动作打开它”。最常见写法仍然是先定义 `Dialogs::make(...)`，再在 `Actions::create()` / `Actions::edit()` / `Actions::submit()` 上链式 `->dialog(...)`。
+推荐先决定“弹窗里放什么”，再决定“由哪个动作打开它”。最常见写法仍然是先定义 `Dialogs::make(...)`，再在 `Actions::create()` / `Actions::edit()` / `Actions::submit()` 上链式 `->dialog(...)`；但如果 `Actions::submit()` / `Actions::close()` 已经写在当前 dialog 的 `footer(...)` 里，则会自动识别当前 dialog，不必再重复写 `->dialog(...)`。
 
 - `->form(...)` 表单弹窗
 - `->content(...)` 说明/确认/自定义内容弹窗
@@ -694,7 +694,7 @@ use Sc\Util\HtmlStructureV2\Support\JsExpression;
 $contentDialog = Dialogs::make('help', '操作说明')
     ->content('<div style="line-height:1.8">这里放说明内容、富文本或自定义组件。</div>')
     ->footer(
-        Actions::close('我知道了')->dialog('help')->type('primary')
+        Actions::close('我知道了')->type('primary')
     );
 
 $componentDialog = Dialogs::make('editor-component', '组件编辑')
@@ -740,10 +740,12 @@ $fillDialog = Dialogs::make('work-order-fill', '填写')
     ])
     ->iframeSubmitHandler('__SC_V2_PAGE__.submit')
     ->footer(
-        Actions::close('取消')->dialog('work-order-fill'),
-        Actions::submit('提交结果')->dialog('work-order-fill')->confirm('确认提交吗？')
+        Actions::close('取消'),
+        Actions::submit('提交结果')->confirm('确认提交吗？')
     );
 ```
+
+`footer(...)` 里的 `Actions::submit()` / `Actions::close()` 现在会默认作用到当前 dialog；只有把动作写到弹窗外部时，才需要显式 `->dialog('work-order-fill')`。
 
 V2 子页面默认可直接使用：
 
@@ -1085,8 +1087,8 @@ $page = Pages::make('用户列表')
 - `->returnTo('/list/url')`
 - `->confirm('确认消息')`
 - `->loadingText('处理中...')`
-- `->successMessage('操作成功')`
-- `->errorMessage('操作失败')`
+- `->successMessage('成功')`
+- `->errorMessage('失败')`
 - `->reloadTable()`
 - `->reloadPage()`
 - `->dialog('editor')->closeAfterSuccess()`
@@ -1574,6 +1576,8 @@ JS);
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
 - `Fields::cascader()` 才暴露 `cascaderProps()`、`emitPath()`、`checkStrictly()`
 - `Fields::upload()`、`Fields::image()` 才暴露上传相关方法
+- 上传值默认兼容原版：单图字段存字符串路径；普通文件和多图字段存 `[{ uid, url, name, status }]`
+- 上传时会默认提示“文件上传中,请稍后...”，成功/失败也会自动提示具体文件名
 - `Fields::number()` 才暴露 `minValue()`、`maxValue()`、`step()`、`precision()`
 - `Fields::date()`、`Fields::datetime()`、`Fields::daterange()` 才暴露 `format()`、`valueFormat()`
 

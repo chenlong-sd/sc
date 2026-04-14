@@ -35,7 +35,9 @@
               initializeFormOptions: 'initializeSimpleFormOptions',
               loadFormFieldOptions: 'loadSimpleFormFieldOptions',
               initializeUploadFiles: 'initializeSimpleUploadFiles',
+              handleUploadBefore: 'handleSimpleUploadBefore',
               handleUploadSuccess: 'handleSimpleUploadSuccess',
+              handleUploadError: 'handleSimpleUploadError',
               handleUploadRemove: 'handleSimpleUploadRemove',
               handleUploadExceed: 'handleSimpleUploadExceed',
               handleUploadPreview: 'handleSimpleUploadPreview'

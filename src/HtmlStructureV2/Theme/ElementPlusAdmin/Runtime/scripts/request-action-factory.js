@@ -1656,7 +1656,7 @@
                   payload,
                   resolvedActionConfig.successMessage
                   ?? submitFormState.submitConfig?.successMessage
-                  ?? '操作成功'
+                  ?? '成功'
                 );
               };
               const resolveErrorMessage = (responsePayload = null) => {
@@ -1665,7 +1665,7 @@
                   responsePayload,
                   resolvedActionConfig.errorMessage
                   ?? submitFormState.submitConfig?.errorMessage
-                  ?? '操作失败'
+                  ?? '失败'
                 );
               };
               const validateConfiguredForm = () => {
