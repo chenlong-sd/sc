@@ -10,6 +10,7 @@ final class StaticResource
     public const ELEMENT_PLUS_CSS = '/elementUI/index.css';
     public const ELEMENT_PLUS_ICON = '/elementUI/index.iife.min.js';
     public const ELEMENT_PLUS_LANG = '/elementUI/zh-cn.min.js';
+    public const SC_V2_THEME_CSS = '/js/sc-v2/element-plus-admin-theme.css';
     public const SORTABLE = '/js/Sortable.min.js';
     public const XLSX = '/js/xlsx.full.min.js';
     public const SCEDITOR_JS = '/sceditor/editor.min.js';

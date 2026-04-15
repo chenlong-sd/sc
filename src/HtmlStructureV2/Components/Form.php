@@ -409,7 +409,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->successMessage('保存成功')`
+     * `Form::make('qa-info-form')->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): self
     {

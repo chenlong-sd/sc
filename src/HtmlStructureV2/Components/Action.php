@@ -513,7 +513,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->successMessage('保存成功')`
+     * `Action::submit()->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): static
     {
@@ -594,12 +594,14 @@ class Action implements
      * 透传额外按钮属性。
      * 若键名以 ":" 开头，数组/布尔/数字/null 会自动转成 JS 字面量；
      * 字符串值仍按原始前端表达式输出。
+     * 若动作运行在 `Table::rowActions()` 中，表达式可直接读取 `scope.row` / `scope.$index`；
+     * 若动作运行在 dialog body/footer 中，可直接读取 `dialogRow`。
      *
      * @param array $props 要合并到按钮上的额外属性。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('打开')->props(['plain' => true, ':disabled' => 'selection.length === 0'])`
+     * `Action::make('打开')->props(['plain' => true, 'v-if' => 'scope.row.enabled'])`
      */
     public function props(array $props): static
     {

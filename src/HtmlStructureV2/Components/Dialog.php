@@ -381,12 +381,15 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 把弹窗主体切换为纯内容块。
+     * 内容模板里可直接读取当前弹窗行数据别名 `dialogRow`，
+     * 等价于当前 dialogKey 对应的 `dialogRows[dialogKey]`；
+     * 无 row 打开时该值为 null。
      *
      * @param string|AbstractHtmlElement|null $content 纯内容块。
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '提示')->content('<div>请确认操作</div>')`
+     * `Dialogs::make('qa-info-dialog', '提示')->content('<div>{{ dialogRow?.name }}</div>')`
      */
     public function content(string|AbstractHtmlElement|null $content): self
     {
@@ -842,6 +845,8 @@ final class Dialog implements Renderable, EventAware
      * 这些动作运行时同样可获得当前 dialog context，因此可直接配合 close/reload/request 使用。
      * 其中 `Actions::submit()` / `Actions::close()` 放在 footer 里时，会默认作用到当前 dialog，
      * 一般不再需要额外写 `->dialog($this->key())`。
+     * footer 区域中的前端表达式同样可直接读取 `dialogRow`，
+     * 例如 `Actions::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`。
      *
      * @param Action ...$actions 底部动作按钮。
      * @return self 当前弹窗实例。

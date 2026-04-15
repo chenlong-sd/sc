@@ -79,8 +79,8 @@ final class Table implements Renderable, EventAware
     private bool $export = false;
     private string $exportLabel = '导出Excel';
     private string $exportFilename = 'export';
-    private string $exportType = 'success';
-    private ?string $exportIcon = 'Download';
+    private string $exportType = 'primary';
+    private ?string $exportIcon = 'TakeawayBox';
     private array $exportQuery = [
         'is_export' => 1,
     ];
@@ -160,12 +160,26 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置每行的操作动作。
+     * 行按钮渲染在表格列插槽 `#default="scope"` 中，
+     * 因此前端属性表达式可直接读取 `scope.row` / `scope.$index`，
+     * 例如 `->props(['v-if' => 'scope.row.status == 1'])`。
+     *
+     * 点击事件则会把当前行解构到 action context 的 `row` 字段中，
+     * 因此 `onClick()` / `on('click', ...)` 里通常直接写 `({ row }) => ...` 即可，
+     * 不需要再手动从 `scope.row` 取值。
+     *
+     * `Actions::edit()` / `Actions::request()` / `Events::openDialog()` 等会自动携带当前行；
+     * `Actions::delete()` 仍是工具栏批量删除语义，不用于 rowActions() 单条删除。
      *
      * @param Action ...$actions 行操作动作。
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->rowActions(Actions::edit()->dialog('qa-info-dialog'))`
+     * `Tables::make('qa-info-table')->rowActions(
+     *     Actions::make('确认')
+     *         ->props(['v-if' => 'scope.row.status == 1'])
+     *         ->onClick('({ row }) => console.log(row.id)')
+     * )`
      */
     public function rowActions(Action ...$actions): self
     {
@@ -471,16 +485,16 @@ final class Table implements Renderable, EventAware
     /**
      * 设置导出按钮类型。
      *
-     * @param string $type 按钮类型，默认值为 success。
+     * @param string $type 按钮类型，默认值为 primary。
      * @return self 当前表格实例。
      *
      * 示例：
      * `Tables::make('qa-info-table')->exportType('primary')`
      */
-    public function exportType(string $type = 'success'): self
+    public function exportType(string $type = 'primary'): self
     {
         $this->export = true;
-        $this->exportType = trim($type) !== '' ? trim($type) : 'success';
+        $this->exportType = trim($type) !== '' ? trim($type) : 'primary';
 
         return $this;
     }
@@ -492,9 +506,9 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportIcon('Download')`
+     * `Tables::make('qa-info-table')->exportIcon('TakeawayBox')`
      */
-    public function exportIcon(?string $icon = 'Download'): self
+    public function exportIcon(?string $icon = 'TakeawayBox'): self
     {
         $this->export = true;
         $this->exportIcon = $icon !== null && trim($icon) !== '' ? trim($icon) : null;

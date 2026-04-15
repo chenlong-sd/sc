@@ -652,7 +652,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->successMessage('保存成功')`
+     * `RequestAction::make('保存')->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): static
     {

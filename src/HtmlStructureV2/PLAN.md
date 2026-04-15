@@ -237,7 +237,7 @@ Confirmed observations:
 - `RequestAction::payload()` already exposes `forms` in public context, so form model reading can be a first-class API instead of forcing runtime-internal `vm` calls
 - `Actions::submit()` already gives dialog-footer submission a relatively clear public shortcut, and standalone page forms now also have public `submitForm()` / `saveUrls()` / `Form::load()` flow
 - Real standalone form-page usage still tends to fall back to internal runtime names such as `validateSimpleForm(...)` / `getSimpleFormModel(...)`
-- iframe child pages can already coordinate with the host, but current usage still leans on raw `window.parent.postMessage(...)` and implicit global submit entry
+- iframe child pages now already have public host-bridge helpers and public submit entry; the remaining work is keeping usage examples on that public contract
 - Page-form CRUD flows still duplicate cancel / return / host-close / host-reload handling more often than they should
 - Current comments expose context nouns such as `forms` / `vm`, but they still do not provide one obvious public recipe for “how to save a V2 form page” without reading runtime source
 
@@ -357,12 +357,12 @@ The recommended execution order is:
 1. Reassess and tighten standalone form page bootstrap / submit ergonomics
 2. Continue lifting iframe child-page submit flow onto a clearer public contract
 3. Keep form-side docs, comments, and tests aligned with the public contract as new shortcuts land
-4. Continue `sc/`-internal native cleanup and re-evaluate whether thin V1 entry aliases are still needed for migration
+4. Continue `sc/`-internal native cleanup and keep migration guidance focused on V2-native APIs instead of reintroducing V1 aliases
 
 ## Notes
 
 - `openPage(dialog)` and `openPage(tab)` have already been brought to usable V2 behavior in recent work.
-- Recent status-toggle cleanup also confirmed a planning rule: V2-native toggle API should only own filter-name binding; legacy backend-field mapping belongs in the compatibility alias path, not the native signature.
+- Recent status-toggle cleanup also confirmed a planning rule: V2-native toggle API should only own filter-name binding; legacy backend-field mapping should stay out of the native signature.
 - Recent real-page migration also proved that cascader/tree data must not be normalized with select-style `value` / `label` wrapping.
 - Recent standalone form-page usage also confirmed a second planning rule: public CRUD form flows must not rely on runtime-internal `vm` method names in usage-side code.
 - For form-side APIs, “discoverable in IDE and comments” should be treated as part of capability completeness, not as optional documentation polish.

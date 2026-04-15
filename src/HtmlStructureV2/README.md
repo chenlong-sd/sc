@@ -783,17 +783,22 @@ Actions::delete()
 
 ### iframe 宿主桥
 
-开启 `->iframeHost()` 后，宿主页会监听 iframe 子页面的 `postMessage`。子页面可以发：
+开启 `->iframeHost()` 后，宿主页会为 iframe 子页面提供宿主桥。通常直接调用
+页面 runtime / action context 暴露的方法即可，不需要手写
+`window.parent.postMessage(...)`。
 
-```js
-window.parent.postMessage({
-  __scV2DialogHost: {
-    action: 'close'
-  }
-}, '*');
-```
+常用公共方法：
 
-支持的 `action`：
+- `ctx.closeHostDialog(dialogKey = null)`
+- `ctx.reloadHostTable(tableKey = null, dialogKey = null)`
+- `ctx.openHostDialog(dialogKey, row = null, tableKey = null)`
+- `ctx.openHostTab(route | { route, title?, index? }, title = '', index = null)`
+- `ctx.setHostDialogTitle(title, dialogKey = null)`
+- `ctx.setHostDialogFullscreen(value = true, dialogKey = null)`
+- `ctx.toggleHostDialogFullscreen(dialogKey = null)`
+- `ctx.refreshHostDialogIframe(dialogKey = null)`
+
+底层宿主桥仍然识别这些 `action`，只有在对接非 V2 子页面时才建议直接发消息：
 
 - `close`
 - `reloadTable`
@@ -1268,7 +1273,7 @@ use Sc\Util\HtmlStructureV2\Dsl\Forms;
 Forms::make('profile')
     ->saveUrls('/admin/profile/create', '/admin/profile/update')
     ->loadingText('保存中...')
-    ->successMessage('保存成功')
+    ->successMessage('成功')
     ->returnTo('/admin/profile/lists');
 
 Actions::save('保存');
@@ -1305,7 +1310,7 @@ use Sc\Util\HtmlStructureV2\Dsl\Forms;
 
 $form = Forms::make('profile')
     ->saveUrls('/admin/profile/create', '/admin/profile/update')
-    ->successMessage('保存成功')
+    ->successMessage('成功')
     ->returnTo('/admin/profile/lists');
 
 Actions::back('/admin/profile/lists');

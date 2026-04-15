@@ -100,8 +100,9 @@ final class DialogRenderer
         $footerActions = $this->resolveFooterActions($dialog);
         if ($footerActions) {
             $footer = El::double('template')->setAttr('#footer');
+            $footerScope = El::double('template')->setAttr('v-for', $this->dialogRowScopeExpression($dialog));
             foreach ($footerActions as $action) {
-                $footer->append($this->actionButtonRenderer->render(
+                $footerScope->append($this->actionButtonRenderer->render(
                     $action,
                     false,
                     'default',
@@ -111,6 +112,7 @@ final class DialogRenderer
                     $dialog->key()
                 ));
             }
+            $footer->append($footerScope);
             $element->append($footer);
         }
 
@@ -124,7 +126,7 @@ final class DialogRenderer
         ?RenderContext $context,
         DialogRenderBindings $bindings
     ): AbstractHtmlElement {
-        $body = El::double('div');
+        $body = El::double('div')->setAttr('v-for', $this->dialogRowScopeExpression($dialog));
         if ($bindings->loadingExpression() !== null && $bindings->loadingExpression() !== '') {
             $body->setAttr('v-loading', $bindings->loadingExpression());
         }
@@ -190,6 +192,17 @@ final class DialogRenderer
         }
 
         return $body;
+    }
+
+    private function dialogRowScopeExpression(Dialog $dialog): string
+    {
+        // Expose the current dialog row as a local alias so business pages can use
+        // `dialogRow` directly in dialog body/footer expressions instead of repeating
+        // `dialogRows['dialog-key']`.
+        return sprintf(
+            'dialogRow in [dialogRows[%s] || null]',
+            $this->jsString($dialog->key())
+        );
     }
 
     /**

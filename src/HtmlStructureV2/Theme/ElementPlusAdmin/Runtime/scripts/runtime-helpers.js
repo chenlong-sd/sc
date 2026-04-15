@@ -212,7 +212,13 @@
             return isBlank(value) ? 'create' : 'edit';
           };
           const resolveMessage = (payload, fallback = '') => {
-            if (typeof payload === 'string' && payload !== '') return payload;
+            if (typeof payload === 'string' && payload !== '') {
+              const normalized = payload.trim().toLowerCase();
+              if (fallback && ['success', 'ok', 'error', 'fail', 'failed'].includes(normalized)) {
+                return fallback;
+              }
+              return payload;
+            }
             if (!isObject(payload)) return fallback;
             return payload.message || payload.msg || payload.error || fallback;
           };
