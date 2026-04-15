@@ -637,7 +637,10 @@ final class TableRenderer
             ->addClass('sc-v2-table-settings-list__cell')
             ->addClass('sc-v2-table-settings-list__cell--toggle')
             ->append(
-                El::double('el-switch')->setAttr('v-model', 'row.show')
+                El::double('el-switch')->setAttrs([
+                    'v-model' => 'row.show',
+                    'size' => 'small',
+                ])
             );
     }
 
@@ -649,6 +652,7 @@ final class TableRenderer
             ->append(
                 El::double('el-input')->setAttrs([
                     'v-model' => 'row.width',
+                    'size' => 'small',
                     'clearable' => '',
                     'placeholder' => '自动',
                 ])
@@ -661,7 +665,10 @@ final class TableRenderer
             ->addClass('sc-v2-table-settings-list__cell')
             ->addClass('sc-v2-table-settings-list__cell--toggle')
             ->append(
-                El::double('el-switch')->setAttr('v-model', 'row.export')
+                El::double('el-switch')->setAttrs([
+                    'v-model' => 'row.export',
+                    'size' => 'small',
+                ])
             );
     }
 
@@ -673,6 +680,7 @@ final class TableRenderer
             ->append(
                 El::double('el-select')->setAttrs([
                     'v-model' => 'row.fixed',
+                    'size' => 'small',
                     'clearable' => '',
                     'placeholder' => '默认',
                 ])->append(
@@ -696,6 +704,7 @@ final class TableRenderer
             ->append(
                 El::double('el-select')->setAttrs([
                     'v-model' => 'row.align',
+                    'size' => 'small',
                     'clearable' => '',
                     'placeholder' => '默认',
                 ])->append(

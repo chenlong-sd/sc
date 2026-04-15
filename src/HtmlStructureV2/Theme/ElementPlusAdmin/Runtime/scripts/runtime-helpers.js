@@ -203,6 +203,34 @@
               query,
             };
           };
+          const hideAppLoadingShell = () => {
+            if (typeof document === 'undefined') {
+              return;
+            }
+
+            const shell = document.querySelector('.sc-v2-app-loading-shell');
+            if (!shell) {
+              return;
+            }
+
+            shell.classList.add('is-hidden');
+
+            const removeShell = () => {
+              if (shell.parentNode) {
+                shell.parentNode.removeChild(shell);
+              }
+            };
+
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+              window.setTimeout(() => {
+                window.requestAnimationFrame(removeShell);
+              }, 180);
+
+              return;
+            }
+
+            removeShell();
+          };
           const resolvePageMode = (query = {}, queryKey = 'id') => {
             const normalizedKey = typeof queryKey === 'string' && queryKey.trim() !== ''
               ? queryKey.trim()
@@ -2169,6 +2197,7 @@
             serializeUploadFile,
             normalizeUploadFile,
             normalizeUploadFiles,
+            hideAppLoadingShell,
             openHostTab,
             pickRows,
             postDialogHostMessage,

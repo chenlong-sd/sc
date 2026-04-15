@@ -1624,6 +1624,7 @@ JS);
 - 公共 helper 在 `runtime-helpers.js`
 - 公共表单 runtime 工厂在 `form-runtime-factory.js`
 - 渲染时会优先把 runtime 按原始模块文件名发布到 `public/js/sc-v2/`，页面里直接加载 `runtime-helpers.js`、`managed-dialog-factory.js` 这类具体脚本，便于定位问题
+- 主题 CSS 也会从 `Theme/ElementPlusAdmin/Runtime/styles/element-plus-admin-theme.css` 自动发布到 `public/js/sc-v2/`；如果发布失败，会回退成 inline style
 - URL 通过查询参数 hash 做缓存失效，不靠 bundle 文件名隐藏真实模块名
 - 如果静态文件发布失败，会自动回退到“按模块分段内联”，不会再退回成单个超大 inline script
 

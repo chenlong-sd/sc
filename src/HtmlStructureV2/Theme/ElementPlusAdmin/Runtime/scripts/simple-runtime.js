@@ -14,6 +14,7 @@
             openHostTab: openHostTabBridge,
             postDialogHostMessage,
             pickRows,
+            hideAppLoadingShell,
             readPageLocation,
             readPageQuery,
             registerElementPlusIcons,
@@ -664,6 +665,7 @@
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
+          hideAppLoadingShell();
           const pageApi = createPublicPageApi(vm);
           globalThis.__SC_V2_PAGE__ = pageApi;
 

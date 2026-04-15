@@ -12,8 +12,70 @@ final class RuntimeAssetPublisher
 
     public function publishScript(string $filename): ?string
     {
-        $normalized = ltrim(str_replace('\\', '/', $filename), '/');
-        $contents = RuntimeScriptLoader::load($normalized);
+        return $this->publishAsset(
+            ltrim(str_replace('\\', '/', $filename), '/'),
+            static fn(string $normalized): string => RuntimeScriptLoader::load($normalized)
+        );
+    }
+
+    public function publishStyle(string $filename): ?string
+    {
+        return $this->publishAsset(
+            ltrim(str_replace('\\', '/', $filename), '/'),
+            static fn(string $normalized): string => RuntimeStyleLoader::load($normalized)
+        );
+    }
+
+    public function publishScriptMany(array $filenames): ?array
+    {
+        return $this->publishManyUsing($filenames, fn(string $filename): ?string => $this->publishScript($filename));
+    }
+
+    /**
+     * @param array<int, string> $filenames
+     * @return array<int, string>|null
+     */
+    public function publishMany(array $filenames): ?array
+    {
+        return $this->publishScriptMany($filenames);
+    }
+
+    /**
+     * @param array<int, string> $filenames
+     * @return array<int, string>|null
+     */
+    public function publishStyleMany(array $filenames): ?array
+    {
+        return $this->publishManyUsing($filenames, fn(string $filename): ?string => $this->publishStyle($filename));
+    }
+
+    /**
+     * @param array<int, string> $filenames
+     * @param \Closure(string): ?string $publisher
+     * @return array<int, string>|null
+     */
+    private function publishManyUsing(array $filenames, \Closure $publisher): ?array
+    {
+        $urls = [];
+
+        foreach ($filenames as $filename) {
+            $url = $publisher($filename);
+            if ($url === null) {
+                return null;
+            }
+
+            $urls[] = $url;
+        }
+
+        return $urls;
+    }
+
+    /**
+     * @param \Closure(string): string $loader
+     */
+    private function publishAsset(string $normalized, \Closure $loader): ?string
+    {
+        $contents = $loader($normalized);
         $hash = substr(sha1($contents), 0, 12);
         $cacheKey = $normalized . ':' . $hash;
 
@@ -30,26 +92,6 @@ final class RuntimeAssetPublisher
         }
 
         return self::$urlCache[$cacheKey] = $url;
-    }
-
-    /**
-     * @param array<int, string> $filenames
-     * @return array<int, string>|null
-     */
-    public function publishMany(array $filenames): ?array
-    {
-        $urls = [];
-
-        foreach ($filenames as $filename) {
-            $url = $this->publishScript($filename);
-            if ($url === null) {
-                return null;
-            }
-
-            $urls[] = $url;
-        }
-
-        return $urls;
     }
 
     private function ensureFileContents(string $targetDir, string $targetPath, string $contents): bool

@@ -15,6 +15,7 @@
             openHostTab: openHostTabBridge,
             postDialogHostMessage,
             pickRows,
+            hideAppLoadingShell,
             readPageLocation,
             registerElementPlusIcons,
             registerScV2Components,
@@ -460,4 +461,5 @@
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
+          hideAppLoadingShell();
         };

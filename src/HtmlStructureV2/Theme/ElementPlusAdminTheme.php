@@ -38,6 +38,8 @@ use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\TableRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\DialogConfigBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\ListRuntimeBuilder;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\RuntimeAssetPublisher;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\RuntimeStyleLoader;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\SimpleRuntimeBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\TableRuntimeConfigBuilder;
 
@@ -73,12 +75,13 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private ?TableBlockRenderer $tableBlockRenderer = null;
     private ?PageFrameRenderer $pageFrameRenderer = null;
     private ?LightweightComponentRenderer $lightweightComponentRenderer = null;
+    private ?RuntimeAssetPublisher $runtimeAssetPublisher = null;
 
     public function boot(RenderContext $context): void
     {
         $assets = $context->document()->assets();
         $assets->addStylesheet(StaticResource::ELEMENT_PLUS_CSS);
-        $assets->addStylesheet(StaticResource::SC_V2_THEME_CSS);
+        $this->appendThemeStylesheet($context);
         $assets->addScript(StaticResource::VUE);
         $assets->addScript(StaticResource::ELEMENT_PLUS_ICON);
         $assets->addScript(StaticResource::ELEMENT_PLUS_JS);
@@ -114,6 +117,31 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $this->appendPageRuntime($context);
 
         return $body;
+    }
+
+    private function appendThemeStylesheet(RenderContext $context): void
+    {
+        $assets = $context->document()->assets();
+
+        try {
+            $url = $this->runtimeAssetPublisher()->publishStyle('element-plus-admin-theme.css');
+            if ($url !== null) {
+                $assets->addStylesheet($url);
+
+                return;
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            $css = RuntimeStyleLoader::load('element-plus-admin-theme.css');
+        } catch (\Throwable) {
+            $assets->addStylesheet(StaticResource::SC_V2_THEME_CSS);
+
+            return;
+        }
+
+        $assets->addInlineStyle($css);
     }
 
     private function renderStandaloneForm(Form $form, RenderContext $context): AbstractHtmlElement
@@ -258,6 +286,11 @@ final class ElementPlusAdminTheme implements ThemeInterface
         }
 
         $this->appendSimpleRuntime($context);
+    }
+
+    private function runtimeAssetPublisher(): RuntimeAssetPublisher
+    {
+        return $this->runtimeAssetPublisher ??= new RuntimeAssetPublisher();
     }
 
     /**

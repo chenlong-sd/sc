@@ -259,13 +259,13 @@ final class FieldRenderer
             FieldType::TEXT => El::double('el-input')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
-                'style' => $inline ? 'width: 180px' : 'width: 100%',
+                'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
             FieldType::PASSWORD => El::double('el-input')->setAttrs($bindModelValue([
                 'type' => 'password',
                 'placeholder' => $placeholder,
                 'clearable' => '',
-                'style' => $inline ? 'width: 180px' : 'width: 100%',
+                'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
             FieldType::ICON => El::double('sc-v2-icon-selector')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
@@ -284,19 +284,19 @@ final class FieldRenderer
                 'style' => $inline ? 'width:min(860px,100%)' : 'width:100%',
             ])),
             FieldType::NUMBER => El::double('el-input-number')->setAttrs($bindModelValue([
-                'style' => $inline ? 'width: 180px' : 'width: 100%',
+                'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
             FieldType::SELECT => El::double('el-select')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
-                'style' => $inline ? 'width: 180px' : 'width: 100%',
+                'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
             FieldType::RADIO => El::double('el-radio-group')->setAttrs($bindModelValue([])),
             FieldType::CHECKBOX => El::double('el-checkbox-group')->setAttrs($bindModelValue([])),
             FieldType::CASCADER => El::double('el-cascader')->setAttrs($bindModelValue([
                 'placeholder' => $placeholder,
                 'clearable' => '',
-                'style' => $inline ? 'min-width: 220px' : 'width: 100%',
+                'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
             FieldType::DATE => El::double('el-date-picker')->setAttrs($bindModelValue([
                 'type' => 'date',

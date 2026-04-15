@@ -1171,6 +1171,18 @@
               || target?.querySelector?.('[data-sc-table-settings-body]')
               || null;
           };
+          const syncTableSettingsHeaderOffset = (vm, tableKey = null, mode = null) => {
+            const target = getTableSettingsRootElement(vm, tableKey, mode);
+            const scrollElement = getTableSettingsScrollElement(vm, tableKey, mode);
+            if (!target || !scrollElement || typeof target.style?.setProperty !== 'function') {
+              return 0;
+            }
+
+            const scrollbarWidth = Math.max(0, Number(scrollElement.offsetWidth || 0) - Number(scrollElement.clientWidth || 0));
+            target.style.setProperty('--sc-v2-table-settings-scrollbar-width', `${scrollbarWidth}px`);
+
+            return scrollbarWidth;
+          };
           const runAfterTableSettingsLayout = (vm, callback = null) => {
             const execute = () => {
               if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
@@ -1543,6 +1555,8 @@
                 virtual.scrollTop = Math.max(0, Number(scrollElement.scrollTop || 0));
               }
 
+              syncTableSettingsHeaderOffset(this, resolvedKey, resolvedMode);
+
               return syncTableSettingsVirtualModeState(state, resolvedMode);
             },
             handleTableSettingsScroll(tableKey = null, mode = null, event = null){
@@ -1559,6 +1573,8 @@
               const virtual = ensureTableSettingsVirtualStateStore(state)?.[resolvedMode] || null;
               const target = event?.target || getTableSettingsScrollElement(this, resolvedKey, resolvedMode);
               if (!virtual || !target) {
+                syncTableSettingsHeaderOffset(this, resolvedKey, resolvedMode);
+
                 return syncTableSettingsVirtualModeState(state, resolvedMode);
               }
 
@@ -1567,6 +1583,8 @@
               if (nextHeight > 0) {
                 virtual.viewportHeight = nextHeight;
               }
+
+              syncTableSettingsHeaderOffset(this, resolvedKey, resolvedMode);
 
               return syncTableSettingsVirtualModeState(state, resolvedMode);
             },

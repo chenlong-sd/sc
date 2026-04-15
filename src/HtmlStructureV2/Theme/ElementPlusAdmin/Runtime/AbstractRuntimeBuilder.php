@@ -19,7 +19,7 @@ abstract class AbstractRuntimeBuilder
         $config = JsonExpressionEncoder::encode($this->buildConfig($context));
         $assets = $context->document()->assets();
         $files = array_merge(RuntimeBundleCatalog::shared(), $this->runtimeFiles());
-        $urls = $this->runtimeAssetPublisher()->publishMany($files);
+        $urls = $this->runtimeAssetPublisher()->publishScriptMany($files);
 
         if ($urls !== null) {
             foreach ($urls as $url) {
