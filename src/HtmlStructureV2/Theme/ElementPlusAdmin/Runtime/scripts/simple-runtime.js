@@ -499,6 +499,9 @@
                 setFormModel(scope, values = {}){
                   return this.setSimpleFormModel(scope, values);
                 },
+                setFieldOptions(scope, fieldName, options = []){
+                  return this.setSimpleFieldOptions(scope, fieldName, options);
+                },
                 initializeFormModel(scope, values = {}){
                   return this.initializeSimpleFormModel(scope, values);
                 },

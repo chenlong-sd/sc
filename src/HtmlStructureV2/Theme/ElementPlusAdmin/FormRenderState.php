@@ -110,7 +110,8 @@ final class FormRenderState
 
     private function buildInitialOptionState(FormSchema $schema): array
     {
-        $state = [];
+        $state = $schema->selectOptions();
+
         foreach ($schema->remoteOptionPaths() as $fieldPath) {
             FormPath::set(
                 $state,

@@ -392,10 +392,10 @@ final class FieldRenderer
             );
         }
 
-        $optionsExpression = $hasRemoteOptions
+        $optionsExpression = $options->hasOptionStateContext()
             ? ($fieldPathExpression === null
-                ? $options->remoteOptionsExpression($fieldPath)
-                : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
+                ? $options->optionExpression($fieldPath)
+                : $options->optionExpressionByPathExpression($fieldPathExpression))
             : null;
 
         if ($field->type() === FieldType::SELECT) {
@@ -434,11 +434,7 @@ final class FieldRenderer
         if ($field->type() === FieldType::CASCADER) {
             $component->setAttr(
                 ':options',
-                $hasRemoteOptions
-                    ? ($fieldPathExpression === null
-                        ? $options->remoteOptionsExpression($fieldPath)
-                        : $options->remoteOptionsExpressionByPathExpression($fieldPathExpression))
-                    : $this->jsValue($optionField->getOptions())
+                $optionsExpression ?? $this->jsValue($optionField->getOptions())
             );
 
             if ($optionField instanceof CascaderField && $optionField->shouldCloseAfterSelection()) {
@@ -729,69 +725,30 @@ final class FieldRenderer
         ?string $optionsExpression,
         string $optionTag
     ): void {
-        if ($optionsExpression !== null) {
-            $option = $this->buildChoiceOptionElement($optionTag, true);
-            $option->setAttrs([
-                'v-for' => sprintf('(item, index) in %s', $optionsExpression),
-                ':key' => 'item.value ?? index',
-                ':disabled' => 'item.disabled === true',
-            ]);
+        $itemsExpression = $optionsExpression ?? $this->jsValue($field->getOptions());
+        $option = $this->buildChoiceOptionElement($optionTag);
+        $option->setAttrs([
+            'v-for' => sprintf('(item, index) in %s', $itemsExpression),
+            ':key' => 'item.value ?? index',
+            ':disabled' => 'item.disabled === true',
+        ]);
 
-            if ($optionTag === 'el-option') {
-                $option->setAttr(':label', 'item.label');
-                $option->setAttr(':value', 'item.value');
-            } else {
-                $option->setAttr(':label', 'item.value');
-                $option->setAttr(':value', 'item.value');
-            }
-
-            $component->append($option);
-
-            return;
+        if ($optionTag === 'el-option') {
+            $option->setAttr(':label', 'item.label');
+            $option->setAttr(':value', 'item.value');
+        } else {
+            $option->setAttr(':label', 'item.value');
+            $option->setAttr(':value', 'item.value');
+            $option->append('{{ item.label }}');
         }
 
-        foreach ($field->getOptions() as $option) {
-            $component->append($this->buildChoiceOptionElement($optionTag, false, $option));
-        }
+        $component->append($option);
     }
 
     private function buildChoiceOptionElement(
         string $optionTag,
-        bool $remote,
-        array $option = []
     ): AbstractHtmlElement {
-        $element = El::double($optionTag);
-
-        if ($remote) {
-            if ($optionTag !== 'el-option') {
-                $element->append('{{ item.label }}');
-            }
-
-            return $element;
-        }
-
-        $value = $this->jsLiteral($option['value'] ?? '');
-        $label = (string)($option['label'] ?? '');
-
-        if (($option['disabled'] ?? false) === true) {
-            $element->setAttr('disabled');
-        }
-
-        if ($optionTag === 'el-option') {
-            $element->setAttrs([
-                'label' => $label,
-                ':value' => $value,
-            ]);
-
-            return $element;
-        }
-
-        $element->setAttrs([
-            ':label' => $value,
-            ':value' => $value,
-        ])->append($label);
-
-        return $element;
+        return El::double($optionTag);
     }
 
     private function wrapFieldControl(

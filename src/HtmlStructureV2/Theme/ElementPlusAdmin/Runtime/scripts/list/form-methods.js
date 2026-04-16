@@ -21,6 +21,7 @@
               getPickerState: 'getPickerState',
               initializePickerState: 'initializePickerState',
               setUploadFileList: 'setUploadFileList',
+              setFieldOptions: 'setFieldOptions',
               getFieldOptions: 'getFieldOptions',
               getLinkageConfig: 'getLinkageConfig',
               clearLinkageTargets: 'clearLinkageTargets',

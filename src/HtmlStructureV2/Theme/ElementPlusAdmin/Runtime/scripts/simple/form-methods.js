@@ -20,6 +20,7 @@
               getPickerState: 'getSimplePickerState',
               initializePickerState: 'initializeSimplePickerState',
               setUploadFileList: 'setSimpleUploadFileList',
+              setFieldOptions: 'setSimpleFieldOptions',
               getFieldOptions: 'getSimpleFieldOptions',
               getLinkageConfig: 'getSimpleLinkageConfig',
               clearLinkageTargets: 'clearSimpleLinkageTargets',

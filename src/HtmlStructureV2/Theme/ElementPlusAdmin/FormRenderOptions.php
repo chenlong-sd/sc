@@ -87,6 +87,11 @@ final class FormRenderOptions
             && $this->remoteScope !== null;
     }
 
+    public function hasOptionStateContext(): bool
+    {
+        return $this->remoteOptionsState !== null;
+    }
+
     public function hasUploadContext(): bool
     {
         return $this->uploadFilesState !== null
@@ -111,10 +116,20 @@ final class FormRenderOptions
 
     public function remoteOptionsExpression(string $fieldName): string
     {
-        return $this->pathStateExpression($this->remoteOptionsState, $fieldName, '[]');
+        return $this->optionExpression($fieldName);
     }
 
     public function remoteOptionsExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return $this->optionExpressionByPathExpression($fieldPathExpression);
+    }
+
+    public function optionExpression(string $fieldName): string
+    {
+        return $this->pathStateExpression($this->remoteOptionsState, $fieldName, '[]');
+    }
+
+    public function optionExpressionByPathExpression(string $fieldPathExpression): string
     {
         return $this->dynamicPathStateExpression($this->remoteOptionsState, $fieldPathExpression, '[]');
     }

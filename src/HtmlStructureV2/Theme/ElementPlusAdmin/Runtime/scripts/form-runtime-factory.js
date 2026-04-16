@@ -22,6 +22,7 @@
           getUploadPaths
         }) => {
           const {
+            buildOptionState,
             buildPickerState,
             clone,
             emitConfiguredEvent,
@@ -84,6 +85,7 @@
             getPickerState: 'getManagedPickerState',
             initializePickerState: 'initializeManagedPickerState',
             setUploadFileList: 'setManagedUploadFileList',
+            setFieldOptions: 'setManagedFieldOptions',
             getFieldOptions: 'getManagedFieldOptions',
             getLinkageConfig: 'getManagedLinkageConfig',
             clearLinkageTargets: 'clearManagedLinkageTargets',
@@ -508,6 +510,22 @@
               context.rowIndex
             );
           };
+          const resolveOptionFieldConfig = (vm, scope, fieldName) => {
+            const remoteConfig = resolveRemoteFieldConfig(vm, scope, fieldName);
+            if (remoteConfig) {
+              return remoteConfig;
+            }
+
+            const staticConfig = resolveScopedFieldConfig(
+              vm,
+              scope,
+              fieldName,
+              getSelectOptionsMap(scope, vm) || {},
+              'rowSelectOptions'
+            );
+
+            return isObject(staticConfig) ? staticConfig : {};
+          };
           const contextualizeArrayRowLinkageTemplate = (template, arrayPath, rowIndex) => {
             if (typeof template !== 'string') {
               return template;
@@ -646,20 +664,33 @@
             });
 
             visitConcreteArrayGroupInstances(vm, scope, (groupCfg, concreteArrayPath, rows) => {
+              const rowSelectOptions = isObject(groupCfg?.rowSelectOptions) ? groupCfg.rowSelectOptions : {};
               const rowRemoteOptionPaths = Array.isArray(groupCfg?.rowRemoteOptionPaths) ? groupCfg.rowRemoteOptionPaths : [];
-              if (rowRemoteOptionPaths.length === 0) {
+              if (rowRemoteOptionPaths.length === 0 && Object.keys(rowSelectOptions).length === 0) {
                 return;
               }
 
               rows.forEach((_, rowIndex) => {
+                const rowOptionState = buildOptionState(
+                  rowSelectOptions,
+                  rowRemoteOptionPaths.reduce((configs, rowFieldPath) => {
+                    const fieldCfg = buildArrayRowRemoteFieldConfig(groupCfg, rowFieldPath, concreteArrayPath, rowIndex);
+                    if (fieldCfg) {
+                      setByPath(configs, rowFieldPath, fieldCfg);
+                    }
+                    return configs;
+                  }, {}),
+                  rowRemoteOptionPaths
+                );
+
+                setByPath(
+                  optionState,
+                  contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, ''),
+                  rowOptionState
+                );
+
                 rowRemoteOptionPaths.forEach((rowFieldPath) => {
                   const fieldName = contextualizeArrayRowFieldPath(concreteArrayPath, rowIndex, rowFieldPath);
-                  const fieldCfg = buildArrayRowRemoteFieldConfig(groupCfg, rowFieldPath, concreteArrayPath, rowIndex) || {};
-                  const initialOptions = Array.isArray(fieldCfg.initialOptions)
-                    ? fieldCfg.initialOptions.map((item, index) => normalizeOption(item, fieldCfg, index))
-                    : [];
-
-                  setByPath(optionState, fieldName, initialOptions);
                   setByPath(loadingState, fieldName, false);
                   setByPath(loadedState, fieldName, false);
                 });
@@ -1011,10 +1042,21 @@
 
               return nextFiles;
             },
+            [names.setFieldOptions](scope, fieldName, options = []){
+              const fieldCfg = resolveOptionFieldConfig(this, scope, fieldName);
+              const nextOptions = (Array.isArray(options) ? options : [])
+                .map((item, index) => normalizeOption(item, fieldCfg, index));
+
+              setByPath(this[names.getOptionState](scope), fieldName, nextOptions);
+              setByPath(this[names.getOptionLoadingState](scope), fieldName, false);
+              setByPath(this[names.getOptionLoadedState](scope), fieldName, true);
+
+              return nextOptions;
+            },
             [names.getFieldOptions](scope, fieldName){
-              const remoteConfig = resolveRemoteFieldConfig(this, scope, fieldName);
-              if (remoteConfig) {
-                return getByPath(this[names.getOptionState](scope), fieldName) || [];
+              const stateOptions = getByPath(this[names.getOptionState](scope), fieldName);
+              if (Array.isArray(stateOptions)) {
+                return stateOptions;
               }
 
               const options = resolveScopedFieldConfig(
@@ -1025,7 +1067,7 @@
                 'rowSelectOptions'
               ) || [];
 
-              return options.map((item, index) => normalizeOption(item, {}, index));
+              return Array.isArray(options) ? clone(options) : [];
             },
             [names.getLinkageConfig](scope, fieldName){
               return buildResolvedLinkageConfig(this, scope, fieldName);

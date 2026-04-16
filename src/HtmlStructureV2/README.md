@@ -1504,6 +1504,166 @@ Blocks::button('查看源数据')
 - `Dialog`: `beforeOpen` / `afterOpen` / `beforeClose` / `afterClose` / `submitSuccess` / `submitFail`
 - `RequestAction`: `click` / `before` / `success` / `fail` / `finally`
 
+### 复杂联动怎么处理
+
+遇到“字段显示/禁用/说明块内容”依赖远端选项、数组行数量、上传结果、弹窗上下文等复杂状态时，推荐按下面顺序处理：
+
+当前这类场景的分析结论是：
+
+- “手动触发远端请求再更新选项”已经是合理需求，不应再要求调用方直接改 `optionState`
+- 单字段值更新已有 `vm.setFormPathValue(scope, fieldName, value)`，够用
+- 选项更新原先缺少正式 API，现已补成 `vm.setFieldOptions(scope, fieldName, options)`，后续优先使用它
+- `setFormModel()` 仍适合整表替换，不适合“请求成功后顺手改几个字段”
+
+1. 先看 DSL 是否已有现成功能
+
+- 静态/远端选项：`options()` / `remoteOptions()`
+- 选项联动回填：`linkageUpdate()` / `linkageUpdates()`
+- 显示/禁用条件：`visibleWhen()` / `disabledWhen()`
+- 结构化事件：`Events::*()`
+
+2. 如果最终展示条件依赖“运行时派生状态”，先把它转成 `model` 字段
+
+- `visibleWhen()` / `disabledWhen()` 默认只保证 `model` 可用
+- 不建议直接在 `visibleWhen()` 里依赖 `dialogOptions` / `tableStates` / `vm.xxx` 这类页面 runtime 变量
+- 更稳的做法是：在事件回调里把派生结果写回表单模型，再让展示逻辑只依赖 `model`
+
+典型例子：根据某个远端 select 的选项数量决定是否显示补充字段。
+
+```php
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+Forms::make('qa-case')
+    ->addFields(
+        Fields::hidden('_typeOptionCount')->default(0),
+        Fields::select('type_id', '案件分类')
+            ->remoteOptions('/admin/qa/type-options', 'id', 'name')
+            ->remoteOptionsDependsOn('scene_id'),
+        Fields::text('remark', '补充说明')
+            ->visibleWhen('model._typeOptionCount > 1')
+    )
+    ->on('optionsLoaded', JsExpression::make(<<<'JS'
+({ fieldName, options, scope, vm }) => {
+  if (fieldName !== 'type_id') return;
+  vm.setFormPathValue(
+    scope,
+    '_typeOptionCount',
+    Array.isArray(options) ? options.length : 0
+  );
+}
+JS))
+    ->on('optionsLoadFail', JsExpression::make(<<<'JS'
+({ fieldName, scope, vm }) => {
+  if (fieldName !== 'type_id') return;
+  vm.setFormPathValue(scope, '_typeOptionCount', 0);
+}
+JS));
+```
+
+这个模式本质上是：
+
+- 事件层负责“拿到真实运行时数据”
+- `vm` 负责“把派生状态写回当前作用域”
+- `visibleWhen()` / `disabledWhen()` 只负责“读 model 做纯展示判断”
+
+3. 如果不是字段，而是说明块/自定义块，也尽量复用同一套思路
+
+- 推荐先把派生值写入 `model`
+- 再在 `Forms::custom()` / 轻组件根节点上写 `v-if`
+
+例如：
+
+```php
+Forms::custom(
+    Blocks::text('当前分类可继续补充说明')
+)->attr('v-if', 'model._typeOptionCount > 1');
+```
+
+### 手动刷新选项与回填
+
+这类需求现在统一按下面三档处理：
+
+1. 字段已经声明了 `remoteOptions()`，只是改成“手动点一下再刷新”
+
+```php
+Forms::custom(
+    Blocks::button('刷新分类')->type('primary')
+        ->on('click', JsExpression::make(<<<'JS'
+({ vm }) => {
+  return vm.loadFormFieldOptions('qa-case', 'type_id', true)
+    .then((options) => {
+      vm.setFormPathValue('qa-case', 'type_id', '');
+      ElementPlus.ElMessage.success(`已刷新 ${Array.isArray(options) ? options.length : 0} 个选项`);
+    });
+}
+JS))
+);
+```
+
+2. 需要自己请求接口，再把返回值替换成字段选项
+
+```php
+Forms::custom(
+    Blocks::button('查询分类')->type('primary')
+        ->on('click', JsExpression::make(<<<'JS'
+async ({ vm, model }) => {
+  const response = await axios.get('/admin/qa/type-options', {
+    params: {
+      keyword: model.keyword || '',
+    }
+  });
+
+  const rows = Array.isArray(response?.data?.data?.options)
+    ? response.data.data.options
+    : [];
+
+  vm.setFieldOptions('qa-case', 'type_id', rows);
+  ElementPlus.ElMessage.success('分类选项已更新');
+}
+JS))
+);
+```
+
+`setFieldOptions()` 会负责把传入数组归一化为标准选项结构，并同步更新当前字段的 `optionLoading / optionLoaded` 状态。
+
+3. 请求成功后，不仅要更新选项，还要顺手改几个表单值
+
+```php
+Forms::custom(
+    Blocks::button('查询并回填')->type('primary')
+        ->on('click', JsExpression::make(<<<'JS'
+async ({ vm, model }) => {
+  const scope = 'qa-case';
+  const response = await axios.get('/admin/qa/type-options', {
+    params: {
+      keyword: model.keyword || '',
+    }
+  });
+
+  const rows = Array.isArray(response?.data?.data?.options)
+    ? response.data.data.options
+    : [];
+  const options = vm.setFieldOptions(scope, 'type_id', rows);
+  const first = options[0] || null;
+
+  vm.withDependencyResetSuspended?.(scope, () => {
+    vm.setFormPathValue(scope, 'type_id', first?.value ?? '');
+    vm.setFormPathValue(scope, 'type_name', first?.label ?? '');
+    vm.setFormPathValue(scope, 'type_code', first?.code ?? '');
+  });
+
+  ElementPlus.ElMessage.success('已更新选项并回填表单');
+}
+JS))
+);
+```
+
+这里的建议很明确：
+
+- 改一个字段：`setFormPathValue()`
+- 改多个字段：连续调用多个 `setFormPathValue()`；如果这些字段还会触发依赖重置，再包一层 `withDependencyResetSuspended()`
+- 不要用 `setFormModel()` 去做“局部补丁更新”
+
 ### 原生 JS 兜底
 
 确实没法抽象时，再用 `Actions::custom()`：
@@ -1518,6 +1678,61 @@ JS))->confirm('确认复制当前链接？');
 ```
 
 这条通道是 escape hatch，不建议作为主路径。
+
+### 极端场景兜底
+
+如果出现下面这种场景，可以直接进入原生兜底，不必继续硬套 DSL：
+
+- 当前所有 `Fields::*()` / `Events::*()` 组合都无法表达需求
+- 逻辑依赖多个运行时状态交叉计算
+- 需要直接操作当前页面的 table / dialog / form runtime
+- 需要短期验证某个复杂交互，后续再沉淀 DSL
+
+推荐的兜底顺序：
+
+1. 优先用结构化事件
+
+- 能用 `Events::setFormModel()` / `Events::initializeFormModel()` / `Events::reloadTable()` 解决时，不要退回原生 JS
+
+2. 再用 `JsExpression`，但尽量只写在事件回调里
+
+- 推荐写法：`({ scope, model, vm, ...ctx }) => {}`
+- 不推荐把大段业务逻辑直接塞进字段属性表达式里
+
+3. 在原生回调里，优先调用 runtime 暴露的方法，而不是直接改内部状态对象
+
+- 表单：`vm.setFormPathValue(scope, fieldName, value)` / `vm.setFieldOptions(scope, fieldName, options)` / `vm.loadFormFieldOptions(scope, fieldName, true)`
+- 表格：`vm.reloadTable(tableKey)` / `vm.getTableSelection(tableKey)`
+- 弹窗：`vm.openDialog(dialogKey, row, tableKey)` / `vm.closeDialog(dialogKey)`
+- 宿主桥：`vm.closeHostDialog()` / `vm.reloadHostTable()` / `vm.openHostTab(...)`
+
+4. 只有 runtime 方法也不够时，才直接访问页面响应式状态
+
+- 例如 `vm.dialogForms` / `vm.tableStates` / `vm.dialogVisible`
+- 例如历史兼容代码里直接改 `vm.getOptionState(scope)` 返回值
+- 这属于最后兜底，写法灵活，但后续重构时也最容易受影响
+
+一个典型的原生兜底例子：
+
+```php
+Forms::make('profile')->on('optionsLoaded', JsExpression::make(<<<'JS'
+({ fieldName, options, scope, vm, model }) => {
+  if (fieldName !== 'dept_id') return;
+
+  const count = Array.isArray(options) ? options.length : 0;
+  vm.setFormPathValue(scope, '_deptOptionCount', count);
+
+  if (count === 1 && !model.dept_id) {
+    vm.setFormPathValue(scope, 'dept_id', options[0]?.value ?? null);
+  }
+}
+JS));
+```
+
+这里要点只有两个：
+
+- 复杂逻辑放到事件回调里
+- 回调结果回落到 `model` 或显式 runtime 方法，不把页面模板变成“直接操作内部状态”的大杂烩
 
 ## 附录：筛选和排序
 

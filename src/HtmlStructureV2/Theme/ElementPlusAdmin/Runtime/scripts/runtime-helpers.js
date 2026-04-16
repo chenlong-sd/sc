@@ -1221,10 +1221,20 @@
 
             return normalized;
           };
-          const buildOptionState = (configs, fieldPaths = []) => {
-            const state = {};
-            (fieldPaths || []).forEach((fieldName) => {
-              const fieldCfg = getByPath(configs || {}, fieldName) || {};
+          const buildOptionState = (selectOptions = {}, configs = {}, fieldPaths = []) => {
+            let staticOptions = selectOptions;
+            let remoteConfigs = configs;
+            let remoteFieldPaths = fieldPaths;
+
+            if (Array.isArray(configs) && fieldPaths.length === 0) {
+              staticOptions = {};
+              remoteConfigs = selectOptions || {};
+              remoteFieldPaths = configs;
+            }
+
+            const state = isObject(staticOptions) ? clone(staticOptions) : {};
+            (remoteFieldPaths || []).forEach((fieldName) => {
+              const fieldCfg = getByPath(remoteConfigs || {}, fieldName) || {};
               setByPath(
                 state,
                 fieldName,
@@ -2098,6 +2108,7 @@
             dialogInitials: buildDialogState(dialogs, (_, dialogKey) => getDialogFormInitialData(dialogKey)),
             dialogRules: buildDialogState(dialogs, (_, dialogKey) => getDialogFormConfig(dialogKey).rules || {}),
             dialogOptions: buildDialogState(dialogs, (_, dialogKey) => buildOptionState(
+              getDialogFormConfig(dialogKey).selectOptions || {},
               getDialogFormConfig(dialogKey).remoteOptions || {},
               getDialogFormConfig(dialogKey).remoteOptionPaths || []
             )),
