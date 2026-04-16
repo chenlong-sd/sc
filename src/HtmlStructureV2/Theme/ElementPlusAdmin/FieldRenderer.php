@@ -39,7 +39,8 @@ final class FieldRenderer
         bool $inline,
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
-        bool $formReadonly = false
+        bool $formReadonly = false,
+        ?string $containerLabelWidth = null
     ): AbstractHtmlElement
     {
         return $this->renderField(
@@ -50,6 +51,7 @@ final class FieldRenderer
             options: $options,
             renderContext: $renderContext,
             formReadonly: $formReadonly,
+            containerLabelWidth: $containerLabelWidth,
         );
     }
 
@@ -61,7 +63,8 @@ final class FieldRenderer
         bool $inline,
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
-        bool $formReadonly = false
+        bool $formReadonly = false,
+        ?string $containerLabelWidth = null
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -72,6 +75,7 @@ final class FieldRenderer
             propExpression: $propExpression,
             renderContext: $renderContext,
             formReadonly: $formReadonly,
+            containerLabelWidth: $containerLabelWidth,
         );
     }
 
@@ -106,7 +110,8 @@ final class FieldRenderer
         ?string $propExpression = null,
         bool $tableCell = false,
         ?RenderContext $renderContext = null,
-        bool $formReadonly = false
+        bool $formReadonly = false,
+        ?string $containerLabelWidth = null
     ): AbstractHtmlElement {
         if ($field->type() === FieldType::HIDDEN) {
             return El::fictitious();
@@ -134,7 +139,8 @@ final class FieldRenderer
             $validatableField,
             $propExpression,
             $tableCell,
-            $options->showLabels && $field->hasLabel()
+            $options->showLabels && $field->hasLabel(),
+            $containerLabelWidth
         );
         if ($pickerField !== null) {
             $component = $this->buildPickerComponent(
@@ -185,7 +191,8 @@ final class FieldRenderer
         Field $field,
         string $fieldPath,
         ?ValidatableFieldInterface $validatableField,
-        bool $showLabels
+        bool $showLabels,
+        ?string $containerLabelWidth = null
     ): DoubleLabel
     {
         $item = El::double('el-form-item')
@@ -195,6 +202,11 @@ final class FieldRenderer
             $item->setAttr('label', $field->label());
         } else {
             $item->setAttr('label-width', '0');
+        }
+
+        $effectiveLabelWidth = $this->resolveEffectiveLabelWidth($field, $containerLabelWidth);
+        if ($showLabels && $effectiveLabelWidth !== null) {
+            $item->setAttr('label-width', $effectiveLabelWidth);
         }
 
         if ($validatableField?->isRequired()) {
@@ -210,7 +222,8 @@ final class FieldRenderer
         ?ValidatableFieldInterface $validatableField,
         ?string $propExpression,
         bool $tableCell,
-        bool $showLabels
+        bool $showLabels,
+        ?string $containerLabelWidth = null
     ): DoubleLabel {
         if ($tableCell) {
             $item = El::double('el-form-item')->setAttrs([
@@ -236,6 +249,11 @@ final class FieldRenderer
                 $item->setAttr('label-width', '0');
             }
 
+            $effectiveLabelWidth = $this->resolveEffectiveLabelWidth($field, $containerLabelWidth);
+            if ($showLabels && $effectiveLabelWidth !== null) {
+                $item->setAttr('label-width', $effectiveLabelWidth);
+            }
+
             if ($validatableField?->isRequired()) {
                 $item->setAttr('required');
             }
@@ -243,7 +261,12 @@ final class FieldRenderer
             return $item;
         }
 
-        return $this->buildFieldItem($field, $fieldPath, $validatableField, $showLabels);
+        return $this->buildFieldItem($field, $fieldPath, $validatableField, $showLabels, $containerLabelWidth);
+    }
+
+    private function resolveEffectiveLabelWidth(Field $field, ?string $containerLabelWidth): ?string
+    {
+        return $field->getLabelWidth() ?? $containerLabelWidth;
     }
 
     private function buildFieldComponent(

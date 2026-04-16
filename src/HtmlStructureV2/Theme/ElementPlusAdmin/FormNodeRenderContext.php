@@ -18,6 +18,7 @@ final class FormNodeRenderContext
         public readonly ?string $arrayPathExpression = null,
         public readonly ?string $rowIndexExpression = null,
         public readonly int $arrayDepth = 0,
+        public readonly ?string $labelWidth = null,
     ) {
     }
 
@@ -34,6 +35,7 @@ final class FormNodeRenderContext
             arrayPathExpression: $this->arrayPathExpression,
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
+            labelWidth: $this->labelWidth,
         );
     }
 
@@ -50,12 +52,43 @@ final class FormNodeRenderContext
             arrayPathExpression: $this->arrayPathExpression,
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
+            labelWidth: $this->labelWidth,
         );
     }
 
     public function mergeReadonly(bool $readonly = true): self
     {
         return $this->withFormReadonly($this->formReadonly || $readonly);
+    }
+
+    public function withLabelWidth(?string $labelWidth): self
+    {
+        if ($labelWidth === $this->labelWidth) {
+            return $this;
+        }
+
+        return new self(
+            modelName: $this->modelName,
+            inline: $this->inline,
+            formReadonly: $this->formReadonly,
+            options: $this->options,
+            renderContext: $this->renderContext,
+            pathPrefix: $this->pathPrefix,
+            arrayPath: $this->arrayPath,
+            arrayPathExpression: $this->arrayPathExpression,
+            rowIndexExpression: $this->rowIndexExpression,
+            arrayDepth: $this->arrayDepth,
+            labelWidth: $labelWidth,
+        );
+    }
+
+    public function inheritLabelWidth(?string $labelWidth): self
+    {
+        if ($labelWidth === null) {
+            return $this;
+        }
+
+        return $this->withLabelWidth($labelWidth);
     }
 
     public function nested(string $modelName, string $pathPrefix, ?bool $inline = null): self
@@ -71,6 +104,7 @@ final class FormNodeRenderContext
             arrayPathExpression: $this->arrayPathExpression,
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
+            labelWidth: $this->labelWidth,
         );
     }
 
@@ -94,6 +128,7 @@ final class FormNodeRenderContext
             arrayPathExpression: $arrayPathExpression,
             rowIndexExpression: $rowIndexExpression,
             arrayDepth: $arrayDepth ?? $this->arrayDepth,
+            labelWidth: $this->labelWidth,
         );
     }
 

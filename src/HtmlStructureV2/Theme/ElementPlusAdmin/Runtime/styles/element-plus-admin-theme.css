@@ -72,8 +72,25 @@ body {
 .sc-v2-form-section__heading {
   font-size: 15px;
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 0.5;
   color: var(--sc-v2-text);
+  position: relative;
+  padding-left: 10px;
+  border-left: none;
+}
+
+.sc-v2-block-title h2::before,
+.sc-v2-section__header::before,
+.sc-v2-form-section__heading::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 53%;
+  transform: translateY(-55%);
+  width: 3px;
+  height: 1.4em;
+  border-radius: 2px;
+  background-color: var(--el-color-primary);
 }
 
 .sc-v2-block-title p,
@@ -142,7 +159,7 @@ body {
 .sc-v2-section > .el-card__body,
 .sc-v2-form-section-card > .el-card__body,
 .sc-v2-form-array__item > .el-card__body {
-  padding: 18px 16px;
+  padding: 14px 16px;
 }
 
 .sc-v2-form-section-block {

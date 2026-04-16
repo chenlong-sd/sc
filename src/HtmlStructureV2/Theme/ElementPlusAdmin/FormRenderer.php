@@ -133,7 +133,8 @@ final class FormRenderer
                 $context->inline,
                 $context->options,
                 $context->renderContext,
-                $context->formReadonly
+                $context->formReadonly,
+                $context->labelWidth
             );
         }
 
@@ -145,13 +146,16 @@ final class FormRenderer
             $context->inline,
             $context->options,
             $context->renderContext,
-            $context->formReadonly
+            $context->formReadonly,
+            $context->labelWidth
         );
     }
 
     private function renderSectionNode(SectionNode $section, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $sectionContext = $context->mergeReadonly($section->isReadonly());
+        $sectionContext = $context
+            ->mergeReadonly($section->isReadonly())
+            ->inheritLabelWidth($section->getLabelWidth());
         $body = El::double('div')->addClass('sc-v2-form-section');
         $header = $this->renderSectionHeader($section, $context->renderContext);
         if ($header !== null) {
@@ -180,7 +184,9 @@ final class FormRenderer
 
     private function renderInlineNode(InlineNode $inlineNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $inlineContext = $context->mergeReadonly($inlineNode->isReadonly());
+        $inlineContext = $context
+            ->mergeReadonly($inlineNode->isReadonly())
+            ->inheritLabelWidth($inlineNode->getLabelWidth());
         $body = $this->applyRenderableAttributes(
             El::double('div')->addClass('sc-v2-form-inline'),
             $inlineNode->getRenderAttributes()
@@ -192,7 +198,9 @@ final class FormRenderer
 
     private function renderGridNode(GridNode $gridNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $gridContext = $context->mergeReadonly($gridNode->isReadonly());
+        $gridContext = $context
+            ->mergeReadonly($gridNode->isReadonly())
+            ->inheritLabelWidth($gridNode->getLabelWidth());
         $row = $this->applyRenderableAttributes(
             El::double('el-row')->setAttr(':gutter', $gridNode->getGutter()),
             $gridNode->getRenderAttributes()
@@ -204,7 +212,9 @@ final class FormRenderer
 
     private function renderTabsNode(TabsNode $tabsNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $tabsContext = $context->mergeReadonly($tabsNode->isReadonly());
+        $tabsContext = $context
+            ->mergeReadonly($tabsNode->isReadonly())
+            ->inheritLabelWidth($tabsNode->getLabelWidth());
         $tabs = $this->applyRenderableAttributes(
             El::double('el-tabs')->addClass('sc-v2-form-tabs'),
             $tabsNode->getRenderAttributes()
@@ -221,7 +231,9 @@ final class FormRenderer
         }
 
         foreach ($tabsNode->getTabs() as $index => $tab) {
-            $tabContext = $tabsContext->mergeReadonly($tab->isReadonly());
+            $tabContext = $tabsContext
+                ->mergeReadonly($tab->isReadonly())
+                ->inheritLabelWidth($tab->getLabelWidth());
             $pane = El::double('el-tab-pane')->setAttrs([
                 'label' => $tab->label(),
                 'name' => (string) $index,
@@ -240,7 +252,9 @@ final class FormRenderer
 
     private function renderCollapseNode(CollapseNode $collapseNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $collapseContext = $context->mergeReadonly($collapseNode->isReadonly());
+        $collapseContext = $context
+            ->mergeReadonly($collapseNode->isReadonly())
+            ->inheritLabelWidth($collapseNode->getLabelWidth());
         $collapse = $this->applyRenderableAttributes(
             El::double('el-collapse')->addClass('sc-v2-form-collapse'),
             $collapseNode->getRenderAttributes()
@@ -250,7 +264,9 @@ final class FormRenderer
         }
 
         foreach ($collapseNode->getItems() as $index => $item) {
-            $itemContext = $collapseContext->mergeReadonly($item->isReadonly());
+            $itemContext = $collapseContext
+                ->mergeReadonly($item->isReadonly())
+                ->inheritLabelWidth($item->getLabelWidth());
             $itemElement = El::double('el-collapse-item')->setAttrs([
                     'title' => $item->title(),
                     'name' => (string) $index,
@@ -289,7 +305,9 @@ final class FormRenderer
 
     private function renderObjectGroup(FormObjectGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $groupContext = $context->mergeReadonly($group->isReadonly());
+        $groupContext = $context
+            ->mergeReadonly($group->isReadonly())
+            ->inheritLabelWidth($group->getLabelWidth());
         $content = El::fictitious();
         $nextPrefix = FormPath::resolve($groupContext->pathPrefix, $group->name());
         $nextModelName = $this->jsModelAccessor($groupContext->modelName, $group->name());
@@ -304,7 +322,9 @@ final class FormRenderer
 
     private function renderArrayGroup(FormArrayGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $groupContext = $context->mergeReadonly($group->isReadonly());
+        $groupContext = $context
+            ->mergeReadonly($group->isReadonly())
+            ->inheritLabelWidth($group->getLabelWidth());
         $arrayPath = FormPath::resolve($groupContext->pathPrefix, $group->name());
         $scopeLiteral = $this->jsLiteral($groupContext->options->remoteScope ?? $groupContext->options->uploadScope ?? 'form');
         $arrayPathExpression = $this->resolveArrayPathExpression($groupContext, $arrayPath);
@@ -368,7 +388,9 @@ final class FormRenderer
 
     private function renderFormTable(FormTable $table, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $tableContext = $context->mergeReadonly($table->isReadonly());
+        $tableContext = $context
+            ->mergeReadonly($table->isReadonly())
+            ->inheritLabelWidth($table->getLabelWidth());
         $columns = $this->formTableColumnWalker->build($table->getChildren(), $table->name());
 
         $arrayPath = FormPath::resolve($tableContext->pathPrefix, $table->name());

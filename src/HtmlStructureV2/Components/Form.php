@@ -133,16 +133,23 @@ final class Form implements Renderable, EventAware
     }
 
     /**
-     * 设置表单标签宽度，例如 96px / 120px。
+     * 设置表单标签宽度，例如 120 / '120px'。
      *
-     * @param string $labelWidth 标签宽度。
+     * @param int|string $labelWidth 标签宽度；数字会自动补上 px 单位，
+     *                                字符串按原样处理（如 '120px'、'auto'）。
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->labelWidth('120px')`
+     * `Form::make('qa-info-form')->labelWidth(120)`
      */
-    public function labelWidth(string $labelWidth): self
+    public function labelWidth(int|string $labelWidth): self
     {
+        if (is_int($labelWidth)) {
+            $labelWidth = $labelWidth . 'px';
+        } elseif (is_numeric($labelWidth) && trim($labelWidth) !== '') {
+            $labelWidth = trim($labelWidth) . 'px';
+        }
+
         $this->labelWidth = $labelWidth;
 
         return $this;

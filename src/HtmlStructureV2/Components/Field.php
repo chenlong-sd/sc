@@ -24,6 +24,7 @@ abstract class Field implements FormNode
     protected ?JsExpression $visibleWhen = null;
     protected ?JsExpression $disabledWhen = null;
     protected ?JsExpression $readonlyWhen = null;
+    protected ?string $labelWidth = null;
 
     public function __construct(
         private readonly string $name,
@@ -352,6 +353,34 @@ abstract class Field implements FormNode
             : JsExpression::make($expression);
 
         return $this;
+    }
+
+    /**
+     * 设置当前字段的 label 宽度，覆盖表单级别的 label-width。
+     *
+     * @param int|string $width label 宽度；数字会自动补上 px 单位，
+     *                           字符串按原样处理（如 '120px'、'auto'）。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->labelWidth(120)`
+     */
+    public function labelWidth(int|string $width): static
+    {
+        if (is_int($width)) {
+            $width = $width . 'px';
+        } elseif (is_numeric($width) && trim($width) !== '') {
+            $width = trim($width) . 'px';
+        }
+
+        $this->labelWidth = $width;
+
+        return $this;
+    }
+
+    public function getLabelWidth(): ?string
+    {
+        return $this->labelWidth;
     }
 
     public function name(): string

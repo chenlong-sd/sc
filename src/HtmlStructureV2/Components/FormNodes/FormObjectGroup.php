@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
@@ -16,6 +17,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
     use HasSpan;
     use HasFormNodeChildren;
     use HasReadonly;
+    use HasFormNodeLabelWidth;
 
     public function __construct(
         private readonly string $name
