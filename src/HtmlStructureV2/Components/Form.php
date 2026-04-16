@@ -44,6 +44,7 @@ final class Form implements Renderable, EventAware
     private array $children = [];
     private bool $inline = false;
     private bool $showLabels = true;
+    private bool $readonly = false;
     private string $labelWidth = '100px';
     private string $submitLabel = '查询';
     private string $resetLabel = '重置';
@@ -160,6 +161,24 @@ final class Form implements Renderable, EventAware
     public function showLabels(bool $showLabels = true): self
     {
         $this->showLabels = $showLabels;
+
+        return $this;
+    }
+
+    /**
+     * 把整个表单切为只读模式。
+     * 文本类字段会尽量保持可选中状态，其余不支持 readonly 的组件会自动退化为 disabled。
+     * 默认筛选按钮会自动隐藏；显式 footerActions() 不会被强制移除。
+     *
+     * @param bool $readonly 是否只读，默认值为 true。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * `Form::make('qa-info-form')->readonly()`
+     */
+    public function readonly(bool $readonly = true): self
+    {
+        $this->readonly = $readonly;
 
         return $this;
     }
@@ -538,6 +557,11 @@ final class Form implements Renderable, EventAware
     public function shouldShowLabels(): bool
     {
         return $this->showLabels;
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
     }
 
     public function getSubmitLabel(): string

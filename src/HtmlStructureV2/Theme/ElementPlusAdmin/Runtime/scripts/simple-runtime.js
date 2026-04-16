@@ -26,6 +26,7 @@
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
           const dialogFormScopePrefix = 'dialog:';
+          const hostDialogKeyQueryKey = '__scV2DialogKey';
           const defaultModeQueryKey = 'id';
           const initialPageQuery = readPageQuery();
           const knownFormScopes = () => Object.keys(forms || {});
@@ -39,6 +40,17 @@
             return normalized !== '' ? normalized : defaultModeQueryKey;
           };
           const getFormConfig = (scope) => forms?.[scope] || {};
+          const resolvePublicFormReadonly = (scope = null) => {
+            const resolvedScope = resolvePublicFormScope(scope);
+            return getFormConfig(resolvedScope)?.readonly === true;
+          };
+          const resolveHostDialogKey = (query = initialPageQuery) => {
+            const dialogKey = typeof query?.[hostDialogKeyQueryKey] === 'string'
+              ? query[hostDialogKeyQueryKey].trim()
+              : '';
+
+            return dialogKey !== '' ? dialogKey : null;
+          };
           const resolvePublicFormScope = (scope = null) => {
             const explicitScope = normalizeFormScope(scope);
             if (explicitScope) {
@@ -79,6 +91,7 @@
               const resolvedScope = resolvePublicFormScope(scope);
               return vm.getFormModel(resolvedScope) || {};
             };
+            const isReadonly = (scope = null) => resolvePublicFormReadonly(scope);
             const cloneFormModel = (scope = null) => clone(getFormModel(scope));
             const setFormModel = (arg1 = null, arg2 = undefined) => {
               const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
@@ -143,6 +156,14 @@
               resolvePageMode: (queryKey = null) => vm.resolvePageMode(queryKey),
               resolveFormScope: (scope = null) => resolvePublicFormScope(scope),
               resolveFormMode: (scope = null) => vm.resolveFormMode(resolvePublicFormScope(scope)),
+              isReadonly,
+              get readonly(){
+                try {
+                  return isReadonly();
+                } catch (error) {
+                  return false;
+                }
+              },
               validateForm,
               getFormModel,
               cloneFormModel,
@@ -151,6 +172,7 @@
               resetForm,
               loadFormData: (scope = null, force = false) => vm.loadFormData(resolvePublicFormScope(scope), force),
               submit,
+              syncHostDialogSubmitState: (...args) => vm.syncHostDialogSubmitState(...args),
               notifyDialogHost: (...args) => vm.notifyDialogHost(...args),
               closeHostDialog: (...args) => vm.closeHostDialog(...args),
               reloadHostTable: (...args) => vm.reloadHostTable(...args),
@@ -246,6 +268,35 @@
                 resolveFormMode(scope = null){
                   const resolvedScope = resolvePublicFormScope(scope);
                   return this.resolvePageMode(getFormConfig(resolvedScope)?.modeQueryKey || defaultModeQueryKey);
+                },
+                isFormReadonly(scope = null){
+                  try {
+                    return resolvePublicFormReadonly(scope);
+                  } catch (error) {
+                    return false;
+                  }
+                },
+                resolveHostDialogKey(dialogKey = null){
+                  const explicitDialogKey = typeof dialogKey === 'string' ? dialogKey.trim() : '';
+                  if (explicitDialogKey !== '') {
+                    return explicitDialogKey;
+                  }
+
+                  return resolveHostDialogKey(
+                    typeof this.getPageQuery === 'function' ? this.getPageQuery() : initialPageQuery
+                  );
+                },
+                syncHostDialogSubmitState(scope = null, dialogKey = null){
+                  const payload = {
+                    action: 'setSubmitVisible',
+                    value: !this.isFormReadonly(scope),
+                  };
+                  const resolvedDialogKey = this.resolveHostDialogKey(dialogKey);
+                  if (resolvedDialogKey) {
+                    payload.dialogKey = resolvedDialogKey;
+                  }
+
+                  return this.notifyDialogHost(payload);
                 },
                 ensureSimpleFormLoadTokenStore(){
                   if (!isObject(this.__simpleFormLoadTokens)) {
@@ -671,6 +722,9 @@
           hideAppLoadingShell();
           const pageApi = createPublicPageApi(vm);
           globalThis.__SC_V2_PAGE__ = pageApi;
+          if (typeof vm.syncHostDialogSubmitState === 'function') {
+            vm.syncHostDialogSubmitState();
+          }
 
           return vm;
         };

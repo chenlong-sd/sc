@@ -82,6 +82,11 @@ final class ActionButtonRenderer
         if ($action->intent() === ActionIntent::SUBMIT) {
             $attrs[':loading'] = $this->dialogStateExpression('dialogSubmitting', $action, $contextDialogKey);
             $attrs[':disabled'] = $this->dialogStateExpression('dialogLoading', $action, $contextDialogKey);
+            $attrs = $this->mergeConditionalAttribute(
+                $attrs,
+                'v-if',
+                $this->dialogSubmitVisibleExpression($action, $contextDialogKey)
+            );
         }
 
         if ($action->intent() === ActionIntent::CLOSE) {
@@ -436,5 +441,27 @@ final class ActionButtonRenderer
             $stateName,
             $this->jsString($this->resolveDialogTarget($action, $contextDialogKey))
         );
+    }
+
+    private function dialogSubmitVisibleExpression(Action $action, ?string $contextDialogKey = null): string
+    {
+        return sprintf(
+            'isDialogSubmitVisible(%s)',
+            $this->jsString($this->resolveDialogTarget($action, $contextDialogKey))
+        );
+    }
+
+    private function mergeConditionalAttribute(array $attrs, string $attribute, string $expression): array
+    {
+        $existing = $attrs[$attribute] ?? null;
+        if (!is_string($existing) || trim($existing) === '') {
+            $attrs[$attribute] = $expression;
+
+            return $attrs;
+        }
+
+        $attrs[$attribute] = sprintf('(%s) && (%s)', $existing, $expression);
+
+        return $attrs;
     }
 }

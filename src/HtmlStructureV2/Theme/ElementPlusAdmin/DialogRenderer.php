@@ -6,6 +6,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
+use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
@@ -210,12 +211,31 @@ final class DialogRenderer
      */
     private function resolveFooterActions(Dialog $dialog): array
     {
+        $form = $dialog->getForm();
+        $formReadonly = $form?->isReadonly() ?? false;
         $footerActions = $dialog->getFooterActions();
         if ($footerActions) {
-            return $footerActions;
+            if (!$formReadonly) {
+                return $footerActions;
+            }
+
+            $filteredActions = array_values(array_filter(
+                $footerActions,
+                static fn(Action $action): bool => $action->intent() !== ActionIntent::SUBMIT
+            ));
+
+            return $filteredActions !== []
+                ? $filteredActions
+                : [Action::close('关闭')->dialog($dialog->key())];
         }
 
-        if ($dialog->getForm()) {
+        if ($form) {
+            if ($formReadonly) {
+                return [
+                    Action::close('关闭')->dialog($dialog->key()),
+                ];
+            }
+
             return [
                 Action::close('取消')->dialog($dialog->key()),
                 Action::submit('保存')->dialog($dialog->key()),

@@ -114,11 +114,67 @@
 
               return iframe || null;
             },
+            setDialogSubmitVisible(dialogKey, visible = true){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return true;
+              }
+
+              this.dialogSubmitVisible[dialogKey] = visible !== false;
+
+              return this.dialogSubmitVisible[dialogKey];
+            },
+            isDialogSubmitVisible(dialogKey){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return true;
+              }
+
+              return this.dialogSubmitVisible?.[dialogKey] !== false;
+            },
+            resolveDialogIframeReadonly(dialogKey){
+              const dialogIframeRef = this.getDialogBodyRefs(dialogKey)?.iframe || null;
+              const iframeWindow = dialogIframeRef?.contentWindow || null;
+              if (!iframeWindow) {
+                return Promise.resolve(null);
+              }
+
+              try {
+                const pageApi = iframeWindow.__SC_V2_PAGE__ || null;
+                if (typeof pageApi?.isReadonly === 'function') {
+                  return Promise.resolve(pageApi.isReadonly()).then((readonly) => readonly === true);
+                }
+
+                if (typeof pageApi?.readonly === 'boolean') {
+                  return Promise.resolve(pageApi.readonly === true);
+                }
+              } catch (error) {
+                return Promise.resolve(null);
+              }
+
+              return Promise.resolve(null);
+            },
+            syncDialogIframeSubmitVisibility(dialogKey){
+              const dialogCfg = cfg.dialogs?.[dialogKey];
+              if (dialogCfg?.type !== 'iframe') {
+                return Promise.resolve(true);
+              }
+
+              return this.resolveDialogIframeReadonly(dialogKey)
+                .then((readonly) => {
+                  if (readonly === null) {
+                    return this.isDialogSubmitVisible(dialogKey);
+                  }
+
+                  return this.setDialogSubmitVisible(dialogKey, readonly !== true);
+                })
+                .catch(() => this.isDialogSubmitVisible(dialogKey));
+            },
             handleDialogIframeLoad(dialogKey, event){
               const iframe = event?.target || this.getDialogBodyRefs(dialogKey)?.iframe || null;
               if (iframe?.contentWindow && cfg.dialogs?.[dialogKey]?.iframe?.host) {
                 this.ensureDialogIframeWindowStore().set(iframe.contentWindow, dialogKey);
               }
+
+              return this.syncDialogIframeSubmitVisibility(dialogKey);
             },
             setDialogTitle(dialogKey, title){
               if (typeof dialogKey !== 'string' || dialogKey === '') {
@@ -272,6 +328,9 @@
                 case 'refreshIframe':
                   this.refreshDialogIframe(dialogKey);
                   break;
+                case 'setSubmitVisible':
+                  this.setDialogSubmitVisible(dialogKey, payload.value !== false);
+                  break;
                 default:
                   break;
               }
@@ -353,6 +412,7 @@
                 dialogs: this.dialogForms || {},
                 dialogLoading: this.dialogLoading?.[dialogKey] || false,
                 dialogSubmitting: this.dialogSubmitting?.[dialogKey] || false,
+                dialogSubmitVisible: this.dialogSubmitVisible?.[dialogKey] !== false,
                 dialogVisible: this.dialogVisible?.[dialogKey] || false,
                 dialogTitle: this.dialogTitles?.[dialogKey] || dialogCfg.title || '',
                 dialogFullscreen: this.dialogFullscreen?.[dialogKey] || false,
@@ -613,6 +673,7 @@
                   this.dialogRows[dialogKey] = sourceRow ? clone(sourceRow) : null;
                   this.dialogSubmitting[dialogKey] = false;
                   this.dialogLoading[dialogKey] = false;
+                  this.dialogSubmitVisible[dialogKey] = true;
                   this.dialogFullscreen[dialogKey] = !!dialogCfg.fullscreen;
                   this.dialogComponentProps[dialogKey] = {};
                   this.resetDialogFormState(dialogKey, sourceRow);

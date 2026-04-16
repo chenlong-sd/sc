@@ -10,6 +10,7 @@ final class FormNodeRenderContext
     public function __construct(
         public readonly string $modelName,
         public readonly bool $inline,
+        public readonly bool $formReadonly,
         public readonly FormRenderOptions $options,
         public readonly ?RenderContext $renderContext = null,
         public readonly string $pathPrefix = '',
@@ -25,6 +26,7 @@ final class FormNodeRenderContext
         return new self(
             modelName: $this->modelName,
             inline: $inline,
+            formReadonly: $this->formReadonly,
             options: $this->options,
             renderContext: $this->renderContext,
             pathPrefix: $this->pathPrefix,
@@ -40,6 +42,7 @@ final class FormNodeRenderContext
         return new self(
             modelName: $modelName,
             inline: $inline ?? $this->inline,
+            formReadonly: $this->formReadonly,
             options: $this->options,
             renderContext: $this->renderContext,
             pathPrefix: $pathPrefix,
@@ -62,6 +65,7 @@ final class FormNodeRenderContext
         return new self(
             modelName: $modelName,
             inline: false,
+            formReadonly: $this->formReadonly,
             options: $this->options,
             renderContext: $this->renderContext,
             pathPrefix: $pathPrefix,

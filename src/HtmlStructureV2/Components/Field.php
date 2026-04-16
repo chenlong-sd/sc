@@ -18,10 +18,12 @@ abstract class Field implements FormNode
     protected array $props = [];
     protected string $helpText = '';
     protected bool $disabled = false;
+    protected bool $readonly = false;
     protected array $suffixActions = [];
     protected string|AbstractHtmlElement|null $suffixContent = null;
     protected ?JsExpression $visibleWhen = null;
     protected ?JsExpression $disabledWhen = null;
+    protected ?JsExpression $readonlyWhen = null;
 
     public function __construct(
         private readonly string $name,
@@ -241,6 +243,24 @@ abstract class Field implements FormNode
     }
 
     /**
+     * 设置字段只读。
+     * 支持 readonly 的组件会输出 `readonly`；
+     * 不支持 readonly 的组件会自动退化为 `disabled`。
+     *
+     * @param bool $readonly 是否只读，默认值为 true。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('code', '编码')->readonly()`
+     */
+    public function readonly(bool $readonly = true): static
+    {
+        $this->readonly = $readonly;
+
+        return $this;
+    }
+
+    /**
      * 在字段右侧追加操作按钮，适合“选择/查看/跳转”类辅助动作。
      *
      * @param Action ...$actions 要追加的右侧动作。
@@ -314,6 +334,26 @@ abstract class Field implements FormNode
         return $this;
     }
 
+    /**
+     * 按条件控制字段只读，表达式上下文中的 model 指向当前表单数据。
+     * 支持 readonly 的组件会绑定 `readonly`；
+     * 其余组件会自动退化为 `disabled`。
+     *
+     * @param string|JsExpression $expression 前端可执行表达式。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('title', '标题')->readonlyWhen('model.locked === true')`
+     */
+    public function readonlyWhen(string|JsExpression $expression): static
+    {
+        $this->readonlyWhen = $expression instanceof JsExpression
+            ? $expression
+            : JsExpression::make($expression);
+
+        return $this;
+    }
+
     public function name(): string
     {
         return $this->name;
@@ -359,6 +399,11 @@ abstract class Field implements FormNode
         return $this->disabled;
     }
 
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
+    }
+
     public function getSuffixActions(): array
     {
         return array_values(array_filter(
@@ -386,5 +431,10 @@ abstract class Field implements FormNode
     public function getDisabledWhen(): ?JsExpression
     {
         return $this->disabledWhen;
+    }
+
+    public function getReadonlyWhen(): ?JsExpression
+    {
+        return $this->readonlyWhen;
     }
 }

@@ -56,6 +56,7 @@ final class FormRenderState
         return [
             'defaults' => $schema->defaults(),
             'initialData' => $form->initialData(),
+            'readonly' => $form->isReadonly(),
             'rules' => $schema->rules(),
             'ref' => $this->ref,
             'modelVar' => $this->modelPath === null ? $this->model : null,

@@ -2136,6 +2136,7 @@
             dialogRows: buildDialogState(dialogs, () => null),
             dialogLoading: buildDialogState(dialogs, () => false),
             dialogSubmitting: buildDialogState(dialogs, () => false),
+            dialogSubmitVisible: buildDialogState(dialogs, () => true),
             dialogTitles: buildDialogTitleState(dialogs),
             dialogIframeUrls: buildDialogState(dialogs, () => ''),
             dialogComponentProps: buildDialogState(dialogs, () => ({})),

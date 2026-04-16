@@ -1519,12 +1519,12 @@ Blocks::button('查看源数据')
 
 - 静态/远端选项：`options()` / `remoteOptions()`
 - 选项联动回填：`linkageUpdate()` / `linkageUpdates()`
-- 显示/禁用条件：`visibleWhen()` / `disabledWhen()`
+- 显示/禁用/只读条件：`visibleWhen()` / `disabledWhen()` / `readonlyWhen()`
 - 结构化事件：`Events::*()`
 
 2. 如果最终展示条件依赖“运行时派生状态”，先把它转成 `model` 字段
 
-- `visibleWhen()` / `disabledWhen()` 默认只保证 `model` 可用
+- `visibleWhen()` / `disabledWhen()` / `readonlyWhen()` 默认只保证 `model` 可用
 - 不建议直接在 `visibleWhen()` 里依赖 `dialogOptions` / `tableStates` / `vm.xxx` 这类页面 runtime 变量
 - 更稳的做法是：在事件回调里把派生结果写回表单模型，再让展示逻辑只依赖 `model`
 
@@ -1564,7 +1564,7 @@ JS));
 
 - 事件层负责“拿到真实运行时数据”
 - `vm` 负责“把派生状态写回当前作用域”
-- `visibleWhen()` / `disabledWhen()` 只负责“读 model 做纯展示判断”
+- `visibleWhen()` / `disabledWhen()` / `readonlyWhen()` 只负责“读 model 做纯展示判断”
 
 3. 如果不是字段，而是说明块/自定义块，也尽量复用同一套思路
 
@@ -1788,6 +1788,11 @@ JS);
 
 ## 附录：字段能力分层
 
+- 通用字段状态：`disabled()` / `disabledWhen()` / `readonly()` / `readonlyWhen()`
+- `readonly()` 会优先输出组件自身的 `readonly`；不支持 readonly 的组件会自动退化为 `disabled`
+- 当前直接走 `readonly` 的字段类型：`text` / `password` / `textarea` / `date` / `datetime` / `date_range`
+- 其余如 `select` / `radio` / `checkbox` / `cascader` / `upload` / `switch` / `picker` / `editor` 等会自动退化为 `disabled`
+- `Form::readonly()` 会把整表单切为只读，并自动关闭 array/table 的新增、删除、排序入口；筛选表单默认提交/重置按钮也会隐藏
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`

@@ -38,7 +38,8 @@ final class FieldRenderer
         string $fieldPath,
         bool $inline,
         FormRenderOptions $options,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        bool $formReadonly = false
     ): AbstractHtmlElement
     {
         return $this->renderField(
@@ -48,6 +49,7 @@ final class FieldRenderer
             inline: $inline,
             options: $options,
             renderContext: $renderContext,
+            formReadonly: $formReadonly,
         );
     }
 
@@ -58,7 +60,8 @@ final class FieldRenderer
         string $fieldPath,
         bool $inline,
         FormRenderOptions $options,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        bool $formReadonly = false
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -68,6 +71,7 @@ final class FieldRenderer
             options: $options,
             propExpression: $propExpression,
             renderContext: $renderContext,
+            formReadonly: $formReadonly,
         );
     }
 
@@ -77,7 +81,8 @@ final class FieldRenderer
         string $fieldPath,
         string $propExpression,
         FormRenderOptions $options,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        bool $formReadonly = false
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -88,6 +93,7 @@ final class FieldRenderer
             propExpression: $propExpression,
             tableCell: true,
             renderContext: $renderContext,
+            formReadonly: $formReadonly,
         );
     }
 
@@ -99,7 +105,8 @@ final class FieldRenderer
         FormRenderOptions $options,
         ?string $propExpression = null,
         bool $tableCell = false,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        bool $formReadonly = false
     ): AbstractHtmlElement {
         if ($field->type() === FieldType::HIDDEN) {
             return El::fictitious();
@@ -108,6 +115,7 @@ final class FieldRenderer
         $modelAccessor = $this->jsModelAccessor($modelName, $field->name());
         $visibleWhen = $this->normalizeFieldExpression($field->getVisibleWhen(), $modelName);
         $disabledWhen = $this->normalizeFieldExpression($field->getDisabledWhen(), $modelName);
+        $readonlyWhen = $this->normalizeFieldExpression($field->getReadonlyWhen(), $modelName);
         $optionField = $field instanceof OptionField ? $field : null;
         $pickerField = $field instanceof PickerField ? $field : null;
         $uploadField = $field instanceof UploadField ? $field : null;
@@ -129,7 +137,15 @@ final class FieldRenderer
             $options->showLabels && $field->hasLabel()
         );
         if ($pickerField !== null) {
-            $component = $this->buildPickerComponent($pickerField, $fieldPath, $options, $propExpression, $disabledWhen);
+            $component = $this->buildPickerComponent(
+                $pickerField,
+                $fieldPath,
+                $options,
+                $propExpression,
+                $disabledWhen,
+                $readonlyWhen,
+                $formReadonly
+            );
         } else {
             $usesExplicitModelBinding = $propExpression !== null;
             $component = $this->buildFieldComponent(
@@ -146,7 +162,7 @@ final class FieldRenderer
             );
 
             $this->applyFieldProps($component, $field);
-            $this->applyDisabledState($component, $field, $disabledWhen);
+            $this->applyInteractivityState($component, $field, $disabledWhen, $readonlyWhen, $formReadonly);
             $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
             $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
         }
@@ -353,17 +369,76 @@ final class FieldRenderer
         $this->applyRenderableAttributes($component, $props);
     }
 
-    private function applyDisabledState(AbstractHtmlElement $component, Field $field, ?string $disabledWhen): void
+    private function applyInteractivityState(
+        AbstractHtmlElement $component,
+        Field $field,
+        ?string $disabledWhen,
+        ?string $readonlyWhen,
+        bool $formReadonly
+    ): void
     {
-        if ($disabledWhen !== null) {
-            $component->setAttr(':disabled', $field->isDisabled() ? 'true' : $disabledWhen);
+        $supportsReadonly = $this->supportsReadonly($field);
+        $readonlyExpression = $supportsReadonly
+            ? $this->resolveBooleanStateExpression($formReadonly || $field->isReadonly(), $readonlyWhen)
+            : null;
+        $disabledExpression = $this->resolveBooleanStateExpression(
+            $field->isDisabled() || (!$supportsReadonly && ($formReadonly || $field->isReadonly())),
+            $disabledWhen,
+            !$supportsReadonly ? $readonlyWhen : null
+        );
+
+        $this->applyBooleanAttribute($component, 'readonly', $readonlyExpression);
+        $this->applyBooleanAttribute($component, 'disabled', $disabledExpression);
+    }
+
+    private function supportsReadonly(Field $field): bool
+    {
+        return match ($field->type()) {
+            FieldType::TEXT,
+            FieldType::PASSWORD,
+            FieldType::TEXTAREA,
+            FieldType::DATE,
+            FieldType::DATETIME,
+            FieldType::DATE_RANGE => true,
+            default => false,
+        };
+    }
+
+    private function resolveBooleanStateExpression(bool $staticEnabled, ?string ...$dynamicExpressions): ?string
+    {
+        if ($staticEnabled) {
+            return 'true';
+        }
+
+        $conditions = array_values(array_filter(
+            $dynamicExpressions,
+            static fn(?string $expression): bool => is_string($expression) && trim($expression) !== ''
+        ));
+
+        if ($conditions === []) {
+            return null;
+        }
+
+        if (count($conditions) === 1) {
+            return $conditions[0];
+        }
+
+        return sprintf('(%s)', implode(') || (', $conditions));
+    }
+
+    private function applyBooleanAttribute(AbstractHtmlElement $component, string $attribute, ?string $expression): void
+    {
+        if ($expression === null) {
+            return;
+        }
+
+        if ($expression === 'true') {
+            $component->setAttr($attribute);
 
             return;
         }
 
-        if ($field->isDisabled()) {
-            $component->setAttr('disabled');
-        }
+        $component->setAttr(':' . $attribute, $expression);
     }
 
     private function applyOptionFieldBehavior(
@@ -510,7 +585,9 @@ final class FieldRenderer
         string $fieldPath,
         FormRenderOptions $options,
         ?string $fieldPathExpression = null,
-        ?string $disabledWhen = null
+        ?string $disabledWhen = null,
+        ?string $readonlyWhen = null,
+        bool $formReadonly = false
     ): AbstractHtmlElement {
         if (!$options->hasPickerContext()) {
             throw new InvalidArgumentException(sprintf(
@@ -544,7 +621,11 @@ final class FieldRenderer
         $displayExpression = $fieldPathExpression === null
             ? $options->pickerDisplayExpression($fieldPath, 'pickerItem')
             : $options->pickerDisplayExpressionByPathExpression($fieldPathExpression, 'pickerItem');
-        $disabledExpression = $disabledWhen ?? ($field->isDisabled() ? 'true' : 'false');
+        $disabledExpression = $this->resolveBooleanStateExpression(
+            $field->isDisabled() || $formReadonly || $field->isReadonly(),
+            $disabledWhen,
+            $readonlyWhen
+        ) ?? 'false';
 
         $root = El::double('div')->addClass('sc-v2-picker');
         $panel = El::double('div')

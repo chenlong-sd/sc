@@ -86,6 +86,7 @@ final class FormRenderer
         $context = new FormNodeRenderContext(
             modelName: $modelName,
             inline: $form->isInline(),
+            formReadonly: $form->isReadonly(),
             options: $renderOptions,
             renderContext: $renderContext,
         );
@@ -103,7 +104,7 @@ final class FormRenderer
             $element->append($this->renderFooterActions($form, $context));
         }
 
-        if ($renderOptions->isFilterMode()) {
+        if ($renderOptions->isFilterMode() && !$form->isReadonly()) {
             $element->append($this->renderFilterActions($form, $renderOptions));
         }
 
@@ -131,7 +132,8 @@ final class FormRenderer
                 $fieldPath,
                 $context->inline,
                 $context->options,
-                $context->renderContext
+                $context->renderContext,
+                $context->formReadonly
             );
         }
 
@@ -142,7 +144,8 @@ final class FormRenderer
             $fieldPath,
             $context->inline,
             $context->options,
-            $context->renderContext
+            $context->renderContext,
+            $context->formReadonly
         );
     }
 
@@ -324,7 +327,8 @@ final class FormRenderer
             $group,
             $scopeLiteral,
             $arrayPathExpression,
-            $rowIndexVariable
+            $rowIndexVariable,
+            $context->formReadonly
         ));
         $card->append($this->renderArrayGroupRowBody(
             $group,
@@ -338,7 +342,7 @@ final class FormRenderer
         $rows->append($template);
         $body->append($rows);
 
-        if ($group->isAddable()) {
+        if (!$context->formReadonly && $group->isAddable()) {
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-array__footer',
                 $group->getAddButtonText(),
@@ -375,7 +379,7 @@ final class FormRenderer
             'empty-text' => $table->getEmptyText(),
             'class' => 'sc-v2-form-table__table',
             'data-sc-form-table' => '1',
-            'data-sc-form-table-sortable' => $table->isReorderable() ? '1' : '0',
+            'data-sc-form-table-sortable' => !$context->formReadonly && $table->isReorderable() ? '1' : '0',
             ':data-sc-form-scope' => $scopeLiteral,
             ':data-sc-form-array-path' => $arrayPathExpression,
         ]);
@@ -388,13 +392,14 @@ final class FormRenderer
                     $arrayPathExpression,
                     $context->options,
                     $context->renderContext,
+                    $context->formReadonly,
                     $context->arrayDepth,
                     $tableScopeVariable
                 )
             );
         }
 
-        if ($table->isReorderable() || $table->isRemovable()) {
+        if (!$context->formReadonly && ($table->isReorderable() || $table->isRemovable())) {
             $tableElement->append($this->renderFormTableActionColumn(
                 $table,
                 $scopeLiteral,
@@ -406,7 +411,7 @@ final class FormRenderer
 
         $body->append($tableElement);
 
-        if ($table->isAddable()) {
+        if (!$context->formReadonly && $table->isAddable()) {
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-table__footer',
                 $table->getAddButtonText(),
@@ -426,6 +431,7 @@ final class FormRenderer
         string $arrayPathExpression,
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
+        bool $formReadonly = false,
         int $tableArrayDepth = 0,
         string $tableScopeVariable = 'scope'
     ): AbstractHtmlElement {
@@ -448,6 +454,7 @@ final class FormRenderer
                     $arrayPathExpression,
                     $options,
                     $renderContext,
+                    $formReadonly,
                     $tableArrayDepth,
                     $tableScopeVariable
                 ));
@@ -485,7 +492,8 @@ final class FormRenderer
                     $columnSchema->path(),
                     $propExpression,
                     $options,
-                    $renderContext
+                    $renderContext,
+                    $formReadonly
                 )
             );
         } elseif ($columnSchema->arrayGroup() !== null) {
@@ -494,6 +502,7 @@ final class FormRenderer
                 $arrayPathExpression,
                 $options,
                 $renderContext,
+                $formReadonly,
                 $tableArrayDepth,
                 $tableScopeVariable
             ));
@@ -508,6 +517,7 @@ final class FormRenderer
                 new FormNodeRenderContext(
                     modelName: $tableRowModelExpression,
                     inline: true,
+                    formReadonly: $formReadonly,
                     options: $options,
                     renderContext: $renderContext
                 )
@@ -525,6 +535,7 @@ final class FormRenderer
         string $arrayPathExpression,
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
+        bool $formReadonly = false,
         int $tableArrayDepth = 0,
         string $tableScopeVariable = 'scope'
     ): AbstractHtmlElement {
@@ -538,6 +549,7 @@ final class FormRenderer
         $rowContext = new FormNodeRenderContext(
             modelName: $tableRowModelExpression,
             inline: true,
+            formReadonly: $formReadonly,
             options: $options,
             renderContext: $renderContext,
             arrayPath: '__table_row__',
@@ -612,7 +624,8 @@ final class FormRenderer
         FormArrayGroup $group,
         string $scopeLiteral,
         string $arrayPathExpression,
-        string $rowIndexVariable
+        string $rowIndexVariable,
+        bool $formReadonly = false
     ): AbstractHtmlElement {
         $header = El::double('template')->setAttr('#header');
         $container = El::double('div')->addClass('sc-v2-form-array__item-header');
@@ -622,7 +635,7 @@ final class FormRenderer
             )
         );
 
-        if ($group->isReorderable() || $group->isRemovable()) {
+        if (!$formReadonly && ($group->isReorderable() || $group->isRemovable())) {
             $actions = El::double('div')->addClass('sc-v2-form-array__item-actions');
 
             if ($group->isReorderable()) {
