@@ -248,7 +248,15 @@
               return payload;
             }
             if (!isObject(payload)) return fallback;
-            return payload.message || payload.msg || payload.error || fallback;
+            const message = payload.message || payload.msg || payload.error || fallback;
+            // 如果消息是通用的成功词（success/ok）且有 fallback，使用 fallback
+            if (typeof message === 'string' && fallback) {
+              const normalized = message.trim().toLowerCase();
+              if (['success', 'ok'].includes(normalized)) {
+                return fallback;
+              }
+            }
+            return message;
           };
           const isSuccessPayload = (payload) => {
             if (!isObject(payload)) return true;
