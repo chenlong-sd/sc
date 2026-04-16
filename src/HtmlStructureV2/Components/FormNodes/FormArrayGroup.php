@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 
@@ -16,6 +17,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
     use HasFormTableColumnAttributes;
     use HasSpan;
     use HasFormNodeChildren;
+    use HasReadonly;
     private array $defaultRows = [];
     private ?string $title = null;
     private string $addButtonText = '新增一组';

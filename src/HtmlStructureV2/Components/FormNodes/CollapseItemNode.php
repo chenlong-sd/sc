@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
@@ -15,6 +16,7 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     use HasRenderAttributes;
     use HasSpan;
     use HasFormNodeChildren;
+    use HasReadonly;
 
     public function __construct(
         private readonly string $title
@@ -65,6 +67,8 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context->withLabelSegment($this->title);
+        return $context
+            ->withLabelSegment($this->title)
+            ->mergeReadonly($this->isReadonly());
     }
 }

@@ -53,6 +53,116 @@
 
               return this.__dialogIframeWindows;
             },
+            ensureDialogLayoutObserverStore(){
+              if (!isObject(this.__dialogLayoutObservers)) {
+                this.__dialogLayoutObservers = {};
+              }
+
+              return this.__dialogLayoutObservers;
+            },
+            getDialogElement(dialogKey){
+              if (typeof dialogKey !== 'string' || dialogKey === '') {
+                return null;
+              }
+
+              const candidates = document.querySelectorAll('[data-sc-v2-dialog-key]');
+              for (const element of candidates) {
+                if (element?.getAttribute?.('data-sc-v2-dialog-key') === dialogKey) {
+                  return element;
+                }
+              }
+
+              return null;
+            },
+            getDialogSectionElement(dialogKey, sectionClassName){
+              const dialogElement = this.getDialogElement(dialogKey);
+              if (!dialogElement || typeof sectionClassName !== 'string' || sectionClassName === '') {
+                return null;
+              }
+
+              return Array.from(dialogElement.children || []).find(
+                (child) => child?.classList?.contains(sectionClassName)
+              ) || null;
+            },
+            syncIframeDialogFooterOffset(dialogKey){
+              const dialogElement = this.getDialogElement(dialogKey);
+              if (!dialogElement) {
+                return null;
+              }
+
+              if (cfg.dialogs?.[dialogKey]?.type !== 'iframe') {
+                dialogElement.style.removeProperty('--sc-v2-dialog-footer-height');
+                return dialogElement;
+              }
+
+              const footerElement = this.getDialogSectionElement(dialogKey, 'el-dialog__footer');
+              const footerHeight = footerElement
+                ? Math.ceil(footerElement.getBoundingClientRect?.().height || 0)
+                : 0;
+
+              dialogElement.style.setProperty('--sc-v2-dialog-footer-height', `${footerHeight}px`);
+
+              return dialogElement;
+            },
+            bindIframeDialogLayoutObserver(dialogKey){
+              const store = this.ensureDialogLayoutObserverStore();
+              const current = store[dialogKey] || null;
+              const dialogElement = this.getDialogElement(dialogKey);
+              const footerElement = this.getDialogSectionElement(dialogKey, 'el-dialog__footer');
+
+              if (!dialogElement || cfg.dialogs?.[dialogKey]?.type !== 'iframe') {
+                if (current?.observer && typeof current.observer.disconnect === 'function') {
+                  current.observer.disconnect();
+                }
+                delete store[dialogKey];
+                return null;
+              }
+
+              if (
+                current?.dialogElement === dialogElement
+                && current?.footerElement === footerElement
+              ) {
+                this.syncIframeDialogFooterOffset(dialogKey);
+                return footerElement;
+              }
+
+              if (current?.observer && typeof current.observer.disconnect === 'function') {
+                current.observer.disconnect();
+              }
+
+              let observer = null;
+              if (typeof ResizeObserver === 'function' && footerElement) {
+                observer = new ResizeObserver(() => {
+                  this.syncIframeDialogFooterOffset(dialogKey);
+                });
+                observer.observe(footerElement);
+              }
+
+              store[dialogKey] = {
+                dialogElement,
+                footerElement,
+                observer,
+              };
+              this.syncIframeDialogFooterOffset(dialogKey);
+
+              return footerElement;
+            },
+            scheduleIframeDialogLayoutSync(dialogKey){
+              return Vue.nextTick(() => this.bindIframeDialogLayoutObserver(dialogKey));
+            },
+            clearIframeDialogLayoutObserver(dialogKey){
+              const store = this.ensureDialogLayoutObserverStore();
+              const current = store[dialogKey] || null;
+              if (current?.observer && typeof current.observer.disconnect === 'function') {
+                current.observer.disconnect();
+              }
+              delete store[dialogKey];
+
+              const dialogElement = this.getDialogElement(dialogKey);
+              if (dialogElement) {
+                dialogElement.style.setProperty('--sc-v2-dialog-footer-height', '0px');
+              }
+            },
             ensureDialogMessageBridge(){
               if (this.__dialogMessageBridgeBound) {
                 return;
@@ -108,9 +218,16 @@
               store[dialogKey] = store[dialogKey] || {};
               store[dialogKey].iframe = iframe || null;
 
+              if (!iframe) {
+                this.clearIframeDialogLayoutObserver(dialogKey);
+                return null;
+              }
+
               if (iframe?.contentWindow && cfg.dialogs?.[dialogKey]?.iframe?.host) {
                 this.ensureDialogIframeWindowStore().set(iframe.contentWindow, dialogKey);
               }
+
+              this.scheduleIframeDialogLayoutSync(dialogKey);
 
               return iframe || null;
             },
@@ -174,7 +291,8 @@
                 this.ensureDialogIframeWindowStore().set(iframe.contentWindow, dialogKey);
               }
 
-              return this.syncDialogIframeSubmitVisibility(dialogKey);
+              return this.syncDialogIframeSubmitVisibility(dialogKey)
+                .finally(() => this.scheduleIframeDialogLayoutSync(dialogKey));
             },
             setDialogTitle(dialogKey, title){
               if (typeof dialogKey !== 'string' || dialogKey === '') {
@@ -189,6 +307,7 @@
               }
 
               this.dialogFullscreen[dialogKey] = value === undefined ? true : !!value;
+              this.scheduleIframeDialogLayoutSync(dialogKey);
             },
             toggleDialogFullscreen(dialogKey){
               if (typeof dialogKey !== 'string' || dialogKey === '') {
@@ -196,6 +315,7 @@
               }
 
               this.dialogFullscreen[dialogKey] = !(this.dialogFullscreen?.[dialogKey] || false);
+              this.scheduleIframeDialogLayoutSync(dialogKey);
             },
             refreshDialogIframe(dialogKey){
               const iframe = this.getDialogBodyRefs(dialogKey)?.iframe || null;
@@ -688,6 +808,8 @@
                     if (!this.isLatestDialogRequestToken(dialogKey, requestToken) || !this.dialogVisible?.[dialogKey]) {
                       return null;
                     }
+
+                    this.bindIframeDialogLayoutObserver(dialogKey);
 
                     if (typeof this[names.clearFormValidate] === 'function') {
                       this[names.clearFormValidate](scope);

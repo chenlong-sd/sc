@@ -151,6 +151,7 @@ final class FormRenderer
 
     private function renderSectionNode(SectionNode $section, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $sectionContext = $context->mergeReadonly($section->isReadonly());
         $body = El::double('div')->addClass('sc-v2-form-section');
         $header = $this->renderSectionHeader($section, $context->renderContext);
         if ($header !== null) {
@@ -159,7 +160,7 @@ final class FormRenderer
         $body->append(
             El::double('div')
                 ->addClass('sc-v2-form-section__body')
-                ->append($this->renderChildrenRow($section->getChildren(), $context))
+                ->append($this->renderChildrenRow($section->getChildren(), $sectionContext))
         );
 
         $wrapped = $section->isPlain()
@@ -179,28 +180,31 @@ final class FormRenderer
 
     private function renderInlineNode(InlineNode $inlineNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $inlineContext = $context->mergeReadonly($inlineNode->isReadonly());
         $body = $this->applyRenderableAttributes(
             El::double('div')->addClass('sc-v2-form-inline'),
             $inlineNode->getRenderAttributes()
         );
-        $this->appendRenderedChildren($body, $inlineNode->getChildren(), $context->withInline(true));
+        $this->appendRenderedChildren($body, $inlineNode->getChildren(), $inlineContext->withInline(true));
 
         return $this->wrapBlockNode($body, $inlineNode->getSpan());
     }
 
     private function renderGridNode(GridNode $gridNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $gridContext = $context->mergeReadonly($gridNode->isReadonly());
         $row = $this->applyRenderableAttributes(
             El::double('el-row')->setAttr(':gutter', $gridNode->getGutter()),
             $gridNode->getRenderAttributes()
         );
-        $this->appendRenderedChildren($row, $gridNode->getChildren(), $context->withInline(false));
+        $this->appendRenderedChildren($row, $gridNode->getChildren(), $gridContext->withInline(false));
 
         return $this->wrapBlockNode($row, $gridNode->getSpan());
     }
 
     private function renderTabsNode(TabsNode $tabsNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $tabsContext = $context->mergeReadonly($tabsNode->isReadonly());
         $tabs = $this->applyRenderableAttributes(
             El::double('el-tabs')->addClass('sc-v2-form-tabs'),
             $tabsNode->getRenderAttributes()
@@ -217,6 +221,7 @@ final class FormRenderer
         }
 
         foreach ($tabsNode->getTabs() as $index => $tab) {
+            $tabContext = $tabsContext->mergeReadonly($tab->isReadonly());
             $pane = El::double('el-tab-pane')->setAttrs([
                 'label' => $tab->label(),
                 'name' => (string) $index,
@@ -226,7 +231,7 @@ final class FormRenderer
                 $pane->setAttr('lazy', '');
             }
 
-            $pane->append($this->renderChildrenBodyContainer('sc-v2-form-tabs__pane', $tab->getChildren(), $context));
+            $pane->append($this->renderChildrenBodyContainer('sc-v2-form-tabs__pane', $tab->getChildren(), $tabContext));
             $tabs->append($pane);
         }
 
@@ -235,6 +240,7 @@ final class FormRenderer
 
     private function renderCollapseNode(CollapseNode $collapseNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $collapseContext = $context->mergeReadonly($collapseNode->isReadonly());
         $collapse = $this->applyRenderableAttributes(
             El::double('el-collapse')->addClass('sc-v2-form-collapse'),
             $collapseNode->getRenderAttributes()
@@ -244,6 +250,7 @@ final class FormRenderer
         }
 
         foreach ($collapseNode->getItems() as $index => $item) {
+            $itemContext = $collapseContext->mergeReadonly($item->isReadonly());
             $itemElement = El::double('el-collapse-item')->setAttrs([
                     'title' => $item->title(),
                     'name' => (string) $index,
@@ -254,7 +261,7 @@ final class FormRenderer
                 $itemElement->append($this->renderChildrenBodyContainer(
                     'sc-v2-form-collapse__item-body',
                     $item->getChildren(),
-                    $context
+                    $itemContext
                 ))
             );
         }
@@ -282,13 +289,14 @@ final class FormRenderer
 
     private function renderObjectGroup(FormObjectGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $groupContext = $context->mergeReadonly($group->isReadonly());
         $content = El::fictitious();
-        $nextPrefix = FormPath::resolve($context->pathPrefix, $group->name());
-        $nextModelName = $this->jsModelAccessor($context->modelName, $group->name());
+        $nextPrefix = FormPath::resolve($groupContext->pathPrefix, $group->name());
+        $nextModelName = $this->jsModelAccessor($groupContext->modelName, $group->name());
         $this->appendRenderedChildren(
             $content,
             $group->getChildren(),
-            $context->nested($nextModelName, $nextPrefix)
+            $groupContext->nested($nextModelName, $nextPrefix)
         );
 
         return $content;
@@ -296,11 +304,12 @@ final class FormRenderer
 
     private function renderArrayGroup(FormArrayGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $arrayPath = FormPath::resolve($context->pathPrefix, $group->name());
-        $scopeLiteral = $this->jsLiteral($context->options->remoteScope ?? $context->options->uploadScope ?? 'form');
-        $arrayPathExpression = $this->resolveArrayPathExpression($context, $arrayPath);
-        $tableScopeVariable = $this->tableLoopVariable($context);
-        [$rowVariable, $rowIndexVariable] = $this->arrayLoopVariables($context);
+        $groupContext = $context->mergeReadonly($group->isReadonly());
+        $arrayPath = FormPath::resolve($groupContext->pathPrefix, $group->name());
+        $scopeLiteral = $this->jsLiteral($groupContext->options->remoteScope ?? $groupContext->options->uploadScope ?? 'form');
+        $arrayPathExpression = $this->resolveArrayPathExpression($groupContext, $arrayPath);
+        $tableScopeVariable = $this->tableLoopVariable($groupContext);
+        [$rowVariable, $rowIndexVariable] = $this->arrayLoopVariables($groupContext);
 
         $body = $this->applyRenderableAttributes(
             El::double('div')->addClass('sc-v2-form-array'),
@@ -328,11 +337,11 @@ final class FormRenderer
             $scopeLiteral,
             $arrayPathExpression,
             $rowIndexVariable,
-            $context->formReadonly
+            $groupContext->formReadonly
         ));
         $card->append($this->renderArrayGroupRowBody(
             $group,
-            $context,
+            $groupContext,
             $arrayPath,
             $arrayPathExpression,
             $rowVariable,
@@ -342,7 +351,7 @@ final class FormRenderer
         $rows->append($template);
         $body->append($rows);
 
-        if (!$context->formReadonly && $group->isAddable()) {
+        if (!$groupContext->formReadonly && $group->isAddable()) {
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-array__footer',
                 $group->getAddButtonText(),
@@ -350,7 +359,7 @@ final class FormRenderer
             ));
         }
 
-        if ($context->inline) {
+        if ($groupContext->inline) {
             return $body;
         }
 
@@ -359,12 +368,13 @@ final class FormRenderer
 
     private function renderFormTable(FormTable $table, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        $tableContext = $context->mergeReadonly($table->isReadonly());
         $columns = $this->formTableColumnWalker->build($table->getChildren(), $table->name());
 
-        $arrayPath = FormPath::resolve($context->pathPrefix, $table->name());
-        $scopeLiteral = $this->jsLiteral($context->options->remoteScope ?? $context->options->uploadScope ?? 'form');
-        $arrayPathExpression = $this->resolveArrayPathExpression($context, $arrayPath);
-        $tableScopeVariable = $this->tableLoopVariable($context);
+        $arrayPath = FormPath::resolve($tableContext->pathPrefix, $table->name());
+        $scopeLiteral = $this->jsLiteral($tableContext->options->remoteScope ?? $tableContext->options->uploadScope ?? 'form');
+        $arrayPathExpression = $this->resolveArrayPathExpression($tableContext, $arrayPath);
+        $tableScopeVariable = $this->tableLoopVariable($tableContext);
 
         $body = El::double('div')->addClass('sc-v2-form-table');
         $header = $this->renderBlockTitleHeader($table->getTitle(), 'sc-v2-form-table__header');
@@ -379,7 +389,7 @@ final class FormRenderer
             'empty-text' => $table->getEmptyText(),
             'class' => 'sc-v2-form-table__table',
             'data-sc-form-table' => '1',
-            'data-sc-form-table-sortable' => !$context->formReadonly && $table->isReorderable() ? '1' : '0',
+            'data-sc-form-table-sortable' => !$tableContext->formReadonly && $table->isReorderable() ? '1' : '0',
             ':data-sc-form-scope' => $scopeLiteral,
             ':data-sc-form-array-path' => $arrayPathExpression,
         ]);
@@ -390,16 +400,16 @@ final class FormRenderer
                 $this->renderFormTableColumnNode(
                     $columnSchema,
                     $arrayPathExpression,
-                    $context->options,
-                    $context->renderContext,
-                    $context->formReadonly,
-                    $context->arrayDepth,
+                    $tableContext->options,
+                    $tableContext->renderContext,
+                    $tableContext->formReadonly,
+                    $tableContext->arrayDepth,
                     $tableScopeVariable
                 )
             );
         }
 
-        if (!$context->formReadonly && ($table->isReorderable() || $table->isRemovable())) {
+        if (!$tableContext->formReadonly && ($table->isReorderable() || $table->isRemovable())) {
             $tableElement->append($this->renderFormTableActionColumn(
                 $table,
                 $scopeLiteral,
@@ -411,7 +421,7 @@ final class FormRenderer
 
         $body->append($tableElement);
 
-        if (!$context->formReadonly && $table->isAddable()) {
+        if (!$tableContext->formReadonly && $table->isAddable()) {
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-table__footer',
                 $table->getAddButtonText(),
@@ -419,7 +429,7 @@ final class FormRenderer
             ));
         }
 
-        if ($context->inline) {
+        if ($tableContext->inline) {
             return $body;
         }
 
@@ -493,7 +503,7 @@ final class FormRenderer
                     $propExpression,
                     $options,
                     $renderContext,
-                    $formReadonly
+                    $formReadonly || $columnSchema->isReadonly()
                 )
             );
         } elseif ($columnSchema->arrayGroup() !== null) {
@@ -502,7 +512,7 @@ final class FormRenderer
                 $arrayPathExpression,
                 $options,
                 $renderContext,
-                $formReadonly,
+                $formReadonly || $columnSchema->isReadonly(),
                 $tableArrayDepth,
                 $tableScopeVariable
             ));

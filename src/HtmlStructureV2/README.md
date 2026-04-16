@@ -1793,6 +1793,7 @@ JS);
 - 当前直接走 `readonly` 的字段类型：`text` / `password` / `textarea` / `date` / `datetime` / `date_range`
 - 其余如 `select` / `radio` / `checkbox` / `cascader` / `upload` / `switch` / `picker` / `editor` 等会自动退化为 `disabled`
 - `Form::readonly()` 会把整表单切为只读，并自动关闭 array/table 的新增、删除、排序入口；筛选表单默认提交/重置按钮也会隐藏
+- `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` 也支持 `readonly()`，只影响各自子树
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`

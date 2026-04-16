@@ -29,12 +29,14 @@ final class DialogRenderer
         ?DialogRenderBindings $bindings = null
     ): AbstractHtmlElement {
         $bindings ??= DialogRenderBindings::make();
+        $footerActions = $this->resolveFooterActions($dialog);
         $attrs = array_merge([
             'v-model' => $visibleModel,
             'width' => $dialog->getWidth(),
             ':close-on-click-modal' => $dialog->shouldCloseOnClickModal() ? 'true' : 'false',
             ':draggable' => $dialog->isDraggable() ? 'true' : 'false',
         ], $dialog->attrs());
+        $attrs = $this->normalizeDialogRootAttributes($attrs, $dialog, $footerActions !== []);
 
         $attrs[':fullscreen'] = $bindings->fullscreenExpression() !== null && $bindings->fullscreenExpression() !== ''
             ? $bindings->fullscreenExpression()
@@ -98,7 +100,6 @@ final class DialogRenderer
             $bindings
         ));
 
-        $footerActions = $this->resolveFooterActions($dialog);
         if ($footerActions) {
             $footer = El::double('template')->setAttr('#footer');
             $footerScope = El::double('template')->setAttr('v-for', $this->dialogRowScopeExpression($dialog));
@@ -127,12 +128,19 @@ final class DialogRenderer
         ?RenderContext $context,
         DialogRenderBindings $bindings
     ): AbstractHtmlElement {
-        $body = El::double('div')->setAttr('v-for', $this->dialogRowScopeExpression($dialog));
+        $bodyClasses = ['sc-v2-dialog__body'];
+        if ($dialog->bodyType() === 'iframe') {
+            $bodyClasses[] = 'sc-v2-dialog__body--iframe';
+        }
+
+        $body = El::double('div')
+            ->setAttr('v-for', $this->dialogRowScopeExpression($dialog))
+            ->setAttr('class', implode(' ', $bodyClasses));
         if ($bindings->loadingExpression() !== null && $bindings->loadingExpression() !== '') {
             $body->setAttr('v-loading', $bindings->loadingExpression());
         }
 
-        if ($dialog->getHeight()) {
+        if ($dialog->getHeight() && $dialog->bodyType() !== 'iframe') {
             $body->setAttr('style', sprintf('min-height:%s', $dialog->getHeight()));
         }
 
@@ -160,12 +168,11 @@ final class DialogRenderer
         }
 
         if ($dialog->bodyType() === 'iframe') {
+            $iframeHeight = $dialog->getHeight() ? '100%' : 'auto';
             $iframe = El::double('iframe')->setAttrs([
                 ':src' => $bindings->iframeUrlExpression() ?: $this->jsString($dialog->getIframeUrl() ?? ''),
-                'style' => sprintf(
-                    'width:100%%;height:%s;border:none;display:block',
-                    $dialog->getHeight() ?: 'auto'
-                ),
+                'class' => 'sc-v2-dialog__iframe',
+                'style' => sprintf('width:100%%;height:%s;border:none;display:block', $iframeHeight),
             ]);
 
             if ($bindings->iframeRefExpression() !== null && $bindings->iframeRefExpression() !== '') {
@@ -243,5 +250,65 @@ final class DialogRenderer
         }
 
         return [];
+    }
+
+    /**
+     * @param array<string, mixed> $attrs
+     * @return array<string, mixed>
+     */
+    private function normalizeDialogRootAttributes(array $attrs, Dialog $dialog, bool $hasFooter): array
+    {
+        $classes = ['sc-v2-dialog'];
+        if ($dialog->bodyType() === 'iframe') {
+            $classes[] = 'sc-v2-dialog--iframe';
+            if ($dialog->getHeight()) {
+                $classes[] = 'sc-v2-dialog--iframe-fixed-height';
+            }
+            if ($hasFooter) {
+                $classes[] = 'sc-v2-dialog--iframe-has-footer';
+            }
+        }
+
+        $attrs['class'] = $this->mergeClassAttribute($attrs['class'] ?? null, implode(' ', $classes));
+        $attrs['data-sc-v2-dialog-key'] = $dialog->key();
+
+        if ($dialog->bodyType() === 'iframe' && $dialog->getHeight()) {
+            $attrs['style'] = $this->mergeStyleAttribute(
+                $attrs['style'] ?? null,
+                sprintf('--sc-v2-dialog-body-height:%s;--sc-v2-dialog-footer-height:0px;', $dialog->getHeight())
+            );
+        }
+
+        return $attrs;
+    }
+
+    private function mergeClassAttribute(mixed $current, string $addition): string
+    {
+        $addition = trim($addition);
+        $current = trim((string)($current ?? ''));
+        if ($current === '') {
+            return $addition;
+        }
+
+        if ($addition === '') {
+            return $current;
+        }
+
+        return trim($current . ' ' . $addition);
+    }
+
+    private function mergeStyleAttribute(mixed $current, string $addition): string
+    {
+        $addition = trim($addition);
+        $current = trim((string)($current ?? ''));
+        if ($current === '') {
+            return $addition;
+        }
+
+        if ($addition === '') {
+            return $current;
+        }
+
+        return rtrim($current, '; ') . ';' . ltrim($addition, '; ');
     }
 }

@@ -17,6 +17,7 @@ final class FormTableColumnSchema
         private readonly string $modelPath = '',
         private string $label = '',
         private readonly array $columnAttributes = [],
+        private readonly bool $readonly = false,
         array $children = [],
     ) {
         $this->children = array_values($children);
@@ -26,7 +27,8 @@ final class FormTableColumnSchema
         Field $field,
         string $path,
         string $modelPath = '',
-        ?string $label = null
+        ?string $label = null,
+        bool $readonly = false
     ): self {
         return new self(
             node: $field,
@@ -34,6 +36,7 @@ final class FormTableColumnSchema
             modelPath: $modelPath,
             label: $label ?? $field->label(),
             columnAttributes: $field->getFormTableColumnAttributes(),
+            readonly: $readonly,
         );
     }
 
@@ -41,7 +44,8 @@ final class FormTableColumnSchema
         CustomNode $customNode,
         string $path = '',
         string $modelPath = '',
-        ?string $label = null
+        ?string $label = null,
+        bool $readonly = false
     ): self {
         return new self(
             node: $customNode,
@@ -49,6 +53,7 @@ final class FormTableColumnSchema
             modelPath: $modelPath,
             label: $label ?? '',
             columnAttributes: $customNode->getFormTableColumnAttributes(),
+            readonly: $readonly,
         );
     }
 
@@ -56,7 +61,8 @@ final class FormTableColumnSchema
         FormArrayGroup $group,
         string $path,
         string $modelPath = '',
-        ?string $label = null
+        ?string $label = null,
+        bool $readonly = false
     ): self {
         return new self(
             node: $group,
@@ -64,6 +70,7 @@ final class FormTableColumnSchema
             modelPath: $modelPath,
             label: $label ?? $group->name(),
             columnAttributes: $group->getFormTableColumnAttributes(),
+            readonly: $readonly,
         );
     }
 
@@ -76,6 +83,7 @@ final class FormTableColumnSchema
             node: null,
             label: $label,
             columnAttributes: [],
+            readonly: false,
             children: $children,
         );
     }
@@ -120,6 +128,7 @@ final class FormTableColumnSchema
             modelPath: $this->modelPath,
             label: $label,
             columnAttributes: $this->columnAttributes,
+            readonly: $this->readonly,
             children: $this->children,
         );
     }
@@ -135,6 +144,7 @@ final class FormTableColumnSchema
             modelPath: $this->modelPath,
             label: $this->label,
             columnAttributes: $this->columnAttributes,
+            readonly: $this->readonly,
             children: $children,
         );
     }
@@ -177,5 +187,10 @@ final class FormTableColumnSchema
     public function columnAttributes(): array
     {
         return $this->columnAttributes;
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
     }
 }

@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
@@ -14,6 +15,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
 {
     use HasSpan;
     use HasFormNodeChildren;
+    use HasReadonly;
 
     public function __construct(
         private readonly string $name
@@ -67,6 +69,8 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context->nestedObject($this->name());
+        return $context
+            ->nestedObject($this->name())
+            ->mergeReadonly($this->isReadonly());
     }
 }

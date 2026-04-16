@@ -37,6 +37,27 @@ final class FormNodeRenderContext
         );
     }
 
+    public function withFormReadonly(bool $formReadonly): self
+    {
+        return new self(
+            modelName: $this->modelName,
+            inline: $this->inline,
+            formReadonly: $formReadonly,
+            options: $this->options,
+            renderContext: $this->renderContext,
+            pathPrefix: $this->pathPrefix,
+            arrayPath: $this->arrayPath,
+            arrayPathExpression: $this->arrayPathExpression,
+            rowIndexExpression: $this->rowIndexExpression,
+            arrayDepth: $this->arrayDepth,
+        );
+    }
+
+    public function mergeReadonly(bool $readonly = true): self
+    {
+        return $this->withFormReadonly($this->formReadonly || $readonly);
+    }
+
     public function nested(string $modelName, string $pathPrefix, ?bool $inline = null): self
     {
         return new self(

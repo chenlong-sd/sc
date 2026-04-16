@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
@@ -15,6 +16,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
     use HasRenderAttributes;
     use HasSpan;
     use HasFormNodeChildren;
+    use HasReadonly;
     private bool $accordion = false;
 
     public function __construct()
@@ -74,7 +76,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context;
+        return $context->mergeReadonly($this->isReadonly());
     }
 
     public function isAccordion(): bool

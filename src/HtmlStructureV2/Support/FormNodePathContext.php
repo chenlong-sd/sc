@@ -11,6 +11,7 @@ final class FormNodePathContext
         private readonly string $fieldPrefix = '',
         private readonly string $modelPrefix = '',
         private readonly array $labelSegments = [],
+        private readonly bool $readonly = false,
     ) {
     }
 
@@ -29,6 +30,11 @@ final class FormNodePathContext
         return $this->modelPrefix;
     }
 
+    public function isReadonly(): bool
+    {
+        return $this->readonly;
+    }
+
     public function fieldPath(string $name): string
     {
         return FormPath::resolve($this->fieldPrefix, $name);
@@ -42,6 +48,7 @@ final class FormNodePathContext
             fieldPrefix: $prefix,
             modelPrefix: $prefix,
             labelSegments: $this->labelSegments,
+            readonly: $this->readonly,
         );
     }
 
@@ -59,6 +66,17 @@ final class FormNodePathContext
             fieldPrefix: $this->fieldPrefix,
             modelPrefix: $this->modelPrefix,
             labelSegments: $segments,
+            readonly: $this->readonly,
+        );
+    }
+
+    public function mergeReadonly(bool $readonly = true): self
+    {
+        return new self(
+            fieldPrefix: $this->fieldPrefix,
+            modelPrefix: $this->modelPrefix,
+            labelSegments: $this->labelSegments,
+            readonly: $this->readonly || $readonly,
         );
     }
 

@@ -36,6 +36,7 @@ final class FormTableColumnWalker
                             path: $context->fieldPath($node->name()),
                             modelPath: $context->modelPrefix(),
                             label: $node->label(),
+                            readonly: $context->isReadonly(),
                         )
                     );
 
@@ -51,6 +52,7 @@ final class FormTableColumnWalker
                             path: '',
                             modelPath: $context->modelPrefix(),
                             label: $node->getColumnLabel() ?? '',
+                            readonly: $context->isReadonly(),
                         )
                     );
 
@@ -67,6 +69,7 @@ final class FormTableColumnWalker
                             path: $context->fieldPath($node->name()),
                             modelPath: $context->modelPrefix(),
                             label: $label,
+                            readonly: $context->isReadonly(),
                         )
                     );
                 }
