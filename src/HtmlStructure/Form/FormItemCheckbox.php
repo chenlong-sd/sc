@@ -55,14 +55,13 @@ class FormItemCheckbox extends AbstractFormItem implements FormItemInterface
     }
 
 
-
     /**
      * 一行一个options
-     * @return void
+     * @return FormItemCheckbox
      */
-    public function oneLineOneOption(): void
+    public function oneLineOneOption(): static
     {
-        $this->setOptionsAttrs(['style' => "display: flex; align-items: center;"])
+        return $this->setOptionsAttrs(['style' => "display: flex; align-items: center;"])
             ->setVAttrs(['style' => 'display: flex; flex-direction: column;align-items: flex-start;']);
     }
 }
