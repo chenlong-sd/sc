@@ -118,6 +118,11 @@ body {
   flex-wrap: wrap;
 }
 
+.sc-v2-toolbar__tools {
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
 .sc-v2-actions > .el-button + .el-button,
 .sc-v2-toolbar__actions > .el-button + .el-button,
 .sc-v2-toolbar__tools > .el-button + .el-button,
@@ -438,16 +443,25 @@ body {
 }
 
 .sc-v2-row-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  align-content: flex-start;
+  justify-content: flex-start;
+  font-size: inherit;
   gap: 4px 8px;
   flex-wrap: wrap;
   min-height: 32px;
+  max-width: 100%;
+  text-align: left;
 }
 
 .sc-v2-row-actions .el-button {
-  font-size: 13px;
+  font-size: inherit;
+}
+
+.sc-v2-row-actions > .el-button + .el-button,
+.sc-v2-row-actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .sc-v2-table-drag-handle,

@@ -129,8 +129,72 @@
               .replace(/&nbsp;/gi, ' ')
               .replace(/\r/g, '');
           };
-          const evaluateExportExpression = (expression, row = {}) => {
-            const source = typeof expression === 'string' ? expression.trim() : '';
+          const normalizeExportExpressionSource = (expression) => {
+            return (typeof expression === 'string' ? expression : '')
+              .replace(/scope\.row/g, 'row')
+              .replace(/(^|[^A-Za-z0-9_$])@([A-Za-z_][A-Za-z0-9_$]*)/g, '$1$2');
+          };
+          const normalizeExportTextOutput = (value) => {
+            if (value === null || value === undefined || value === '') {
+              return '';
+            }
+
+            return String(value)
+              .replace(/\u00a0/g, ' ')
+              .replace(/\r/g, '')
+              .replace(/[ \t]+\n/g, '\n')
+              .replace(/\n[ \t]+/g, '\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .trim();
+          };
+          const parseExportLoopExpression = (expression) => {
+            const source = normalizeExportExpressionSource(expression).trim();
+            if (source === '') {
+              return null;
+            }
+
+            const match = source.match(/^(?:\(\s*([^,\s]+)\s*(?:,\s*([^,\s]+)\s*)?\)|([^\s]+))\s+(?:in|of)\s+([\s\S]+)$/);
+            if (!match) {
+              return null;
+            }
+
+            const itemAlias = String(match[1] || match[3] || 'item').trim();
+            const indexAlias = String(match[2] || '').trim() || null;
+            const listExpression = String(match[4] || '').trim();
+
+            if (itemAlias === '' || listExpression === '') {
+              return null;
+            }
+
+            return {
+              itemAlias,
+              indexAlias,
+              listExpression,
+            };
+          };
+          const normalizeExportLoopItems = (value) => {
+            if (Array.isArray(value)) {
+              return value.map((item, index) => ({ item, index }));
+            }
+
+            if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+              return Array.from({ length: Math.floor(value) }, (_, index) => ({
+                item: index + 1,
+                index,
+              }));
+            }
+
+            if (isObject(value)) {
+              return Object.keys(value).map((key) => ({
+                item: value[key],
+                index: key,
+              }));
+            }
+
+            return [];
+          };
+          const evaluateExportExpression = (expression, row = {}, locals = {}) => {
+            const source = normalizeExportExpressionSource(expression).trim();
             if (source === '') {
               return '';
             }
@@ -139,6 +203,7 @@
               const executor = new Function(
                 'row',
                 'scope',
+                'locals',
                 'helpers',
                 `
                   const window = undefined;
@@ -146,24 +211,176 @@
                   const vm = undefined;
                   with (helpers || {}) {
                     with (row || {}) {
-                      return (${source});
+                      with (locals || {}) {
+                        return (${source});
+                      }
                     }
                   }
                 `
               );
 
-              return executor(row || {}, { row: row || {} }, { getByPath });
+              return executor(row || {}, { row: row || {} }, locals || {}, { getByPath });
             } catch (error) {
               return '';
             }
           };
-          const renderExportTemplate = (template, row = {}) => {
+          const renderExportTextTemplate = (template, row = {}, locals = {}) => {
+            const rawTemplate = typeof template === 'string' ? template : '';
+            if (rawTemplate.trim() === '') {
+              return rawTemplate;
+            }
+
+            const normalizedTemplate = normalizeExportExpressionSource(rawTemplate);
+            const matcher = /{{([\s\S]+?)}}/g;
+            let cursor = 0;
+            let output = '';
+            let matched = false;
+            let match = null;
+
+            while ((match = matcher.exec(normalizedTemplate)) !== null) {
+              matched = true;
+              output += normalizedTemplate.slice(cursor, match.index);
+              output += stringifyExportValue(evaluateExportExpression(match[1], row, locals));
+              cursor = match.index + match[0].length;
+            }
+
+            output += normalizedTemplate.slice(cursor);
+
+            return matched ? output : normalizedTemplate;
+          };
+          const renderExportTemplateWithDom = (template, row = {}) => {
+            if (typeof DOMParser !== 'function') {
+              return null;
+            }
+
             const rawTemplate = typeof template === 'string' ? template : '';
             if (rawTemplate.trim() === '') {
               return '';
             }
 
-            const normalizedTemplate = rawTemplate.replace(/scope\.row/g, 'row');
+            const parser = new DOMParser();
+
+            try {
+              const doc = parser.parseFromString(
+                `<sc-v2-export-root>${rawTemplate}</sc-v2-export-root>`,
+                'text/html'
+              );
+              const root = doc.body && doc.body.firstElementChild;
+              if (!root) {
+                return null;
+              }
+
+              const blockTags = new Set(['div', 'p', 'li', 'tr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+              const renderNodeList = (nodes, locals = {}) => Array.from(nodes || [])
+                .map((node) => renderExportNode(node, locals))
+                .join('');
+              const renderElementContent = (element, locals = {}) => {
+                const tagName = String(element.tagName || '').toLowerCase();
+                if (tagName === 'br') {
+                  return '\n';
+                }
+
+                if (tagName === 'template' && element.content) {
+                  return renderNodeList(element.content.childNodes, locals);
+                }
+
+                const output = renderNodeList(element.childNodes, locals);
+                if (output === '') {
+                  return '';
+                }
+
+                if (blockTags.has(tagName) && !output.endsWith('\n')) {
+                  return `${output}\n`;
+                }
+
+                return output;
+              };
+              const renderLoopElement = (element, locals = {}) => {
+                const loop = parseExportLoopExpression(element.getAttribute('v-for') || '');
+                if (!loop) {
+                  return '';
+                }
+
+                const ifExpression = element.getAttribute('v-if');
+
+                const items = normalizeExportLoopItems(
+                  evaluateExportExpression(loop.listExpression, row, locals)
+                );
+
+                const chunks = items.map(({ item, index }) => {
+                  const loopLocals = Object.assign({}, locals, {
+                    [loop.itemAlias]: item,
+                  });
+                  if (loop.indexAlias) {
+                    loopLocals[loop.indexAlias] = index;
+                  }
+
+                  if (typeof ifExpression === 'string' && ifExpression.trim() !== '') {
+                    if (!evaluateExportExpression(ifExpression, row, loopLocals)) {
+                      return '';
+                    }
+                  }
+
+                  return renderElementContent(element, loopLocals);
+                }).filter((chunk) => chunk !== '');
+
+                return chunks.reduce((output, chunk, index) => {
+                  if (index === 0) {
+                    return chunk;
+                  }
+
+                  const separator = output.endsWith('\n') || chunk.startsWith('\n')
+                    ? ''
+                    : '\n';
+
+                  return output + separator + chunk;
+                }, '');
+              };
+              const renderExportNode = (node, locals = {}) => {
+                if (!node) {
+                  return '';
+                }
+
+                if (node.nodeType === 3) {
+                  return renderExportTextTemplate(node.textContent || '', row, locals);
+                }
+
+                if (node.nodeType !== 1) {
+                  return '';
+                }
+
+                const element = node;
+                if (element.hasAttribute('v-for')) {
+                  return renderLoopElement(element, locals);
+                }
+
+                const ifExpression = element.getAttribute('v-if');
+                if (typeof ifExpression === 'string' && ifExpression.trim() !== '') {
+                  if (!evaluateExportExpression(ifExpression, row, locals)) {
+                    return '';
+                  }
+                }
+
+                return renderElementContent(element, locals);
+              };
+
+              return normalizeExportTextOutput(renderNodeList(root.childNodes));
+            } catch (error) {
+              return null;
+            }
+          };
+          const renderExportTemplate = (template, row = {}) => {
+            const domRendered = renderExportTemplateWithDom(template, row);
+            if (domRendered !== null) {
+              return domRendered;
+            }
+
+            const rawTemplate = typeof template === 'string' ? template : '';
+            if (rawTemplate.trim() === '') {
+              return '';
+            }
+
+            const normalizedTemplate = normalizeExportExpressionSource(rawTemplate);
             const matcher = /{{([\s\S]+?)}}/g;
             let cursor = 0;
             let output = '';
@@ -179,7 +396,9 @@
 
             output += stripExportHtml(normalizedTemplate.slice(cursor));
 
-            return matched ? output.trim() : stripExportHtml(normalizedTemplate).trim();
+            return normalizeExportTextOutput(
+              matched ? output : stripExportHtml(normalizedTemplate)
+            );
           };
           const resolveExportDisplayValue = (value, column = {}) => {
             const display = isObject(column?.display) ? column.display : {};

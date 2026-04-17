@@ -166,7 +166,7 @@ class FormItemTableTheme extends AbstractFormItemTheme implements FormItemTableT
 
         Html::js()->vue->addMethod('tableFormRowDel', ['scope', 'data'], Js::code(
             Js::code('let index = scope.$index'),
-            Js::code("this.{$table->getData()}.splice(index, 1)")
+            Js::code("data.splice(index, 1)")
         ));
     }
 
