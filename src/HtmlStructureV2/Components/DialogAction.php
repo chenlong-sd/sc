@@ -13,6 +13,40 @@ final class DialogAction extends Action
         parent::__construct($label, $intent);
     }
 
+    protected function hasForbiddenUrl(): bool
+    {
+        if (parent::hasForbiddenUrl()) {
+            return true;
+        }
+
+        if ($this->dialog === null) {
+            return false;
+        }
+
+        $save = $this->dialog->getSaveUrl();
+        $create = $this->dialog->getCreateUrl();
+        $update = $this->dialog->getUpdateUrl();
+        $iframe = $this->dialog->getIframeUrl();
+
+        return match ($this->intent()) {
+            ActionIntent::CREATE => $this->dialogUrlForbidden($create, $save, $iframe),
+            ActionIntent::EDIT => $this->dialogUrlForbidden($update, $save, $iframe),
+            ActionIntent::SUBMIT => $this->dialogUrlForbidden($save, $create, $update, $iframe),
+            default => $this->isForbiddenUrl($iframe),
+        };
+    }
+
+    private function dialogUrlForbidden(?string ...$urls): bool
+    {
+        foreach ($urls as $url) {
+            if ($this->isForbiddenUrl($url)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * 直接绑定一个 Dialog 对象，页面构建时会自动收集。
      *

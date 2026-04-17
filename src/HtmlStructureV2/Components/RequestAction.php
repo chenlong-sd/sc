@@ -898,6 +898,17 @@ final class RequestAction extends Action
         return $this->requestUrl;
     }
 
+    protected function hasForbiddenUrl(): bool
+    {
+        if (parent::hasForbiddenUrl()) {
+            return true;
+        }
+
+        return $this->isForbiddenUrl($this->requestUrl)
+            || $this->isForbiddenUrl($this->saveCreateUrl)
+            || $this->isForbiddenUrl($this->saveUpdateUrl);
+    }
+
     public function getRequestMethod(): string
     {
         return $this->requestMethod;

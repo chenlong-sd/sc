@@ -1,5 +1,267 @@
         globalThis.__SC_V2_RUNTIME_HELPERS__ = globalThis.__SC_V2_RUNTIME_HELPERS__ || (() => {
           const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+          const IMAGE_EXT_RE = /\.(apng|avif|bmp|gif|ico|jpe?g|png|svg|webp)(\?|#|$)/i;
+          const VIDEO_EXT_RE = /\.(mp4|webm|ogv|ogg|mov|m4v|avi|mkv|flv|wmv)(\?|#|$)/i;
+          const isImagePreviewTarget = (url, meta) => {
+            if (meta) {
+              const type = meta.raw?.type || meta.type || meta.mime || '';
+              if (typeof type === 'string' && type.startsWith('image/')) {
+                return true;
+              }
+              const kind = meta.kind || meta?.fieldConfig?.kind;
+              if (kind === 'image') {
+                return true;
+              }
+            }
+            return typeof url === 'string' && IMAGE_EXT_RE.test(url);
+          };
+          const isVideoPreviewTarget = (url, meta) => {
+            if (meta) {
+              const type = meta.raw?.type || meta.type || meta.mime || '';
+              if (typeof type === 'string' && type.startsWith('video/')) {
+                return true;
+              }
+              const kind = meta.kind || meta?.fieldConfig?.kind;
+              if (kind === 'video') {
+                return true;
+              }
+            }
+            return typeof url === 'string' && VIDEO_EXT_RE.test(url);
+          };
+          const openImagePreviewOverlay = (url) => {
+            if (typeof document === 'undefined' || !url) {
+              return;
+            }
+            const overlay = document.createElement('div');
+            overlay.className = 'sc-v2-image-preview-overlay';
+            const mask = document.createElement('div');
+            mask.className = 'sc-v2-image-preview-mask';
+            const body = document.createElement('div');
+            body.className = 'sc-v2-image-preview-body';
+            const image = document.createElement('img');
+            image.className = 'sc-v2-image-preview-image';
+            image.src = String(url);
+            image.alt = '';
+            const close = document.createElement('span');
+            close.className = 'sc-v2-image-preview-close';
+            close.textContent = '×';
+            const dispose = () => {
+              image.removeAttribute('src');
+              overlay.remove();
+              document.removeEventListener('keydown', onKey);
+            };
+            const onKey = (event) => {
+              if (event.key === 'Escape') {
+                dispose();
+              }
+            };
+            mask.addEventListener('click', dispose);
+            close.addEventListener('click', dispose);
+            body.appendChild(image);
+            body.appendChild(close);
+            overlay.appendChild(mask);
+            overlay.appendChild(body);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', onKey);
+          };
+          const openVideoPreviewOverlay = (url) => {
+            if (typeof document === 'undefined' || !url) {
+              return;
+            }
+            const overlay = document.createElement('div');
+            overlay.className = 'sc-v2-video-preview-overlay';
+            const mask = document.createElement('div');
+            mask.className = 'sc-v2-video-preview-mask';
+            const body = document.createElement('div');
+            body.className = 'sc-v2-video-preview-body';
+            const video = document.createElement('video');
+            video.className = 'sc-v2-video-preview-video';
+            video.src = String(url);
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            const close = document.createElement('span');
+            close.className = 'sc-v2-video-preview-close';
+            close.textContent = '×';
+            const dispose = () => {
+              try { video.pause(); } catch (_) {}
+              video.removeAttribute('src');
+              video.load?.();
+              overlay.remove();
+              document.removeEventListener('keydown', onKey);
+            };
+            const onKey = (event) => {
+              if (event.key === 'Escape') {
+                dispose();
+              }
+            };
+            mask.addEventListener('click', dispose);
+            close.addEventListener('click', dispose);
+            body.appendChild(video);
+            body.appendChild(close);
+            overlay.appendChild(mask);
+            overlay.appendChild(body);
+            document.body.appendChild(overlay);
+            document.addEventListener('keydown', onKey);
+          };
+          if (typeof window !== 'undefined') {
+            window.__scV2OpenImagePreview = window.__scV2OpenImagePreview || openImagePreviewOverlay;
+            window.__scV2OpenVideoPreview = window.__scV2OpenVideoPreview || openVideoPreviewOverlay;
+          }
+          const VIDEO_UPLOAD_SELECTOR = '.sc-v2-upload-kind-video .el-upload-list__item';
+          let videoUploadPreviewObserver = null;
+          let videoUploadPreviewSyncQueued = false;
+          const resolveVideoUploadItemUrl = (item) => {
+            if (!item || typeof item.querySelector !== 'function') {
+              return '';
+            }
+
+            const video = item.querySelector('.sc-v2-upload-video-thumb');
+            if (video?.getAttribute) {
+              const currentVideoUrl = String(video.getAttribute('src') || '').trim();
+              if (currentVideoUrl !== '') {
+                return currentVideoUrl;
+              }
+            }
+
+            const thumbnail = item.querySelector('.el-upload-list__item-thumbnail, img');
+            const imageUrl = String(
+              thumbnail?.getAttribute?.('src')
+                || thumbnail?.currentSrc
+                || thumbnail?.src
+                || ''
+            ).trim();
+
+            return imageUrl;
+          };
+          const syncVideoUploadPreviewItem = (item) => {
+            if (!item || typeof item.querySelector !== 'function') {
+              return;
+            }
+
+            const url = resolveVideoUploadItemUrl(item);
+            if (!isVideoPreviewTarget(url, null)) {
+              item.querySelector('.sc-v2-upload-video-thumb')?.remove?.();
+              item.classList?.remove('sc-v2-upload-video-item--ready');
+              return;
+            }
+
+            const existing = item.querySelector('.sc-v2-upload-video-thumb');
+            if (existing?.getAttribute?.('src') !== url) {
+              existing?.remove?.();
+            }
+
+            if (!item.querySelector('.sc-v2-upload-video-thumb')) {
+              const video = document.createElement('video');
+              video.className = 'sc-v2-upload-video-thumb';
+              video.src = url;
+              video.muted = true;
+              video.controls = false;
+              video.playsInline = true;
+              video.preload = 'metadata';
+              video.setAttribute('aria-label', '预览视频');
+              video.setAttribute('tabindex', '0');
+              video.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                openVideoPreviewOverlay(url);
+              });
+              video.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') {
+                  return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                openVideoPreviewOverlay(url);
+              });
+              video.addEventListener('loadedmetadata', () => {
+                try {
+                  if (video.duration > 0 && video.currentTime === 0) {
+                    video.currentTime = Math.min(0.1, Math.max(video.duration / 20, 0.01));
+                  }
+                } catch (_) {}
+              });
+              video.addEventListener('loadeddata', () => {
+                item.classList?.add('sc-v2-upload-video-item--ready');
+              });
+              video.addEventListener('error', () => {
+                item.classList?.remove('sc-v2-upload-video-item--ready');
+              });
+              item.appendChild(video);
+            }
+          };
+          const enhanceVideoUploadPreviews = (root = null) => {
+            if (typeof document === 'undefined') {
+              return;
+            }
+
+            const scope = root && typeof root.querySelectorAll === 'function'
+              ? root
+              : document;
+            scope.querySelectorAll(VIDEO_UPLOAD_SELECTOR).forEach((item) => {
+              syncVideoUploadPreviewItem(item);
+            });
+          };
+          const queueVideoUploadPreviewSync = (root = null) => {
+            if (videoUploadPreviewSyncQueued || typeof window === 'undefined') {
+              return;
+            }
+
+            videoUploadPreviewSyncQueued = true;
+            window.requestAnimationFrame(() => {
+              videoUploadPreviewSyncQueued = false;
+              enhanceVideoUploadPreviews(root);
+            });
+          };
+          const startVideoUploadPreviewObserver = () => {
+            if (typeof document === 'undefined') {
+              return;
+            }
+
+            queueVideoUploadPreviewSync(document);
+            if (videoUploadPreviewObserver !== null || typeof MutationObserver !== 'function') {
+              return;
+            }
+
+            const target = document.body || document.documentElement;
+            if (!target) {
+              return;
+            }
+
+            videoUploadPreviewObserver = new MutationObserver((mutations) => {
+              for (const mutation of mutations) {
+                if (mutation.type === 'attributes') {
+                  const node = mutation.target;
+                  if (
+                    node?.closest?.('.sc-v2-upload-kind-video')
+                    || node?.matches?.('.sc-v2-upload-kind-video')
+                  ) {
+                    queueVideoUploadPreviewSync(document);
+                    return;
+                  }
+                  continue;
+                }
+
+                for (const node of mutation.addedNodes || []) {
+                  if (
+                    node?.matches?.('.sc-v2-upload-kind-video')
+                    || node?.matches?.(VIDEO_UPLOAD_SELECTOR)
+                    || node?.querySelector?.('.sc-v2-upload-kind-video')
+                  ) {
+                    queueVideoUploadPreviewSync(document);
+                    return;
+                  }
+                }
+              }
+            });
+            videoUploadPreviewObserver.observe(target, {
+              childList: true,
+              subtree: true,
+              attributes: true,
+              attributeFilter: ['class', 'src'],
+            });
+          };
           const clone = (value) => {
             if (Array.isArray(value)) {
               return value.map((item) => clone(item));
@@ -2157,9 +2419,10 @@
             const storedFiles = normalized
               .map((file, index) => serializeUploadFile(file, index))
               .filter(Boolean);
-            const isSingleImage = (fieldCfg?.kind || 'file') === 'image' && !fieldCfg?.multiple;
+            const kind = fieldCfg?.kind || 'file';
+            const isSingleMedia = (kind === 'image' || kind === 'video') && !fieldCfg?.multiple;
 
-            setByPath(model, fieldName, isSingleImage ? (storedFiles[0]?.url ?? '') : storedFiles);
+            setByPath(model, fieldName, isSingleMedia ? (storedFiles[0]?.url ?? '') : storedFiles);
 
             return normalized;
           };
@@ -2186,8 +2449,13 @@
             clone,
             executeStructuredEvent,
             emitConfiguredEvent,
+            enhanceVideoUploadPreviews,
             ensureSuccess,
             extractFileName,
+            isImagePreviewTarget,
+            isVideoPreviewTarget,
+            openImagePreviewOverlay,
+            openVideoPreviewOverlay,
             extractLoadData,
             extractPayload,
             formatColumnDatetime,
@@ -2237,6 +2505,7 @@
             resolveUploadValue,
             setConfigState,
             setByPath,
+            startVideoUploadPreviewObserver,
             syncUploadModelValue
           };
         })();

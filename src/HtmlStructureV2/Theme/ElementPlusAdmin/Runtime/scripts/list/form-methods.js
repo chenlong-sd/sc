@@ -42,6 +42,7 @@
               handleUploadError: 'handleUploadError',
               handleUploadRemove: 'handleUploadRemove',
               handleUploadExceed: 'handleUploadExceed',
+              handleUploadProgress: 'handleUploadProgress',
               handleUploadPreview: 'handleUploadPreview'
             },
             getFormConfig: (scope) => getScopedFormConfig(scope),

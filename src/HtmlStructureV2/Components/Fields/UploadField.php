@@ -7,7 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 
-final class UploadField extends Field implements ValidatableFieldInterface
+class UploadField extends Field implements ValidatableFieldInterface
 {
     use HasValidation;
 
@@ -52,6 +52,11 @@ final class UploadField extends Field implements ValidatableFieldInterface
      */
     public function uploadMultiple(bool $multiple = true): static
     {
+        return $this->applyUploadMultiple($multiple);
+    }
+
+    private function applyUploadMultiple(bool $multiple): static
+    {
         $this->initializeUploadConfig();
         $this->upload['multiple'] = $multiple;
 
@@ -76,16 +81,37 @@ final class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::image('images', '图片', true)->asImage(true)`
+     * `Fields::images('images', '图片')->uploadUrl('/admin/upload/image')`
      */
     public function asImage(bool $multiple = false): static
     {
+        return $this->asMedia('image', 'image/*', $multiple);
+    }
+
+    /**
+     * 切换为视频上传模式，可选是否多视频。
+     * 会自动把列表样式切到 `picture-card`，默认 accept 设为 `video/*`；
+     * 单视频模式下也会自动把数量上限收敛到 1。
+     *
+     * @param bool $multiple 是否多视频，默认值为 false。
+     * @return static 当前上传字段实例。
+     *
+     * 示例：
+     * `Fields::video('intro', '介绍视频')`
+     */
+    public function asVideo(bool $multiple = false): static
+    {
+        return $this->asMedia('video', 'video/*', $multiple);
+    }
+
+    private function asMedia(string $kind, string $defaultAccept, bool $multiple): static
+    {
         $this->initializeUploadConfig();
-        $this->upload['kind'] = 'image';
+        $this->upload['kind'] = $kind;
         $this->upload['listType'] = 'picture-card';
-        $this->upload['accept'] = $this->upload['accept'] ?: 'image/*';
+        $this->upload['accept'] = $this->upload['accept'] ?: $defaultAccept;
         $this->upload['buttonText'] = '';
-        $this->uploadMultiple($multiple);
+        $this->applyUploadMultiple($multiple);
 
         if (!$multiple && ($this->upload['limit'] === null || $this->upload['limit'] < 1)) {
             $this->upload['limit'] = 1;
@@ -255,6 +281,25 @@ final class UploadField extends Field implements ValidatableFieldInterface
         return $this;
     }
 
+    /**
+     * 控制是否展示上传进度条。
+     * 参考旧版 `showProgress()` 语义；当前对普通文件和视频上传生效，图片模式会忽略。
+     *
+     * @param bool $show 是否展示进度条，默认值为 true。
+     * @return static 当前上传字段实例。
+     *
+     * 示例：
+     * `Fields::upload('file', '附件')->showProgress()`
+     * `Fields::video('intro', '介绍视频')->showProgress()`
+     */
+    public function showProgress(bool $show = true): static
+    {
+        $this->initializeUploadConfig();
+        $this->upload['showProgress'] = $show;
+
+        return $this;
+    }
+
     public function hasUpload(): bool
     {
         return $this->upload !== [];
@@ -271,10 +316,10 @@ final class UploadField extends Field implements ValidatableFieldInterface
             return $this->default;
         }
 
-        $isSingleImage = ($this->upload['kind'] ?? 'file') === 'image'
+        $isSingleMedia = in_array($this->upload['kind'] ?? 'file', ['image', 'video'], true)
             && !($this->upload['multiple'] ?? false);
 
-        return $isSingleImage ? '' : [];
+        return $isSingleMedia ? '' : [];
     }
 
     protected function validationPromptPrefix(): string
@@ -307,6 +352,7 @@ final class UploadField extends Field implements ValidatableFieldInterface
             'buttonText' => '选择文件',
             'tip' => '',
             'responsePath' => '',
+            'showProgress' => false,
         ];
     }
 }

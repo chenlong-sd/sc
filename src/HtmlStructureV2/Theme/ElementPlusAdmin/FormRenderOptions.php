@@ -29,6 +29,7 @@ final class FormRenderOptions
         public readonly string $uploadErrorMethod = 'handleUploadError',
         public readonly string $uploadRemoveMethod = 'handleUploadRemove',
         public readonly string $uploadExceedMethod = 'handleUploadExceed',
+        public readonly string $uploadProgressMethod = 'handleUploadProgress',
         public readonly string $uploadPreviewMethod = 'handleUploadPreview',
         public readonly ?string $pickerScope = null,
         public readonly string $pickerItemsMethod = 'getPickerItems',
@@ -63,6 +64,7 @@ final class FormRenderOptions
             uploadErrorMethod: self::stringOrDefault($options, 'uploadErrorMethod', 'handleUploadError'),
             uploadRemoveMethod: self::stringOrDefault($options, 'uploadRemoveMethod', 'handleUploadRemove'),
             uploadExceedMethod: self::stringOrDefault($options, 'uploadExceedMethod', 'handleUploadExceed'),
+            uploadProgressMethod: self::stringOrDefault($options, 'uploadProgressMethod', 'handleUploadProgress'),
             uploadPreviewMethod: self::stringOrDefault($options, 'uploadPreviewMethod', 'handleUploadPreview'),
             pickerScope: self::stringOrNull($options, 'pickerScope'),
             pickerItemsMethod: self::stringOrDefault($options, 'pickerItemsMethod', 'getPickerItems'),
@@ -172,9 +174,12 @@ final class FormRenderOptions
             uploadFilesState: $this->uploadFilesState,
             uploadScope: $this->uploadScope,
             uploadFileListUpdateMethod: $this->uploadFileListUpdateMethod,
+            uploadBeforeMethod: $this->uploadBeforeMethod,
             uploadSuccessMethod: $this->uploadSuccessMethod,
+            uploadErrorMethod: $this->uploadErrorMethod,
             uploadRemoveMethod: $this->uploadRemoveMethod,
             uploadExceedMethod: $this->uploadExceedMethod,
+            uploadProgressMethod: $this->uploadProgressMethod,
             uploadPreviewMethod: $this->uploadPreviewMethod,
             pickerScope: $this->pickerScope,
             pickerItemsMethod: $this->pickerItemsMethod,
@@ -361,6 +366,26 @@ final class FormRenderOptions
         return sprintf(
             "(files, uploadFiles) => %s('%s', %s, files, uploadFiles)",
             $this->uploadExceedMethod,
+            $this->uploadScope,
+            $fieldPathExpression
+        );
+    }
+
+    public function uploadProgressHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(uploadEvent, uploadFile, uploadFiles) => %s('%s', '%s', uploadEvent, uploadFile, uploadFiles)",
+            $this->uploadProgressMethod,
+            $this->uploadScope,
+            $fieldName
+        );
+    }
+
+    public function uploadProgressHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(uploadEvent, uploadFile, uploadFiles) => %s('%s', %s, uploadEvent, uploadFile, uploadFiles)",
+            $this->uploadProgressMethod,
             $this->uploadScope,
             $fieldPathExpression
         );

@@ -34,14 +34,18 @@
             initializeFormModelBySchema,
             isEventCanceled,
             isBlank,
+            isImagePreviewTarget,
             isObject,
             isSameValue,
+            isVideoPreviewTarget,
+            openImagePreviewOverlay,
             makeRequest,
             normalizeArrayGroupRow,
             normalizeDependencies,
             normalizeOption,
             normalizePickerItems,
             normalizeUploadFiles,
+            openVideoPreviewOverlay,
             pickRows,
             resolveDialogKeyFromScope,
             resolveDynamicParams,
@@ -112,6 +116,7 @@
             handleUploadError: 'handleManagedUploadError',
             handleUploadRemove: 'handleManagedUploadRemove',
             handleUploadExceed: 'handleManagedUploadExceed',
+            handleUploadProgress: 'handleManagedUploadProgress',
             handleUploadPreview: 'handleManagedUploadPreview'
           }, methodNames);
           const uploadNoticeStoreKey = '__scV2UploadNoticeStore';
@@ -154,6 +159,26 @@
               store[uid].close();
             }
             delete store[uid];
+          };
+          const dedupeUploadFiles = (files) => {
+            return (Array.isArray(files) ? files : []).filter((file, index, source) => {
+              if (!file || file.uid === undefined || file.uid === null || file.uid === '') {
+                return true;
+              }
+
+              return source.findIndex((candidate) => candidate?.uid === file.uid) === index;
+            });
+          };
+          const resolveUploadFileListSource = (currentUploadFiles, uploadFile, uploadFiles) => {
+            if (Array.isArray(uploadFiles) && uploadFiles.length > 0) {
+              return dedupeUploadFiles(uploadFiles);
+            }
+
+            return dedupeUploadFiles(
+              (Array.isArray(currentUploadFiles) ? currentUploadFiles : []).concat(
+                uploadFile ? [uploadFile] : []
+              )
+            );
           };
           const buildFormEventContext = (vm, scope, overrides = {}) => {
             const model = getFormModel(vm, scope) || {};
@@ -198,6 +223,19 @@
                 formCfg?.arrayGroups || []
               )
             };
+          };
+          const resolveUploadFileUrl = (uploadFile) => {
+            const url = uploadFile?.url
+              || uploadFile?.responseValue
+              || resolveUploadValue(uploadFile?.response || uploadFile, {});
+
+            return isBlank(url) ? '' : String(url);
+          };
+          const isUploadPreviewableFile = (uploadFile) => {
+            const url = resolveUploadFileUrl(uploadFile);
+
+            return url !== ''
+              && (isVideoPreviewTarget(url, uploadFile) || isImagePreviewTarget(url, uploadFile));
           };
           const applyResolvedFormModel = (vm, scope, formCfg, nextModel) => {
             const applyModel = () => setConfigState(vm, formCfg, 'modelVar', 'modelPath', nextModel);
@@ -1029,6 +1067,12 @@
             [names.initializePickerState](scope){
               return rebuildPickerState(this, scope);
             },
+            resolveUploadFileUrl(uploadFile){
+              return resolveUploadFileUrl(uploadFile);
+            },
+            isUploadPreviewableFile(uploadFile){
+              return isUploadPreviewableFile(uploadFile);
+            },
             [names.setUploadFileList](scope, fieldName, uploadFiles){
               const fieldCfg = resolveScopedFieldConfig(
                 this,
@@ -1039,6 +1083,7 @@
               ) || {};
               const nextFiles = normalizeUploadFiles(uploadFiles || [], fieldCfg);
               setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
+              syncUploadModelValue(this[names.getFormModel](scope), fieldName, fieldCfg, nextFiles);
 
               return nextFiles;
             },
@@ -1476,6 +1521,34 @@
               openUploadNotice(this, uploadRawFile);
               return true;
             },
+            [names.handleUploadProgress](scope, fieldName, uploadEvent, uploadFile, uploadFiles){
+              const fieldCfg = resolveScopedFieldConfig(
+                this,
+                scope,
+                fieldName,
+                getUploadsMap(scope, this) || {},
+                'rowUploads'
+              ) || {};
+              const currentUploadFiles = getByPath(this[names.getUploadFileState](scope), fieldName) || [];
+              const nextFiles = normalizeUploadFiles(
+                resolveUploadFileListSource(currentUploadFiles, uploadFile, uploadFiles).map((file) => {
+                  if (uploadFile?.uid && file?.uid === uploadFile.uid) {
+                    const percentage = Number(uploadEvent?.percent ?? uploadFile?.percentage ?? file?.percentage ?? 0);
+                    return Object.assign({}, file, {
+                      name: uploadFile.name || file.name,
+                      status: 'uploading',
+                      percentage: Number.isFinite(percentage) ? Math.round(percentage) : Math.round(file?.percentage ?? 0)
+                    });
+                  }
+
+                  return file;
+                }),
+                fieldCfg
+              );
+              setByPath(this[names.getUploadFileState](scope), fieldName, nextFiles);
+
+              return nextFiles;
+            },
             [names.handleUploadSuccess](scope, fieldName, response, uploadFile, uploadFiles){
               const fieldCfg = resolveScopedFieldConfig(
                 this,
@@ -1485,16 +1558,7 @@
                 'rowUploads'
               ) || {};
               const currentUploadFiles = getByPath(this[names.getUploadFileState](scope), fieldName) || [];
-              const sourceUploadFiles = (Array.isArray(uploadFiles) && uploadFiles.length > 0
-                ? uploadFiles
-                : currentUploadFiles.concat(uploadFile ? [uploadFile] : [])
-              ).filter((file, index, files) => {
-                if (!file || file.uid === undefined || file.uid === null || file.uid === '') {
-                  return true;
-                }
-
-                return files.findIndex((candidate) => candidate?.uid === file.uid) === index;
-              });
+              const sourceUploadFiles = resolveUploadFileListSource(currentUploadFiles, uploadFile, uploadFiles);
               closeUploadNotice(this, uploadFile);
 
               try {
@@ -1600,15 +1664,24 @@
               ElementPlus.ElMessage.error('最多只能上传 ' + limit + ' 个文件');
             },
             [names.handleUploadPreview](uploadFile){
-              const url = uploadFile?.url
-                || uploadFile?.responseValue
-                || resolveUploadValue(uploadFile?.response || uploadFile, {});
+              const url = resolveUploadFileUrl(uploadFile);
 
               if (isBlank(url)) {
                 return;
               }
 
-              window.open(String(url), '_blank');
+              const urlString = String(url);
+              if (isVideoPreviewTarget(urlString, uploadFile)) {
+                openVideoPreviewOverlay(urlString);
+                return;
+              }
+
+              if (isImagePreviewTarget(urlString, uploadFile)) {
+                openImagePreviewOverlay(urlString);
+                return;
+              }
+
+              window.open(urlString, '_blank');
             }
           };
         };

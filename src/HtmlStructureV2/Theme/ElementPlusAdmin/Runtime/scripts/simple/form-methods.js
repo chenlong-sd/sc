@@ -41,6 +41,7 @@
               handleUploadError: 'handleSimpleUploadError',
               handleUploadRemove: 'handleSimpleUploadRemove',
               handleUploadExceed: 'handleSimpleUploadExceed',
+              handleUploadProgress: 'handleSimpleUploadProgress',
               handleUploadPreview: 'handleSimpleUploadPreview'
             },
             getFormConfig: (scope) => getFormConfig(scope),

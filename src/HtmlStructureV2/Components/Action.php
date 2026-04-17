@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
+use Sc\Util\ScTool;
 
 class Action implements
     Renderable,
@@ -400,7 +401,34 @@ class Action implements
 
     public function isAvailable(): bool
     {
-        return $this->available;
+        if (!$this->available) {
+            return false;
+        }
+
+        return !$this->hasForbiddenUrl();
+    }
+
+    /**
+     * 当动作关联的 URL 被标记为 ScTool::NOT_FOUND（通常代表无权限）时，
+     * 该动作不参与渲染、目标校验、事件校验以及弹窗收集。
+     */
+    protected function hasForbiddenUrl(): bool
+    {
+        return match ($this->intent) {
+            ActionIntent::DELETE => $this->isForbiddenUrl($this->deleteUrl),
+            ActionIntent::SUBMIT, ActionIntent::CREATE, ActionIntent::EDIT => $this->isForbiddenUrl($this->saveUrl)
+                || $this->isForbiddenUrl($this->createUrl)
+                || $this->isForbiddenUrl($this->updateUrl),
+            default => $this->isForbiddenUrl($this->saveUrl)
+                || $this->isForbiddenUrl($this->createUrl)
+                || $this->isForbiddenUrl($this->updateUrl)
+                || $this->isForbiddenUrl($this->deleteUrl),
+        };
+    }
+
+    protected function isForbiddenUrl(?string $url): bool
+    {
+        return $url === ScTool::NOT_FOUND;
     }
 
     /**

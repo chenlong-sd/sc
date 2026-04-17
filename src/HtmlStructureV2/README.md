@@ -1798,9 +1798,10 @@ JS);
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
 - `Fields::cascader()` 才暴露 `cascaderProps()`、`emitPath()`、`checkStrictly()`、`closeAfterSelection()`
-- `Fields::upload()`、`Fields::image()` 才暴露上传相关方法
+- `Fields::upload()`、`Fields::image()`、`Fields::video()` 才暴露上传相关方法
 - 上传字段值约定：单图字段存字符串路径；普通文件和多图字段存 `[{ uid, url, name, status }]`
 - 上传时会默认提示“文件上传中,请稍后...”，成功/失败也会自动提示具体文件名
+- 上传字段支持 `showProgress()`；当前对普通文件和视频生效，图片模式会忽略
 - `Fields::number()` 才暴露 `minValue()`、`maxValue()`、`step()`、`precision()`
 - `Fields::date()`、`Fields::datetime()`、`Fields::daterange()` 才暴露 `format()`、`valueFormat()`
 

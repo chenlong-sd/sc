@@ -729,13 +729,20 @@ final class FieldRenderer
         }
 
         $upload = $uploadField->getUpload();
+        $kind = $upload['kind'] ?? 'file';
+        $listType = (string)($upload['listType'] ?? 'text');
+        $showProgress = ($upload['showProgress'] ?? false) && $kind !== 'image';
+        $fileListExpression = null;
+
+        $component->addClass('sc-v2-upload-field');
 
         if ($options->hasUploadContext()) {
+            $fileListExpression = $fieldPathExpression === null
+                ? $options->uploadFileListExpression($fieldPath)
+                : $options->uploadFileListExpressionByPathExpression($fieldPathExpression);
             $component->setAttr(
                 ':file-list',
-                $fieldPathExpression === null
-                    ? $options->uploadFileListExpression($fieldPath)
-                    : $options->uploadFileListExpressionByPathExpression($fieldPathExpression)
+                $fileListExpression
             );
             $component->setAttr(
                 '@update:file-list',
@@ -773,10 +780,48 @@ final class FieldRenderer
                     ? $options->uploadExceedHandler($fieldPath)
                     : $options->uploadExceedHandlerByPathExpression($fieldPathExpression)
             );
+            if ($showProgress) {
+                $component->setAttr(
+                    ':on-progress',
+                    $fieldPathExpression === null
+                        ? $options->uploadProgressHandler($fieldPath)
+                        : $options->uploadProgressHandlerByPathExpression($fieldPathExpression)
+                );
+            }
             $component->setAttr(':on-preview', $options->uploadPreviewMethod);
         }
 
-        if (($upload['kind'] ?? 'file') === 'image') {
+        if ($showProgress) {
+            $component->addClass('sc-v2-upload-show-progress');
+        }
+        if ($kind === 'file' && $listType === 'text') {
+            $component->addClass('sc-v2-upload-kind-file');
+            $deleteHandler = null;
+            if ($fileListExpression !== null) {
+                $component->addClass('sc-v2-upload-kind-file--custom-remove');
+                $updateHandler = $fieldPathExpression === null
+                    ? $options->uploadFileListUpdateHandler($fieldPath)
+                    : $options->uploadFileListUpdateHandlerByPathExpression($fieldPathExpression);
+                $deleteHandler = sprintf(
+                    "(event) => { event.preventDefault(); event.stopPropagation(); (%s)(((%s) || []).filter((item) => ((item.uid || item.url || item.name || '') !== (file.uid || file.url || file.name || '')))); }",
+                    $updateHandler,
+                    $fileListExpression
+                );
+            }
+            $component->append($this->buildUploadFileSlot($options, $showProgress, $deleteHandler));
+        }
+        if ($kind === 'image' || $kind === 'video') {
+            $isSingle = !($upload['multiple'] ?? false);
+            if ($isSingle && $fileListExpression !== null) {
+                $component->addClass('sc-v2-upload-single-media');
+                $component->setAttr(
+                    ':class',
+                    sprintf("{ 'sc-v2-upload-single-media--filled': (%s).length > 0 }", $fileListExpression)
+                );
+            }
+            if ($kind === 'video') {
+                $component->addClass('sc-v2-upload-kind-video');
+            }
             $component->append(
                 El::double('el-icon')->append(
                     El::double('Plus')
@@ -797,6 +842,72 @@ final class FieldRenderer
                 )
             );
         }
+    }
+
+    private function buildUploadFileSlot(
+        FormRenderOptions $options,
+        bool $showProgress,
+        ?string $deleteHandler = null
+    ): AbstractHtmlElement
+    {
+        $actions = El::double('div')->addClass('sc-v2-upload-file-item__actions')->append(
+            El::double('el-link')->setAttrs([
+                'v-if' => "file.status === 'success' && isUploadPreviewableFile(file)",
+                'type' => 'primary',
+                ':underline' => 'false',
+                '@click' => sprintf("(event) => { event.preventDefault(); %s(file); }", $options->uploadPreviewMethod),
+            ])->append('预览'),
+            El::double('el-link')->setAttrs([
+                'v-if' => "file.status === 'success' && resolveUploadFileUrl(file)",
+                'type' => 'primary',
+                ':underline' => 'false',
+                ':href' => 'resolveUploadFileUrl(file)',
+                ':download' => "file.name || ''",
+                'target' => '_blank',
+            ])->append('下载')
+        );
+        if ($deleteHandler !== null) {
+            $actions->append(
+                El::double('el-link')->setAttrs([
+                    'v-if' => "file.status === 'success'",
+                    'type' => 'danger',
+                    ':underline' => 'false',
+                    '@click' => $deleteHandler,
+                ])->append('删除')
+            );
+        }
+
+        $template = El::double('template')->setAttr('#file', '{ file }');
+        $item = El::double('div')->addClass('sc-v2-upload-file-item')->append(
+            El::double('div')->addClass('sc-v2-upload-file-item__main')->append(
+                El::double('div')->addClass('sc-v2-upload-file-item__name')->setAttr(':title', "file.name || ''")->append(
+                    El::double('el-icon')->addClass('sc-v2-upload-file-item__icon')->append(
+                        El::double('Document')
+                    ),
+                    El::double('span')->addClass('sc-v2-upload-file-item__name-text')->append('{{ file.name || "未命名文件" }}')
+                ),
+                $actions
+            )
+        );
+
+        if ($showProgress) {
+            $item->append(
+                El::double('div')->addClass('sc-v2-upload-file-item__progress')->setAttr('v-if', "file.status === 'uploading'")->append(
+                    El::double('div')->addClass('sc-v2-upload-file-item__progress-track')->append(
+                        El::double('div')->addClass('sc-v2-upload-file-item__progress-fill')->setAttr(
+                            ':style',
+                            "{ width: Math.max(0, Math.min(100, Number(file.percentage || 0))) + '%' }"
+                        )
+                    ),
+                    El::double('span')->addClass('sc-v2-upload-file-item__progress-text')
+                        ->append('{{ Math.round(Math.max(0, Math.min(100, Number(file.percentage || 0)))) }}%')
+                )
+            );
+        }
+
+        $template->append($item);
+
+        return $template;
     }
 
     private function wrapFieldRoot(Field $field, DoubleLabel $item, bool $inline, ?string $visibleWhen): AbstractHtmlElement

@@ -7,12 +7,14 @@ use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
 use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
 use Sc\Util\HtmlStructureV2\Components\Fields\IconField;
+use Sc\Util\HtmlStructureV2\Components\Fields\ImageField;
 use Sc\Util\HtmlStructureV2\Components\Fields\NumberField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PasswordField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\TextField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
+use Sc\Util\HtmlStructureV2\Components\Fields\VideoField;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 
 final class Fields
@@ -194,21 +196,35 @@ final class Fields
     }
 
     /**
-     * 创建图片上传字段，可通过 $multiple 控制是否多图。
-     * 内部会自动切到图片模式和 `picture-card` 列表样式。
+     * 创建图片上传字段。默认单图；调用 `multiple()` 切换到多图，多图可再 `uploadLimit()` 限制数量。
      *
      * @param string $name 字段名。
      * @param string|null $label 字段标签；传 null 时不显示标签。
-     * @param bool $multiple 是否多图，默认值为 false。
-     * @return UploadField 图片上传字段实例。
+     * @return ImageField 图片上传字段实例。
      *
      * 示例：
-     * `Fields::image('images', '图片', true)->uploadUrl('/admin/upload/image')`
+     * `Fields::image('cover', '封面图')->uploadUrl('/admin/upload/image')`
+     * `Fields::image('gallery', '相册')->multiple()->uploadLimit(9)`
      */
-    public static function image(string $name, ?string $label = null, bool $multiple = false): UploadField
+    public static function image(string $name, ?string $label = null): ImageField
     {
-        return (new UploadField($name, $label ?? ''))
-            ->asImage($multiple);
+        return new ImageField($name, $label ?? '');
+    }
+
+    /**
+     * 创建视频上传字段。默认单视频；调用 `multiple()` 切换到多视频，多视频可再 `uploadLimit()` 限制数量。
+     *
+     * @param string $name 字段名。
+     * @param string|null $label 字段标签；传 null 时不显示标签。
+     * @return VideoField 视频上传字段实例。
+     *
+     * 示例：
+     * `Fields::video('intro', '介绍视频')->uploadUrl('/admin/upload/video')`
+     * `Fields::video('clips', '视频集')->multiple()->uploadLimit(5)`
+     */
+    public static function video(string $name, ?string $label = null): VideoField
+    {
+        return new VideoField($name, $label ?? '');
     }
 
     /**

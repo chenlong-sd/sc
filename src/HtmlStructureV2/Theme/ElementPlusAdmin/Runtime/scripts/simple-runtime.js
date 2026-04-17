@@ -23,6 +23,7 @@
             resolveMessage,
             resolvePageMode,
             setConfigState,
+            startVideoUploadPreviewObserver,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
           const dialogFormScopePrefix = 'dialog:';
@@ -689,6 +690,9 @@
                 handleUploadExceed(...args){
                   return this.handleSimpleUploadExceed(...args);
                 },
+                handleUploadProgress(...args){
+                  return this.handleSimpleUploadProgress(...args);
+                },
                 handleUploadPreview(...args){
                   return this.handleSimpleUploadPreview(...args);
                 },
@@ -719,6 +723,7 @@
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
+          startVideoUploadPreviewObserver();
           hideAppLoadingShell();
           const pageApi = createPublicPageApi(vm);
           globalThis.__SC_V2_PAGE__ = pageApi;

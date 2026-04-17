@@ -21,6 +21,7 @@
             registerScV2Components,
             resolveMessage,
             resolvePageMode,
+            startVideoUploadPreviewObserver,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
           const lists = cfg.lists || {};
@@ -381,6 +382,9 @@
                 handleSimpleUploadExceed(...args){
                   return this.handleUploadExceed(...args);
                 },
+                handleSimpleUploadProgress(...args){
+                  return this.handleUploadProgress(...args);
+                },
                 handleSimpleUploadPreview(...args){
                   return this.handleUploadPreview(...args);
                 },
@@ -461,5 +465,6 @@
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           app.mount('#app');
+          startVideoUploadPreviewObserver();
           hideAppLoadingShell();
         };
