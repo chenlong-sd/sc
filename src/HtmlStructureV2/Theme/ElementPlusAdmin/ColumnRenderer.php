@@ -16,11 +16,12 @@ final class ColumnRenderer
     public function render(
         Column $column,
         ?TableRenderBindings $bindings = null,
-        bool $settingsEnabled = false
+        bool $settingsEnabled = false,
+        ?string $settingsKey = null
     ): AbstractHtmlElement
     {
         if ($column->isSelectionColumn()) {
-            return $this->renderSelectionColumn($column);
+            return $this->renderSelectionColumn($column, $bindings, $settingsEnabled, $settingsKey);
         }
 
         if ($column->isIndexColumn()) {
@@ -40,11 +41,11 @@ final class ColumnRenderer
         }
         $attrs = array_merge($attrs, $column->getAttrs());
 
-        if ($settingsEnabled && $bindings !== null && $column->supportsSettings()) {
-            $attrs['v-if'] = $bindings->columnVisibleExpression($column->prop());
-            $attrs[':width'] = $bindings->columnWidthExpression($column->prop(), $column->getWidth());
-            $attrs[':align'] = $bindings->columnAlignExpression($column->prop(), $column->getAlign());
-            $attrs[':fixed'] = $bindings->columnFixedExpression($column->prop(), $column->getFixed());
+        if ($settingsEnabled && $bindings !== null && is_string($settingsKey) && $settingsKey !== '') {
+            $attrs = $this->mergeVisibilityCondition($attrs, $bindings->columnVisibleExpression($settingsKey));
+            $attrs[':width'] = $bindings->columnWidthExpression($settingsKey, $column->getWidth());
+            $attrs[':align'] = $bindings->columnAlignExpression($settingsKey, $column->getAlign());
+            $attrs[':fixed'] = $bindings->columnFixedExpression($settingsKey, $column->getFixed());
         } else {
             if ($column->getWidth() !== null) {
                 $attrs['width'] = $column->getWidth();
@@ -81,6 +82,24 @@ final class ColumnRenderer
         $element->append($this->renderPlainColumnTemplate($column));
 
         return $this->decorateColumnElement($column, $element);
+    }
+
+    /**
+     * @param array<string, mixed> $attrs
+     * @return array<string, mixed>
+     */
+    private function mergeVisibilityCondition(array $attrs, string $condition): array
+    {
+        $current = trim((string)($attrs['v-if'] ?? ''));
+        if ($current === '') {
+            $attrs['v-if'] = $condition;
+
+            return $attrs;
+        }
+
+        $attrs['v-if'] = sprintf('(%s) && (%s)', $current, $condition);
+
+        return $attrs;
     }
 
     private function renderFormatTemplate(Column $column): AbstractHtmlElement
@@ -390,7 +409,12 @@ final class ColumnRenderer
         return sprintf('%s(%s)', $method, implode(', ', $arguments));
     }
 
-    private function renderSelectionColumn(Column $column): AbstractHtmlElement
+    private function renderSelectionColumn(
+        Column $column,
+        ?TableRenderBindings $bindings = null,
+        bool $settingsEnabled = false,
+        ?string $settingsKey = null
+    ): AbstractHtmlElement
     {
         $attrs = array_merge([
             'type' => 'selection',
@@ -398,7 +422,13 @@ final class ColumnRenderer
             'align' => $column->getAlign() ?? 'center',
         ], $column->getAttrs());
 
-        if ($column->getFixed()) {
+        if ($settingsEnabled && $bindings !== null && is_string($settingsKey) && $settingsKey !== '') {
+            $attrs = $this->mergeVisibilityCondition($attrs, $bindings->columnVisibleExpression($settingsKey));
+            unset($attrs['width'], $attrs['align'], $attrs['fixed']);
+            $attrs[':width'] = $bindings->columnWidthExpression($settingsKey, $column->getWidth() ?? 48);
+            $attrs[':align'] = $bindings->columnAlignExpression($settingsKey, $column->getAlign() ?? 'center');
+            $attrs[':fixed'] = $bindings->columnFixedExpression($settingsKey, $column->getFixed());
+        } elseif ($column->getFixed()) {
             $attrs['fixed'] = $column->getFixed();
         }
 

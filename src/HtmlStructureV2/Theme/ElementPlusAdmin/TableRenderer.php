@@ -7,6 +7,7 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Action;
+use Sc\Util\HtmlStructureV2\Components\Column;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
@@ -227,7 +228,7 @@ final class TableRenderer
             $this->filterRenderableTableRootAttributes($table->getRenderAttributes())
         );
 
-        if ($table->hasSelection() && !$table->hasExplicitSelectionColumn()) {
+        if (!$table->useSettings() && $table->hasSelection() && !$table->hasExplicitSelectionColumn()) {
             $selectionColumn = El::double('el-table-column')->setAttrs([
                 'type' => 'selection',
                 'width' => '48',
@@ -246,36 +247,59 @@ final class TableRenderer
         ));
 
         if ($table->useSettings()) {
-            $firstSettingsColumnIndex = null;
-            $orderedColumns = [];
+            $settingsEntriesByColumnId = [];
+            $leadingSettingsEntries = [];
+            $rowActionSettingsEntry = null;
 
-            foreach ($renderableColumns as $index => $column) {
-                if ($column->supportsSettings()) {
-                    $firstSettingsColumnIndex ??= $index;
-                    $orderedColumns[] = $column;
+            foreach ($table->getSettingsColumnDefinitions() as $settingsEntry) {
+                $settingsColumn = $settingsEntry['column'] ?? null;
+                if ($settingsColumn instanceof Column) {
+                    $settingsEntriesByColumnId[spl_object_id($settingsColumn)] = $settingsEntry;
                     continue;
                 }
 
-                if ($firstSettingsColumnIndex !== null && $index === $firstSettingsColumnIndex + count($orderedColumns)) {
-                    $element->append($this->renderOrderedSettingsColumns($orderedColumns, $bindings));
-                    $firstSettingsColumnIndex = null;
-                    $orderedColumns = [];
+                if (($settingsEntry['kind'] ?? null) === 'selection') {
+                    $leadingSettingsEntries[] = $settingsEntry;
+                    continue;
+                }
+
+                if (($settingsEntry['kind'] ?? null) === 'row_actions') {
+                    $rowActionSettingsEntry = $settingsEntry;
+                }
+            }
+
+            $orderedEntries = $leadingSettingsEntries;
+
+            foreach ($renderableColumns as $column) {
+                $settingsEntry = $settingsEntriesByColumnId[spl_object_id($column)] ?? null;
+                if ($settingsEntry !== null) {
+                    $orderedEntries[] = $settingsEntry;
+                    continue;
+                }
+
+                if ($orderedEntries !== []) {
+                    $element->append($this->renderOrderedSettingsColumns($table, $orderedEntries, $bindings, $renderContext));
+                    $orderedEntries = [];
                 }
 
                 $element->append($this->columnRenderer->render($column, $bindings, true));
             }
 
-            if ($orderedColumns !== []) {
-                $element->append($this->renderOrderedSettingsColumns($orderedColumns, $bindings));
+            if ($rowActionSettingsEntry !== null) {
+                $orderedEntries[] = $rowActionSettingsEntry;
+            }
+
+            if ($orderedEntries !== []) {
+                $element->append($this->renderOrderedSettingsColumns($table, $orderedEntries, $bindings, $renderContext));
             }
         } else {
             foreach ($renderableColumns as $column) {
                 $element->append($this->columnRenderer->render($column, $bindings, false));
             }
-        }
 
-        if ($table->getRowActions() || $table->useDragSort()) {
-            $element->append($this->renderRowActionColumn($table, $bindings, $renderContext));
+            if ($table->hasManagedRowActionColumn()) {
+                $element->append($this->renderRowActionColumn($table, $bindings, $renderContext));
+            }
         }
 
         return $element;
@@ -391,21 +415,34 @@ final class TableRenderer
     private function renderRowActionColumn(
         Table $table,
         TableRenderBindings $bindings,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        ?string $settingsKey = null,
+        bool $settingsEnabled = false
     ): AbstractHtmlElement
     {
-        $actionColumn = El::double('el-table-column')->setAttrs([
+        $defaultWidth = $this->resolveRowActionColumnWidth($table);
+        $attrs = [
             'label' => '操作',
-            'fixed' => 'right',
-            'align' => 'center',
-            'width' => $table->getRowActionColumnWidth() ?? max(
-                120,
-                (count($table->getRowActions()) + ($table->useDragSort() ? 1 : 0)) * 76
-            ),
-        ]);
+        ];
+
+        if ($settingsEnabled && is_string($settingsKey) && $settingsKey !== '') {
+            $attrs[':width'] = $bindings->columnWidthExpression($settingsKey, $defaultWidth);
+            $attrs[':align'] = $bindings->columnAlignExpression($settingsKey, 'center');
+            $attrs[':fixed'] = $bindings->columnFixedExpression($settingsKey, 'right');
+        } else {
+            $attrs['fixed'] = 'right';
+            $attrs['align'] = 'center';
+            $attrs['width'] = $defaultWidth;
+        }
+
+        $actionColumn = El::double('el-table-column')->setAttrs($attrs);
+
+        if ($settingsEnabled && is_string($settingsKey) && $settingsKey !== '') {
+            $this->appendVisibilityCondition($actionColumn, $bindings->columnVisibleExpression($settingsKey));
+        }
 
         if ($table->useTrash()) {
-            $actionColumn->setAttr('v-if', sprintf('!%s', $bindings->trashModeExpression()));
+            $this->appendVisibilityCondition($actionColumn, sprintf('!%s', $bindings->trashModeExpression()));
         }
 
         $template = El::double('template')->setAttr('#default', 'scope');
@@ -420,6 +457,14 @@ final class TableRenderer
         $actionColumn->append($template);
 
         return $actionColumn;
+    }
+
+    private function resolveRowActionColumnWidth(Table $table): int
+    {
+        return $table->getRowActionColumnWidth() ?? max(
+            120,
+            (count($table->getRowActions()) + ($table->useDragSort() ? 1 : 0)) * 76
+        );
     }
 
     private function renderDragSortHandle(Table $table): AbstractHtmlElement
@@ -687,11 +732,11 @@ final class TableRenderer
                     El::double('el-option')->setAttrs([
                         'label' => '左侧',
                         'value' => 'left',
-                    ]),
+                    ])->append('左侧'),
                     El::double('el-option')->setAttrs([
                         'label' => '右侧',
                         'value' => 'right',
-                    ])
+                    ])->append('右侧')
                 )
             );
     }
@@ -711,23 +756,28 @@ final class TableRenderer
                     El::double('el-option')->setAttrs([
                         'label' => '左对齐',
                         'value' => 'left',
-                    ]),
+                    ])->append('左对齐'),
                     El::double('el-option')->setAttrs([
                         'label' => '居中对齐',
                         'value' => 'center',
-                    ]),
+                    ])->append('居中对齐'),
                     El::double('el-option')->setAttrs([
                         'label' => '右对齐',
                         'value' => 'right',
-                    ])
+                    ])->append('右对齐')
                 )
             );
     }
 
     /**
-     * @param array<int, \Sc\Util\HtmlStructureV2\Components\Column> $columns
+     * @param array<int, array<string, mixed>> $columns
      */
-    private function renderOrderedSettingsColumns(array $columns, TableRenderBindings $bindings): AbstractHtmlElement
+    private function renderOrderedSettingsColumns(
+        Table $table,
+        array $columns,
+        TableRenderBindings $bindings,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $wrapper = El::double('template')->setAttrs([
             'v-for' => sprintf('(renderColumnKey, renderColumnIndex) in %s', $bindings->renderColumnKeysExpression()),
@@ -736,16 +786,54 @@ final class TableRenderer
 
         foreach ($columns as $index => $column) {
             $branchDirective = $index === 0 ? 'v-if' : 'v-else-if';
+            $columnKey = (string)($column['key'] ?? '');
+            $definitionColumn = $column['column'] ?? null;
             $wrapper->append(
                 El::double('template')->setAttr(
                     $branchDirective,
-                    sprintf('renderColumnKey === %s', $this->jsValue($column->prop()))
+                    sprintf('renderColumnKey === %s', $this->jsValue($columnKey))
                 )->append(
-                    $this->columnRenderer->render($column, $bindings, true)
+                    $definitionColumn instanceof Column
+                        ? $this->columnRenderer->render($definitionColumn, $bindings, true, $columnKey)
+                        : $this->renderSyntheticSettingsColumn(
+                            $table,
+                            (string)($column['kind'] ?? ''),
+                            $bindings,
+                            $renderContext,
+                            $columnKey
+                        )
                 )
             );
         }
 
         return $wrapper;
+    }
+
+    private function renderSyntheticSettingsColumn(
+        Table $table,
+        string $kind,
+        TableRenderBindings $bindings,
+        ?RenderContext $renderContext,
+        string $columnKey
+    ): AbstractHtmlElement {
+        return match ($kind) {
+            'selection' => $this->columnRenderer->render(
+                $this->buildAutoSelectionColumn($table),
+                $bindings,
+                true,
+                $columnKey
+            ),
+            default => $this->renderRowActionColumn($table, $bindings, $renderContext, $columnKey, true),
+        };
+    }
+
+    private function buildAutoSelectionColumn(Table $table): Column
+    {
+        $column = Column::selection();
+        if ($table->getSelectionFixed() !== null) {
+            $column->fixed($table->getSelectionFixed());
+        }
+
+        return $column;
     }
 }

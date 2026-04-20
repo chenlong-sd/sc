@@ -82,26 +82,22 @@ final class TableRuntimeConfigBuilder
 
     private function buildSettingsColumns(Table $table): array
     {
-        $columns = [];
-
-        foreach ($table->columns() as $column) {
-            if (!$column->supportsSettings()) {
-                continue;
-            }
-
-            $columns[] = [
-                'key' => $column->prop(),
-                'label' => $column->label() !== '' ? $column->label() : $column->prop(),
-                'show' => true,
-                'width' => $column->getWidth(),
-                'fixed' => $column->getFixed(),
-                'align' => $column->getAlign(),
-                'export' => ($column->getExportExcel()['allow'] ?? true) === true,
-                'exportSort' => $column->getExportExcel()['sort'] ?? null,
-            ];
-        }
-
-        return $columns;
+        return array_map(
+            static function (array $definition): array {
+                return [
+                    'key' => $definition['key'] ?? '',
+                    'label' => $definition['label'] ?? '',
+                    'show' => $definition['show'] ?? true,
+                    'width' => $definition['width'] ?? null,
+                    'fixed' => $definition['fixed'] ?? null,
+                    'align' => $definition['align'] ?? null,
+                    'export' => $definition['export'] ?? true,
+                    'exportSort' => $definition['exportSort'] ?? null,
+                    'allowExportControl' => $definition['allowExportControl'] ?? true,
+                ];
+            },
+            $table->getSettingsColumnDefinitions()
+        );
     }
 
     private function buildExportColumns(Table $table): array

@@ -43,6 +43,9 @@ final class Table implements Renderable, EventAware
     private const DEFAULT_TRASH_DIALOG_HEIGHT = '90vh';
     private const DEFAULT_TRASH_QUERY_KEY = 'is_delete';
     private const DEFAULT_TRASH_QUERY_VALUE = 1;
+    private const SETTINGS_SELECTION_COLUMN_KEY = '__sc_v2_selection__';
+    private const SETTINGS_ROW_ACTION_COLUMN_KEY = '__sc_v2_row_actions__';
+    private const SETTINGS_EVENT_COLUMN_KEY_PREFIX = '__sc_v2_event__';
 
     private array $columns = [];
     private array $toolbarLeftActions = [];
@@ -995,6 +998,94 @@ final class Table implements Renderable, EventAware
         return $this->filterAvailableActions($this->rowActions);
     }
 
+    public function hasManagedRowActionColumn(): bool
+    {
+        return $this->getRowActions() !== [] || $this->useDragSort();
+    }
+
+    /**
+     * 返回参与“列设置”的列定义。
+     * 普通数据列沿用 prop 作为 key，事件列和自动补齐的行操作列会分配保留 key。
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getSettingsColumnDefinitions(): array
+    {
+        $definitions = [];
+        $eventKeyCounters = [];
+        $selectionKeyCounter = 0;
+
+        if ($this->selection && !$this->hasExplicitSelectionColumn()) {
+            $definitions[] = [
+                'key' => self::SETTINGS_SELECTION_COLUMN_KEY,
+                'label' => '选择',
+                'show' => true,
+                'width' => 48,
+                'fixed' => $this->selectionFixed,
+                'align' => 'center',
+                'export' => false,
+                'exportSort' => null,
+                'allowExportControl' => false,
+                'kind' => 'selection',
+                'column' => null,
+            ];
+        }
+
+        foreach ($this->columns as $column) {
+            if (!$column->isRenderable()) {
+                continue;
+            }
+
+            if ($column->isSelectionColumn()) {
+                $definitions[] = [
+                    'key' => $this->buildSelectionSettingsColumnKey($selectionKeyCounter),
+                    'label' => '选择',
+                    'show' => true,
+                    'width' => $column->getWidth() ?? 48,
+                    'fixed' => $column->getFixed(),
+                    'align' => $column->getAlign() ?? 'center',
+                    'export' => false,
+                    'exportSort' => null,
+                    'allowExportControl' => false,
+                    'kind' => 'selection',
+                    'column' => $column,
+                ];
+                continue;
+            }
+
+            if ($column->supportsSettings()) {
+                $definitions[] = $this->buildSettingsColumnDefinition($column, $column->prop());
+                continue;
+            }
+
+            if ($column->isEventColumn()) {
+                $definitions[] = $this->buildSettingsColumnDefinition(
+                    $column,
+                    $this->buildEventSettingsColumnKey($column, $eventKeyCounters),
+                    false
+                );
+            }
+        }
+
+        if ($this->hasManagedRowActionColumn()) {
+            $definitions[] = [
+                'key' => self::SETTINGS_ROW_ACTION_COLUMN_KEY,
+                'label' => '操作',
+                'show' => true,
+                'width' => $this->rowActionColumnWidth,
+                'fixed' => 'right',
+                'align' => 'center',
+                'export' => false,
+                'exportSort' => null,
+                'allowExportControl' => false,
+                'kind' => 'row_actions',
+                'column' => null,
+            ];
+        }
+
+        return $definitions;
+    }
+
     public function getDataSource(): ?DataSourceInterface
     {
         return $this->dataSource;
@@ -1231,6 +1322,62 @@ final class Table implements Renderable, EventAware
         }
 
         return false;
+    }
+
+    private function buildSettingsColumnDefinition(
+        Column $column,
+        string $key,
+        bool $allowExportControl = true
+    ): array {
+        return [
+            'key' => $key,
+            'label' => $column->label() !== '' ? $column->label() : $key,
+            'show' => true,
+            'width' => $column->getWidth(),
+            'fixed' => $column->getFixed(),
+            'align' => $column->getAlign(),
+            'export' => $allowExportControl && ($column->getExportExcel()['allow'] ?? true) === true,
+            'exportSort' => $allowExportControl ? ($column->getExportExcel()['sort'] ?? null) : null,
+            'allowExportControl' => $allowExportControl,
+            'kind' => $column->isEventColumn() ? 'event' : 'column',
+            'column' => $column,
+        ];
+    }
+
+    private function buildEventSettingsColumnKey(Column $column, array &$eventKeyCounters): string
+    {
+        if ($column->prop() !== '') {
+            return $column->prop();
+        }
+
+        $base = $this->normalizeSettingsColumnKeySegment($column->label());
+        $eventKeyCounters[$base] = ($eventKeyCounters[$base] ?? 0) + 1;
+
+        return sprintf(
+            '%s_%s_%d',
+            self::SETTINGS_EVENT_COLUMN_KEY_PREFIX,
+            $base,
+            $eventKeyCounters[$base]
+        );
+    }
+
+    private function buildSelectionSettingsColumnKey(int &$selectionKeyCounter): string
+    {
+        $selectionKeyCounter++;
+
+        if ($selectionKeyCounter === 1) {
+            return self::SETTINGS_SELECTION_COLUMN_KEY;
+        }
+
+        return self::SETTINGS_SELECTION_COLUMN_KEY . '_' . $selectionKeyCounter;
+    }
+
+    private function normalizeSettingsColumnKeySegment(string $value): string
+    {
+        $normalized = preg_replace('/[^A-Za-z0-9_]+/u', '_', trim($value)) ?? '';
+        $normalized = trim($normalized, '_');
+
+        return $normalized !== '' ? $normalized : 'actions';
     }
 
     private function normalizeRemoteDataHandleExpression(string|\Stringable|JsExpression $handler): JsExpression

@@ -855,13 +855,16 @@
             const key = typeof fallback.key === 'string' && fallback.key !== ''
               ? fallback.key
               : (typeof source.key === 'string' ? source.key : '');
+            const allowExportControl = source.allowExportControl === false
+              ? false
+              : (fallback.allowExportControl !== false);
             const fallbackExport = fallback.export !== false;
             const hasSourceExport = typeof source.export === 'boolean';
-            const exportEnabled = hasSourceExport
+            const exportEnabled = allowExportControl && (hasSourceExport
               ? source.export
               : (fallbackExport === false
                 ? false
-                : (typeof source.show === 'boolean' ? source.show : true));
+                : (typeof source.show === 'boolean' ? source.show : true)));
 
             return {
               key,
@@ -876,6 +879,7 @@
               align: normalizeTableAlign(source.align, normalizeTableAlign(fallback.align)),
               export: exportEnabled,
               exportSort: normalizeTableExportSort(source.exportSort, normalizeTableExportSort(fallback.exportSort)),
+              allowExportControl,
             };
           };
           const normalizeTableSettingsState = (settings = {}, defaults = {}) => {
@@ -941,6 +945,9 @@
 
             return decorated.map((entry) => entry.item);
           };
+          const filterTableExportSettingColumns = (columns = []) => (
+            (Array.isArray(columns) ? columns : []).filter((item) => item?.allowExportControl !== false)
+          );
           const buildTableSettingsColumnCache = (columns = []) => {
             const list = Array.isArray(columns) ? columns : [];
             const columnsByKey = Object.create(null);
@@ -973,7 +980,10 @@
             state.settingsColumnsByKey = settingsCache.columnsByKey;
             state.renderColumnKeys = settingsCache.renderColumnKeys;
             state.settingsDraftDisplayColumns = draftColumns;
-            state.settingsDraftExportColumns = orderTableSettingColumns(draftColumns, 'export');
+            state.settingsDraftExportColumns = orderTableSettingColumns(
+              filterTableExportSettingColumns(draftColumns),
+              'export'
+            );
             syncTableSettingsVirtualStates(state);
 
             return state;
@@ -1865,7 +1875,14 @@
               }
 
               if (sortMode === 'export') {
-                const ordered = orderTableSettingColumns(columns, 'export').slice();
+                const ordered = orderTableSettingColumns(
+                  filterTableExportSettingColumns(columns),
+                  'export'
+                ).slice();
+                if (from >= ordered.length || to >= ordered.length) {
+                  return columns;
+                }
+
                 const moved = ordered.splice(from, 1)[0];
                 if (!moved) {
                   return columns;
@@ -1901,9 +1918,9 @@
                 return null;
               }
 
-              const columns = Array.isArray(state.settingsDraft?.columns) ? state.settingsDraft.columns : [];
               const sortMode = normalizeTableSettingsSortMode(state?.settingsTab, 'display');
-              if (columns.length <= 1) {
+              const rows = this.getTableSettingsDraftColumns(resolvedKey, sortMode);
+              if (!Array.isArray(rows) || rows.length <= 1) {
                 return null;
               }
 
