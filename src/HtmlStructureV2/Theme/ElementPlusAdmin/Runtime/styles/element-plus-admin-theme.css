@@ -576,6 +576,10 @@ body {
   flex: none;
 }
 
+.sc-v2-table-settings-popper {
+  z-index: 2300 !important;
+}
+
 .sc-v2-table-settings-modal {
   position: fixed;
   inset: 0;

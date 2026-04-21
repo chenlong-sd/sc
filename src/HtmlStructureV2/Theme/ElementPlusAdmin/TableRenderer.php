@@ -728,6 +728,7 @@ final class TableRenderer
                     'size' => 'small',
                     'clearable' => '',
                     'placeholder' => '默认',
+                    'popper-class' => 'sc-v2-table-settings-popper',
                 ])->append(
                     El::double('el-option')->setAttrs([
                         'label' => '左侧',
@@ -752,6 +753,7 @@ final class TableRenderer
                     'size' => 'small',
                     'clearable' => '',
                     'placeholder' => '默认',
+                    'popper-class' => 'sc-v2-table-settings-popper',
                 ])->append(
                     El::double('el-option')->setAttrs([
                         'label' => '左对齐',

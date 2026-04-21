@@ -815,12 +815,16 @@
             return /^\d+$/.test(normalized) ? Number(normalized) : normalized;
           };
           const normalizeTableFixed = (value, fallback = null) => {
+            // undefined 表示未显式设置，走 fallback；其它值（含 '' / null）视为用户显式取消固定，不再回退默认值。
+            if (value === undefined) {
+              return fallback ?? null;
+            }
             const normalized = typeof value === 'string' ? value.trim() : '';
             if (normalized === 'left' || normalized === 'right') {
               return normalized;
             }
 
-            return fallback ?? null;
+            return null;
           };
           const normalizeTableAlign = (value, fallback = null) => {
             const normalized = typeof value === 'string' ? value.trim() : '';
@@ -1846,9 +1850,16 @@
             },
             getTableColumnFixed(tableKey = null, columnKey = '', fallback = null){
               const setting = this.getTableColumnSetting(tableKey, columnKey);
-              const fixed = typeof setting?.fixed === 'string' ? setting.fixed : '';
+              // 没有参与列设置的列沿用 fallback；参与列设置但用户显式清空固定位置时返回 false 表示不固定。
+              if (!setting) {
+                return fallback;
+              }
+              const fixed = typeof setting.fixed === 'string' ? setting.fixed.trim() : '';
+              if (fixed === 'left' || fixed === 'right') {
+                return fixed;
+              }
 
-              return fixed !== '' ? fixed : fallback;
+              return false;
             },
             getTableStripe(tableKey = null, fallback = true){
               const settings = this.getTableSettings(tableKey);
