@@ -12,6 +12,7 @@
             callHook,
             emitConfiguredEvent,
             getByPath,
+            initializeFormModelBySchema,
             isEventCanceled,
             isObject,
             makeRequest,
@@ -391,6 +392,36 @@
                 submitData: normalizedSubmitData,
               }, overrides));
             },
+            getDialogFormConfig(dialogKey){
+              return cfg?.forms?.[toDialogScope(dialogKey)] || {};
+            },
+            getDialogFormInitialData(dialogKey){
+              const formCfg = this.getDialogFormConfig(dialogKey);
+
+              return initializeFormModelBySchema(
+                isObject(formCfg?.defaults) ? formCfg.defaults : {},
+                formCfg?.initialData || {},
+                formCfg?.arrayGroups || []
+              );
+            },
+            initializeDialogFormModel(dialogKey, values = {}, defaults = undefined){
+              const formCfg = this.getDialogFormConfig(dialogKey);
+              const baseDefaults = isObject(defaults)
+                ? defaults
+                : this.getDialogFormInitialData(dialogKey);
+
+              return initializeFormModelBySchema(
+                baseDefaults,
+                values,
+                formCfg?.arrayGroups || []
+              );
+            },
+            resolveDialogSubmitData(dialogKey){
+              return this.initializeDialogFormModel(
+                dialogKey,
+                this.dialogForms?.[dialogKey] || {}
+              );
+            },
             invokeDialogComponentMethod(dialogKey, methodName, context){
               if (typeof methodName !== 'string' || methodName === '') {
                 return Promise.resolve(null);
@@ -605,13 +636,17 @@
               const activeRow = row === undefined
                 ? (this.dialogRows?.[dialogKey] || null)
                 : (row || null);
-              const formData = Object.assign(
-                clone(this.dialogInitials?.[dialogKey] || {}),
+              let formData = this.initializeDialogFormModel(
+                dialogKey,
                 activeRow ? clone(activeRow) : {}
               );
 
               if (isObject(data)) {
-                Object.assign(formData, clone(data));
+                formData = this.initializeDialogFormModel(
+                  dialogKey,
+                  clone(data),
+                  formData
+                );
               }
 
               if (typeof this[names.withDependencyResetSuspended] === 'function') {
@@ -996,7 +1031,7 @@
                     return null;
                   }
 
-                  const submitData = this.dialogForms?.[dialogKey] || {};
+                  const submitData = this.resolveDialogSubmitData(dialogKey);
                   return makeRequest({
                     method: 'post',
                     url: submitUrl,

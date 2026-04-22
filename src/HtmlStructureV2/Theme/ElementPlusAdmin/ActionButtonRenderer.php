@@ -36,7 +36,7 @@ final class ActionButtonRenderer
         }
 
         $target = ActionRenderTarget::resolve($action, $tableBindings);
-        $this->assertActionHasRequiredRenderTarget($action, $rowScoped, $target);
+        $this->assertActionHasRequiredRenderTarget($action, $rowScoped, $target, $contextDialogKey);
         $attrs = array_merge([
             'type' => $action->buttonType(),
             'size' => $size,
@@ -116,7 +116,8 @@ final class ActionButtonRenderer
     private function assertActionHasRequiredRenderTarget(
         Action $action,
         bool $rowScoped,
-        ActionRenderTarget $target
+        ActionRenderTarget $target,
+        ?string $contextDialogKey = null
     ): void {
         if ($action->intent() === ActionIntent::REFRESH && !$target->hasDataTarget()) {
             throw new InvalidArgumentException(sprintf(
@@ -129,6 +130,7 @@ final class ActionButtonRenderer
             $action instanceof RequestAction
             && $action->shouldReloadTable()
             && !$target->hasDataTarget()
+            && trim((string) ($contextDialogKey ?? '')) === ''
         ) {
             throw new InvalidArgumentException(sprintf(
                 'Request action [%s] enables reloadTable() but has no explicit forTable()/forList() target or local table/list render context.',

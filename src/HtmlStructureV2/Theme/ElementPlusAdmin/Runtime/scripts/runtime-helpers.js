@@ -2370,7 +2370,11 @@
             const getDialogFormConfig = (dialogKey) => forms?.[toDialogScope(dialogKey)] || {};
             const getDialogFormInitialData = (dialogKey) => {
               const formConfig = getDialogFormConfig(dialogKey);
-              return clone(formConfig.initialData || formConfig.defaults || {});
+              return initializeFormModelBySchema(
+                formConfig.defaults || {},
+                formConfig.initialData || {},
+                formConfig.arrayGroups || []
+              );
             };
 
             return {
