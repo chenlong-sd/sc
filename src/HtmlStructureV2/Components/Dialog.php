@@ -522,22 +522,22 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 把弹窗主体切换为 iframe 页面。
-     * `query` 会在每次打开弹窗时按当前 dialog context 解析；
-     * 传字符串时会自动包装成 JsExpression；
-     * 默认同时开启宿主桥接和头部全屏切换；
-     * 若底部动作使用 `Actions::submit()` 且配置了 saveUrl()/createUrl()/updateUrl()，
-     * runtime 默认会先调用子页面的 `"__SC_V2_PAGE__.submit"` 取提交数据；
-     * 可再用 iframeSubmitHandler() 改成别的方法路径；
-     * 若未显式设置 height()，默认高度为 70vh。
-     * 可用字段与 component() 的 props 解析上下文一致；
-     * 当前页地址可直接读取 `@page.url` / `@page.path`。
+     * - `query` 会在每次打开弹窗时按当前 dialog context 解析；
+     * - 传字符串时会自动包装成 JsExpression；
+     * - 默认同时开启宿主桥接和头部全屏切换；
+     * - 若底部动作使用 `Actions::submit()` 且配置了 saveUrl()/createUrl()/updateUrl()，
+     * - runtime 默认会先调用子页面的 `"__SC_V2_PAGE__.submit"` 取提交数据；
+     * - 可再用 iframeSubmitHandler() 改成别的方法路径；
+     * - 若未显式设置 height()，默认高度为 70vh。
+     * - 可用字段与 component() 的 props 解析上下文一致；
+     * - 当前页地址可直接读取 ‘@page.url’ / ‘@page.path’。
      *
      * @param string $url iframe 页面地址。
      * @param array|string|JsExpression $query iframe 查询参数。
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => '@row.id'])`
+     * `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => ‘@row.id’])`
      */
     public function iframe(string $url, array|string|JsExpression $query = []): self
     {

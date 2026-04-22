@@ -32,6 +32,7 @@ class Action implements
     private ?string $listTarget = null;
     private string|JsExpression|null $handler = null;
     private ?string $confirmText = null;
+    private ?Dialog $dialog = null;
     private ?string $saveUrl = null;
     private ?string $createUrl = null;
     private ?string $updateUrl = null;
@@ -271,22 +272,57 @@ class Action implements
     {
         $this->target = $target;
 
+        if ($this->dialog !== null && $this->dialog->key() !== $target) {
+            $this->dialog = null;
+        }
+
         return $this;
     }
 
     /**
-     * target() 的语义化别名，用于显式绑定 dialog key。
-     * 若动作已经位于 dialog footer，submit/close 通常可省略该调用。
+     * target() 的语义化别名，用于绑定弹窗。
+     * 支持传 Dialog key 字符串或直接传 Dialog 对象；
+     * 传 Dialog 对象时，会自动完成对象绑定和页面收集。
      *
-     * @param string $dialog 目标弹窗 key。
+     * @param string|Dialog $dialog Dialog key 或 Dialog 对象。
      * @return static 当前动作实例。
      *
      * 示例：
      * `Action::close()->dialog('qa-info-dialog')`
+     * `Action::custom('查看')->dialog($dialog)`
      */
-    public function dialog(string $dialog): static
+    public function dialog(string|Dialog $dialog): static
     {
+        if ($dialog instanceof Dialog) {
+            return $this->bindDialog($dialog);
+        }
+
         return $this->target($dialog);
+    }
+
+    /**
+     * 直接绑定一个 Dialog 对象，页面构建时会自动收集。
+     *
+     * @param Dialog $dialog 要绑定的 Dialog 对象。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * `Action::custom('查看')->bindDialog(Dialog::make('qa-info-dialog'))`
+     */
+    public function bindDialog(Dialog $dialog): static
+    {
+        $this->dialog = $dialog;
+        $this->target = $dialog->key();
+
+        return $this;
+    }
+
+    /**
+     * 获取已绑定的 Dialog 对象。
+     */
+    public function getDialog(): ?Dialog
+    {
+        return $this->dialog;
     }
 
     /**

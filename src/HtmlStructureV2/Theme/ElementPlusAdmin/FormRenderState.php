@@ -37,16 +37,37 @@ final class FormRenderState
     {
         $schema = $form->schema();
         $initialData = $form->initialData();
+        $state = [];
 
-        return array_filter([
-            $this->model => $initialData === [] ? $schema->defaults() : $initialData,
-            $this->rules => $schema->rules(),
-            $this->optionState => $this->buildInitialOptionState($schema),
-            $this->optionLoading => $this->buildFlagState($schema->remoteOptionPaths()),
-            $this->optionLoaded => $this->buildFlagState($schema->remoteOptionPaths()),
-            $this->uploadFiles => $this->buildInitialUploadState($schema->uploadPaths()),
-            $this->pickerState => $schema->pickerDefaults(),
-        ], static fn(mixed $value, mixed $key) => is_string($key) && $key !== '', ARRAY_FILTER_USE_BOTH);
+        $this->putRuntimeStateValue(
+            $state,
+            $this->model,
+            $this->modelPath,
+            $initialData === [] ? $schema->defaults() : $initialData
+        );
+        $this->putRuntimeStateValue($state, $this->rules, $this->rulesPath, $schema->rules());
+        $this->putRuntimeStateValue($state, $this->optionState, $this->optionStatePath, $this->buildInitialOptionState($schema));
+        $this->putRuntimeStateValue(
+            $state,
+            $this->optionLoading,
+            $this->optionLoadingPath,
+            $this->buildFlagState($schema->remoteOptionPaths())
+        );
+        $this->putRuntimeStateValue(
+            $state,
+            $this->optionLoaded,
+            $this->optionLoadedPath,
+            $this->buildFlagState($schema->remoteOptionPaths())
+        );
+        $this->putRuntimeStateValue(
+            $state,
+            $this->uploadFiles,
+            $this->uploadFilesPath,
+            $this->buildInitialUploadState($schema->uploadPaths())
+        );
+        $this->putRuntimeStateValue($state, $this->pickerState, $this->pickerStatePath, $schema->pickerDefaults());
+
+        return $state;
     }
 
     public function simpleRuntimeConfig(Form $form): array
@@ -142,5 +163,22 @@ final class FormRenderState
         }
 
         return $state;
+    }
+
+    private function putRuntimeStateValue(array &$state, ?string $variable, ?array $path, mixed $value): void
+    {
+        $normalizedPath = array_values(array_filter(
+            $path ?? [],
+            static fn(mixed $segment): bool => is_string($segment) && $segment !== ''
+        ));
+
+        if ($normalizedPath !== []) {
+            FormPath::set($state, implode('.', $normalizedPath), $value);
+            return;
+        }
+
+        if (is_string($variable) && $variable !== '') {
+            $state[$variable] = $value;
+        }
     }
 }

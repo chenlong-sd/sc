@@ -6,7 +6,6 @@ use InvalidArgumentException;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
-use Sc\Util\HtmlStructureV2\Components\DialogAction;
 use Sc\Util\HtmlStructureV2\Contracts\DocumentRenderable;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
@@ -308,16 +307,10 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
                 continue;
             }
 
-            if (!$action instanceof DialogAction) {
-                continue;
-            }
-
             $dialog = $action->getDialog();
-            if ($dialog === null) {
-                continue;
+            if ($dialog !== null) {
+                $dialogs[$dialog->key()] ??= $dialog;
             }
-
-            $dialogs[$dialog->key()] ??= $dialog;
         }
     }
 }

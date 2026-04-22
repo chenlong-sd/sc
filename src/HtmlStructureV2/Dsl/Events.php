@@ -39,9 +39,9 @@ final class Events
     /**
      * 创建一个打开弹窗事件，目标可传 Dialog 对象或 dialog key。
      *
-     * 默认优先使用事件对象自身的 `dialogKey`；
-     * 打开时若当前 context 中存在 `row` / `tableKey`，也会一并透传给弹窗运行时。
-     * 返回的事件对象还可继续链式调用 `row()` / `table()`，覆盖默认上下文。
+     * - 默认优先使用事件对象自身的 `dialogKey`；
+     * - 打开时若当前 context 中存在 `row` / `tableKey`，也会一并透传给弹窗运行时。
+     * - 返回的事件对象还可继续链式调用 `row()` / `table()`，覆盖默认上下文。
      *
      * @param string|Dialog $dialog Dialog 对象或 dialog key。
      * @return StructuredEvent 打开弹窗事件。

@@ -4,7 +4,6 @@ namespace Sc\Util\HtmlStructureV2\Support\PageManaged;
 
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
-use Sc\Util\HtmlStructureV2\Components\DialogAction;
 use Sc\Util\HtmlStructureV2\Support\StructuredEventInspector;
 
 trait CollectsDialogsFromActions
@@ -28,16 +27,10 @@ trait CollectsDialogsFromActions
                 }
             }
 
-            if (!$action instanceof DialogAction) {
-                continue;
-            }
-
             $dialog = $action->getDialog();
-            if ($dialog === null) {
-                continue;
+            if ($dialog !== null) {
+                $dialogs[$dialog->key()] = $dialog;
             }
-
-            $dialogs[$dialog->key()] = $dialog;
         }
 
         return array_values($dialogs);

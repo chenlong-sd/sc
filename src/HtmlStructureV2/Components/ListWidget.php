@@ -228,16 +228,12 @@ final class ListWidget implements Renderable, EventAware
                 }
             }
 
-            if (!$action instanceof DialogAction) {
-                continue;
+            if ($action instanceof Action) {
+                $dialog = $action->getDialog();
+                if ($dialog !== null) {
+                    $dialogs[$dialog->key()] ??= $dialog;
+                }
             }
-
-            $dialog = $action->getDialog();
-            if ($dialog === null) {
-                continue;
-            }
-
-            $dialogs[$dialog->key()] ??= $dialog;
         }
     }
 

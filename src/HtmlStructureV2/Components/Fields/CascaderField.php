@@ -40,6 +40,18 @@ final class CascaderField extends OptionField
      * 设置 cascader 的原生 props 配置。
      *
      * @param array $props cascader 原生 props。
+     * - expandTrigger    次级菜单的展开方式
+     * - multiple    是否多选
+     * - checkStrictly    是否严格的遵守父子节点不互相关联
+     * - emitPath    在选中节点改变时，是否返回由该节点所在的各级菜单的值所组成的数组，若设置 false，则只返回该节点的值
+     * - lazy    是否动态加载子节点，需与 lazyLoad 方法结合使用
+     * - lazyLoad    加载动态数据的方法，仅在 lazy 为 true 时有效
+     * - value    指定选项的值为选项对象的某个属性值
+     * - label    指定选项标签为选项对象的某个属性值
+     * - children    指定选项的子选项为选项对象的某个属性值
+     * - disabled    指定选项的禁用为选项对象的某个属性值
+     * - leaf    指定选项的叶子节点的标志位为选项对象的某个属性值
+     * - hoverThreshold    hover 时展开菜单的灵敏度阈值
      * @return static 当前级联字段实例。
      *
      * 示例：
