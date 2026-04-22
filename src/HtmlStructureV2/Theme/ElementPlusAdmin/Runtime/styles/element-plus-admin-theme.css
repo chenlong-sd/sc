@@ -30,7 +30,7 @@ body {
 #app {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 14px 14px 20px;
+  padding: 14px 8px 0;
   background: var(--sc-v2-page-bg);
 }
 
@@ -390,7 +390,6 @@ body {
   justify-content: space-between;
   gap: 6px;
   flex-wrap: wrap;
-  margin: 4px 0 8px;
 }
 
 .sc-v2-status-toggles {
@@ -595,17 +594,13 @@ body {
 .sc-v2-table-settings-modal__panel {
   display: flex;
   flex-direction: column;
-  width: min(760px, calc(100vw - 36px));
+  width: min(860px, calc(100vw - 36px));
   max-height: calc(100vh - 36px);
   min-height: min(640px, calc(100vh - 36px));
   border-radius: 16px;
   background: var(--sc-v2-surface);
   box-shadow: var(--sc-v2-shadow);
   overflow: hidden;
-}
-
-.sc-v2-table-settings-modal__panel--wide {
-  width: min(980px, calc(100vw - 36px));
 }
 
 .sc-v2-table-settings-modal__header,

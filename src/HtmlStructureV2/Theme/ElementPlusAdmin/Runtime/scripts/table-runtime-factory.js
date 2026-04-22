@@ -814,11 +814,7 @@
 
             return /^\d+$/.test(normalized) ? Number(normalized) : normalized;
           };
-          const normalizeTableFixed = (value, fallback = null) => {
-            // undefined 表示未显式设置，走 fallback；其它值（含 '' / null）视为用户显式取消固定，不再回退默认值。
-            if (value === undefined) {
-              return fallback ?? null;
-            }
+          const normalizeTableFixed = (value) => {
             const normalized = typeof value === 'string' ? value.trim() : '';
             if (normalized === 'left' || normalized === 'right') {
               return normalized;
@@ -879,7 +875,10 @@
                 ? source.show
                 : (fallback.show !== false),
               width: normalizeTableWidth(source.width, fallback.width ?? null),
-              fixed: normalizeTableFixed(source.fixed, normalizeTableFixed(fallback.fixed)),
+              // 仅当 source 完全没有 fixed 字段时才回退到默认值，否则无论是 ''/null/undefined 都视为用户取消固定。
+              fixed: Object.prototype.hasOwnProperty.call(source, 'fixed')
+                ? normalizeTableFixed(source.fixed)
+                : normalizeTableFixed(fallback.fixed),
               align: normalizeTableAlign(source.align, normalizeTableAlign(fallback.align)),
               export: exportEnabled,
               exportSort: normalizeTableExportSort(source.exportSort, normalizeTableExportSort(fallback.exportSort)),
