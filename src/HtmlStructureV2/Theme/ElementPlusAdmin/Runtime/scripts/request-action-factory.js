@@ -1568,13 +1568,68 @@
                   buildSubmitFormContext(scope, overrides)
                 );
               };
+              const resolveDialogSubmitConfig = () => {
+                const dialogKey = typeof resolvedActionConfig.dialogTarget === 'string' && resolvedActionConfig.dialogTarget !== ''
+                  ? resolvedActionConfig.dialogTarget
+                  : (typeof context.dialogKey === 'string' && context.dialogKey !== '' ? context.dialogKey : null);
+
+                const dialogConfig = dialogKey && isObject(cfg?.dialogs?.[dialogKey])
+                  ? cfg.dialogs[dialogKey]
+                  : (isObject(context.dialogConfig) ? context.dialogConfig : null);
+
+                return {
+                  dialogKey,
+                  dialogConfig,
+                };
+              };
+              const buildDialogSubmitContext = (submitData = null, overrides = {}) => {
+                const { dialogKey } = resolveDialogSubmitConfig();
+                if (dialogKey && typeof this.buildDialogSubmitContext === 'function') {
+                  return this.buildDialogSubmitContext(dialogKey, submitData, overrides);
+                }
+
+                return Object.assign({}, context, {
+                  dialogKey: dialogKey || context.dialogKey || null,
+                  dialog: isObject(submitData) ? submitData : (submitData ?? context.dialog ?? {}),
+                  submitData,
+                }, overrides || {});
+              };
+              const emitDialogSubmitEvent = (eventName, submitData = null, overrides = {}) => {
+                const { dialogConfig } = resolveDialogSubmitConfig();
+                if (!dialogConfig) {
+                  return Promise.resolve([]);
+                }
+
+                return emitConfiguredEvent(
+                  dialogConfig,
+                  eventName,
+                  buildDialogSubmitContext(submitData, overrides)
+                );
+              };
               const saveConfig = isObject(resolvedActionConfig?.save) ? resolvedActionConfig.save : {};
               const hasSaveUrls = !!(saveConfig.createUrl || saveConfig.updateUrl);
               let submitFormState = null;
+              let submitFormStateError = null;
               try {
                 submitFormState = resolveSubmitFormState();
               } catch (error) {
-                const message = error?.message || '操作失败';
+                submitFormStateError = error;
+                submitFormState = {
+                  scope: null,
+                  formConfig: {},
+                  submitConfig: {},
+                };
+              }
+              const usesDialogSubmitFlow = () => {
+                if (resolvedActionConfig.dialogSubmitFallback !== true || submitFormState.scope) {
+                  return false;
+                }
+
+                const { dialogConfig } = resolveDialogSubmitConfig();
+                return dialogConfig?.type === 'iframe';
+              };
+              if (submitFormStateError && !usesDialogSubmitFlow()) {
+                const message = submitFormStateError?.message || '操作失败';
                 if (message) {
                   ElementPlus.ElMessage.error(message);
                 }
@@ -1582,9 +1637,21 @@
                 return Promise.resolve(null);
               }
               const hasFormSaveUrls = !!(submitFormState.submitConfig.createUrl || submitFormState.submitConfig.updateUrl);
-              if ((!resolvedActionConfig?.request?.url && !hasSaveUrls && !hasFormSaveUrls)) {
+              const hasDialogSaveUrls = (() => {
+                if (!usesDialogSubmitFlow()) {
+                  return false;
+                }
+
+                const { dialogConfig } = resolveDialogSubmitConfig();
+                return !!(dialogConfig?.saveUrl || dialogConfig?.createUrl || dialogConfig?.updateUrl);
+              })();
+              if ((!resolvedActionConfig?.request?.url && !hasSaveUrls && !hasFormSaveUrls && !hasDialogSaveUrls)) {
                 if (usesFormSubmitFlow()) {
-                  ElementPlus.ElMessage.error('当前表单未配置保存地址，请先调用 Form::saveUrls()。');
+                  ElementPlus.ElMessage.error(
+                    usesDialogSubmitFlow()
+                      ? '当前弹窗未配置保存地址，请先调用 Dialog::saveUrl()/createUrl()/updateUrl()。'
+                      : '当前表单未配置保存地址，请先调用 Form::saveUrls()。'
+                  );
                 }
 
                 return Promise.resolve(null);
@@ -1595,9 +1662,12 @@
                   return context.resolvePageMode(saveConfig.modeQueryKey);
                 }
 
-                const submitFormState = resolveSubmitFormState();
                 if (submitFormState.scope) {
                   return context.resolveFormMode(submitFormState.scope);
+                }
+
+                if (usesDialogSubmitFlow()) {
+                  return context.mode === 'edit' ? 'edit' : 'create';
                 }
 
                 return context.resolvePageMode();
@@ -1617,13 +1687,22 @@
                   return resolveContextValue(resolvedActionConfig.request.url, context);
                 }
 
-                const submitFormState = resolveSubmitFormState();
                 const submitConfig = submitFormState.submitConfig || {};
                 if (submitConfig.createUrl || submitConfig.updateUrl) {
                   const mode = resolveSaveMode();
                   const candidateUrl = mode === 'edit'
                     ? (submitConfig.updateUrl || submitConfig.createUrl || '')
                     : (submitConfig.createUrl || submitConfig.updateUrl || '');
+
+                  return resolveContextValue(candidateUrl, context);
+                }
+
+                if (usesDialogSubmitFlow()) {
+                  const { dialogConfig } = resolveDialogSubmitConfig();
+                  const mode = resolveSaveMode();
+                  const candidateUrl = mode === 'edit'
+                    ? (dialogConfig?.updateUrl || dialogConfig?.saveUrl || '')
+                    : (dialogConfig?.createUrl || dialogConfig?.updateUrl || dialogConfig?.saveUrl || '');
 
                   return resolveContextValue(candidateUrl, context);
                 }
@@ -1635,7 +1714,10 @@
                   return resolvedActionConfig.request.method || 'post';
                 }
 
-                const submitFormState = resolveSubmitFormState();
+                if (usesDialogSubmitFlow()) {
+                  return resolvedActionConfig.request?.method || 'post';
+                }
+
                 return submitFormState.submitConfig?.method || 'post';
               };
               const resolveLoadingText = () => {
@@ -1643,7 +1725,6 @@
                   return resolvedActionConfig.loadingText;
                 }
 
-                const submitFormState = resolveSubmitFormState();
                 if (submitFormState.submitConfig?.loadingText) {
                   return submitFormState.submitConfig.loadingText;
                 }
@@ -1659,7 +1740,6 @@
                 return null;
               };
               const resolveSuccessMessage = (payload) => {
-                const submitFormState = resolveSubmitFormState();
                 return resolveMessage(
                   payload,
                   resolvedActionConfig.successMessage
@@ -1668,7 +1748,6 @@
                 );
               };
               const resolveErrorMessage = (responsePayload = null) => {
-                const submitFormState = resolveSubmitFormState();
                 return resolveMessage(
                   responsePayload,
                   resolvedActionConfig.errorMessage
@@ -1677,6 +1756,10 @@
                 );
               };
               const validateConfiguredForm = () => {
+                if (usesDialogSubmitFlow()) {
+                  return Promise.resolve(true);
+                }
+
                 if (!shouldValidateForm()) {
                   return Promise.resolve(true);
                 }
@@ -1726,6 +1809,64 @@
 
                 return payload;
               };
+              const resolveDialogSubmitPayload = () => {
+                if (!usesDialogSubmitFlow()) {
+                  return Promise.resolve(resolveRequestPayload());
+                }
+
+                const { dialogKey } = resolveDialogSubmitConfig();
+                if (!dialogKey) {
+                  return Promise.reject(new Error('当前弹窗未配置提交目标'));
+                }
+                if (typeof this.invokeDialogIframeSubmit !== 'function') {
+                  return Promise.reject(new Error('当前运行时不支持 iframe 弹窗提交'));
+                }
+
+                const dialogContext = typeof this.buildDialogContext === 'function'
+                  ? this.buildDialogContext(dialogKey)
+                  : context;
+
+                return Promise.resolve(this.invokeDialogIframeSubmit(dialogKey, dialogContext))
+                  .then((payload) => {
+                    if (payload === null || payload === false) {
+                      return null;
+                    }
+
+                    return payload ?? {};
+                  });
+              };
+              const emitRequestSuccessLifecycle = (request, payload) => {
+                const emitDialogSuccess = resolvedActionConfig.dialogSubmitFallback === true && resolveDialogSubmitConfig().dialogKey
+                  ? emitDialogSubmitEvent('submitSuccess', request.query, {
+                      request,
+                      response: context.response,
+                      payload,
+                    })
+                  : Promise.resolve([]);
+
+                return emitSubmitFormEvent(submitFormState.scope, 'submitSuccess', {
+                  request,
+                  response: context.response,
+                  payload,
+                })
+                  .then(() => emitDialogSuccess)
+                  .then(() => emitConfiguredEvent(resolvedActionConfig, 'success', context));
+              };
+              const emitRequestFailLifecycle = (request, error) => {
+                const emitDialogFail = resolvedActionConfig.dialogSubmitFallback === true && resolveDialogSubmitConfig().dialogKey
+                  ? emitDialogSubmitEvent('submitFail', request?.query ?? null, {
+                      request,
+                      error,
+                    })
+                  : Promise.resolve([]);
+
+                return emitSubmitFormEvent(submitFormState.scope, 'submitFail', {
+                  request,
+                  error,
+                })
+                  .then(() => emitDialogFail)
+                  .then(() => emitConfiguredEvent(resolvedActionConfig, 'fail', context));
+              };
               const perform = ({ importData = null, suppressGlobalLoading = false } = {}) => {
                 if (actionLoading[resolvedActionConfig.key]) {
                   return Promise.resolve(null);
@@ -1753,6 +1894,13 @@
                       return null;
                     }
 
+                    return resolveDialogSubmitPayload();
+                  })
+                  .then((requestPayload) => {
+                    if (requestPayload === null) {
+                      return null;
+                    }
+
                     const requestUrl = resolveRequestUrl();
                     if (typeof requestUrl !== 'string' || requestUrl === '') {
                       throw new Error('请求地址不能为空');
@@ -1761,11 +1909,10 @@
                     const request = {
                       method: resolveRequestMethod(),
                       url: requestUrl,
-                      query: resolveRequestPayload(),
+                      query: requestPayload,
                     };
 
                     context.request = request;
-                    const submitFormState = resolveSubmitFormState();
                     if (submitFormState.scope) {
                       context.formScope = submitFormState.scope;
                       context.formConfig = submitFormState.formConfig;
@@ -1807,16 +1954,12 @@
 
                             context.payload = payload;
 
-                            const successMessage = resolveSuccessMessage(payload);
-                            if (successMessage) {
-                              ElementPlus.ElMessage.success(successMessage);
-                            }
+                          const successMessage = resolveSuccessMessage(payload);
+                          if (successMessage) {
+                            ElementPlus.ElMessage.success(successMessage);
+                          }
 
-                            return emitSubmitFormEvent(submitFormState.scope, 'submitSuccess', {
-                              request,
-                              response,
-                              payload,
-                            }).then(() => emitConfiguredEvent(resolvedActionConfig, 'success', context))
+                            return emitRequestSuccessLifecycle(request, payload)
                               .then(() => {
                                 if (resolvedActionConfig.closeDialog && resolvedActionConfig.dialogTarget) {
                                   context.closeDialog(resolvedActionConfig.dialogTarget);
@@ -1847,11 +1990,7 @@
                               ElementPlus.ElMessage.error(message);
                             }
 
-                            return emitSubmitFormEvent(submitFormState.scope, 'submitFail', {
-                              request,
-                              error,
-                            })
-                              .then(() => emitConfiguredEvent(resolvedActionConfig, 'fail', context))
+                            return emitRequestFailLifecycle(request, error)
                               .then(() => null);
                           })
                           .finally(() => {

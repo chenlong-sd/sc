@@ -233,7 +233,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置统一保存接口，适合新建/编辑共用提交地址。
      * URL 会在前端提交时按当前 dialog context 解析。
-     * 未被 `Actions::submit()->saveUrl()/createUrl()/updateUrl()` 显式覆盖时使用。
+     * 未被当前保存动作就近覆盖时使用。
      * 常用可用字段：
      * - mode / row / dialogKey / tableKey
      * - dialogContext / data: 由 context() 解析出的附加上下文
@@ -257,7 +257,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置新建提交接口。
      * 仅在 create 模式下使用；若未设置会回退到 saveUrl()。
-     * 未被 `Actions::submit()->createUrl()/saveUrl()` 显式覆盖时使用。
+     * 未被当前保存动作就近覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
      *
      * @param string|null $createUrl 新建模式提交地址；传 null 表示清空。
@@ -276,7 +276,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置编辑提交接口。
      * 仅在 edit 模式下使用；若未设置会回退到 saveUrl()。
-     * 未被 `Actions::submit()->updateUrl()/saveUrl()` 显式覆盖时使用。
+     * 未被当前保存动作就近覆盖时使用。
      * token 解析字段与 saveUrl() 一致。
      *
      * @param string|null $updateUrl 编辑模式提交地址；传 null 表示清空。
@@ -525,7 +525,7 @@ final class Dialog implements Renderable, EventAware
      * - `query` 会在每次打开弹窗时按当前 dialog context 解析；
      * - 传字符串时会自动包装成 JsExpression；
      * - 默认同时开启宿主桥接和头部全屏切换；
-     * - 若底部动作使用 `Actions::submit()` 且配置了 saveUrl()/createUrl()/updateUrl()，
+     * - 若底部动作使用 `Actions::save()` 且配置了 dialog 的 saveUrl()/createUrl()/updateUrl()，
      * - runtime 默认会先调用子页面的 `"__SC_V2_PAGE__.submit"` 取提交数据；
      * - 可再用 iframeSubmitHandler() 改成别的方法路径；
      * - 若未显式设置 height()，默认高度为 70vh。
@@ -593,7 +593,7 @@ final class Dialog implements Renderable, EventAware
     }
 
     /**
-     * 设置 iframe 弹窗点击 `Actions::submit()` 时在子页面调用的提交方法路径。
+     * 设置 iframe 弹窗点击保存动作时在子页面调用的提交方法路径。
      * 路径从 `iframe.contentWindow` 开始解析，默认值为 `"__SC_V2_PAGE__.submit"`。
      * 例如可写 `"__SC_V2_PAGE__.submit"`、`"submit"`、`"pageApi.submitForm"`。
      * 该方法应返回最终提交到 saveUrl()/createUrl()/updateUrl() 的数据，也可以直接返回 Promise。
@@ -843,7 +843,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 设置弹窗底部动作按钮。
      * 这些动作运行时同样可获得当前 dialog context，因此可直接配合 close/reload/request 使用。
-     * 其中 `Actions::submit()` / `Actions::close()` 放在 footer 里时，会默认作用到当前 dialog，
+     * 其中 `Actions::save()` / `Actions::close()` 放在 footer 里时，会默认作用到当前 dialog，
      * 一般不再需要额外写 `->dialog($this->key())`。
      * footer 区域中的前端表达式同样可直接读取 `dialogRow`，
      * 例如 `Actions::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`。
@@ -852,7 +852,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->footer(Actions::submit(), Actions::close())`
+     * `Dialogs::make('qa-info-dialog', '编辑')->footer(Actions::save(), Actions::close())`
      */
     public function footer(Action ...$actions): self
     {

@@ -56,9 +56,15 @@ final class ListWidget implements Renderable, EventAware
      * - `filters($form)`：直接传完整 Form，适合需要自定义布局/按钮/标签宽度的场景
      * - `filters(Fields::text(...), Fields::select(...))`：直接传字段，内部会自动包装成 inline Form
      *
-     * 显式传入时会保留这份 UI；若表格里还声明了
-     * `Column::searchable()` / `Table::search()` / `Table::searchSchema()`，
+     * 显式传入时会保留这份 UI；若表格列还声明了
+     * `Column::searchable()`，
      * V2 会继续自动补齐这份表单里尚未声明的筛选项，减少重复书写。
+     * 同时，当前筛选表单里已声明的字段也会反向补齐到运行时 searchSchema；
+     * 因此常见场景下只写 `filters()` 即可完成“筛选 UI + 查询协议”。
+     * 若筛选字段本身链式声明了 `searchable()` / `searchType()` / `searchField()`，
+     * 则会优先使用字段上的搜索协议，不需要再到 table 侧重复写一份。
+     * 若需要隐藏筛选协议，直接在 `filters()` 里放隐藏字段并链式声明搜索协议；
+     * 若只是补齐可见筛选项，可继续用列上的 `searchable()`。
      *
      * @param Form|Field ...$filters 筛选表单或筛选字段。
      * @return self 当前列表实例。
@@ -156,7 +162,7 @@ final class ListWidget implements Renderable, EventAware
 
     /**
      * 获取当前列表实际生效的筛选表单。
-     * 若显式配置了 filters()，会优先保留显式字段，再按表格搜索协议补齐缺失项；
+     * 若显式配置了 filters()，会优先保留显式字段，再按表格列搜索协议补齐缺失项；
      * 若未配置 filters()，则直接自动推导一份行内筛选表单。
      * 其中自动推导出来的筛选项默认隐藏 label，只保留 placeholder；
      * `displayMapping()` / `displayTag()` / `displayBoolean*()` 会优先识别为 select。

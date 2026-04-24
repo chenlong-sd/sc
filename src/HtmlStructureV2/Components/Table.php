@@ -61,7 +61,6 @@ final class Table implements Renderable, EventAware
     private string $emptyText = '暂无数据';
     private bool $selection = false;
     private ?string $selectionFixed = null;
-    private array $searchSchema = [];
     private ?string $deleteUrl = null;
     private string $deleteKey = 'id';
     private ?int $rowActionColumnWidth = null;
@@ -404,7 +403,8 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置表格顶部的快速状态切换按钮组。
-     * `name` 是筛选模型字段名；后端真实字段映射应通过 search()/searchSchema()/列 searchable() 定义。
+     * `name` 是筛选模型字段名；后端真实字段映射应通过 filters() 字段上的 searchable()/searchField()、
+     * 或列上的 searchable() 定义。
      * 若当前表格还没有对应搜索协议，V2 会自动补一条 hidden 的 `=` 搜索项，真实字段默认同名。
      *
      * @param string $name 筛选模型字段名。
@@ -599,60 +599,6 @@ final class Table implements Renderable, EventAware
     public function dataUrl(string $url, array $query = []): self
     {
         return $this->dataSource(UrlDataSource::make($url, $query));
-    }
-
-    /**
-     * 追加一条搜索协议定义。
-     * `name` 是筛选表单里的字段名，`field` 是最终发给后端的真实字段名；
-     * 例如 `search('keyword', 'LIKE', 'user_name')`。
-     * 若当前表格被放进 `List` 且未显式提供 filters()，这类搜索协议也会参与默认筛选表单推导；
-     * 但没有列展示信息时，只能按字段名做通用输入框/范围输入推断。
-     *
-     * @param string $name 筛选模型字段名。
-     * @param string $type 搜索操作符，默认值为 =。
-     * @param string|null $field 后端真实字段名；传 null 时默认同 $name。
-     * @return self 当前表格实例。
-     *
-     * 示例：
-     * `Tables::make('qa-info-table')->search('keyword', 'LIKE', 'title')`
-     */
-    public function search(
-        string $name,
-        #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
-        string $type = '=',
-        ?string $field = null
-    ): self
-    {
-        $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, [
-            'type' => $type,
-            'field' => $field,
-        ]);
-
-        return $this;
-    }
-
-    /**
-     * 批量设置搜索协议定义。
-     * 常用于需要和外部 filters/form 显式对齐时一次性声明整张表的搜索协议。
-     * 在 `List` 自动筛选模式下，未被列 searchable() 覆盖的字段也会尝试按这里的 name/type 推导默认输入控件。
-     *
-     * @param array $schema 搜索协议定义。
-     * @return self 当前表格实例。
-     *
-     * 示例：
-     * `Tables::make('qa-info-table')->searchSchema(['keyword' => ['type' => 'LIKE', 'field' => 'title']])`
-     */
-    public function searchSchema(array $schema): self
-    {
-        foreach ($schema as $name => $config) {
-            if (!is_string($name) || $name === '') {
-                continue;
-            }
-
-            $this->searchSchema[$name] = $this->normalizeSearchSchemaItem($name, $config);
-        }
-
-        return $this;
     }
 
     /**
@@ -1148,12 +1094,9 @@ final class Table implements Renderable, EventAware
 
     public function getSearchSchema(): array
     {
-        $schema = array_replace(
-            $this->buildColumnSearchSchema(),
-            $this->searchSchema
+        return $this->appendImplicitStatusToggleSearchSchema(
+            $this->buildColumnSearchSchema()
         );
-
-        return $this->appendImplicitStatusToggleSearchSchema($schema);
     }
 
     public function getDeleteUrl(): ?string

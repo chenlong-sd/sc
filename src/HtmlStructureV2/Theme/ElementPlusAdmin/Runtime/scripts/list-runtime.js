@@ -6,6 +6,7 @@
             clone,
             emitConfiguredEvent,
             extractPayload,
+            getByPath,
             ensureSuccess,
             getConfigState,
             initializeConfiguredForms,
@@ -72,7 +73,7 @@
             const searchType = {};
 
             Object.keys(schema || {}).forEach((key) => {
-              const value = model[key];
+              const value = getByPath(model, key);
               if (isBlank(value)) return;
 
               const meta = schema[key] || {};
@@ -115,12 +116,12 @@
           const applyLocalSearch = (rows, model, schema) => {
             return rows.filter((row) => {
               return Object.keys(schema || {}).every((key) => {
-                const value = model[key];
+                const value = getByPath(model, key);
                 if (isBlank(value)) return true;
 
                 const meta = schema[key] || {};
                 const type = String(meta.type || '=').toUpperCase();
-                const rowValue = row[key];
+                const rowValue = getByPath(row, key);
                 if (type === 'LIKE') {
                   return String(rowValue ?? '').includes(String(value));
                 }

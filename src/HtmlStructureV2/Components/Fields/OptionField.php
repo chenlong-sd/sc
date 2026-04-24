@@ -25,6 +25,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     public function __construct(string $name, string $label, FieldType $type = FieldType::SELECT)
     {
         parent::__construct($name, $label, $type);
+
+        if ($type === FieldType::SELECT) {
+            $this->prop('filterable', true);
+        }
     }
 
     /**

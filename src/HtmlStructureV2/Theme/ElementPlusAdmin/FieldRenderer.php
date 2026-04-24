@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
+use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
 use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
@@ -337,26 +338,9 @@ final class FieldRenderer
                 'clearable' => '',
                 'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
-            FieldType::DATE => El::double('el-date-picker')->setAttrs($bindModelValue([
-                'type' => 'date',
-                'placeholder' => $placeholder,
-                'clearable' => '',
-                'style' => $inline ? 'width: 220px' : 'width: 100%',
-            ])),
-            FieldType::DATETIME => El::double('el-date-picker')->setAttrs($bindModelValue([
-                'type' => 'datetime',
-                'placeholder' => $placeholder,
-                'clearable' => '',
-                'style' => $inline ? 'width: 240px' : 'width: 100%',
-            ])),
-            FieldType::DATE_RANGE => El::double('el-date-picker')->setAttrs($bindModelValue([
-                'type' => 'daterange',
-                'range-separator' => (string)($field->getProps()['range-separator'] ?? '至'),
-                'start-placeholder' => (string)($field->getProps()['start-placeholder'] ?? '开始日期'),
-                'end-placeholder' => (string)($field->getProps()['end-placeholder'] ?? '结束日期'),
-                'clearable' => '',
-                'style' => $inline ? 'width: 320px' : 'width: 100%',
-            ])),
+            FieldType::DATE,
+            FieldType::DATETIME,
+            FieldType::DATE_RANGE => $this->buildDateFieldComponent($field, $bindModelValue, $placeholder, $inline),
             FieldType::UPLOAD => El::double('el-upload')->setAttrs(array_filter([
                 'action' => (string)($upload['action'] ?? ''),
                 'method' => (string)($upload['method'] ?? 'post'),
@@ -382,7 +366,14 @@ final class FieldRenderer
             if ($field->type() === FieldType::TEXTAREA && $attr === 'rows') {
                 continue;
             }
-            if ($field->type() === FieldType::DATE_RANGE && in_array($attr, ['range-separator', 'start-placeholder', 'end-placeholder'], true)) {
+            if ($field instanceof DateField && $attr === 'type') {
+                continue;
+            }
+            if (
+                $field instanceof DateField
+                && $field->isRangePicker()
+                && in_array($attr, ['range-separator', 'start-placeholder', 'end-placeholder'], true)
+            ) {
                 continue;
             }
 
@@ -425,6 +416,80 @@ final class FieldRenderer
             FieldType::DATE_RANGE => true,
             default => false,
         };
+    }
+
+    private function buildDateFieldComponent(
+        Field $field,
+        callable $bindModelValue,
+        string $placeholder,
+        bool $inline
+    ): AbstractHtmlElement {
+        $pickerType = $field instanceof DateField
+            ? $field->getPickerType()
+            : match ($field->type()) {
+                FieldType::DATE => 'date',
+                FieldType::DATE_RANGE => 'daterange',
+                default => 'datetime',
+            };
+
+        $baseAttrs = [
+            'clearable' => '',
+            'style' => $this->resolveDateFieldInlineStyle($pickerType, $inline),
+        ];
+
+        if ($field instanceof DateField && $field->usesTimePicker()) {
+            return El::double('el-time-picker')->setAttrs($bindModelValue(array_merge($baseAttrs, [
+                'placeholder' => $placeholder,
+            ])));
+        }
+
+        if ($field instanceof DateField && $field->isRangePicker()) {
+            $defaultStartPlaceholder = $pickerType === 'datetimerange' ? '开始时间' : '开始日期';
+            $defaultEndPlaceholder = $pickerType === 'datetimerange' ? '结束时间' : '结束日期';
+            $defaultTimeExpression = $this->resolveRangeDefaultTimeExpression($field, $pickerType);
+
+            return El::double('el-date-picker')->setAttrs($bindModelValue(array_filter(array_merge($baseAttrs, [
+                'type' => $pickerType,
+                'range-separator' => (string)($field->getProps()['range-separator'] ?? '至'),
+                'start-placeholder' => (string)($field->getProps()['start-placeholder'] ?? $defaultStartPlaceholder),
+                'end-placeholder' => (string)($field->getProps()['end-placeholder'] ?? $defaultEndPlaceholder),
+                ':default-time' => $defaultTimeExpression,
+            ]), static fn(mixed $value): bool => $value !== null)));
+        }
+
+        return El::double('el-date-picker')->setAttrs($bindModelValue(array_merge($baseAttrs, [
+            'type' => $pickerType,
+            'placeholder' => $placeholder,
+        ])));
+    }
+
+    private function resolveDateFieldInlineStyle(string $pickerType, bool $inline): string
+    {
+        if (!$inline) {
+            return 'width: 100%';
+        }
+
+        return match ($pickerType) {
+            'datetime' => 'width: 240px',
+            'datetimerange' => 'width: 360px',
+            'daterange', 'monthrange' => 'width: 320px',
+            'time' => 'width: 220px',
+            default => 'width: 220px',
+        };
+    }
+
+    private function resolveRangeDefaultTimeExpression(Field $field, string $pickerType): ?string
+    {
+        if ($pickerType !== 'datetimerange') {
+            return null;
+        }
+
+        $props = $field->getProps();
+        if (array_key_exists(':default-time', $props) || array_key_exists('default-time', $props)) {
+            return null;
+        }
+
+        return '[new Date(2000, 0, 1, 0, 0, 0), new Date(2000, 0, 1, 23, 59, 59)]';
     }
 
     private function resolveBooleanStateExpression(bool $staticEnabled, ?string ...$dynamicExpressions): ?string

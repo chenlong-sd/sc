@@ -6,6 +6,7 @@ use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\Form;
 use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
+use Sc\Util\HtmlStructureV2\Support\ListFilterSearchSchemaBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\DialogConfigBuilder;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime\TableRuntimeConfigBuilder;
 
@@ -16,6 +17,7 @@ final class RuntimePreparationCoordinator
         private readonly TableRenderStateFactory $tableRenderStateFactory = new TableRenderStateFactory(),
         private readonly DialogConfigBuilder $dialogConfigBuilder = new DialogConfigBuilder(),
         private readonly TableRuntimeConfigBuilder $tableRuntimeConfigBuilder = new TableRuntimeConfigBuilder(),
+        private readonly ListFilterSearchSchemaBuilder $listFilterSearchSchemaBuilder = new ListFilterSearchSchemaBuilder(),
     ) {
     }
 
@@ -44,10 +46,18 @@ final class RuntimePreparationCoordinator
         $tableState = null;
         $table = $list->getTable();
         if ($table !== null) {
+            $resolvedTableOverrides = array_replace(['listKey' => $list->key()], $tableOverrides);
+            if ($filterForm !== null) {
+                $resolvedTableOverrides['searchSchema'] = $this->listFilterSearchSchemaBuilder->build(
+                    $filterForm,
+                    $table->getSearchSchema()
+                );
+            }
+
             $tableState = $this->prepareTable(
                 $registry,
                 $table,
-                array_replace(['listKey' => $list->key()], $tableOverrides)
+                $resolvedTableOverrides
             );
         }
 

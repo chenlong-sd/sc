@@ -34,6 +34,7 @@ final class RequestAction extends Action
     private ?string $saveCreateUrl = null;
     private ?string $saveUpdateUrl = null;
     private ?string $saveModeQueryKey = null;
+    private bool $dialogSubmitFallback = false;
     private bool $importEnabled = false;
     private array $importColumns = [];
     private string $importRowsKey = 'rows';
@@ -276,6 +277,8 @@ final class RequestAction extends Action
      */
     public function submitForm(?string $scope = null): static
     {
+        $this->dialogSubmitFallback = true;
+
         return $this
             ->validateForm($scope)
             ->payloadFromForm($scope);
@@ -1002,6 +1005,11 @@ final class RequestAction extends Action
     public function getSaveModeQueryKey(): ?string
     {
         return $this->saveModeQueryKey;
+    }
+
+    public function shouldUseDialogSubmitFallback(): bool
+    {
+        return $this->dialogSubmitFallback;
     }
 
     public function usesImport(): bool

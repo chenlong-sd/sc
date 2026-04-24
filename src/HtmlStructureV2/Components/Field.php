@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
@@ -25,6 +26,8 @@ abstract class Field implements FormNode
     protected ?JsExpression $disabledWhen = null;
     protected ?JsExpression $readonlyWhen = null;
     protected ?string $labelWidth = null;
+    protected ?array $searchConfig = null;
+    protected bool $searchEnabled = true;
 
     public function __construct(
         private readonly string $name,
@@ -174,6 +177,86 @@ abstract class Field implements FormNode
     public function style(?string $style): static
     {
         return $this->prop('style', $style);
+    }
+
+    /**
+     * 为当前字段声明列表筛选搜索协议。
+     * 主要用于 `ListWidget::filters()` 里的字段，把“筛选 UI + 搜索类型 + 真实字段映射”收敛到一处定义。
+     * 未指定 type 时默认使用 `=`；未指定真实字段时默认使用当前字段 path/name。
+     * 传 false 可显式关闭该字段参与搜索协议推导。
+     *
+     * @param string|bool $searchable 是否启用搜索或直接指定搜索操作符，默认值为 true。
+     * @param string|null $field 后端真实字段名；传 null 时默认使用当前字段 path/name。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('user_name', '用户')->searchable('LIKE', 'user.name')`
+     */
+    public function searchable(
+        #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
+        string|bool $searchable = true,
+        ?string $field = null
+    ): static {
+        if ($searchable === false) {
+            $this->searchEnabled = false;
+            $this->searchConfig = [];
+
+            return $this;
+        }
+
+        $this->searchEnabled = true;
+        $this->searchConfig ??= [];
+        $this->searchConfig['type'] = is_string($searchable) ? strtoupper($searchable) : '=';
+
+        $normalizedField = is_string($field) ? trim($field) : '';
+        if ($normalizedField !== '') {
+            $this->searchConfig['field'] = $normalizedField;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 单独设置当前字段的搜索操作符。
+     *
+     * @param string $type 搜索操作符类型。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('keyword', '关键词')->searchType('LIKE')`
+     */
+    public function searchType(
+        #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
+        string $type
+    ): static {
+        $this->searchEnabled = true;
+        $this->searchConfig ??= [];
+        $this->searchConfig['type'] = strtoupper($type);
+
+        return $this;
+    }
+
+    /**
+     * 单独设置当前字段映射到的真实搜索字段名。
+     *
+     * @param string $field 后端真实字段名。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * `Fields::text('user_name', '用户')->searchField('user.name')`
+     */
+    public function searchField(string $field): static
+    {
+        $normalized = trim($field);
+        if ($normalized === '') {
+            return $this;
+        }
+
+        $this->searchEnabled = true;
+        $this->searchConfig ??= [];
+        $this->searchConfig['field'] = $normalized;
+
+        return $this;
     }
 
     private function mergeFieldPropString(string $name, string $value): string
@@ -465,5 +548,20 @@ abstract class Field implements FormNode
     public function getReadonlyWhen(): ?JsExpression
     {
         return $this->readonlyWhen;
+    }
+
+    public function hasSearchConfig(): bool
+    {
+        return $this->searchConfig !== null;
+    }
+
+    public function isSearchEnabled(): bool
+    {
+        return $this->searchEnabled;
+    }
+
+    public function getSearchConfig(): ?array
+    {
+        return $this->searchConfig;
     }
 }

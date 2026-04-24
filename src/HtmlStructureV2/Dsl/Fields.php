@@ -240,12 +240,12 @@ final class Fields
     public static function date(string $name, ?string $label = null): DateField
     {
         return (new DateField($name, $label ?? '', FieldType::DATE))
-            ->format('YYYY-MM-DD')
-            ->valueFormat('YYYY-MM-DD');
+            ->pickerType('date');
     }
 
     /**
-     * 创建日期时间选择器，默认使用 YYYY-MM-DD HH:mm:ss 格式。
+     * 创建日期时间选择器统一入口，默认类型为 `datetime`。
+     * 也可继续链式切换为 `date` / `daterange` / `datetimerange` / `time` 等模式。
      *
      * @param string $name 字段名。
      * @param string|null $label 字段标签；传 null 时不显示标签。
@@ -253,12 +253,12 @@ final class Fields
      *
      * 示例：
      * `Fields::datetime('published_at', '发布时间')`
+     * `Fields::datetime('service_time', '服务时间')->pickerType('datetimerange')`
      */
     public static function datetime(string $name, ?string $label = null): DateField
     {
         return (new DateField($name, $label ?? '', FieldType::DATETIME))
-            ->format('YYYY-MM-DD HH:mm:ss')
-            ->valueFormat('YYYY-MM-DD HH:mm:ss');
+            ->pickerType('datetime');
     }
 
     /**
@@ -275,8 +275,7 @@ final class Fields
     public static function daterange(string $name, ?string $label = null): DateField
     {
         return (new DateField($name, $label ?? '', FieldType::DATE_RANGE))
-            ->format('YYYY-MM-DD')
-            ->valueFormat('YYYY-MM-DD')
+            ->pickerType('daterange')
             ->prop('range-separator', '至')
             ->prop('start-placeholder', '开始日期')
             ->prop('end-placeholder', '结束日期');

@@ -134,27 +134,6 @@ class Action implements
     }
 
     /**
-     * 创建“提交弹窗数据”动作。
-     * 目标为 form 弹窗时会直接提交表单；
-     * 目标为 iframe 弹窗时，会先调用子页面的提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
-     * 若动作放在 dialog footer 中，会默认使用当前 dialog；
-     * 其它位置如需显式指定目标 dialog，再链式调用 dialog()。
-     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()；
-     * 也可继续链式调用 successMessage()/errorMessage()/loadingText() 覆盖默认提示。
-     *
-     * @param string $label 按钮显示文案，默认值为“保存”。
-     * @return self 弹窗提交动作实例。
-     *
-     * 示例：
-     * `Action::submit()->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
-     */
-    public static function submit(string $label = '保存'): self
-    {
-        return (new self($label, ActionIntent::SUBMIT))
-            ->type('primary');
-    }
-
-    /**
      * 创建“关闭弹窗”动作。
      * 若动作放在 dialog footer 中，会默认关闭当前 dialog；
      * 其它位置如需显式指定目标 dialog，再链式调用 dialog()。
@@ -258,15 +237,14 @@ class Action implements
 
     /**
      * 指定动作目标，通常用于绑定 dialog key。
-     * 对 submit/close/create/edit 这类依赖弹窗目标的动作，最终会基于这个 target 运行。
-     * 其中 submit 若命中 iframe 弹窗，还会继续读取该 dialog 配置的 iframe 提交入口。
-     * 若当前动作已经处于 dialog footer，上述 submit/close 默认可省略 target。
+     * 对 close/create/edit，以及运行在 dialog footer 中的保存动作，最终都会基于这个 target 运行。
+     * 若当前动作已经处于 dialog footer，上述动作默认可省略 target。
      *
      * @param string|null $target 目标弹窗 key；传 null 表示清空目标。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->target('qa-info-dialog')`
+     * `Action::close()->target('qa-info-dialog')`
      */
     public function target(?string $target): static
     {
@@ -518,15 +496,14 @@ class Action implements
     }
 
     /**
-     * 为 `Actions::submit()` 就近设置统一提交地址。
-     * 优先级高于目标 dialog 上的 saveUrl()/createUrl()/updateUrl()；
-     * 适合当前按钮想临时覆盖默认提交地址时使用。
+     * 为当前弹窗保存流程就近设置统一提交地址。
+     * 优先级高于目标 dialog 上的 saveUrl()/createUrl()/updateUrl()。
      *
      * @param string|null $saveUrl 提交地址；传 null 表示取消就近覆盖。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
+     * `Action::make('保存')->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
      */
     public function saveUrl(?string $saveUrl): static
     {
@@ -536,14 +513,14 @@ class Action implements
     }
 
     /**
-     * 为 `Actions::submit()` 就近设置 create 模式提交地址。
+     * 为当前弹窗保存流程就近设置 create 模式提交地址。
      * 优先级高于目标 dialog 上的 createUrl()/saveUrl()。
      *
      * @param string|null $createUrl 新建模式提交地址；传 null 表示取消就近覆盖。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->createUrl('/admin/qa-info/create')`
+     * `Action::make('保存')->dialog('qa-info-dialog')->createUrl('/admin/qa-info/create')`
      */
     public function createUrl(?string $createUrl): static
     {
@@ -553,14 +530,14 @@ class Action implements
     }
 
     /**
-     * 为 `Actions::submit()` 就近设置 edit 模式提交地址。
+     * 为当前弹窗保存流程就近设置 edit 模式提交地址。
      * 优先级高于目标 dialog 上的 updateUrl()/saveUrl()。
      *
      * @param string|null $updateUrl 编辑模式提交地址；传 null 表示取消就近覆盖。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->updateUrl('/admin/qa-info/update')`
+     * `Action::make('保存')->dialog('qa-info-dialog')->updateUrl('/admin/qa-info/update')`
      */
     public function updateUrl(?string $updateUrl): static
     {
@@ -571,13 +548,13 @@ class Action implements
 
     /**
      * 设置当前动作成功后的提示文案。
-     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     * 适用于会发请求的动作，例如 `Actions::request()`、`Actions::save()`。
      *
      * @param string|null $successMessage 成功提示文案；传 null 表示沿用默认成功提示。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->successMessage('成功')`
+     * `Actions::save()->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): static
     {
@@ -588,13 +565,13 @@ class Action implements
 
     /**
      * 设置当前动作失败后的提示文案。
-     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     * 适用于会发请求的动作，例如 `Actions::request()`、`Actions::save()`。
      *
      * @param string|null $errorMessage 失败提示文案；传 null 表示沿用默认失败提示。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->errorMessage('保存失败，请重试')`
+     * `Actions::save()->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): static
     {
@@ -605,13 +582,13 @@ class Action implements
 
     /**
      * 设置当前动作进行中的 loading 文案。
-     * 适用于会发请求的动作，例如 `Actions::submit()`、`Actions::request()`、`Actions::save()`。
+     * 适用于会发请求的动作，例如 `Actions::request()`、`Actions::save()`。
      *
      * @param string|null $loadingText loading 提示文案；传 null 表示沿用默认文案。
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::submit()->loadingText('正在提交，请稍后...')`
+     * `Actions::save()->loadingText('正在提交，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): static
     {

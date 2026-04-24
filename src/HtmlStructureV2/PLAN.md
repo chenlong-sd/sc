@@ -23,7 +23,7 @@ Reason:
 - V2 already has `Table::toolbarLeft()` / `Table::toolbarRight()`
 - V2 already has `Table::rowActions()`
 - V2 already has `ListWidget::filters()`
-- V2 already has `Table::search()` / `Table::searchSchema()`
+- V2 already has `ListWidget::filters()` and column-level `searchable()`
 - V2 page-level actions already exist via `Page::actions()`
 
 So the next phase should focus on missing feature bodies, not on re-creating old API names.
@@ -107,7 +107,7 @@ This gap is also no longer pending planning work.
 Confirmed landing points:
 
 - `Table::statusToggle()` now exists as the V2-native quick toggle entry
-- Native `Table::statusToggle()` has been simplified back to `name + options + label`; backend field mapping stays in `search()` / `searchSchema()` / `Column::searchable()`
+- Native `Table::statusToggle()` has been simplified back to `name + options + label`; backend field mapping stays in filter-field search config or `Column::searchable()`
 - Toggle clicks now reuse the existing table search pipeline instead of introducing a parallel query path
 - When a table lives inside `ListWidget`, toggle state syncs into the list filter model
 - The labeled toggle-bar presentation has been aligned back to the original V1 visual structure during real-page migration

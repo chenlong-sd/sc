@@ -12,6 +12,7 @@ final class CascaderField extends OptionField
     public function __construct(string $name, string $label)
     {
         parent::__construct($name, $label, FieldType::CASCADER);
+        $this->prop('filterable', true);
     }
 
     /**

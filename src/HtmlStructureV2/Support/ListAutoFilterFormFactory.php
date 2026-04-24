@@ -153,7 +153,7 @@ final class ListAutoFilterFormFactory
 
         if ($this->looksLikeDatetime($name, $display, $searchField)) {
             return Fields::daterange($name)
-                ->prop('type', 'datetimerange')
+                ->pickerType('datetimerange')
                 ->format('YYYY-MM-DD HH:mm:ss')
                 ->valueFormat('YYYY-MM-DD HH:mm:ss')
                 ->prop('start-placeholder', '开始' . $label)

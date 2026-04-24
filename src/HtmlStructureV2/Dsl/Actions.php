@@ -86,11 +86,14 @@ final class Actions
     }
 
     /**
-     * 创建一个独立表单页常用的“保存”请求动作。
+     * 创建一个通用“保存”请求动作。
      * 默认按钮类型为 primary，图标为 Check；
-     * 默认会按当前唯一表单或显式 submitForm() 目标执行表单提交；
-     * 保存地址、提示文案、submit* 生命周期事件推荐配置在 Form 上；
-     * 如果页面里有多个表单，可继续链式调用 submitForm('formKey') 显式指定目标。
+     * 默认会按当前唯一表单或显式 submitForm() 目标执行保存；
+     * 若当前动作运行在 dialog footer 中且没有可解析的表单 scope，
+     * 会自动回退到当前 dialog 的提交流程，适用于 iframe dialog 等场景。
+     *
+     * 保存地址、提示文案、submit* 生命周期事件推荐优先配置在 Form 上；
+     * 若当前保存场景没有 Form，可回退使用 dialog 的 saveUrl()/createUrl()/updateUrl()。
      *
      * @param string $label 按钮显示文案，默认值为“保存”。
      * @return RequestAction 请求动作实例，默认已配置 icon('Check')->submitForm()。
@@ -174,26 +177,6 @@ final class Actions
         return RequestAction::make($label)
             ->icon('Upload')
             ->enableImport();
-    }
-
-    /**
-     * 创建“提交弹窗数据”动作。
-     * 目标为 form 弹窗时直接提交表单；
-     * 目标为 iframe 弹窗时，会先调用子页面提交方法取数据，再按 dialog 的 saveUrl()/createUrl()/updateUrl() 提交。
-     * 若动作放在 dialog footer 中，会默认使用当前 dialog；
-     * 其它位置如需显式指定目标 dialog，请继续链式调用 dialog()；
-     * 如需就近覆盖提交地址，可继续链式调用 saveUrl()/createUrl()/updateUrl()；
-     * 也可继续链式调用 successMessage()/errorMessage()/loadingText() 覆盖默认提示。
-     *
-     * @param string $label 按钮显示文案，默认值为“保存”。
-     * @return Action 弹窗提交动作实例。
-     *
-     * 示例：
-     * `Actions::submit()->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
-     */
-    public static function submit(string $label = '保存'): Action
-    {
-        return Action::submit($label);
     }
 
     /**

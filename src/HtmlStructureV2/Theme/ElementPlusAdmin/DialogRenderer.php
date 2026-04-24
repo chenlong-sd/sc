@@ -6,6 +6,8 @@ use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Dialog;
+use Sc\Util\HtmlStructureV2\Components\RequestAction;
+use Sc\Util\HtmlStructureV2\Dsl\Actions;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
@@ -229,6 +231,13 @@ final class DialogRenderer
             $filteredActions = array_values(array_filter(
                 $footerActions,
                 static fn(Action $action): bool => $action->intent() !== ActionIntent::SUBMIT
+                    && !(
+                        $action instanceof RequestAction
+                        && (
+                            $action->shouldValidateForm()
+                            || $action->getPayloadSource() === 'form'
+                        )
+                    )
             ));
 
             return $filteredActions !== []
@@ -245,7 +254,9 @@ final class DialogRenderer
 
             return [
                 Action::close('取消')->dialog($dialog->key()),
-                Action::submit('保存')->dialog($dialog->key()),
+                Actions::save()
+                    ->closeAfterSuccess()
+                    ->reloadTable(),
             ];
         }
 
