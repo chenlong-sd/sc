@@ -2359,9 +2359,17 @@
                         vm: this,
                       }).then((payload) => {
                         const rows = pickRows(payload);
+                        const resolvedTotal = resolveTotal(payload) ?? resolveTotal(rawPayload);
+                        const nextTotal = (
+                          Number(state?.page || 1) > 1
+                          && (!Number.isFinite(Number(resolvedTotal)) || Number(resolvedTotal) <= 0)
+                          && Number(state?.total || 0) > 0
+                        )
+                          ? Number(state.total)
+                          : (Number.isFinite(Number(resolvedTotal)) ? Number(resolvedTotal) : rows.length);
                         state.rows = rows;
                         state.allRows = clone(rows);
-                        state.total = resolveTotal(payload) ?? resolveTotal(rawPayload) ?? rows.length;
+                        state.total = nextTotal;
                         state.selection = normalizeActiveTableSelection(state, tableCfg);
                         syncGlobalTableSelection(this, resolvedKey);
 
@@ -2537,9 +2545,50 @@
                 return;
               }
 
-              state.page = page;
-              emitTableEvent(this, tableKey, tableCfg, state, 'pageChange', { page })
-                .then(() => this.loadTableData(tableKey));
+              const nextPage = Number(page);
+              if (!Number.isFinite(nextPage) || nextPage <= 0) {
+                return;
+              }
+
+              const paginationEventLock = isObject(state.__paginationEventLock)
+                ? state.__paginationEventLock
+                : null;
+              const now = Date.now();
+              if (
+                paginationEventLock
+                && (now - Number(paginationEventLock.at || 0)) < 1000
+                && (
+                  (paginationEventLock.type === 'size' && nextPage === 1)
+                  || (
+                    paginationEventLock.type === 'page'
+                    && Number(paginationEventLock.page || 0) > 1
+                    && nextPage === 1
+                  )
+                )
+              ) {
+                state.__paginationEventLock = null;
+                return;
+              }
+
+              if (nextPage === Number(state.page)) {
+                return;
+              }
+
+              state.__paginationEventLock = {
+                type: 'page',
+                page: nextPage,
+                pageSize: Number(state.pageSize),
+                at: now,
+              };
+              state.page = nextPage;
+              emitTableEvent(this, tableKey, tableCfg, state, 'pageChange', { page: nextPage })
+                .then(() => this.loadTableData(tableKey))
+                .finally(() => {
+                  const lock = isObject(state.__paginationEventLock) ? state.__paginationEventLock : null;
+                  if (lock && lock.type === 'page' && Number(lock.page) === nextPage) {
+                    state.__paginationEventLock = null;
+                  }
+                });
             },
             handleTablePageSizeChange(tableKey, pageSize){
               const state = this.getTableState(tableKey);
@@ -2548,10 +2597,39 @@
                 return;
               }
 
-              state.pageSize = pageSize;
+              const nextPageSize = Number(pageSize);
+              if (!Number.isFinite(nextPageSize) || nextPageSize <= 0) {
+                return;
+              }
+
+              const allowedPageSizes = Array.isArray(tableCfg?.pagination?.pageSizes)
+                ? tableCfg.pagination.pageSizes.map((size) => Number(size)).filter((size) => Number.isFinite(size) && size > 0)
+                : [];
+
+              if (allowedPageSizes.length > 0 && !allowedPageSizes.includes(nextPageSize)) {
+                return;
+              }
+
+              if (nextPageSize === Number(state.pageSize)) {
+                return;
+              }
+
+              state.__paginationEventLock = {
+                type: 'size',
+                page: 1,
+                pageSize: nextPageSize,
+                at: Date.now(),
+              };
+              state.pageSize = nextPageSize;
               state.page = 1;
-              emitTableEvent(this, tableKey, tableCfg, state, 'pageSizeChange', { pageSize })
-                .then(() => this.loadTableData(tableKey));
+              emitTableEvent(this, tableKey, tableCfg, state, 'pageSizeChange', { pageSize: nextPageSize })
+                .then(() => this.loadTableData(tableKey))
+                .finally(() => {
+                  const lock = isObject(state.__paginationEventLock) ? state.__paginationEventLock : null;
+                  if (lock && lock.type === 'size' && Number(lock.pageSize) === nextPageSize) {
+                    state.__paginationEventLock = null;
+                  }
+                });
             },
             handleTableSortChange(tableKey, payload = {}){
               const state = this.getTableState(tableKey);

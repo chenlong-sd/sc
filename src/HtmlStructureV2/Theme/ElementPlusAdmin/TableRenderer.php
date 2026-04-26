@@ -406,8 +406,8 @@ final class TableRenderer
                     ':page-size' => $bindings->pageSizeExpression(),
                     ':page-sizes' => $this->jsValue($table->getPageSizes()),
                     ':total' => $bindings->totalExpression(),
-                    '@size-change' => $bindings->pageSizeChangeExpression(),
-                    '@current-change' => $bindings->pageChangeExpression(),
+                    '@update:page-size' => $bindings->pageSizeChangeExpression(),
+                    '@update:current-page' => $bindings->pageChangeExpression(),
                 ])
             );
     }
