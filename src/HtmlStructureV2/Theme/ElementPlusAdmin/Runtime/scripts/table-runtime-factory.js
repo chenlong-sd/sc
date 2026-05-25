@@ -147,6 +147,15 @@
               .replace(/\n{3,}/g, '\n\n')
               .trim();
           };
+          const trimExportLoopChunkBoundary = (value) => {
+            if (value === null || value === undefined || value === '') {
+              return '';
+            }
+
+            return String(value)
+              .replace(/^[\s\n]+/g, '')
+              .replace(/[\s\n]+$/g, '');
+          };
           const parseExportLoopExpression = (expression) => {
             const source = normalizeExportExpressionSource(expression).trim();
             if (source === '') {
@@ -321,7 +330,7 @@
                     }
                   }
 
-                  return renderElementContent(element, loopLocals);
+                  return trimExportLoopChunkBoundary(renderElementContent(element, loopLocals));
                 }).filter((chunk) => chunk !== '');
 
                 return chunks.reduce((output, chunk, index) => {
@@ -329,9 +338,7 @@
                     return chunk;
                   }
 
-                  const separator = output.endsWith('\n') || chunk.startsWith('\n')
-                    ? ''
-                    : '\n';
+                  const separator = '； ';
 
                   return output + separator + chunk;
                 }, '');
