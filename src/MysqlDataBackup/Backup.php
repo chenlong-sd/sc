@@ -44,13 +44,13 @@ class Backup
     /**
      * @param array $postParam
      * 空置时 返回页面
-     * $postParam['start'] 不为空时 执行备份,
-     * $postParam['tables'] 执行备份时需要传需要备份的数据库
-     * $postParam['cancel'] 不为空时 取消备份
-     * $postParam['remove'] 不为空时 删除备份文件
-     * $postParam['recover'] 不为空时 执行恢复
-     * $postParam['getRecover'] 不为空时 获取备份文件
-     * $postParam['getMessage'] 不为空时 获取当前备份明细
+     * - start 不为空时 执行备份,
+     * - tables 执行备份时需要传需要备份的数据库
+     * - cancel 不为空时 取消备份
+     * - remove 不为空时 删除备份文件
+     * - recover 不为空时 执行恢复
+     * - getRecover 不为空时 获取备份文件
+     * - getMessage 不为空时 获取当前备份明细
      *
      * @return array|string
      * @throws \Exception
