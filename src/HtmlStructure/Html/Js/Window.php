@@ -299,7 +299,7 @@ class Window
 
     public function setId(string $id): Window
     {
-        $this->id = $id;
+        $this->id = "VueWindow" . $id;
         return $this;
     }
 

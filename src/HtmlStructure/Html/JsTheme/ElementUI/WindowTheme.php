@@ -194,7 +194,7 @@ class WindowTheme implements WindowThemeInterface
             }
             
             for (const key of Object.keys(this.\$data)) {
-                if (/^VueWindow\d+$/.test(key)){
+                if (/^VueWindow/.test(key)){
                     this[key] = false;
                 }
             }
