@@ -289,7 +289,7 @@ abstract class Field implements FormNode
      */
     public function span(int $span): static
     {
-        $this->span = $span;
+        $this->span = max(1, min(24, $span));
 
         return $this;
     }

@@ -997,7 +997,7 @@
 
                 this.dialogSubmitting[dialogKey] = true;
                 loadingInstance = ElementPlus.ElLoading.service({
-                  lock: true,
+                  lock: false,
                   text: resolveSubmitLoadingText(),
                   background: 'rgba(255,255,255,0.35)',
                 });

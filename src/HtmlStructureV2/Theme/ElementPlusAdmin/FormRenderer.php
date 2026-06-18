@@ -172,14 +172,14 @@ final class FormRenderer
             : El::double('el-card')->addClass('sc-v2-form-section-card')->append($body);
         $wrapped = $this->applyRenderableAttributes($wrapped, $section->getRenderAttributes());
 
-        $block = $this->wrapBlockNode($wrapped, $section->getSpan())
+        $block = $this->makeBlockNode($wrapped, $section)
             ->addClass('sc-v2-form-section-block');
 
         if ($section->isPlain()) {
             $block->addClass('sc-v2-form-section-block--plain');
         }
 
-        return $block;
+        return $this->appendAfterSpanColumn($block, $section->getAfterSpan());
     }
 
     private function renderInlineNode(InlineNode $inlineNode, FormNodeRenderContext $context): AbstractHtmlElement
@@ -193,7 +193,7 @@ final class FormRenderer
         );
         $this->appendRenderedChildren($body, $inlineNode->getChildren(), $inlineContext->withInline(true));
 
-        return $this->wrapBlockNode($body, $inlineNode->getSpan());
+        return $this->wrapBlockNode($body, $inlineNode);
     }
 
     private function renderGridNode(GridNode $gridNode, FormNodeRenderContext $context): AbstractHtmlElement
@@ -207,7 +207,7 @@ final class FormRenderer
         );
         $this->appendRenderedChildren($row, $gridNode->getChildren(), $gridContext->withInline(false));
 
-        return $this->wrapBlockNode($row, $gridNode->getSpan());
+        return $this->wrapBlockNode($row, $gridNode);
     }
 
     private function renderTabsNode(TabsNode $tabsNode, FormNodeRenderContext $context): AbstractHtmlElement
@@ -247,7 +247,7 @@ final class FormRenderer
             $tabs->append($pane);
         }
 
-        return $this->wrapBlockNode($tabs, $tabsNode->getSpan());
+        return $this->wrapBlockNode($tabs, $tabsNode);
     }
 
     private function renderCollapseNode(CollapseNode $collapseNode, FormNodeRenderContext $context): AbstractHtmlElement
@@ -282,7 +282,7 @@ final class FormRenderer
             );
         }
 
-        return $this->wrapBlockNode($collapse, $collapseNode->getSpan());
+        return $this->wrapBlockNode($collapse, $collapseNode);
     }
 
     private function renderUnsupportedTabPaneNode(TabPaneNode $tabPaneNode, FormNodeRenderContext $context): AbstractHtmlElement
@@ -383,7 +383,7 @@ final class FormRenderer
             return $body;
         }
 
-        return $this->wrapBlockNode($body, $group->getSpan());
+        return $this->wrapBlockNode($body, $group);
     }
 
     private function renderFormTable(FormTable $table, FormNodeRenderContext $context): AbstractHtmlElement
@@ -455,7 +455,7 @@ final class FormRenderer
             return $body;
         }
 
-        return $this->wrapBlockNode($body, $table->getSpan());
+        return $this->wrapBlockNode($body, $table);
     }
 
     private function renderFormTableColumnNode(
@@ -943,12 +943,30 @@ final class FormRenderer
             return $content;
         }
 
-        return $this->wrapBlockNode($content, $customNode->getSpan());
+        return $this->wrapBlockNode($content, $customNode);
     }
 
-    private function wrapBlockNode(AbstractHtmlElement $content, int $span): AbstractHtmlElement
+    private function wrapBlockNode(AbstractHtmlElement $content, FormNode $node): AbstractHtmlElement
     {
-        return El::double('el-col')->setAttr(':span', $span)->append($content);
+        $root = $this->makeBlockNode($content, $node);
+
+        return $this->appendAfterSpanColumn($root, $node->getAfterSpan());
+    }
+
+    private function makeBlockNode(AbstractHtmlElement $content, FormNode $node): AbstractHtmlElement
+    {
+        return El::double('el-col')->setAttr(':span', $node->getSpan())->append($content);
+    }
+
+    private function appendAfterSpanColumn(AbstractHtmlElement $root, int $afterSpan): AbstractHtmlElement
+    {
+        if ($afterSpan <= 0) {
+            return $root;
+        }
+
+        $root->after(El::double('el-col')->setAttr(':span', $afterSpan));
+
+        return $root->getParent() ?: $root;
     }
 
     private function customRenderableEventContextExpression(FormNodeRenderContext $context): ?string

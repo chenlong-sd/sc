@@ -985,7 +985,27 @@ final class FieldRenderer
             $root->setAttr('v-if', $visibleWhen);
         }
 
-        return $root;
+        if ($inline) {
+            return $root;
+        }
+
+        return $this->appendAfterSpanColumn($root, $field->getAfterSpan(), $visibleWhen);
+    }
+
+    private function appendAfterSpanColumn(AbstractHtmlElement $root, int $afterSpan, ?string $visibleWhen = null): AbstractHtmlElement
+    {
+        if ($afterSpan <= 0) {
+            return $root;
+        }
+
+        $afterColumn = El::double('el-col')->setAttr(':span', $afterSpan);
+        if ($visibleWhen !== null) {
+            $afterColumn->setAttr('v-if', $visibleWhen);
+        }
+
+        $root->after($afterColumn);
+
+        return $root->getParent() ?: $root;
     }
 
     private function appendHelpText(DoubleLabel $item, Field $field): void

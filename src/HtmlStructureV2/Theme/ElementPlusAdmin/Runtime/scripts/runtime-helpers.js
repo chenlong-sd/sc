@@ -1293,7 +1293,7 @@
                 const loadingText = resolveContextValue(handler.loadingText, context);
                 if (loadingText) {
                   loadingInstance = ElementPlus.ElLoading.service({
-                    lock: true,
+                    lock: false,
                     text: String(loadingText),
                     background: 'rgba(255,255,255,0.35)',
                   });
