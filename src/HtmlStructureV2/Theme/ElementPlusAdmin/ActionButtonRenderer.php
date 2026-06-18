@@ -222,16 +222,23 @@ final class ActionButtonRenderer
                 $actionKey !== null
             ),
             ActionIntent::REQUEST => null,
-            ActionIntent::CUSTOM => $this->resolveCustomExecutor($action) ?? (
-                $action->targetName() !== null
+            ActionIntent::CUSTOM => $this->resolveCustomExecutor($action)
+                ?? ($action->targetName() !== null
                     ? $this->wrapActionExecution(
                         $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                         $rowScoped,
                         $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target),
                         $actionKey !== null
                     )
-                    : null
-            ),
+                    : ($action->hasEventHandlers('click')
+                        ? $this->wrapActionExecution(
+                            $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
+                            $rowScoped,
+                            null,
+                            $actionKey !== null
+                        )
+                        : null)
+                ),
         };
     }
 
