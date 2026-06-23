@@ -14,7 +14,7 @@ trait HasReadonly
      * @return static 当前节点实例。
      *
      * 示例：
-     * `Forms::section('基础信息')->readonly()`
+     * - `Forms::section('基础信息')->readonly()`
      */
     public function readonly(bool $readonly = true): static
     {

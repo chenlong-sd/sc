@@ -58,7 +58,7 @@ class Action implements
      * @return static 动作实例。
      *
      * 示例：
-     * `Action::make('导出')->icon('Download')->type('success')`
+     * - `Action::make('导出')->icon('Download')->type('success')`
      */
     public static function make(string $label): static
     {
@@ -73,7 +73,7 @@ class Action implements
      * @return DialogAction 返回支持绑定弹窗的动作实例。
      *
      * 示例：
-     * `Action::create('新增')->dialog('qa-info-dialog')`
+     * - `Action::create('新增')->dialog('qa-info-dialog')`
      */
     public static function create(string $label = '新建'): DialogAction
     {
@@ -90,7 +90,7 @@ class Action implements
      * @return DialogAction 返回支持绑定弹窗的动作实例。
      *
      * 示例：
-     * `Action::edit()->dialog('qa-info-dialog')`
+     * - `Action::edit()->dialog('qa-info-dialog')`
      */
     public static function edit(string $label = '编辑'): DialogAction
     {
@@ -108,7 +108,7 @@ class Action implements
      * @return self 删除动作实例。
      *
      * 示例：
-     * `Action::delete()->deleteUrl('/admin/qa-info/delete')->deleteKey('id')`
+     * - `Action::delete()->deleteUrl('/admin/qa-info/delete')->deleteKey('id')`
      */
     public static function delete(string $label = '删除'): self
     {
@@ -125,7 +125,7 @@ class Action implements
      * @return self 刷新动作实例。
      *
      * 示例：
-     * `Action::refresh()->forTable('qa-info-table')`
+     * - `Action::refresh()->forTable('qa-info-table')`
      */
     public static function refresh(string $label = '刷新'): self
     {
@@ -142,7 +142,7 @@ class Action implements
      * @return self 关闭动作实例。
      *
      * 示例：
-     * `Action::close()->dialog('qa-info-dialog')`
+     * - `Action::close()->dialog('qa-info-dialog')`
      */
     public static function close(string $label = '取消'): self
     {
@@ -161,7 +161,7 @@ class Action implements
      * @return self 重置表单动作实例。
      *
      * 示例：
-     * `Action::resetForm('恢复初始值', 'qa-info-form')`
+     * - `Action::resetForm('恢复初始值', 'qa-info-form')`
      */
     public static function resetForm(string $label = '重置', ?string $scope = null): self
     {
@@ -180,7 +180,7 @@ class Action implements
      * @return self 自定义动作实例。
      *
      * 示例：
-     * `Action::custom('查看')->onClick('({ row, vm }) => vm.openDetail?.(row)')`
+     * - `Action::custom('查看')->onClick('({ row, vm }) => vm.openDetail?.(row)')`
      */
     public static function custom(string $label): self
     {
@@ -194,7 +194,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('保存草稿')->type('warning')`
+     * - `Action::make('保存草稿')->type('warning')`
      */
     public function type(string $type): static
     {
@@ -210,7 +210,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('保存')->icon('Check')`
+     * - `Action::make('保存')->icon('Check')`
      */
     public function icon(string $icon): static
     {
@@ -226,7 +226,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('导出')->key('export-action')`
+     * - `Action::make('导出')->key('export-action')`
      */
     public function key(string $key): static
     {
@@ -244,7 +244,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::close()->target('qa-info-dialog')`
+     * - `Action::close()->target('qa-info-dialog')`
      */
     public function target(?string $target): static
     {
@@ -266,8 +266,8 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::close()->dialog('qa-info-dialog')`
-     * `Action::custom('查看')->dialog($dialog)`
+     * - `Action::close()->dialog('qa-info-dialog')`
+     * - `Action::custom('查看')->dialog($dialog)`
      */
     public function dialog(string|Dialog $dialog): static
     {
@@ -285,7 +285,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::custom('查看')->bindDialog(Dialog::make('qa-info-dialog'))`
+     * - `Action::custom('查看')->bindDialog(Dialog::make('qa-info-dialog'))`
      */
     public function bindDialog(Dialog $dialog): static
     {
@@ -311,7 +311,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::refresh()->forTable('qa-info-table')`
+     * - `Action::refresh()->forTable('qa-info-table')`
      */
     public function forTable(string|Table $table): static
     {
@@ -329,7 +329,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::refresh()->forList('qa-info-list')`
+     * - `Action::refresh()->forList('qa-info-list')`
      */
     public function forList(string|ListWidget $list): static
     {
@@ -352,7 +352,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('预览')->onClick('({ row, vm }) => vm.openPreview?.(row)')`
+     * - `Action::make('预览')->onClick('({ row, vm }) => vm.openPreview?.(row)')`
      */
     public function onClick(string|JsExpression|StructuredEventInterface $handler): static
     {
@@ -377,7 +377,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('审核')->when($canAudit, fn (Action $action) => $action->type('success'))`
+     * - `Action::make('审核')->when($canAudit, fn (Action $action) => $action->type('success'))`
      */
     public function when(bool $condition, ?callable $callback = null, ?callable $otherwise = null): static
     {
@@ -404,7 +404,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('删除')->available($canDelete)`
+     * - `Action::make('删除')->available($canDelete)`
      */
     public function available(bool $available = true): static
     {
@@ -469,7 +469,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('详情')->on('click', '({ row, vm }) => vm.openDetail?.(row)')`
+     * - `Action::make('详情')->on('click', '({ row, vm }) => vm.openDetail?.(row)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -486,7 +486,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::delete()->confirm('确认删除选中记录？')`
+     * - `Action::delete()->confirm('确认删除选中记录？')`
      */
     public function confirm(?string $text): static
     {
@@ -503,7 +503,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('保存')->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
+     * - `Action::make('保存')->dialog('qa-info-dialog')->saveUrl('/admin/qa-info/save')`
      */
     public function saveUrl(?string $saveUrl): static
     {
@@ -520,7 +520,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('保存')->dialog('qa-info-dialog')->createUrl('/admin/qa-info/create')`
+     * - `Action::make('保存')->dialog('qa-info-dialog')->createUrl('/admin/qa-info/create')`
      */
     public function createUrl(?string $createUrl): static
     {
@@ -537,7 +537,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('保存')->dialog('qa-info-dialog')->updateUrl('/admin/qa-info/update')`
+     * - `Action::make('保存')->dialog('qa-info-dialog')->updateUrl('/admin/qa-info/update')`
      */
     public function updateUrl(?string $updateUrl): static
     {
@@ -554,7 +554,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Actions::save()->successMessage('成功')`
+     * - `Actions::save()->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): static
     {
@@ -571,7 +571,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Actions::save()->errorMessage('保存失败，请重试')`
+     * - `Actions::save()->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): static
     {
@@ -588,7 +588,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Actions::save()->loadingText('正在提交，请稍后...')`
+     * - `Actions::save()->loadingText('正在提交，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): static
     {
@@ -605,7 +605,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::delete()->deleteUrl('/admin/qa-info/delete')`
+     * - `Action::delete()->deleteUrl('/admin/qa-info/delete')`
      */
     public function deleteUrl(?string $deleteUrl): static
     {
@@ -622,7 +622,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::delete()->deleteKey('qa_id')`
+     * - `Action::delete()->deleteKey('qa_id')`
      */
     public function deleteKey(?string $deleteKey): static
     {
@@ -642,7 +642,7 @@ class Action implements
      * @return static 当前动作实例。
      *
      * 示例：
-     * `Action::make('打开')->props(['plain' => true, 'v-if' => 'scope.row.enabled'])`
+     * - `Action::make('打开')->props(['plain' => true, 'v-if' => 'scope.row.enabled'])`
      */
     public function props(array $props): static
     {

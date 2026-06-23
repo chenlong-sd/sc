@@ -43,7 +43,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->default('默认标题')`
+     * - `Fields::text('title', '标题')->default('默认标题')`
      */
     public function default(mixed $default): static
     {
@@ -65,7 +65,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->prop('clearable', true)`
+     * - `Fields::text('title', '标题')->prop('clearable', true)`
      */
     public function prop(string $name, mixed $value): static
     {
@@ -102,7 +102,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->props(['clearable' => true, 'maxlength' => 100])`
+     * - `Fields::text('title', '标题')->props(['clearable' => true, 'maxlength' => 100])`
      */
     public function props(array $props): static
     {
@@ -127,7 +127,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->attr(':maxlength', 50)`
+     * - `Fields::text('title', '标题')->attr(':maxlength', 50)`
      */
     public function attr(string $name, mixed $value = ''): static
     {
@@ -142,7 +142,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->attrs(['clearable' => true, ':maxlength' => 50])`
+     * - `Fields::text('title', '标题')->attrs(['clearable' => true, ':maxlength' => 50])`
      */
     public function attrs(array $attributes): static
     {
@@ -157,7 +157,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->className('title-input')`
+     * - `Fields::text('title', '标题')->className('title-input')`
      */
     public function className(?string $className): static
     {
@@ -172,7 +172,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->style('max-width:320px')`
+     * - `Fields::text('title', '标题')->style('max-width:320px')`
      */
     public function style(?string $style): static
     {
@@ -190,7 +190,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('user_name', '用户')->searchable('LIKE', 'user.name')`
+     * - `Fields::text('user_name', '用户')->searchable('LIKE', 'user.name')`
      */
     public function searchable(
         #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
@@ -223,7 +223,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('keyword', '关键词')->searchType('LIKE')`
+     * - `Fields::text('keyword', '关键词')->searchType('LIKE')`
      */
     public function searchType(
         #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
@@ -243,7 +243,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('user_name', '用户')->searchField('user.name')`
+     * - `Fields::text('user_name', '用户')->searchField('user.name')`
      */
     public function searchField(string $field): static
     {
@@ -285,7 +285,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->span(12)`
+     * - `Fields::text('title', '标题')->span(12)`
      */
     public function span(int $span): static
     {
@@ -301,7 +301,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('slug', '标识')->helpText('仅支持英文、数字和中划线')`
+     * - `Fields::text('slug', '标识')->helpText('仅支持英文、数字和中划线')`
      */
     public function helpText(string $helpText): static
     {
@@ -317,7 +317,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('code', '编码')->disabled()`
+     * - `Fields::text('code', '编码')->disabled()`
      */
     public function disabled(bool $disabled = true): static
     {
@@ -335,7 +335,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('code', '编码')->readonly()`
+     * - `Fields::text('code', '编码')->readonly()`
      */
     public function readonly(bool $readonly = true): static
     {
@@ -351,7 +351,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('user_name', '用户')->suffixActions(Actions::make('选择'))`
+     * - `Fields::text('user_name', '用户')->suffixActions(Actions::make('选择'))`
      */
     public function suffixActions(Action ...$actions): static
     {
@@ -367,7 +367,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('code', '编码')->suffixContent('自动生成')`
+     * - `Fields::text('code', '编码')->suffixContent('自动生成')`
      */
     public function suffixContent(string|AbstractHtmlElement|null $content): static
     {
@@ -387,7 +387,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('other', '其他')->visibleWhen('model.type === \"other\"')`
+     * - `Fields::text('other', '其他')->visibleWhen('model.type === \"other\"')`
      */
     public function visibleWhen(string|JsExpression $expression): static
     {
@@ -407,7 +407,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->disabledWhen('model.locked === true')`
+     * - `Fields::text('title', '标题')->disabledWhen('model.locked === true')`
      */
     public function disabledWhen(string|JsExpression $expression): static
     {
@@ -427,7 +427,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->readonlyWhen('model.locked === true')`
+     * - `Fields::text('title', '标题')->readonlyWhen('model.locked === true')`
      */
     public function readonlyWhen(string|JsExpression $expression): static
     {
@@ -446,7 +446,7 @@ abstract class Field implements FormNode
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->labelWidth(120)`
+     * - `Fields::text('title', '标题')->labelWidth(120)`
      */
     public function labelWidth(int|string $width): static
     {

@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Dsl\Events;
+use Sc\Util\HtmlStructureV2\Support\AutoKey;
 use Sc\Util\HtmlStructureV2\Support\FormSchema;
 use Sc\Util\HtmlStructureV2\Support\FormSchemaWalker;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -65,23 +66,35 @@ final class Form implements Renderable, EventAware
     private ?string $saveErrorMessage = null;
     private ?array $initialData = null;
 
-    public function __construct(
-        private readonly string $key
-    ) {
+    private readonly string $key;
+
+    public function __construct(?string $key = null)
+    {
+        $this->key = self::resolveKey($key);
     }
 
     /**
      * 直接创建一个表单组件实例。
      *
-     * @param string $key 表单唯一 key。
+     * @param string|null $key 表单唯一 key；传 null 时自动生成内部 key，仅适合内联使用。
      * @return self 表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')`
+     * - `Form::make('qa-info-form')`
      */
-    public static function make(string $key): self
+    public static function make(?string $key = null): self
     {
         return new self($key);
+    }
+
+    private static function resolveKey(?string $key): string
+    {
+        $key = trim((string)$key);
+        if ($key !== '') {
+            return $key;
+        }
+
+        return AutoKey::make('__sc_v2_auto_form_');
     }
 
     /**
@@ -91,7 +104,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->addFields(Fields::text('title'), Fields::switch('status'))`
+     * - `Form::make('qa-info-form')->addFields(Fields::text('title'), Fields::switch('status'))`
      */
     public function addFields(Field ...$fields): self
     {
@@ -107,7 +120,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->addContent(Forms::section('基础信息')->addContent(...))`
+     * - `Form::make('qa-info-form')->addContent(Forms::section('基础信息')->addContent(...))`
      */
     public function addContent(FormNode ...$nodes): self
     {
@@ -123,7 +136,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('filter-form')->inline()`
+     * - `Form::make('filter-form')->inline()`
      */
     public function inline(bool $inline = true): self
     {
@@ -140,7 +153,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->labelWidth(120)`
+     * - `Form::make('qa-info-form')->labelWidth(120)`
      */
     public function labelWidth(int|string $labelWidth): self
     {
@@ -163,7 +176,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('filter-form')->showLabels(false)`
+     * - `Form::make('filter-form')->showLabels(false)`
      */
     public function showLabels(bool $showLabels = true): self
     {
@@ -181,7 +194,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->readonly()`
+     * - `Form::make('qa-info-form')->readonly()`
      */
     public function readonly(bool $readonly = true): self
     {
@@ -197,7 +210,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('filter-form')->submitLabel('搜索')`
+     * - `Form::make('filter-form')->submitLabel('搜索')`
      */
     public function submitLabel(string $submitLabel): self
     {
@@ -213,7 +226,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('filter-form')->resetLabel('清空')`
+     * - `Form::make('filter-form')->resetLabel('清空')`
      */
     public function resetLabel(string $resetLabel): self
     {
@@ -231,7 +244,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->footerActions(Actions::save(), Actions::back('/admin/qa-info/lists'))`
+     * - `Form::make('qa-info-form')->footerActions(Actions::save(), Actions::back('/admin/qa-info/lists'))`
      */
     public function footerActions(Action ...$actions): self
     {
@@ -254,7 +267,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->load('/admin/qa-info/detail')`
+     * - `Form::make('qa-info-form')->load('/admin/qa-info/detail')`
      */
     public function load(string $url, string $method = 'get'): self
     {
@@ -285,7 +298,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->loadPayload(['id' => '@page.query.id'])`
+     * - `Form::make('qa-info-form')->loadPayload(['id' => '@page.query.id'])`
      */
     public function loadPayload(array|string|JsExpression $loadPayload): self
     {
@@ -303,7 +316,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->loadDataPath('data.info')`
+     * - `Form::make('qa-info-form')->loadDataPath('data.info')`
      */
     public function loadDataPath(?string $loadDataPath): self
     {
@@ -314,13 +327,13 @@ final class Form implements Renderable, EventAware
 
     /**
      * 控制独立表单页详情加载时机，仅支持 always / create / edit。
-     * `edit` 为默认值，表示只有当前页面 query 中存在 modeQueryKey() 对应值时才自动拉取详情。
+     * - `edit` 为默认值，表示只有当前页面 query 中存在 modeQueryKey() 对应值时才自动拉取详情。
      *
      * @param string $loadWhen 加载时机，可选 always、create、edit。
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->loadWhen('edit')`
+     * - `Form::make('qa-info-form')->loadWhen('edit')`
      */
     public function loadWhen(string $loadWhen): self
     {
@@ -345,7 +358,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->modeQueryKey('info_id')`
+     * - `Form::make('qa-info-form')->modeQueryKey('info_id')`
      */
     public function modeQueryKey(string $queryKey = self::DEFAULT_MODE_QUERY_KEY): self
     {
@@ -364,7 +377,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
+     * - `Form::make('qa-info-form')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
      */
     public function saveUrls(string $createUrl, ?string $updateUrl = null): self
     {
@@ -386,7 +399,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->setData(['title' => '示例', 'content' => '<p>内容</p>'])`
+     * - `Form::make('qa-info-form')->setData(['title' => '示例', 'content' => '<p>内容</p>'])`
      */
     public function setData(array $data): self
     {
@@ -402,7 +415,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->saveMethod('post')`
+     * - `Form::make('qa-info-form')->saveMethod('post')`
      */
     public function saveMethod(string $method = 'post'): self
     {
@@ -419,7 +432,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->loadingText('正在保存，请稍后...')`
+     * - `Form::make('qa-info-form')->loadingText('正在保存，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): self
     {
@@ -435,7 +448,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->successMessage('成功')`
+     * - `Form::make('qa-info-form')->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): self
     {
@@ -451,7 +464,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->errorMessage('保存失败，请重试')`
+     * - `Form::make('qa-info-form')->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): self
     {
@@ -469,7 +482,7 @@ final class Form implements Renderable, EventAware
      * @return self 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
+     * - `Form::make('qa-info-form')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
      */
     public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): self
     {
@@ -515,7 +528,7 @@ final class Form implements Renderable, EventAware
      * @return static 当前表单实例。
      *
      * 示例：
-     * `Form::make('qa-info-form')->on('submitSuccess', Events::returnTo('/admin/qa-info/lists'))`
+     * - `Form::make('qa-info-form')->on('submitSuccess', Events::returnTo('/admin/qa-info/lists'))`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

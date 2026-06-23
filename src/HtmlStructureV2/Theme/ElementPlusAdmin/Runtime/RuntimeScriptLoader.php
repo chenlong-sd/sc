@@ -4,25 +4,29 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Runtime;
 
 final class RuntimeScriptLoader
 {
-    /** @var array<string, string> */
+    /** @var array<string, array{mtime: int, contents: string}> */
     private static array $cache = [];
 
     public static function load(string $filename, array $replacements = []): string
     {
         $path = __DIR__ . '/scripts/' . ltrim($filename, '/');
 
-        if (!isset(self::$cache[$path])) {
+        $mtime = @filemtime($path) ?: 0;
+        if (!isset(self::$cache[$path]) || self::$cache[$path]['mtime'] !== $mtime) {
             $contents = @file_get_contents($path);
             if ($contents === false) {
                 throw new \RuntimeException(sprintf('Unable to load runtime script: %s', $path));
             }
 
-            self::$cache[$path] = $contents;
+            self::$cache[$path] = [
+                'mtime' => $mtime,
+                'contents' => $contents,
+            ];
         }
 
         return $replacements === []
-            ? self::$cache[$path]
-            : strtr(self::$cache[$path], $replacements);
+            ? self::$cache[$path]['contents']
+            : strtr(self::$cache[$path]['contents'], $replacements);
     }
 
     /**

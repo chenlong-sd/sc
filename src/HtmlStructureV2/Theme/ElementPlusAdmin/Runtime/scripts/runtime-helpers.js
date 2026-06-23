@@ -1276,6 +1276,25 @@
               return emitter(String(message));
             }
 
+            if (type === 'hostMessage') {
+              const message = resolveContextValue(handler.message ?? '', context);
+              if (message === null || message === undefined || message === '') {
+                return null;
+              }
+
+              if (typeof context?.notifyDialogHost === 'function') {
+                return context.notifyDialogHost({
+                  action: 'message',
+                  message: String(message),
+                  messageType: typeof handler.messageType === 'string' && handler.messageType !== ''
+                    ? handler.messageType
+                    : 'success',
+                });
+              }
+
+              return false;
+            }
+
             if (type === 'request') {
               const request = {
                 method: resolveContextValue(handler.method || 'post', context) || 'post',
@@ -1564,6 +1583,7 @@
           };
           const dialogScopePrefix = 'dialog:';
           const dialogHostBridgeQueryKey = '__scV2DialogHost';
+          const dialogHostBridgeKeyQueryKey = '__scV2DialogKey';
           const toDialogScope = (dialogKey) => {
             const normalized = String(dialogKey || '').trim();
             return normalized === '' ? dialogScopePrefix : (dialogScopePrefix + normalized);
@@ -1576,7 +1596,7 @@
             try {
               const params = new URLSearchParams(window.location.search || '');
               if (!params.has(dialogHostBridgeQueryKey)) {
-                return false;
+                return params.has(dialogHostBridgeKeyQueryKey);
               }
 
               const value = String(params.get(dialogHostBridgeQueryKey) || '').trim().toLowerCase();

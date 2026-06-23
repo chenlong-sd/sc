@@ -30,7 +30,7 @@ final class PageRuntimeRegistry
 
     public function mergeSimpleState(array $state): void
     {
-        $this->context->set(self::SIMPLE_STATE, array_merge(
+        $this->context->set(self::SIMPLE_STATE, array_replace_recursive(
             $this->context->get(self::SIMPLE_STATE, []),
             $state
         ));

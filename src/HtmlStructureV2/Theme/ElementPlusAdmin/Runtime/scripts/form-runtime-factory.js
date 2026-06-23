@@ -5,6 +5,7 @@
           getRefName,
           getFormConfig = () => null,
           getFormModel,
+          getFormRules,
           getOptionState,
           getOptionLoadingState,
           getOptionLoadedState,
@@ -529,6 +530,74 @@
               dependencies: contextualizeArrayRowDependencies(fieldCfg.dependencies || [], arrayPath, rowIndex),
               params: contextualizeArrayRowModelTokens(clone(fieldCfg.params || {}), arrayPath, rowIndex)
             });
+          };
+          const hasRemoteSearchEnabled = (fieldCfg) => {
+            return fieldCfg?.remoteSearch?.enabled === true;
+          };
+          const buildRemoteOptionsRequestQuery = (fieldCfg, model, fieldName, keyword = null) => {
+            const query = Object.assign({}, resolveDynamicParams(fieldCfg.params || {}, model));
+            if (!hasRemoteSearchEnabled(fieldCfg)) {
+              return query;
+            }
+
+            const searchCfg = fieldCfg.remoteSearch || {};
+            const searchField = typeof searchCfg.searchField === 'string' && searchCfg.searchField !== ''
+              ? searchCfg.searchField
+              : fieldName;
+            const defaultSearchField = typeof searchCfg.defaultSearchField === 'string' && searchCfg.defaultSearchField !== ''
+              ? searchCfg.defaultSearchField
+              : (fieldCfg.valueField || 'id');
+            const searchType = typeof searchCfg.searchType === 'string' && searchCfg.searchType !== ''
+              ? searchCfg.searchType
+              : 'like';
+            const hasSearchKeywordArgument = keyword !== null && keyword !== undefined;
+            const searchKeyword = hasSearchKeywordArgument ? String(keyword) : '';
+            const currentValue = getByPath(model, fieldName);
+            const searchPayload = Object.assign({}, isObject(query.search) ? query.search : {});
+            const searchValues = Object.assign({}, isObject(searchPayload.search) ? searchPayload.search : {});
+            const searchTypes = Object.assign({}, isObject(searchPayload.searchType) ? searchPayload.searchType : {});
+
+            searchValues[searchField] = searchKeyword;
+            if (!hasSearchKeywordArgument && searchKeyword === '' && !isBlank(currentValue)) {
+              searchValues[defaultSearchField] = currentValue;
+            }
+            searchTypes[searchField] = searchType;
+
+            searchPayload.search = searchValues;
+            searchPayload.searchType = searchTypes;
+            query.search = searchPayload;
+            if (query.page === undefined) {
+              query.page = searchCfg.page ?? 1;
+            }
+            if (query.pageSize === undefined) {
+              query.pageSize = searchCfg.pageSize ?? 20;
+            }
+
+            return query;
+          };
+          const runRemoteSearchAfterHandle = (vm, fieldCfg, context) => {
+            const handler = fieldCfg?.remoteSearch?.afterSearchHandle;
+            if (!handler) {
+              return;
+            }
+
+            try {
+              if (typeof handler === 'function') {
+                handler.call(vm, context);
+                return;
+              }
+
+              if (typeof handler === 'string' && handler.trim() !== '') {
+                new Function('ctx', 'data', 'options', handler).call(
+                  vm,
+                  context,
+                  context.payload,
+                  context.options
+                );
+              }
+            } catch (error) {
+              console.error('[sc-v2] remoteSearch afterSearchHandle failed', error);
+            }
           };
           const resolveRemoteFieldConfig = (vm, scope, fieldName) => {
             const direct = getByPath(getRemoteOptionsMap(scope, vm) || {}, fieldName);
@@ -1441,7 +1510,7 @@
                 this[names.initializeArrayGroupRemoteOptions](scope, arrayPath, force);
               });
             },
-            [names.loadFormFieldOptions](scope, fieldName, force = false){
+            [names.loadFormFieldOptions](scope, fieldName, force = false, keyword = null){
               const fieldCfg = resolveRemoteFieldConfig(this, scope, fieldName);
               if (!fieldCfg?.url) {
                 return Promise.resolve([]);
@@ -1455,7 +1524,8 @@
 
               const loadingState = this[names.getOptionLoadingState](scope);
               const loadedState = this[names.getOptionLoadedState](scope);
-              if (getByPath(loadingState, fieldName)) {
+              const isRemoteSearchRequest = hasRemoteSearchEnabled(fieldCfg) && keyword !== null && keyword !== undefined;
+              if (!isRemoteSearchRequest && getByPath(loadingState, fieldName)) {
                 return Promise.resolve(getByPath(this[names.getOptionState](scope), fieldName) || []);
               }
               if (!force && getByPath(loadedState, fieldName)) {
@@ -1468,7 +1538,7 @@
               return makeRequest({
                 method: fieldCfg.method || 'get',
                 url: fieldCfg.url,
-                query: Object.assign({}, resolveDynamicParams(fieldCfg.params || {}, model))
+                query: buildRemoteOptionsRequestQuery(fieldCfg, model, fieldName, keyword)
               })
                 .then((response) => {
                   if (!this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
@@ -1479,6 +1549,17 @@
                   const options = pickRows(payload).map((item, index) => normalizeOption(item, fieldCfg, index));
                   setByPath(this[names.getOptionState](scope), fieldName, options);
                   setByPath(loadedState, fieldName, true);
+                  runRemoteSearchAfterHandle(this, fieldCfg, {
+                    scope,
+                    fieldName,
+                    fieldConfig: fieldCfg,
+                    response,
+                    payload,
+                    options,
+                    query: keyword === null || keyword === undefined ? '' : String(keyword),
+                    model,
+                    vm: this
+                  });
 
                   return emitFormEvent(this, scope, 'optionsLoaded', {
                     fieldName,

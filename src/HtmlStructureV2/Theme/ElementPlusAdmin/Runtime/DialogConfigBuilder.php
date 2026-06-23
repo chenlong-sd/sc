@@ -15,6 +15,8 @@ final class DialogConfigBuilder
                 continue;
             }
 
+            $form = $dialog->getForm();
+
             $config[$dialog->key()] = [
                 'title' => $dialog->title(),
                 'titleTemplate' => $dialog->getTitleTemplate(),
@@ -29,8 +31,10 @@ final class DialogConfigBuilder
                     'closeMethod' => $dialog->getComponentCloseMethod(),
                 ] : null,
                 'saveUrl' => $dialog->getSaveUrl(),
-                'createUrl' => $dialog->getCreateUrl(),
-                'updateUrl' => $dialog->getUpdateUrl(),
+                'createUrl' => $dialog->getCreateUrl() ?? $form?->getSaveCreateUrl(),
+                'updateUrl' => $dialog->getUpdateUrl() ?? $form?->getSaveUpdateUrl(),
+                'modeQueryKey' => $form?->getModeQueryKey(),
+                'rowData' => $dialog->getRowData() ?? ($dialog->getLoadUrl() ? [] : $dialog->getLoadPayload()),
                 'load' => $dialog->getLoadUrl() ? [
                     'url' => $dialog->getLoadUrl(),
                     'method' => $dialog->getLoadMethod(),

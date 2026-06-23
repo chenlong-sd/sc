@@ -31,7 +31,7 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 栅格布局节点实例。
      *
      * 示例：
-     * `GridNode::make()`
+     * - `GridNode::make()`
      */
     public static function make(): self
     {
@@ -46,7 +46,7 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前栅格布局节点。
      *
      * 示例：
-     * `Forms::grid()->addItems(Fields::text('title', '标题')->span(12))`
+     * - `Forms::grid()->addItems(Fields::text('title', '标题')->span(12))`
      */
     public function addItems(FormNode ...$children): self
     {
@@ -60,7 +60,7 @@ final class GridNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前栅格布局节点。
      *
      * 示例：
-     * `Forms::grid()->gutter(24)`
+     * - `Forms::grid()->gutter(24)`
      */
     public function gutter(int $gutter): self
     {

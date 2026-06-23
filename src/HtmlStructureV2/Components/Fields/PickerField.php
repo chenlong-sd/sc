@@ -41,7 +41,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->dialog(Dialogs::make('user-picker', '选择用户')->iframe('/admin/user/lists'))`
+     * - `Fields::picker('user_ids', '选择用户')->dialog(Dialogs::make('user-picker', '选择用户')->iframe('/admin/user/lists'))`
      */
     public function dialog(Dialog $dialog): static
     {
@@ -61,7 +61,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->selectionPath('__scV2Selections.user-table')`
+     * - `Fields::picker('user_ids', '选择用户')->selectionPath('__scV2Selections.user-table')`
      */
     public function selectionPath(string $selectionPath): static
     {
@@ -81,7 +81,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->valueField('user_id')`
+     * - `Fields::picker('user_ids', '选择用户')->valueField('user_id')`
      */
     public function valueField(string $valueField): static
     {
@@ -101,7 +101,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->labelField('nickname')`
+     * - `Fields::picker('user_ids', '选择用户')->labelField('nickname')`
      */
     public function labelField(string $labelField): static
     {
@@ -125,7 +125,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->displayTemplate('@item.name（@item.mobile）')`
+     * - `Fields::picker('user_ids', '选择用户')->displayTemplate('@item.name（@item.mobile）')`
      */
     public function displayTemplate(string $displayTemplate): static
     {
@@ -143,7 +143,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->buttonLabel('选择用户')`
+     * - `Fields::picker('user_ids', '选择用户')->buttonLabel('选择用户')`
      */
     public function buttonLabel(string $buttonLabel): static
     {
@@ -163,7 +163,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->confirmLabel('确认选择')`
+     * - `Fields::picker('user_ids', '选择用户')->confirmLabel('确认选择')`
      */
     public function confirmLabel(string $confirmLabel): static
     {
@@ -183,7 +183,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->emptyText('暂未选择用户')`
+     * - `Fields::picker('user_ids', '选择用户')->emptyText('暂未选择用户')`
      */
     public function emptyText(string $emptyText): static
     {
@@ -203,7 +203,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_id', '选择用户')->multiple(false)`
+     * - `Fields::picker('user_id', '选择用户')->multiple(false)`
      */
     public function multiple(bool $multiple = true): static
     {
@@ -219,7 +219,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->clearable(false)`
+     * - `Fields::picker('user_ids', '选择用户')->clearable(false)`
      */
     public function clearable(bool $clearable = true): static
     {
@@ -236,7 +236,7 @@ final class PickerField extends Field implements ValidatableFieldInterface
      * @return static 当前选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->defaultItems([['id' => 1, 'name' => '张三']])`
+     * - `Fields::picker('user_ids', '选择用户')->defaultItems([['id' => 1, 'name' => '张三']])`
      */
     public function defaultItems(array $items): static
     {

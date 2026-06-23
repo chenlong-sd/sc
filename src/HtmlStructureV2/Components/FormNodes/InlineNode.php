@@ -30,7 +30,7 @@ final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScope
      * @return self 行内布局节点实例。
      *
      * 示例：
-     * `InlineNode::make()`
+     * - `InlineNode::make()`
      */
     public static function make(): self
     {
@@ -45,7 +45,7 @@ final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScope
      * @return self 当前行内布局节点。
      *
      * 示例：
-     * `Forms::inline()->addItems(Fields::text('keyword', '关键词'))`
+     * - `Forms::inline()->addItems(Fields::text('keyword', '关键词'))`
      */
     public function addItems(FormNode ...$children): self
     {

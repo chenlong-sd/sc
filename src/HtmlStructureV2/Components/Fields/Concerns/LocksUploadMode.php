@@ -12,12 +12,11 @@ use BadMethodCallException;
 trait LocksUploadMode
 {
     /**
-     * @internal
-     * @deprecated 媒体字段已固化单/多模式，请使用对应的 image/images/video/videos 构造器
+     * @deprecated 请使用 multiple()，保留该方法仅为兼容旧代码。
      */
     public function uploadMultiple(bool $multiple = true): static
     {
-        throw $this->mediaMethodDisabled('uploadMultiple');
+        return $this->multiple($multiple);
     }
 
     /**
@@ -59,7 +58,7 @@ trait LocksUploadMode
     private function mediaMethodDisabled(string $method): BadMethodCallException
     {
         return new BadMethodCallException(sprintf(
-            '%s() is not available on %s; use the appropriate Fields::image/images/video/videos() factory instead.',
+            '%s() is not available on %s; use the appropriate Fields::image()/Fields::video() factory instead.',
             $method,
             static::class
         ));

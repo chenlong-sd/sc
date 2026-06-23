@@ -22,13 +22,14 @@ final class Forms
     /**
      * 创建一个表单容器，后续通过 addFields()/addContent() 继续挂载字段或结构节点。
      *
-     * @param string $key 表单唯一 key。
+     * @param string|null $key 表单唯一 key；传 null 时自动生成内部 key，仅适合内联使用。
      * @return Form 表单实例。
      *
      * 示例：
-     * `Forms::make('qa-info-form')->addFields(Fields::text('title', '标题'))`
+     * - `Forms::make('qa-info-form')->addFields(Fields::text('title', '标题'))`
+     * - `Forms::make()->addFields(Fields::text('title', '标题'))`
      */
-    public static function make(string $key): Form
+    public static function make(?string $key = null): Form
     {
         return Form::make($key);
     }
@@ -41,7 +42,7 @@ final class Forms
      * @return SectionNode 分组节点实例。
      *
      * 示例：
-     * `Forms::section('基础信息')->addContent(Fields::text('title', '标题'))`
+     * - `Forms::section('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public static function section(string $title): SectionNode
     {
@@ -55,7 +56,7 @@ final class Forms
      * @return InlineNode 行内布局节点实例。
      *
      * 示例：
-     * `Forms::inline()->addItems(Fields::text('keyword', '关键词')->span(8))`
+     * - `Forms::inline()->addItems(Fields::text('keyword', '关键词')->span(8))`
      */
     public static function inline(): InlineNode
     {
@@ -69,7 +70,7 @@ final class Forms
      * @return GridNode 栅格布局节点实例。
      *
      * 示例：
-     * `Forms::grid()->addItems(Fields::text('title', '标题')->span(12), Fields::text('code', '编码')->span(12))`
+     * - `Forms::grid()->addItems(Fields::text('title', '标题')->span(12), Fields::text('code', '编码')->span(12))`
      */
     public static function grid(): GridNode
     {
@@ -84,7 +85,7 @@ final class Forms
      * @return TabsNode 标签页容器实例。
      *
      * 示例：
-     * `Forms::tabs()->addTabs(Forms::tab('基础信息'), Forms::tab('扩展信息'))`
+     * - `Forms::tabs()->addTabs(Forms::tab('基础信息'), Forms::tab('扩展信息'))`
      */
     public static function tabs(): TabsNode
     {
@@ -98,7 +99,7 @@ final class Forms
      * @return TabPaneNode 标签面板实例。
      *
      * 示例：
-     * `Forms::tab('基础信息')->addContent(Fields::text('title', '标题'))`
+     * - `Forms::tab('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public static function tab(string $label): TabPaneNode
     {
@@ -113,7 +114,7 @@ final class Forms
      * @return CollapseNode 折叠容器实例。
      *
      * 示例：
-     * `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
+     * - `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
      */
     public static function collapse(): CollapseNode
     {
@@ -127,7 +128,7 @@ final class Forms
      * @return CollapseItemNode 折叠项实例。
      *
      * 示例：
-     * `Forms::collapseItem('高级设置')->addContent(Fields::text('remark', '备注'))`
+     * - `Forms::collapseItem('高级设置')->addContent(Fields::text('remark', '备注'))`
      */
     public static function collapseItem(string $title): CollapseItemNode
     {
@@ -143,7 +144,7 @@ final class Forms
      * @return FormObjectGroup 对象作用域节点实例。
      *
      * 示例：
-     * `Forms::object('profile')->addSchema(Fields::text('name', '姓名'))`
+     * - `Forms::object('profile')->addSchema(Fields::text('name', '姓名'))`
      */
     public static function object(string $name): FormObjectGroup
     {
@@ -158,7 +159,7 @@ final class Forms
      * @return FormArrayGroup 数组分组节点实例。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->addSchema(Fields::text('name', '姓名'))`
+     * - `Forms::arrayGroup('contacts')->addSchema(Fields::text('name', '姓名'))`
      */
     public static function arrayGroup(string $name): FormArrayGroup
     {
@@ -173,7 +174,7 @@ final class Forms
      * @return FormTable 表格化数组节点实例。
      *
      * 示例：
-     * `Forms::table('items')->addColumns(Fields::text('name', '名称'), Fields::number('qty', '数量'))`
+     * - `Forms::table('items')->addColumns(Fields::text('name', '名称'), Fields::number('qty', '数量'))`
      */
     public static function table(string $name): FormTable
     {
@@ -189,7 +190,7 @@ final class Forms
      * @return CustomNode 自定义内容节点实例。
      *
      * 示例：
-     * `Forms::custom('<div class="help-text">请先保存基础信息</div>')`
+     * - `Forms::custom('<div class="help-text">请先保存基础信息</div>')`
      */
     public static function custom(string|AbstractHtmlElement|Renderable $content): CustomNode
     {

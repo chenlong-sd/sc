@@ -33,7 +33,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 标签页容器实例。
      *
      * 示例：
-     * `TabsNode::make()`
+     * - `TabsNode::make()`
      */
     public static function make(): self
     {
@@ -47,7 +47,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前标签页容器。
      *
      * 示例：
-     * `Forms::tabs()->addTabs(Forms::tab('基础信息'))`
+     * - `Forms::tabs()->addTabs(Forms::tab('基础信息'))`
      */
     public function addTabs(TabPaneNode ...$tabs): self
     {
@@ -61,7 +61,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前标签页容器。
      *
      * 示例：
-     * `Forms::tabs()->type('border-card')`
+     * - `Forms::tabs()->type('border-card')`
      */
     public function type(string $type): self
     {
@@ -77,7 +77,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前标签页容器。
      *
      * 示例：
-     * `Forms::tabs()->tabPosition('left')`
+     * - `Forms::tabs()->tabPosition('left')`
      */
     public function tabPosition(string $tabPosition): self
     {
@@ -94,7 +94,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
      * @return self 当前标签页容器。
      *
      * 示例：
-     * `Forms::tabs()->stretch()`
+     * - `Forms::tabs()->stretch()`
      */
     public function stretch(bool $stretch = true): self
     {

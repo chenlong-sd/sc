@@ -62,7 +62,7 @@ final class Column
      * @return self 列实例。
      *
      * 示例：
-     * `Column::make('标题', 'title')`
+     * - `Column::make('标题', 'title')`
      */
     public static function make(string $label, string $prop): self
     {
@@ -78,7 +78,7 @@ final class Column
      * @return self 普通列实例。
      *
      * 示例：
-     * `Column::normal('标题', 'title')`
+     * - `Column::normal('标题', 'title')`
      */
     public static function normal(string $label, string $prop = ''): self
     {
@@ -101,7 +101,7 @@ final class Column
      * @return self 勾选列实例。
      *
      * 示例：
-     * `Column::selection()`
+     * - `Column::selection()`
      */
     public static function selection(): self
     {
@@ -118,7 +118,7 @@ final class Column
      * @return self 序号列实例。
      *
      * 示例：
-     * `Column::index()`
+     * - `Column::index()`
      */
     public static function index(string $title = '序号'): self
     {
@@ -136,7 +136,7 @@ final class Column
      * @return self 展开列实例。
      *
      * 示例：
-     * `Column::expand()`
+     * - `Column::expand()`
      */
     public static function expand(string $title = ''): self
     {
@@ -152,7 +152,7 @@ final class Column
      * @return self 操作列实例。
      *
      * 示例：
-     * `Column::event('操作')`
+     * - `Column::event('操作')`
      */
     public static function event(string $title = '操作', string $prop = ''): self
     {
@@ -173,7 +173,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->width(220)`
+     * - `Tables::column('标题', 'title')->width(220)`
      */
     public function width(int|string $width, bool $showOverflowTooltip = true): self
     {
@@ -193,7 +193,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->minWidth(180)`
+     * - `Tables::column('标题', 'title')->minWidth(180)`
      */
     public function minWidth(int|string $minWidth): self
     {
@@ -209,7 +209,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('状态', 'status')->align('center')`
+     * - `Tables::column('状态', 'status')->align('center')`
      */
     public function align(string $align): self
     {
@@ -225,7 +225,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('操作', 'id')->fixed('right')`
+     * - `Tables::column('操作', 'id')->fixed('right')`
      */
     public function fixed(string $position = 'right'): self
     {
@@ -241,7 +241,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Column::make('操作', '')->type('event')`
+     * - `Column::make('操作', '')->type('event')`
      */
     public function type(string $type): self
     {
@@ -261,7 +261,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->props(['class-name' => 'title-column'])`
+     * - `Tables::column('标题', 'title')->props(['class-name' => 'title-column'])`
      */
     public function props(array $attrs): self
     {
@@ -283,7 +283,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('创建时间', 'create_time')->sortable('create_time')`
+     * - `Tables::column('创建时间', 'create_time')->sortable('create_time')`
      */
     public function sortable(string|bool $sortable = true): self
     {
@@ -306,7 +306,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('创建时间', 'create_time')->sortField('create_time')`
+     * - `Tables::column('创建时间', 'create_time')->sortField('create_time')`
      */
     public function sortField(string $sortField): self
     {
@@ -323,14 +323,14 @@ final class Column
      * 对应字段名通常应与列 prop 保持一致。
      * 当当前列放在 `List` 里且未显式调用 `filters()` 时，V2 会尝试基于 searchable()
      * 自动生成默认筛选 UI；这些自动生成的筛选项默认隐藏 label，只保留 placeholder，
-     * `displayMapping()` / `displayTag()` / `displayBoolean*()` / `displaySwitch()` 会优先推成 select。
+     * - `displayMapping()` / `displayTag()` / `displayBoolean*()` / `displaySwitch()` 会优先推成 select。
      *
      * @param string|bool $searchable 是否启用搜索或直接指定搜索操作符，默认值为 true。
      * @param string|null $field 后端真实字段名；传 null 时默认使用当前列 prop。
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->searchable('LIKE')`
+     * - `Tables::column('标题', 'title')->searchable('LIKE')`
      */
     public function searchable(
         #[ExpectedValues(self::SUPPORTED_SEARCH_TYPES)]
@@ -358,7 +358,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('状态', 'status')->searchType('IN')`
+     * - `Tables::column('状态', 'status')->searchType('IN')`
      */
     public function searchType(
         #[ExpectedValues(self::SUPPORTED_SEARCH_TYPES)]
@@ -378,7 +378,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->searchField('qa_title')`
+     * - `Tables::column('标题', 'title')->searchField('qa_title')`
      */
     public function searchField(string $field): self
     {
@@ -397,7 +397,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->displayFormat('{{ scope.row.title }}')`
+     * - `Tables::column('标题', 'title')->displayFormat('{{ scope.row.title }}')`
      */
     public function displayFormat(string|\Stringable $format): self
     {
@@ -419,7 +419,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('状态', 'status')->displayMapping([1 => '启用', 0 => '停用'])`
+     * - `Tables::column('状态', 'status')->displayMapping([1 => '启用', 0 => '停用'])`
      */
     public function displayMapping(array $options, string $separator = ', '): self
     {
@@ -442,7 +442,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('状态', 'status')->displayTag([1 => ['label' => '启用', 'type' => 'success']])`
+     * - `Tables::column('状态', 'status')->displayTag([1 => ['label' => '启用', 'type' => 'success']])`
      */
     public function displayTag(array|ColumnTags $options, string $defaultType = 'info'): self
     {
@@ -465,7 +465,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('封面', 'cover')->displayImage(80, 80)`
+     * - `Tables::column('封面', 'cover')->displayImage(80, 80)`
      */
     public function displayImage(
         int $width = 60,
@@ -491,7 +491,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('启用', 'status')->displayBoolean('启用', '停用')`
+     * - `Tables::column('启用', 'status')->displayBoolean('启用', '停用')`
      */
     public function displayBoolean(string $truthyLabel = '是', string $falsyLabel = '否'): self
     {
@@ -515,7 +515,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('启用', 'status')->displayBooleanTag('启用', '停用')`
+     * - `Tables::column('启用', 'status')->displayBooleanTag('启用', '停用')`
      */
     public function displayBooleanTag(
         string $truthyLabel = '是',
@@ -536,8 +536,8 @@ final class Column
 
     /**
      * 把列渲染为可直接切换的开关，并按原版 showSwitch() 规则自动提交更新请求。
-     * `options` 支持 `[1 => '开启', 0 => '关闭']` 或 `[['value' => 1, 'label' => '开启'], ...]`。
-     * `openValue` 不传时默认取 options 第一项作为开启值。
+     * - `options` 支持 `[1 => '开启', 0 => '关闭']` 或 `[['value' => 1, 'label' => '开启'], ...]`。
+     * - `openValue` 不传时默认取 options 第一项作为开启值。
      *
      * @param array $options 开关选项。
      * @param string $requestUrl 更新请求地址。
@@ -545,7 +545,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('状态', 'status')->displaySwitch([1 => '启用', 0 => '停用'], '/admin/qa-info/status')`
+     * - `Tables::column('状态', 'status')->displaySwitch([1 => '启用', 0 => '停用'], '/admin/qa-info/status')`
      */
     public function displaySwitch(array $options, string $requestUrl, mixed $openValue = null): self
     {
@@ -574,7 +574,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('创建日期', 'create_time')->displayDate()`
+     * - `Tables::column('创建日期', 'create_time')->displayDate()`
      */
     public function displayDate(string $format = 'YYYY-MM-DD'): self
     {
@@ -593,7 +593,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('创建时间', 'create_time')->displayDatetime()`
+     * - `Tables::column('创建时间', 'create_time')->displayDatetime()`
      */
     public function displayDatetime(string $format = 'YYYY-MM-DD HH:mm:ss'): self
     {
@@ -612,7 +612,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('图片', 'images')->displayImages(3, 'url')`
+     * - `Tables::column('图片', 'images')->displayImages(3, 'url')`
      */
     public function displayImages(
         int $previewNumber = 3,
@@ -641,7 +641,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->displayPlaceholder('--')`
+     * - `Tables::column('标题', 'title')->displayPlaceholder('--')`
      */
     public function displayPlaceholder(string $placeholder): self
     {
@@ -662,7 +662,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->openPage('/admin/qa-info/form', ['title' => '编辑问答'], 'dialog')`
+     * - `Tables::column('标题', 'title')->openPage('/admin/qa-info/form', ['title' => '编辑问答'], 'dialog')`
      */
     public function openPage(
         string $url,
@@ -751,7 +751,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->addTip('点击标题可查看详情')`
+     * - `Tables::column('标题', 'title')->addTip('点击标题可查看详情')`
      */
     public function addTip(string|\Stringable $tip, string|\Stringable $icon = 'WarningFilled', array $attrs = []): self
     {
@@ -771,7 +771,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->appendContent('<span class="ml-2 text-muted">新</span>')`
+     * - `Tables::column('标题', 'title')->appendContent('<span class="ml-2 text-muted">新</span>')`
      */
     public function appendContent(string|AbstractHtmlElement|\Stringable $content): self
     {
@@ -788,7 +788,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->exportExcel(true, 10)`
+     * - `Tables::column('标题', 'title')->exportExcel(true, 10)`
      */
     public function exportExcel(bool $allow = true, float $sort = null): self
     {
@@ -809,7 +809,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('内部备注', 'remark')->notShow(true, true)`
+     * - `Tables::column('内部备注', 'remark')->notShow(true, true)`
      */
     public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): self
     {
@@ -827,7 +827,7 @@ final class Column
      * @return self 当前列实例。
      *
      * 示例：
-     * `Tables::column('导出专用字段', 'export_only')->onlyExportExcel()`
+     * - `Tables::column('导出专用字段', 'export_only')->onlyExportExcel()`
      */
     public function onlyExportExcel(float $excelSort = null): self
     {

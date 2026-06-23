@@ -45,7 +45,10 @@ final class FormRenderState
             $this->modelPath,
             $initialData === [] ? $schema->defaults() : $initialData
         );
-        $this->putRuntimeStateValue($state, $this->rules, $this->rulesPath, $schema->rules());
+
+        // 不再将规则放入 state，由 computed 属性从 config 读取
+        // $this->putRuntimeStateValue($state, $this->rules, $this->rulesPath, $schema->rules());
+
         $this->putRuntimeStateValue($state, $this->optionState, $this->optionStatePath, $this->buildInitialOptionState($schema));
         $this->putRuntimeStateValue(
             $state,

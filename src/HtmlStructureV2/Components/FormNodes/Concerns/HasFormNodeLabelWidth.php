@@ -16,7 +16,7 @@ trait HasFormNodeLabelWidth
      * @return static 当前容器实例。
      *
      * 示例：
-     * `Forms::section('基础信息')->labelWidth(120)`
+     * - `Forms::section('基础信息')->labelWidth(120)`
      */
     public function labelWidth(int|string|null $width): static
     {

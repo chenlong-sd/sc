@@ -201,6 +201,26 @@ final class FormRenderOptions
         );
     }
 
+    public function remoteSearchHandler(string $fieldName): string
+    {
+        return sprintf(
+            "(query) => %s('%s', '%s', true, query)",
+            $this->remoteLoadMethod,
+            $this->remoteScope,
+            $fieldName
+        );
+    }
+
+    public function remoteSearchHandlerByPathExpression(string $fieldPathExpression): string
+    {
+        return sprintf(
+            "(query) => %s('%s', %s, true, query)",
+            $this->remoteLoadMethod,
+            $this->remoteScope,
+            $fieldPathExpression
+        );
+    }
+
     public function linkageChangeHandler(string $fieldName): string
     {
         return sprintf(

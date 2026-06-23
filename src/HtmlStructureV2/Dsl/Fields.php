@@ -28,7 +28,7 @@ final class Fields
      * @return TextField 单行文本字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->required()->placeholder('请输入标题')`
+     * - `Fields::text('title', '标题')->required()->placeholder('请输入标题')`
      */
     public static function text(string $name, ?string $label = null): TextField
     {
@@ -43,7 +43,7 @@ final class Fields
      * @return PasswordField 密码字段实例。
      *
      * 示例：
-     * `Fields::password('password', '密码')->required()`
+     * - `Fields::password('password', '密码')->required()`
      */
     public static function password(string $name, ?string $label = null): PasswordField
     {
@@ -60,7 +60,7 @@ final class Fields
      * @return IconField 图标字段实例。
      *
      * 示例：
-     * `Fields::icon('icon', '图标')->required()`
+     * - `Fields::icon('icon', '图标')->required()`
      */
     public static function icon(string $name, ?string $label = null): IconField
     {
@@ -76,7 +76,7 @@ final class Fields
      * @return TextField 多行文本字段实例。
      *
      * 示例：
-     * `Fields::textarea('remark', '备注')->prop('rows', 6)`
+     * - `Fields::textarea('remark', '备注')->prop('rows', 6)`
      */
     public static function textarea(string $name, ?string $label = null): TextField
     {
@@ -93,7 +93,7 @@ final class Fields
      * @return EditorField 富文本字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
+     * - `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
      */
     public static function editor(string $name, ?string $label = null): EditorField
     {
@@ -108,7 +108,7 @@ final class Fields
      * @return NumberField 数字字段实例。
      *
      * 示例：
-     * `Fields::number('sort', '排序')->minValue(0)->step(1)`
+     * - `Fields::number('sort', '排序')->minValue(0)->step(1)`
      */
     public static function number(string $name, ?string $label = null): NumberField
     {
@@ -124,7 +124,7 @@ final class Fields
      * @return OptionField 下拉字段实例。
      *
      * 示例：
-     * `Fields::select('status', '状态')->options([1 => '启用', 0 => '停用'])`
+     * - `Fields::select('status', '状态')->options([1 => '启用', 0 => '停用'])`
      */
     public static function select(string $name, ?string $label = null): OptionField
     {
@@ -140,7 +140,7 @@ final class Fields
      * @return OptionField 单选字段实例。
      *
      * 示例：
-     * `Fields::radio('type', '类型')->options(['a' => 'A', 'b' => 'B'])`
+     * - `Fields::radio('type', '类型')->options(['a' => 'A', 'b' => 'B'])`
      */
     public static function radio(string $name, ?string $label = null): OptionField
     {
@@ -156,7 +156,7 @@ final class Fields
      * @return OptionField 多选字段实例。
      *
      * 示例：
-     * `Fields::checkbox('tags', '标签')->options(['a' => 'A', 'b' => 'B'])`
+     * - `Fields::checkbox('tags', '标签')->options(['a' => 'A', 'b' => 'B'])`
      */
     public static function checkbox(string $name, ?string $label = null): OptionField
     {
@@ -172,7 +172,7 @@ final class Fields
      * @return CascaderField 级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('area', '地区')->options($areaOptions)`
+     * - `Fields::cascader('area', '地区')->options($areaOptions)`
      */
     public static function cascader(string $name, ?string $label = null): CascaderField
     {
@@ -181,14 +181,15 @@ final class Fields
 
     /**
      * 创建通用上传字段。
-     * 后续通常至少继续链式配置 uploadUrl()；返回值默认按单文件字符串处理。
+     * 后续通常至少继续链式配置 uploadUrl()；调用 `multiple()` 切换到多文件。
      *
      * @param string $name 字段名。
      * @param string|null $label 字段标签；传 null 时不显示标签。
      * @return UploadField 上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadUrl('/admin/upload/file')`
+     * - `Fields::upload('file', '附件')->uploadUrl('/admin/upload/file')`
+     * - `Fields::upload('files', '附件')->multiple()->uploadLimit(5)`
      */
     public static function upload(string $name, ?string $label = null): UploadField
     {
@@ -203,8 +204,8 @@ final class Fields
      * @return ImageField 图片上传字段实例。
      *
      * 示例：
-     * `Fields::image('cover', '封面图')->uploadUrl('/admin/upload/image')`
-     * `Fields::image('gallery', '相册')->multiple()->uploadLimit(9)`
+     * - `Fields::image('cover', '封面图')->uploadUrl('/admin/upload/image')`
+     * - `Fields::image('gallery', '相册')->multiple()->uploadLimit(9)`
      */
     public static function image(string $name, ?string $label = null): ImageField
     {
@@ -219,8 +220,8 @@ final class Fields
      * @return VideoField 视频上传字段实例。
      *
      * 示例：
-     * `Fields::video('intro', '介绍视频')->uploadUrl('/admin/upload/video')`
-     * `Fields::video('clips', '视频集')->multiple()->uploadLimit(5)`
+     * - `Fields::video('intro', '介绍视频')->uploadUrl('/admin/upload/video')`
+     * - `Fields::video('clips', '视频集')->multiple()->uploadLimit(5)`
      */
     public static function video(string $name, ?string $label = null): VideoField
     {
@@ -235,7 +236,7 @@ final class Fields
      * @return DateField 日期字段实例。
      *
      * 示例：
-     * `Fields::date('publish_date', '发布日期')`
+     * - `Fields::date('publish_date', '发布日期')`
      */
     public static function date(string $name, ?string $label = null): DateField
     {
@@ -252,8 +253,8 @@ final class Fields
      * @return DateField 日期时间字段实例。
      *
      * 示例：
-     * `Fields::datetime('published_at', '发布时间')`
-     * `Fields::datetime('service_time', '服务时间')->pickerType('datetimerange')`
+     * - `Fields::datetime('published_at', '发布时间')`
+     * - `Fields::datetime('service_time', '服务时间')->pickerType('datetimerange')`
      */
     public static function datetime(string $name, ?string $label = null): DateField
     {
@@ -270,7 +271,7 @@ final class Fields
      * @return DateField 日期范围字段实例。
      *
      * 示例：
-     * `Fields::daterange('range', '日期范围')`
+     * - `Fields::daterange('range', '日期范围')`
      */
     public static function daterange(string $name, ?string $label = null): DateField
     {
@@ -289,7 +290,7 @@ final class Fields
      * @return BasicField 开关字段实例。
      *
      * 示例：
-     * `Fields::toggle('status', '启用状态')->default(true)`
+     * - `Fields::toggle('status', '启用状态')->default(true)`
      */
     public static function toggle(string $name, ?string $label = null): BasicField
     {
@@ -312,7 +313,7 @@ final class Fields
      * @return PickerField 选择器字段实例。
      *
      * 示例：
-     * `Fields::picker('user_ids', '选择用户')->dialog(Dialogs::make('user-picker', '选择用户')->iframe('/admin/user/lists'))`
+     * - `Fields::picker('user_ids', '选择用户')->dialog(Dialogs::make('user-picker', '选择用户')->iframe('/admin/user/lists'))`
      */
     public static function picker(string $name, ?string $label = null): PickerField
     {
@@ -327,7 +328,7 @@ final class Fields
      * @return BasicField 隐藏字段实例。
      *
      * 示例：
-     * `Fields::hidden('id')`
+     * - `Fields::hidden('id')`
      */
     public static function hidden(string $name): BasicField
     {

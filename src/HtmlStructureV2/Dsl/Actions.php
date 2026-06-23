@@ -17,7 +17,7 @@ final class Actions
      * @return Action 通用动作实例，可继续链式调用 type()/icon()/onClick() 等方法。
      *
      * 示例：
-     * `Actions::make('导出')->icon('Download')->onClick('({ vm }) => vm.handleExport?.()')`
+     * - `Actions::make('导出')->icon('Download')->onClick('({ vm }) => vm.handleExport?.()')`
      */
     public static function make(string $label): Action
     {
@@ -32,7 +32,7 @@ final class Actions
      * @return DialogAction 返回支持 dialog()/bindDialog() 的弹窗动作。
      *
      * 示例：
-     * `Actions::create('新增')->dialog('qa-info-dialog')`
+     * - `Actions::create('新增')->dialog('qa-info-dialog')`
      */
     public static function create(string $label = '新建'): DialogAction
     {
@@ -47,7 +47,7 @@ final class Actions
      * @return DialogAction 返回支持 dialog()/bindDialog() 的弹窗动作。
      *
      * 示例：
-     * `Actions::edit()->dialog('qa-info-dialog')`
+     * - `Actions::edit()->dialog('qa-info-dialog')`
      */
     public static function edit(string $label = '编辑'): DialogAction
     {
@@ -63,7 +63,7 @@ final class Actions
      * @return Action 删除动作实例。
      *
      * 示例：
-     * `Actions::delete()->deleteUrl('/admin/qa-info/delete')->deleteKey('id')`
+     * - `Actions::delete()->deleteUrl('/admin/qa-info/delete')->deleteKey('id')`
      */
     public static function delete(string $label = '删除'): Action
     {
@@ -78,7 +78,7 @@ final class Actions
      * @return Action 刷新动作实例。
      *
      * 示例：
-     * `Actions::refresh()->forTable('qa-info-table')`
+     * - `Actions::refresh()->forTable('qa-info-table')`
      */
     public static function refresh(string $label = '刷新'): Action
     {
@@ -99,7 +99,7 @@ final class Actions
      * @return RequestAction 请求动作实例，默认已配置 icon('Check')->submitForm()。
      *
      * 示例：
-     * `Actions::save()->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
+     * - `Actions::save()->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
      */
     public static function save(string $label = '保存'): RequestAction
     {
@@ -117,7 +117,7 @@ final class Actions
      * @return Action 重置表单动作实例。
      *
      * 示例：
-     * `Actions::resetForm('重置', 'qa-info-form')`
+     * - `Actions::resetForm('重置', 'qa-info-form')`
      */
     public static function resetForm(string $label = '重置', ?string $scope = null): Action
     {
@@ -134,7 +134,7 @@ final class Actions
      * @return RequestAction 请求动作实例。
      *
      * 示例：
-     * `Actions::request('同步')->post('/admin/qa-info/sync')->successMessage('同步成功')`
+     * - `Actions::request('同步')->post('/admin/qa-info/sync')->successMessage('同步成功')`
      */
     public static function request(string $label): RequestAction
     {
@@ -170,7 +170,7 @@ final class Actions
      * @return RequestAction 导入动作实例。
      *
      * 示例：
-     * `Actions::import()->post('/admin/qa-info/import')->importColumns(['name' => '名称'])`
+     * - `Actions::import()->post('/admin/qa-info/import')->importColumns(['name' => '名称'])`
      */
     public static function import(string $label = '导入'): RequestAction
     {
@@ -190,7 +190,7 @@ final class Actions
      * @return Action 返回/取消动作实例。
      *
      * 示例：
-     * `Actions::back('/admin/qa-info/lists', '返回列表')`
+     * - `Actions::back('/admin/qa-info/lists', '返回列表')`
      */
     public static function back(string|JsExpression|null $url = null, string $label = '取消'): Action
     {
@@ -208,7 +208,7 @@ final class Actions
      * @return Action 关闭弹窗动作实例。
      *
      * 示例：
-     * `Actions::close()->dialog('qa-info-dialog')`
+     * - `Actions::close()->dialog('qa-info-dialog')`
      */
     public static function close(string $label = '取消'): Action
     {
@@ -228,7 +228,7 @@ final class Actions
      * @return Action 自定义动作实例。
      *
      * 示例：
-     * `Actions::custom('查看日志')->onClick('({ row, vm }) => vm.openLogDialog?.(row)')`
+     * - `Actions::custom('查看日志')->onClick('({ row, vm }) => vm.openLogDialog?.(row)')`
      */
     public static function custom(string $label): Action
     {

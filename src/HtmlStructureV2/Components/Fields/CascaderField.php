@@ -24,7 +24,7 @@ final class CascaderField extends OptionField
      * @return static 当前级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('area', '地区')->options($areaOptions)`
+     * - `Fields::cascader('area', '地区')->options($areaOptions)`
      */
     public function options(array $options): static
     {
@@ -56,7 +56,7 @@ final class CascaderField extends OptionField
      * @return static 当前级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('area', '地区')->cascaderProps(['multiple' => true])`
+     * - `Fields::cascader('area', '地区')->cascaderProps(['multiple' => true])`
      */
     public function cascaderProps(array $props): static
     {
@@ -77,7 +77,7 @@ final class CascaderField extends OptionField
      * @return static 当前级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('area', '地区')->emitPath(false)`
+     * - `Fields::cascader('area', '地区')->emitPath(false)`
      */
     public function emitPath(bool $emitPath = true): static
     {
@@ -93,7 +93,7 @@ final class CascaderField extends OptionField
      * @return static 当前级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('area', '地区')->checkStrictly()`
+     * - `Fields::cascader('area', '地区')->checkStrictly()`
      */
     public function checkStrictly(bool $strict = true): static
     {
@@ -110,7 +110,7 @@ final class CascaderField extends OptionField
      * @return static 当前级联字段实例。
      *
      * 示例：
-     * `Fields::cascader('dept_id', '处置部门')->closeAfterSelection()`
+     * - `Fields::cascader('dept_id', '处置部门')->closeAfterSelection()`
      */
     public function closeAfterSelection(bool $closeAfterSelection = true): static
     {

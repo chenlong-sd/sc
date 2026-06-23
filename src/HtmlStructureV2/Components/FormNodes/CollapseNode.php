@@ -31,7 +31,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
      * @return self 折叠面板实例。
      *
      * 示例：
-     * `CollapseNode::make()`
+     * - `CollapseNode::make()`
      */
     public static function make(): self
     {
@@ -45,7 +45,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
      * @return self 当前折叠容器。
      *
      * 示例：
-     * `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
+     * - `Forms::collapse()->addItems(Forms::collapseItem('高级设置'))`
      */
     public function addItems(CollapseItemNode ...$items): self
     {
@@ -59,7 +59,7 @@ final class CollapseNode implements FormNode, FormNodeContainer, FormNodePathSco
      * @return self 当前折叠容器。
      *
      * 示例：
-     * `Forms::collapse()->accordion()`
+     * - `Forms::collapse()->accordion()`
      */
     public function accordion(bool $accordion = true): self
     {

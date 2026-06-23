@@ -17,6 +17,7 @@ use Sc\Util\HtmlStructureV2\Contracts\Fields\PlaceholderFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\RenderContext;
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\AppliesRenderableAttributes;
@@ -122,6 +123,14 @@ final class FieldRenderer
         $visibleWhen = $this->normalizeFieldExpression($field->getVisibleWhen(), $modelName);
         $disabledWhen = $this->normalizeFieldExpression($field->getDisabledWhen(), $modelName);
         $readonlyWhen = $this->normalizeFieldExpression($field->getReadonlyWhen(), $modelName);
+        $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
+        $requiredWhen = null;
+        if ($validatableField?->isConditionalRequired() && $validatableField->getRequiredCondition()) {
+            $requiredWhen = $this->normalizeFieldExpression(
+                JsExpression::make($validatableField->getRequiredCondition()),
+                $modelName
+            );
+        }
         $optionField = $field instanceof OptionField ? $field : null;
         $pickerField = $field instanceof PickerField ? $field : null;
         $uploadField = $field instanceof UploadField ? $field : null;
@@ -141,7 +150,8 @@ final class FieldRenderer
             $propExpression,
             $tableCell,
             $options->showLabels && $field->hasLabel(),
-            $containerLabelWidth
+            $containerLabelWidth,
+            $requiredWhen
         );
         if ($pickerField !== null) {
             $component = $this->buildPickerComponent(
@@ -193,7 +203,8 @@ final class FieldRenderer
         string $fieldPath,
         ?ValidatableFieldInterface $validatableField,
         bool $showLabels,
-        ?string $containerLabelWidth = null
+        ?string $containerLabelWidth = null,
+        ?string $requiredWhen = null
     ): DoubleLabel
     {
         $item = El::double('el-form-item')
@@ -211,7 +222,13 @@ final class FieldRenderer
         }
 
         if ($validatableField?->isRequired()) {
-            $item->setAttr('required');
+            if ($requiredWhen) {
+                // 条件必填：使用动态绑定
+                $item->setAttr(':required', $requiredWhen);
+            } else {
+                // 普通必填：使用静态属性
+                $item->setAttr('required');
+            }
         }
 
         return $item;
@@ -224,7 +241,8 @@ final class FieldRenderer
         ?string $propExpression,
         bool $tableCell,
         bool $showLabels,
-        ?string $containerLabelWidth = null
+        ?string $containerLabelWidth = null,
+        ?string $requiredWhen = null
     ): DoubleLabel {
         if ($tableCell) {
             $item = El::double('el-form-item')->setAttrs([
@@ -234,7 +252,11 @@ final class FieldRenderer
             ]);
 
             if ($validatableField?->isRequired()) {
-                $item->setAttr('required');
+                if ($requiredWhen) {
+                    $item->setAttr(':required', $requiredWhen);
+                } else {
+                    $item->setAttr('required');
+                }
             }
 
             return $item;
@@ -256,13 +278,17 @@ final class FieldRenderer
             }
 
             if ($validatableField?->isRequired()) {
-                $item->setAttr('required');
+                if ($requiredWhen) {
+                    $item->setAttr(':required', $requiredWhen);
+                } else {
+                    $item->setAttr('required');
+                }
             }
 
             return $item;
         }
 
-        return $this->buildFieldItem($field, $fieldPath, $validatableField, $showLabels, $containerLabelWidth);
+        return $this->buildFieldItem($field, $fieldPath, $validatableField, $showLabels, $containerLabelWidth, $requiredWhen);
     }
 
     private function resolveEffectiveLabelWidth(Field $field, ?string $containerLabelWidth): ?string
@@ -576,6 +602,16 @@ final class FieldRenderer
                         ? $options->remoteVisibleChangeHandler($fieldPath)
                         : $options->remoteVisibleChangeHandlerByPathExpression($fieldPathExpression)
                 );
+
+                if ($optionField->hasRemoteSearch()) {
+                    $component->setAttr(':remote', 'true');
+                    $component->setAttr(
+                        ':remote-method',
+                        $fieldPathExpression === null
+                            ? $options->remoteSearchHandler($fieldPath)
+                            : $options->remoteSearchHandlerByPathExpression($fieldPathExpression)
+                    );
+                }
             }
 
             $this->appendOptionChildren($component, $optionField, $optionsExpression, 'el-option');

@@ -16,7 +16,7 @@ final class Pages
      * @return Page 页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->header('问答信息管理')`
+     * - `Pages::make('问答信息')->header('问答信息管理')`
      */
     public static function make(string $title, ?string $key = null): Page
     {

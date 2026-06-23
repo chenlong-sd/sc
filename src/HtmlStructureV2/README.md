@@ -276,6 +276,7 @@ $page = Pages::make('概览页')
 V2 表单现在按“节点树”组织，不再只面向 `Field[]`。
 
 如果只是普通表单，直接 `Forms::make()->addFields(...)` 即可；只有在需要分组、分栏、折叠、标签页、数组表格时，再继续往下使用结构节点。
+`Forms::make()` 不传 key 时会自动生成内部 key，适合直接传给页面、弹窗或列表筛选；自动 key 不承诺跨请求固定，需要从 JS/事件里按名称引用表单时，请显式传 key。
 
 - 叶子节点：`Field`
 - 结构节点：`Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::collapse()` / `Forms::custom()`
@@ -429,6 +430,8 @@ Fields::picker('user_ids', '用户')
 
 如果动作直接通过 `->dialog($dialog)` 绑定的是 `Dialog` 对象，V2 会在页面构建时自动把它收集进当前页面，包括独立 `Table` 区块和 dialog footer 里的二级弹窗；如果只写字符串 key，例如 `Actions::create('打开')->dialog('editor')`、`Actions::submit('保存')->dialog('editor')`、`Actions::request(...)->dialog('editor')`，对应 key 必须能在当前页面解析到，否则会在构建期直接抛错。
 
+直接传 Dialog 对象时，`Dialogs::make('弹窗标题')` 可省略 key，运行时会自动生成内部 key；自动 key 不承诺跨请求固定，需要 `Events::openDialog('editor')` 或 `Actions::custom()->dialog('editor')` 这类字符串引用时，请继续使用 `Dialogs::make('editor', '弹窗标题')`。
+
 ## 常见页面示例
 
 下面这些示例按后台开发里最常见的页面类型组织。建议先看和自己场景最接近的写法，再回头查动作、事件、附录能力。
@@ -487,6 +490,15 @@ $batchDialog = Dialogs::make('create-batch', '批量新增')
             Fields::textarea('codes', '商品编码')->required(),
             Fields::select('category_id', '分类')
                 ->remoteOptions('/admin/category/options', 'id', 'name')
+        )
+    );
+
+$assignDialog = Dialogs::make('assign-user', '分配人员')
+    ->saveUrl('/admin/work-order/assign')
+    ->form(
+        Forms::make('assign-user')->addFields(
+            Fields::select('user_id', '处理人')
+                ->remoteSearch('/admin/user/listsData', 'realname')
         )
     );
 
@@ -617,6 +629,22 @@ JS)),
 echo $page->toHtml();
 ```
 
+`remoteOptions()` 适合打开下拉时加载一组固定候选项；`remoteSearch()` 适合数据量较大、需要按输入关键字搜索的下拉。
+`remoteSearch($url, 'realname')` 会按旧版默认协议请求：
+
+```php
+[
+    'search' => [
+        'search' => ['realname' => $query],
+        'searchType' => ['realname' => 'like'],
+    ],
+    'page' => 1,
+    'pageSize' => 20,
+]
+```
+
+如果表单已有值但选项还没加载，运行时会用第三个参数指定的字段回查当前选中项；不传时默认用 `id`。
+
 表格工具栏默认分左右两区：
 
 - `toolbarLeft(...)` 放左侧，适合新增、批量操作这类主操作
@@ -680,6 +708,29 @@ $editorDialog = Dialogs::make('editor', '编辑用户')
 ```
 
 如果接口无论新建还是编辑都走同一个保存地址，也可以只写 `->saveUrl('/admin/user/save')`。
+
+行操作打开表单弹窗时，表单会先按字段名自动回填当前行数据；字段名不一致时，用 `rowData()` 做映射：
+
+```php
+Actions::make('确认')->dialog(
+    Dialogs::make('confirm-work-order', '确认工单')
+        ->rowData([
+            'work_order_id' => '@row.id',
+        ])
+        ->form(
+            Forms::make('confirmWork')->addFields(
+                Fields::hidden('work_order_id'),
+                Fields::radio('result', '确认结果')->options([
+                    1 => '确认',
+                    2 => '转移',
+                    3 => '驳回',
+                ])
+            )->saveUrl('/admin/work-order/confirm')
+        )
+);
+```
+
+为了兼容旧写法，未配置 `load()` 的表单弹窗里，`loadPayload(['work_order_id' => '@row.id'])` 也会作为表单初始数据映射使用；配置了 `load()` 时，`loadPayload()` 仍只表示详情加载请求参数。
 
 ### 非表单弹窗示例
 
@@ -1095,7 +1146,7 @@ $page = Pages::make('用户列表')
 - `->errorMessage('失败')`
 - `->reloadTable()`
 - `->reloadPage()`
-- `->dialog('editor')->closeAfterSuccess()`
+- `->closeAfterSuccess()`：优先关闭 action 绑定的 dialog；iframe 子页面会自动关闭宿主弹窗
 - `->before(...)`
 - `->afterSuccess(...)`
 - `->afterFail(...)`
@@ -1405,6 +1456,7 @@ Actions::custom('取消')->onClick(Events::returnTo());
 
 - `Events::closeHostDialog()`
 - `Events::reloadHostTable($table = null)`
+- `Events::hostMessage($message, $type = 'success')`
 - `Events::returnTo($url = null)->hostTable($table = null)`
 
 说明：
@@ -1424,6 +1476,7 @@ Actions::request('保存')
     ->afterSuccess(JsExpression::make(<<<'JS'
 (ctx) => {
   ctx.reloadHostTable();
+  ctx.notifyDialogHost({ action: 'message', message: '保存成功', messageType: 'success' });
   ctx.closeHostDialog();
 }
 JS));

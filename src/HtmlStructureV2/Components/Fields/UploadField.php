@@ -28,7 +28,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadUrl('/admin/upload/file')`
+     * - `Fields::upload('file', '附件')->uploadUrl('/admin/upload/file')`
      */
     public function uploadUrl(string $action): static
     {
@@ -42,17 +42,27 @@ class UploadField extends Field implements ValidatableFieldInterface
      * 控制是否允许多文件上传。
      * 开启后字段默认值会切为数组；
      * 字段值约定为：单图存字符串路径，普通文件/多图存
-     * `[{"uid":"...","url":"...","name":"...","status":"success"}]` 数组。
+     * - `[{"uid":"...","url":"...","name":"...","status":"success"}]` 数组。
      *
      * @param bool $multiple 是否多文件，默认值为 true。
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('files', '附件')->uploadMultiple()`
+     * - `Fields::upload('files', '附件')->multiple()`
+     */
+    public function multiple(bool $multiple = true): static
+    {
+        return $this->applyUploadMultiple($multiple);
+    }
+
+    /**
+     * 控制是否允许多文件上传。
+     *
+     * @deprecated 请使用 multiple()，保留该方法仅为兼容旧代码。
      */
     public function uploadMultiple(bool $multiple = true): static
     {
-        return $this->applyUploadMultiple($multiple);
+        return $this->multiple($multiple);
     }
 
     private function applyUploadMultiple(bool $multiple): static
@@ -81,7 +91,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::images('images', '图片')->uploadUrl('/admin/upload/image')`
+     * - `Fields::images('images', '图片')->uploadUrl('/admin/upload/image')`
      */
     public function asImage(bool $multiple = false): static
     {
@@ -97,7 +107,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::video('intro', '介绍视频')`
+     * - `Fields::video('intro', '介绍视频')`
      */
     public function asVideo(bool $multiple = false): static
     {
@@ -128,7 +138,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('files', '附件')->uploadLimit(5)`
+     * - `Fields::upload('files', '附件')->uploadLimit(5)`
      */
     public function uploadLimit(int $limit): static
     {
@@ -146,7 +156,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadAccept('.pdf,.doc,.docx')`
+     * - `Fields::upload('file', '附件')->uploadAccept('.pdf,.doc,.docx')`
      */
     public function uploadAccept(string $accept): static
     {
@@ -165,7 +175,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadResponsePath('data.url')`
+     * - `Fields::upload('file', '附件')->uploadResponsePath('data.url')`
      */
     public function uploadResponsePath(string $path): static
     {
@@ -182,7 +192,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadButtonText('选择附件')`
+     * - `Fields::upload('file', '附件')->uploadButtonText('选择附件')`
      */
     public function uploadButtonText(string $buttonText): static
     {
@@ -199,7 +209,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadTip('支持 pdf/doc/docx')`
+     * - `Fields::upload('file', '附件')->uploadTip('支持 pdf/doc/docx')`
      */
     public function uploadTip(string $tip): static
     {
@@ -217,7 +227,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadHeaders(['Authorization' => 'Bearer xxx'])`
+     * - `Fields::upload('file', '附件')->uploadHeaders(['Authorization' => 'Bearer xxx'])`
      */
     public function uploadHeaders(array $headers): static
     {
@@ -235,7 +245,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadData(['scene' => 'qa'])`
+     * - `Fields::upload('file', '附件')->uploadData(['scene' => 'qa'])`
      */
     public function uploadData(array $data): static
     {
@@ -253,7 +263,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadName('upload_file')`
+     * - `Fields::upload('file', '附件')->uploadName('upload_file')`
      */
     public function uploadName(string $name): static
     {
@@ -271,7 +281,7 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->uploadListType('picture-card')`
+     * - `Fields::upload('file', '附件')->uploadListType('picture-card')`
      */
     public function uploadListType(string $listType): static
     {
@@ -289,8 +299,8 @@ class UploadField extends Field implements ValidatableFieldInterface
      * @return static 当前上传字段实例。
      *
      * 示例：
-     * `Fields::upload('file', '附件')->showProgress()`
-     * `Fields::video('intro', '介绍视频')->showProgress()`
+     * - `Fields::upload('file', '附件')->showProgress()`
+     * - `Fields::video('intro', '介绍视频')->showProgress()`
      */
     public function showProgress(bool $show = true): static
     {
@@ -339,7 +349,7 @@ class UploadField extends Field implements ValidatableFieldInterface
         }
 
         $this->upload = [
-            'action' => '',
+            'action' => $this->resolveDefaultUploadUrl(),
             'method' => 'post',
             'name' => 'file',
             'headers' => [],
@@ -354,5 +364,18 @@ class UploadField extends Field implements ValidatableFieldInterface
             'responsePath' => '',
             'showProgress' => false,
         ];
+    }
+
+    private function resolveDefaultUploadUrl(): string
+    {
+        if (!function_exists('sc_default_upload_url')) {
+            return '';
+        }
+
+        try {
+            return (string)\sc_default_upload_url();
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

@@ -482,6 +482,17 @@
                 case 'setSubmitVisible':
                   this.setDialogSubmitVisible(dialogKey, payload.value !== false);
                   break;
+                case 'message': {
+                  const message = payload.message ?? payload.text ?? '';
+                  if (message !== null && message !== undefined && message !== '') {
+                    const messageType = typeof payload.messageType === 'string' && payload.messageType !== ''
+                      ? payload.messageType
+                      : (typeof payload.type === 'string' && payload.type !== '' ? payload.type : 'info');
+                    const emitter = ElementPlus.ElMessage?.[messageType] || ElementPlus.ElMessage;
+                    emitter(String(message));
+                  }
+                  break;
+                }
                 default:
                   break;
               }
@@ -640,6 +651,21 @@
                 dialogKey,
                 activeRow ? clone(activeRow) : {}
               );
+              const rowData = resolveContextValue(
+                dialogCfg.rowData || {},
+                this.buildDialogContext(dialogKey, activeRow, {
+                  row: activeRow,
+                  mode: activeRow ? 'edit' : 'create',
+                })
+              );
+
+              if (isObject(rowData)) {
+                formData = this.initializeDialogFormModel(
+                  dialogKey,
+                  clone(rowData),
+                  formData
+                );
+              }
 
               if (isObject(data)) {
                 formData = this.initializeDialogFormModel(
@@ -784,7 +810,14 @@
                 return '';
               }
 
-              const mode = this.dialogMode?.[dialogKey] || 'create';
+              const model = this.dialogForms?.[dialogKey] || {};
+              const modeQueryKey = typeof dialogCfg.modeQueryKey === 'string' && dialogCfg.modeQueryKey !== ''
+                ? dialogCfg.modeQueryKey
+                : 'id';
+              const modelKeyValue = getByPath(model, modeQueryKey);
+              const mode = !isBlank(modelKeyValue)
+                ? 'edit'
+                : (this.dialogMode?.[dialogKey] || 'create');
               const submitActionCfg = isObject(actionConfig?.submit) ? actionConfig.submit : {};
               const url = mode === 'edit'
                 ? (submitActionCfg.updateUrl || submitActionCfg.saveUrl || dialogCfg.updateUrl || dialogCfg.saveUrl || '')

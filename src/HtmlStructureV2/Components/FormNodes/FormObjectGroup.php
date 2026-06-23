@@ -34,7 +34,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
      * @return self 对象作用域节点实例。
      *
      * 示例：
-     * `FormObjectGroup::make('profile')`
+     * - `FormObjectGroup::make('profile')`
      */
     public static function make(string $name): self
     {
@@ -49,7 +49,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
      * @return self 当前对象作用域节点。
      *
      * 示例：
-     * `Forms::object('profile')->addSchema(Fields::text('name', '姓名'))`
+     * - `Forms::object('profile')->addSchema(Fields::text('name', '姓名'))`
      */
     public function addSchema(FormNode ...$children): self
     {

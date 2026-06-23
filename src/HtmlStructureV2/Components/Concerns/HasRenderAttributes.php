@@ -17,7 +17,7 @@ trait HasRenderAttributes
      * @return static 当前节点实例。
      *
      * 示例：
-     * `Blocks::button('查看')->attr(':disabled', 'loading')`
+     * - `Blocks::button('查看')->attr(':disabled', 'loading')`
      */
     public function attr(string $name, mixed $value = ''): static
     {
@@ -53,7 +53,7 @@ trait HasRenderAttributes
      * @return static 当前节点实例。
      *
      * 示例：
-     * `Layouts::stack()->attrs(['data-role' => 'summary', ':loading' => 'loading'])`
+     * - `Layouts::stack()->attrs(['data-role' => 'summary', ':loading' => 'loading'])`
      */
     public function attrs(array $attributes): static
     {
@@ -76,7 +76,7 @@ trait HasRenderAttributes
      * @return static 当前节点实例。
      *
      * 示例：
-     * `Forms::section('基础信息')->className('profile-section')`
+     * - `Forms::section('基础信息')->className('profile-section')`
      */
     public function className(?string $className): static
     {
@@ -91,7 +91,7 @@ trait HasRenderAttributes
      * @return static 当前节点实例。
      *
      * 示例：
-     * `Blocks::text('说明')->style('color:#909399;font-size:12px')`
+     * - `Blocks::text('说明')->style('color:#909399;font-size:12px')`
      */
     public function style(?string $style): static
     {

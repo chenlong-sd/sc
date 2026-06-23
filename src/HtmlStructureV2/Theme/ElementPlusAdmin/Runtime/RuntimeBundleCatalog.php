@@ -11,6 +11,7 @@ final class RuntimeBundleCatalog
     {
         return [
             'runtime-helpers.js',
+            'conditional-validation.js',
             'column-display-factory.js',
             'table-runtime-factory.js',
             'request-action-factory.js',

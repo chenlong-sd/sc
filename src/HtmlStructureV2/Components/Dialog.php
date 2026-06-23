@@ -8,6 +8,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Support\AutoKey;
 use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
@@ -67,6 +68,7 @@ final class Dialog implements Renderable, EventAware
     private ?string $loadUrl = null;
     private string $loadMethod = self::DEFAULT_LOAD_METHOD;
     private array|JsExpression $loadPayload = [];
+    private array|JsExpression|null $rowData = null;
     private ?string $loadDataPath = null;
     private string $loadWhen = self::DEFAULT_LOAD_WHEN;
     private ?JsExpression $beforeOpenHook = null;
@@ -76,10 +78,12 @@ final class Dialog implements Renderable, EventAware
     private array|JsExpression $contextData = [];
     private array $props = [];
 
-    public function __construct(
-        private readonly string $key,
-        string $title
-    ) {
+    private readonly string $key;
+
+    public function __construct(string $keyOrTitle, ?string $title = null)
+    {
+        $this->key = self::resolveKey($title === null ? null : $keyOrTitle);
+        $title ??= $keyOrTitle;
         $normalizedTitle = trim($title);
         $this->implicitTitleTemplate = self::containsDynamicTitleSyntax($normalizedTitle)
             ? $normalizedTitle
@@ -93,16 +97,27 @@ final class Dialog implements Renderable, EventAware
      * - 静态兜底标题：用于按钮文案、关闭后回退态等场景
      * - 隐式标题模板：用于弹窗打开时按当前上下文动态解析
      *
-     * @param string $key 弹窗唯一 key。
-     * @param string $title 弹窗标题，支持模板语法。
+     * @param string $keyOrTitle 弹窗唯一 key，或省略 key 时的弹窗标题。
+     * @param string|null $title 弹窗标题，支持模板语法；传 null 时自动生成内部 key，仅适合对象绑定。
      * @return self 弹窗实例。
      *
      * 示例：
-     * `Dialog::make('qa-info-dialog', '编辑 {title}')`
+     * - `Dialog::make('qa-info-dialog', '编辑 {title}')`
+     * - `Dialog::make('编辑 {title}')`
      */
-    public static function make(string $key, string $title): self
+    public static function make(string $keyOrTitle, ?string $title = null): self
     {
-        return new self($key, $title);
+        return new self($keyOrTitle, $title);
+    }
+
+    private static function resolveKey(?string $key): string
+    {
+        $key = trim((string)$key);
+        if ($key !== '') {
+            return $key;
+        }
+
+        return AutoKey::make('__sc_v2_auto_dialog_');
     }
 
     /**
@@ -113,7 +128,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->width('960px')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->width('960px')`
      */
     public function width(string $width): self
     {
@@ -131,7 +146,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->height('84vh')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->height('84vh')`
      */
     public function height(?string $height): self
     {
@@ -152,7 +167,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->draggable()`
+     * - `Dialogs::make('qa-info-dialog', '详情')->draggable()`
      */
     public function draggable(bool $draggable = true): self
     {
@@ -169,7 +184,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->fullscreen()`
+     * - `Dialogs::make('qa-info-dialog', '详情')->fullscreen()`
      */
     public function fullscreen(bool $fullscreen = true): self
     {
@@ -187,7 +202,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->alignCenter(false)`
+     * - `Dialogs::make('qa-info-dialog', '详情')->alignCenter(false)`
      */
     public function alignCenter(bool $alignCenter = true): self
     {
@@ -204,7 +219,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->closeOnClickModal()`
+     * - `Dialogs::make('qa-info-dialog', '详情')->closeOnClickModal()`
      */
     public function closeOnClickModal(bool $closeOnClickModal = true): self
     {
@@ -221,7 +236,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->destroyOnClose(false)`
+     * - `Dialogs::make('qa-info-dialog', '详情')->destroyOnClose(false)`
      */
     public function destroyOnClose(bool $destroyOnClose = true): self
     {
@@ -245,7 +260,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->saveUrl('/admin/qa-info/save')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->saveUrl('/admin/qa-info/save')`
      */
     public function saveUrl(?string $saveUrl): self
     {
@@ -264,7 +279,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '新建')->createUrl('/admin/qa-info/create')`
+     * - `Dialogs::make('qa-info-dialog', '新建')->createUrl('/admin/qa-info/create')`
      */
     public function createUrl(?string $createUrl): self
     {
@@ -283,7 +298,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->updateUrl('/admin/qa-info/update')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->updateUrl('/admin/qa-info/update')`
      */
     public function updateUrl(?string $updateUrl): self
     {
@@ -294,7 +309,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 设置动态标题模板，例如 编辑 {name}。
-     * `{field}` 会先从当前 `row` 中取值；若模板里还包含 token，也会在前端打开弹窗时继续解析。
+     * - `{field}` 会先从当前 `row` 中取值；若模板里还包含 token，也会在前端打开弹窗时继续解析。
      * 显式调用后会覆盖 make($key, $title) 中自动识别出的隐式标题模板。
      * 常用可用字段：
      * - row / mode / dialogKey / tableKey
@@ -306,7 +321,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->titleTemplate('编辑 {title}')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->titleTemplate('编辑 {title}')`
      */
     public function titleTemplate(?string $titleTemplate): self
     {
@@ -344,7 +359,7 @@ final class Dialog implements Renderable, EventAware
      * @return static 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->on('afterOpen', '({ row }) => console.log(row)')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->on('afterOpen', '({ row }) => console.log(row)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -361,7 +376,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->form(Forms::make('qa-info-form'))`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->form(Forms::make('qa-info-form'))`
      */
     public function form(Form $form): self
     {
@@ -389,7 +404,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '提示')->content('<div>{{ dialogRow?.name }}</div>')`
+     * - `Dialogs::make('qa-info-dialog', '提示')->content('<div>{{ dialogRow?.name }}</div>')`
      */
     public function content(string|AbstractHtmlElement|null $content): self
     {
@@ -409,7 +424,7 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 把弹窗主体切换为 Vue 组件。
-     * `name` 应是前端已注册的组件名。`props` 若传数组/字符串/JsExpression，会在每次打开弹窗时
+     * - `name` 应是前端已注册的组件名。`props` 若传数组/字符串/JsExpression，会在每次打开弹窗时
      * 按当前 dialog context 解析；组件打开/关闭生命周期可再配合 componentOpenMethod()/componentCloseMethod()。
      *
      * props 解析时可用字段：
@@ -426,7 +441,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->component('QaInfoPreview', ['id' => '@row.id'])`
+     * - `Dialogs::make('qa-info-dialog', '详情')->component('QaInfoPreview', ['id' => '@row.id'])`
      */
     public function component(
         string $name,
@@ -455,7 +470,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->componentProps(['id' => '@row.id'])`
+     * - `Dialogs::make('qa-info-dialog', '详情')->componentProps(['id' => '@row.id'])`
      */
     public function componentProps(array|string|JsExpression $props): self
     {
@@ -472,7 +487,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->componentAttrs(['class' => 'qa-info-dialog'])`
+     * - `Dialogs::make('qa-info-dialog', '详情')->componentAttrs(['class' => 'qa-info-dialog'])`
      */
     public function componentAttrs(array $attrs): self
     {
@@ -492,7 +507,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->componentOpenMethod('onShow')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->componentOpenMethod('onShow')`
      */
     public function componentOpenMethod(?string $method): self
     {
@@ -511,7 +526,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->componentCloseMethod('onHide')`
+     * - `Dialogs::make('qa-info-dialog', '详情')->componentCloseMethod('onHide')`
      */
     public function componentCloseMethod(?string $method): self
     {
@@ -537,7 +552,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => ‘@row.id’])`
+     * - `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => ‘@row.id’])`
      */
     public function iframe(string $url, array|string|JsExpression $query = []): self
     {
@@ -566,7 +581,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeHost()`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeHost()`
      */
     public function iframeHost(bool $enabled = true): self
     {
@@ -583,7 +598,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeFullscreenToggle(false)`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->iframe('/admin/qa-info/form')->iframeFullscreenToggle(false)`
      */
     public function iframeFullscreenToggle(bool $enabled = true): self
     {
@@ -603,7 +618,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->iframeSubmitHandler('__SC_V2_PAGE__.submit')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->iframeSubmitHandler('__SC_V2_PAGE__.submit')`
      */
     public function iframeSubmitHandler(?string $handlerPath = '__SC_V2_PAGE__.submit'): self
     {
@@ -616,7 +631,7 @@ final class Dialog implements Renderable, EventAware
     /**
      * 配置弹窗打开时的详情加载接口。
      * 当 loadWhen() 条件命中时，会在弹窗打开流程中请求该接口，再把结果回填到表单。
-     * `url` 同样支持运行时 token。
+     * - `url` 同样支持运行时 token。
      * method 默认值为 get。
      * 常用可用字段：
      * - row / mode / dialogKey / tableKey
@@ -629,7 +644,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->load('/admin/qa-info/detail')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->load('/admin/qa-info/detail')`
      */
     public function load(string $url, string $method = 'get'): self
     {
@@ -653,11 +668,29 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->loadPayload(['id' => '@row.id'])`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->loadPayload(['id' => '@row.id'])`
      */
     public function loadPayload(array|string|JsExpression $loadPayload): self
     {
         $this->loadPayload = $this->normalizeExpressionConfig($loadPayload);
+
+        return $this;
+    }
+
+    /**
+     * 设置行操作打开弹窗时要写入表单的初始数据。
+     * 数组/字符串/JsExpression 都会按当前 dialog context 解析，可直接读取 `@row.xxx`。
+     * 适合表单字段名与表格字段名不一致时做映射。
+     *
+     * @param array|string|JsExpression $rowData 表单初始数据映射。
+     * @return self 当前弹窗实例。
+     *
+     * 示例：
+     * - `Dialogs::make('confirm', '确认')->rowData(['work_order_id' => '@row.id'])`
+     */
+    public function rowData(array|string|JsExpression $rowData): self
+    {
+        $this->rowData = $this->normalizeExpressionConfig($rowData);
 
         return $this;
     }
@@ -670,7 +703,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->loadDataPath('data.info')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->loadDataPath('data.info')`
      */
     public function loadDataPath(?string $loadDataPath): self
     {
@@ -681,13 +714,13 @@ final class Dialog implements Renderable, EventAware
 
     /**
      * 控制详情加载时机，仅支持 always / create / edit。
-     * `edit` 为默认值，表示只有带 row 打开时才自动拉取详情。
+     * - `edit` 为默认值，表示只有带 row 打开时才自动拉取详情。
      *
      * @param string $loadWhen 加载时机，可选 always、create、edit。
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->loadWhen('edit')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->loadWhen('edit')`
      */
     public function loadWhen(string $loadWhen): self
     {
@@ -710,7 +743,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->beforeOpen('({ row }) => !!row')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->beforeOpen('({ row }) => !!row')`
      */
     public function beforeOpen(string|JsExpression $beforeOpenHook): self
     {
@@ -732,7 +765,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->afterOpen('({ vm }) => vm.focusFirstField?.()')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->afterOpen('({ vm }) => vm.focusFirstField?.()')`
      */
     public function afterOpen(string|JsExpression $afterOpenHook): self
     {
@@ -754,7 +787,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->beforeClose('({ dialogSubmitting }) => !dialogSubmitting')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->beforeClose('({ dialogSubmitting }) => !dialogSubmitting')`
      */
     public function beforeClose(string|JsExpression $beforeCloseHook): self
     {
@@ -776,7 +809,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->afterClose('({ vm }) => vm.clearTempState?.()')`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->afterClose('({ vm }) => vm.clearTempState?.()')`
      */
     public function afterClose(string|JsExpression $afterCloseHook): self
     {
@@ -807,7 +840,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->context(['source' => '@row.source'])`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->context(['source' => '@row.source'])`
      */
     public function context(array|string|JsExpression $contextData): self
     {
@@ -831,7 +864,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '详情')->props(['append-to-body' => true])`
+     * - `Dialogs::make('qa-info-dialog', '详情')->props(['append-to-body' => true])`
      */
     public function props(array $props): self
     {
@@ -852,7 +885,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * `Dialogs::make('qa-info-dialog', '编辑')->footer(Actions::save(), Actions::close())`
+     * - `Dialogs::make('qa-info-dialog', '编辑')->footer(Actions::save(), Actions::close())`
      */
     public function footer(Action ...$actions): self
     {
@@ -1055,6 +1088,11 @@ final class Dialog implements Renderable, EventAware
     public function getLoadPayload(): array|JsExpression
     {
         return $this->loadPayload;
+    }
+
+    public function getRowData(): array|JsExpression|null
+    {
+        return $this->rowData;
     }
 
     public function getLoadDataPath(): ?string

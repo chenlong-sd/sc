@@ -24,7 +24,7 @@ final class VideoField extends UploadField
      * @return static 当前视频字段实例。
      *
      * 示例：
-     * `Fields::video('clips', '视频集')->multiple()->uploadLimit(5)`
+     * - `Fields::video('clips', '视频集')->multiple()->uploadLimit(5)`
      */
     public function multiple(bool $enable = true): static
     {

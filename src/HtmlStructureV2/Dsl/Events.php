@@ -21,7 +21,7 @@ final class Events
      * - Dialog hook: 额外还有 mode / dialogKey / dialogContext / data / dialog
      * - Form / Forms::custom(): 常见有 model / form / scope / fieldName / vm
      * - 页面地址：`page.url` / `page.path` / `page.query`
-     * `query` 传字符串时会自动包装成 JsExpression。
+     * - `query` 传字符串时会自动包装成 JsExpression。
      * 返回的事件对象还可继续链式调用 `target()` / `newTab()` / `features()`。
      *
      * @param string|JsExpression $url 目标 URL。
@@ -29,7 +29,7 @@ final class Events
      * @return StructuredEvent 打开链接事件。
      *
      * 示例：
-     * `Events::openUrl('/admin/qa-info/form', ['id' => '@row.id'])`
+     * - `Events::openUrl('/admin/qa-info/form', ['id' => '@row.id'])`
      */
     public static function openUrl(string|JsExpression $url, array|string|JsExpression $query = []): StructuredEvent
     {
@@ -47,7 +47,7 @@ final class Events
      * @return StructuredEvent 打开弹窗事件。
      *
      * 示例：
-     * `Events::openDialog('qa-info-dialog')`
+     * - `Events::openDialog('qa-info-dialog')`
      */
     public static function openDialog(string|Dialog $dialog): StructuredEvent
     {
@@ -64,7 +64,7 @@ final class Events
      * @return StructuredEvent 关闭弹窗事件。
      *
      * 示例：
-     * `Events::closeDialog('qa-info-dialog')`
+     * - `Events::closeDialog('qa-info-dialog')`
      */
     public static function closeDialog(string|Dialog $dialog): StructuredEvent
     {
@@ -81,7 +81,7 @@ final class Events
      * @return StructuredEvent 刷新表格事件。
      *
      * 示例：
-     * `Events::reloadTable('qa-info-table')`
+     * - `Events::reloadTable('qa-info-table')`
      */
     public static function reloadTable(string|Table|null $table = null): StructuredEvent
     {
@@ -98,7 +98,7 @@ final class Events
      * @return StructuredEvent 刷新列表事件。
      *
      * 示例：
-     * `Events::reloadList('qa-info-list')`
+     * - `Events::reloadList('qa-info-list')`
      */
     public static function reloadList(string|ListWidget|null $list = null): StructuredEvent
     {
@@ -112,7 +112,7 @@ final class Events
      * @return StructuredEvent 整页刷新事件。
      *
      * 示例：
-     * `Events::reloadPage()`
+     * - `Events::reloadPage()`
      */
     public static function reloadPage(): StructuredEvent
     {
@@ -126,7 +126,7 @@ final class Events
      * @return StructuredEvent 关闭宿主弹窗事件。
      *
      * 示例：
-     * `Events::closeHostDialog()`
+     * - `Events::closeHostDialog()`
      */
     public static function closeHostDialog(): StructuredEvent
     {
@@ -141,11 +141,27 @@ final class Events
      * @return StructuredEvent 刷新宿主表格事件。
      *
      * 示例：
-     * `Events::reloadHostTable('qa-info-table')`
+     * - `Events::reloadHostTable('qa-info-table')`
      */
     public static function reloadHostTable(string|Table|null $table = null): StructuredEvent
     {
         return StructuredEvent::reloadHostTable($table);
+    }
+
+    /**
+     * 创建一个在 iframe 宿主页面显示消息提示的事件。
+     * 适合 iframe 子页面保存成功后，让父页面弹出成功提示；若当前不在宿主 iframe 弹窗中，运行时会静默跳过。
+     *
+     * @param string|JsExpression $message 提示文案。
+     * @param string $type 提示类型，默认值为 success。
+     * @return StructuredEvent 宿主页面消息提示事件。
+     *
+     * 示例：
+     * - `Events::hostMessage('保存成功')`
+     */
+    public static function hostMessage(string|JsExpression $message, string $type = 'success'): StructuredEvent
+    {
+        return StructuredEvent::hostMessage($message, $type);
     }
 
     /**
@@ -159,7 +175,7 @@ final class Events
      * @return StructuredEvent 返回事件。
      *
      * 示例：
-     * `Events::returnTo('/admin/qa-info/lists')`
+     * - `Events::returnTo('/admin/qa-info/lists')`
      */
     public static function returnTo(string|JsExpression|null $url = null): StructuredEvent
     {
@@ -172,7 +188,7 @@ final class Events
      * 目标表单可继续链式调用 `->form('profile')` 显式指定；
      * 不指定时，运行时会优先尝试使用当前事件上下文里的表单 scope。
      *
-     * `values` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * - `values` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 例如可写：
      * - `Events::setFormModel(['status' => 1])`
      * - `Events::setFormModel(['id' => '@row.id'])->form('profile')`
@@ -182,7 +198,7 @@ final class Events
      * @return StructuredEvent 整表赋值事件。
      *
      * 示例：
-     * `Events::setFormModel(['status' => 1])->form('qa-info-form')`
+     * - `Events::setFormModel(['status' => 1])->form('qa-info-form')`
      */
     public static function setFormModel(array|string|JsExpression $values): StructuredEvent
     {
@@ -199,7 +215,7 @@ final class Events
      * @return StructuredEvent 初始化表单模型事件。
      *
      * 示例：
-     * `Events::initializeFormModel('@response.data')->form('qa-info-form')`
+     * - `Events::initializeFormModel('@response.data')->form('qa-info-form')`
      */
     public static function initializeFormModel(array|string|JsExpression $values): StructuredEvent
     {
@@ -216,7 +232,7 @@ final class Events
      * @return StructuredEvent 重置表单事件。
      *
      * 示例：
-     * `Events::resetForm('qa-info-form')`
+     * - `Events::resetForm('qa-info-form')`
      */
     public static function resetForm(?string $scope = null): StructuredEvent
     {
@@ -225,7 +241,7 @@ final class Events
 
     /**
      * 创建一个消息提示事件，type 可传 success / warning / error / info。
-     * `message` 支持动态表达式，会从当前 handler context 中解析。
+     * - `message` 支持动态表达式，会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文，例如 Action / RequestAction 常见有 row /
      * tableKey / listKey / filters / forms / dialogs / selection / vm，Dialog hook 还会额外提供
      * mode / dialogKey / dialogContext / data / dialog。
@@ -235,7 +251,7 @@ final class Events
      * @return StructuredEvent 消息提示事件。
      *
      * 示例：
-     * `Events::message('保存成功', 'success')`
+     * - `Events::message('保存成功', 'success')`
      */
     public static function message(string|JsExpression $message, string $type = 'info'): StructuredEvent
     {
@@ -245,11 +261,11 @@ final class Events
     /**
      * 创建一个轻量请求事件，适合在自定义交互里直接发起接口调用。
      *
-     * `query` 支持动态表达式，会从当前 handler context 中解析。
+     * - `query` 支持动态表达式，会从当前 handler context 中解析。
      * 具体可用字段取决于挂载位置，通常就是宿主组件 `on()` 注释里列出的公共上下文；
      * 常见有 row / tableKey / listKey / filters / forms / dialogs / selection / vm，
      * 若运行在弹窗生命周期里，还可读取 mode / dialogKey / dialogContext / data / dialog。
-     * `query` 传字符串时会自动包装成 JsExpression。
+     * - `query` 传字符串时会自动包装成 JsExpression。
      * 返回的事件对象还可继续链式调用 `successMessage()` / `errorMessage()` / `loadingText()`；
      * 请求执行完成后，后续事件可从 context 中读取 `request` / `response` / `payload` / `error`。
      *
@@ -259,7 +275,7 @@ final class Events
      * @return StructuredEvent 轻量请求事件。
      *
      * 示例：
-     * `Events::request('/admin/qa-info/delete', 'post', ['id' => '@row.id'])->successMessage('删除成功')`
+     * - `Events::request('/admin/qa-info/delete', 'post', ['id' => '@row.id'])->successMessage('删除成功')`
      */
     public static function request(
         string $url,

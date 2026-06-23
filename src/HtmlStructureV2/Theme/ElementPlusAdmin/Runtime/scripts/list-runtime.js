@@ -34,6 +34,7 @@
           const createListFilterMethods = globalThis.__SC_V2_CREATE_LIST_FILTER_METHODS__;
           const createListTableMethods = globalThis.__SC_V2_CREATE_LIST_TABLE_METHODS__;
           const createListDialogMethods = globalThis.__SC_V2_CREATE_LIST_DIALOG_METHODS__;
+          const hostDialogKeyQueryKey = '__scV2DialogKey';
           const buildCurrentPageContext = () => {
             const location = readPageLocation();
 
@@ -42,6 +43,19 @@
               mode: resolvePageMode(location.query || {}),
               formScope: null,
             });
+          };
+          const resolveHostDialogKey = (dialogKey = null) => {
+            const explicitDialogKey = typeof dialogKey === 'string' ? dialogKey.trim() : '';
+            if (explicitDialogKey !== '') {
+              return explicitDialogKey;
+            }
+
+            const pageQuery = buildCurrentPageContext().query || {};
+            const queryDialogKey = typeof pageQuery?.[hostDialogKeyQueryKey] === 'string'
+              ? pageQuery[hostDialogKeyQueryKey].trim()
+              : '';
+
+            return queryDialogKey !== '' ? queryDialogKey : null;
           };
 
           const pickTotal = (payload, depth = 0) => {
@@ -219,6 +233,35 @@
             }, overrides);
           };
 
+          const buildComputedRules = () => {
+            const computed = {};
+            const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
+
+            if (conditionalValidation) {
+              Object.keys(forms || {}).forEach((scope) => {
+                const formCfg = forms[scope];
+                if (formCfg && formCfg.rulesVar && !formCfg.rulesPath) {
+                  const rulesVarName = formCfg.rulesVar;
+                  const modelVarName = formCfg.modelVar || formCfg.modelPath?.[0];
+
+                  computed[rulesVarName] = function() {
+                    // 从 config 读取规则，而不是从 state
+                    const rawRules = formCfg.rules || {};
+
+                    // 传入一个 getter 函数来获取最新的 model
+                    const getModel = () => {
+                      return modelVarName ? this[modelVarName] : {};
+                    };
+
+                    return conditionalValidation.processConditionalRules(rawRules, getModel);
+                  };
+                }
+              });
+            }
+
+            return computed;
+          };
+
           const app = Vue.createApp({
             data(){
               return Object.assign({
@@ -228,6 +271,7 @@
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
               }, state || {});
             },
+            computed: buildComputedRules(),
             created(){
               initializeConfiguredForms(forms, {
                 initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
@@ -270,20 +314,22 @@
                   return postDialogHostMessage(payload);
                 },
                 closeHostDialog(dialogKey = null){
+                  const resolvedDialogKey = resolveHostDialogKey(dialogKey);
                   const payload = { action: 'close' };
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return this.notifyDialogHost(payload);
                 },
                 reloadHostTable(tableKey = null, dialogKey = null){
+                  const resolvedDialogKey = resolveHostDialogKey(dialogKey);
                   const payload = { action: 'reloadTable' };
                   if (typeof tableKey === 'string' && tableKey !== '') {
                     payload.tableKey = tableKey;
                   }
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return this.notifyDialogHost(payload);

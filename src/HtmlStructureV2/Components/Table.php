@@ -103,7 +103,7 @@ final class Table implements Renderable, EventAware
      * @return self 表格实例。
      *
      * 示例：
-     * `Table::make('qa-info-table')`
+     * - `Table::make('qa-info-table')`
      */
     public static function make(string $key): self
     {
@@ -117,7 +117,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->addColumns(Tables::column('标题', 'title'))`
+     * - `Tables::make('qa-info-table')->addColumns(Tables::column('标题', 'title'))`
      */
     public function addColumns(Column ...$columns): self
     {
@@ -134,7 +134,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->toolbarLeft(Actions::create()->dialog('qa-info-dialog'))`
+     * - `Tables::make('qa-info-table')->toolbarLeft(Actions::create()->dialog('qa-info-dialog'))`
      */
     public function toolbarLeft(Action ...$actions): self
     {
@@ -151,7 +151,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->toolbarRight(Actions::refresh('刷新'))`
+     * - `Tables::make('qa-info-table')->toolbarRight(Actions::refresh('刷新'))`
      */
     public function toolbarRight(Action ...$actions): self
     {
@@ -170,14 +170,14 @@ final class Table implements Renderable, EventAware
      * 因此 `onClick()` / `on('click', ...)` 里通常直接写 `({ row }) => ...` 即可，
      * 不需要再手动从 `scope.row` 取值。
      *
-     * `Actions::edit()` / `Actions::request()` / `Events::openDialog()` 等会自动携带当前行；
-     * `Actions::delete()` 仍是工具栏批量删除语义，不用于 rowActions() 单条删除。
+     * - `Actions::edit()` / `Actions::request()` / `Events::openDialog()` 等会自动携带当前行；
+     * - `Actions::delete()` 仍是工具栏批量删除语义，不用于 rowActions() 单条删除。
      *
      * @param Action ...$actions 行操作动作。
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->rowActions(
+     * - `Tables::make('qa-info-table')->rowActions(
      *     Actions::make('确认')
      *         ->props(['v-if' => 'scope.row.status == 1'])
      *         ->onClick('({ row }) => console.log(row.id)')
@@ -198,7 +198,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->rowActionColumnWidth(220)`
+     * - `Tables::make('qa-info-table')->rowActionColumnWidth(220)`
      */
     public function rowActionColumnWidth(int $width): self
     {
@@ -217,7 +217,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->maxHeight(-80)`
+     * - `Tables::make('qa-info-table')->maxHeight(-80)`
      */
     public function maxHeight(int $maxHeight = -60): self
     {
@@ -235,7 +235,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->rowKey('id')`
+     * - `Tables::make('qa-info-table')->rowKey('id')`
      */
     public function rowKey(string $rowKey): self
     {
@@ -256,7 +256,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->tree(true, 'children')->rowKey('id')`
+     * - `Tables::make('qa-info-table')->tree(true, 'children')->rowKey('id')`
      */
     public function tree(
         bool $enabled = true,
@@ -275,8 +275,8 @@ final class Table implements Renderable, EventAware
 
     /**
      * 细化树表的 `tree-props` 配置。
-     * `childrenKey` 对应子节点字段；`checkStrictly` 会透传给 Element Plus；
-     * `hasChildrenKey` 主要给后续懒加载/占位树节点预留，不传时不会输出。
+     * - `childrenKey` 对应子节点字段；`checkStrictly` 会透传给 Element Plus；
+     * - `hasChildrenKey` 主要给后续懒加载/占位树节点预留，不传时不会输出。
      *
      * @param string $childrenKey 子节点字段名。
      * @param bool $checkStrictly 是否严格关联父子勾选。
@@ -284,7 +284,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->treeProps('children', false, 'has_children')`
+     * - `Tables::make('qa-info-table')->treeProps('children', false, 'has_children')`
      */
     public function treeProps(
         string $childrenKey = 'children',
@@ -322,7 +322,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dragSort()->rowKey('id')`
+     * - `Tables::make('qa-info-table')->dragSort()->rowKey('id')`
      */
     public function dragSort(bool $enabled = true): self
     {
@@ -339,7 +339,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dragSortLabel('拖动排序')`
+     * - `Tables::make('qa-info-table')->dragSortLabel('拖动排序')`
      */
     public function dragSortLabel(string $label = '排序'): self
     {
@@ -356,7 +356,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dragSortType('warning')`
+     * - `Tables::make('qa-info-table')->dragSortType('warning')`
      */
     public function dragSortType(string $type = 'primary'): self
     {
@@ -373,7 +373,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dragSortIcon('Sort')`
+     * - `Tables::make('qa-info-table')->dragSortIcon('Sort')`
      */
     public function dragSortIcon(?string $icon = 'Rank'): self
     {
@@ -391,7 +391,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dragSortConfig(['ghostClass' => 'sortable-ghost'])`
+     * - `Tables::make('qa-info-table')->dragSortConfig(['ghostClass' => 'sortable-ghost'])`
      */
     public function dragSortConfig(array $config): self
     {
@@ -403,7 +403,7 @@ final class Table implements Renderable, EventAware
 
     /**
      * 设置表格顶部的快速状态切换按钮组。
-     * `name` 是筛选模型字段名；后端真实字段映射应通过 filters() 字段上的 searchable()/searchField()、
+     * - `name` 是筛选模型字段名；后端真实字段映射应通过 filters() 字段上的 searchable()/searchField()、
      * 或列上的 searchable() 定义。
      * 若当前表格还没有对应搜索协议，V2 会自动补一条 hidden 的 `=` 搜索项，真实字段默认同名。
      *
@@ -413,7 +413,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->statusToggle('status', [1 => '启用', 0 => '停用'], '状态')`
+     * - `Tables::make('qa-info-table')->statusToggle('status', [1 => '启用', 0 => '停用'], '状态')`
      */
     public function statusToggle(
         string $name,
@@ -441,7 +441,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->statusTogglesNewLine()`
+     * - `Tables::make('qa-info-table')->statusTogglesNewLine()`
      */
     public function statusTogglesNewLine(bool $newLine = true): self
     {
@@ -459,7 +459,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->export('qa-info')`
+     * - `Tables::make('qa-info-table')->export('qa-info')`
      */
     public function export(string $filename = 'export'): self
     {
@@ -475,7 +475,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportLabel('导出问答')`
+     * - `Tables::make('qa-info-table')->exportLabel('导出问答')`
      */
     public function exportLabel(string $label = '导出Excel'): self
     {
@@ -492,7 +492,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportType('primary')`
+     * - `Tables::make('qa-info-table')->exportType('primary')`
      */
     public function exportType(string $type = 'primary'): self
     {
@@ -509,7 +509,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportIcon('TakeawayBox')`
+     * - `Tables::make('qa-info-table')->exportIcon('TakeawayBox')`
      */
     public function exportIcon(?string $icon = 'TakeawayBox'): self
     {
@@ -526,7 +526,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportFilename('qa-info-export')`
+     * - `Tables::make('qa-info-table')->exportFilename('qa-info-export')`
      */
     public function exportFilename(string $filename): self
     {
@@ -545,7 +545,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->exportQuery(['is_export' => 1, 'with_detail' => 1])`
+     * - `Tables::make('qa-info-table')->exportQuery(['is_export' => 1, 'with_detail' => 1])`
      */
     public function exportQuery(array $query): self
     {
@@ -562,7 +562,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dataSource(UrlDataSource::make('/admin/qa-info/list'))`
+     * - `Tables::make('qa-info-table')->dataSource(UrlDataSource::make('/admin/qa-info/list'))`
      */
     public function dataSource(DataSourceInterface $dataSource): self
     {
@@ -578,7 +578,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->rows([['id' => 1, 'title' => '示例']])`
+     * - `Tables::make('qa-info-table')->rows([['id' => 1, 'title' => '示例']])`
      */
     public function rows(array $rows): self
     {
@@ -594,7 +594,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list', ['type' => 'normal'])`
+     * - `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list', ['type' => 'normal'])`
      */
     public function dataUrl(string $url, array $query = []): self
     {
@@ -608,7 +608,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->pagination(false)`
+     * - `Tables::make('qa-info-table')->pagination(false)`
      */
     public function pagination(bool $pagination = true): self
     {
@@ -624,7 +624,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->pageSize(50)`
+     * - `Tables::make('qa-info-table')->pageSize(50)`
      */
     public function pageSize(int $pageSize): self
     {
@@ -640,7 +640,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->pageSizes([20, 50, 100])`
+     * - `Tables::make('qa-info-table')->pageSizes([20, 50, 100])`
      */
     public function pageSizes(array $pageSizes): self
     {
@@ -656,7 +656,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->stripe()`
+     * - `Tables::make('qa-info-table')->stripe()`
      */
     public function stripe(bool $stripe = true): self
     {
@@ -672,7 +672,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->border()`
+     * - `Tables::make('qa-info-table')->border()`
      */
     public function border(bool $border = true): self
     {
@@ -692,7 +692,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->settings(false)`
+     * - `Tables::make('qa-info-table')->settings(false)`
      */
     public function settings(bool $settings = true): self
     {
@@ -708,7 +708,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->emptyText('暂无问答数据')`
+     * - `Tables::make('qa-info-table')->emptyText('暂无问答数据')`
      */
     public function emptyText(string $emptyText): self
     {
@@ -728,7 +728,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->selection()`
+     * - `Tables::make('qa-info-table')->selection()`
      */
     public function selection(bool $selection = true): self
     {
@@ -745,7 +745,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->selectionFixed('left')`
+     * - `Tables::make('qa-info-table')->selectionFixed('left')`
      */
     public function selectionFixed(
         #[ExpectedValues(['left', 'right'])]
@@ -767,7 +767,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->deleteUrl('/admin/qa-info/delete')`
+     * - `Tables::make('qa-info-table')->deleteUrl('/admin/qa-info/delete')`
      */
     public function deleteUrl(?string $deleteUrl): self
     {
@@ -785,7 +785,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->deleteKey('id')`
+     * - `Tables::make('qa-info-table')->deleteKey('id')`
      */
     public function deleteKey(string $deleteKey): self
     {
@@ -827,7 +827,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list')->trash('/admin/qa-info/recover')`
+     * - `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list')->trash('/admin/qa-info/recover')`
      */
     public function trash(?string $recoverUrl = null): self
     {
@@ -845,7 +845,7 @@ final class Table implements Renderable, EventAware
      * @return self 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->trash()->recoverUrl('/admin/qa-info/recover')`
+     * - `Tables::make('qa-info-table')->trash()->recoverUrl('/admin/qa-info/recover')`
      */
     public function recoverUrl(?string $recoverUrl): self
     {
@@ -885,7 +885,7 @@ final class Table implements Renderable, EventAware
      * @return static 当前表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->on('loadSuccess', '({ rows }) => console.log(rows)')`
+     * - `Tables::make('qa-info-table')->on('loadSuccess', '({ rows }) => console.log(rows)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

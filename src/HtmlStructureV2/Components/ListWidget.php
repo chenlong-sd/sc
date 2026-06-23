@@ -43,7 +43,7 @@ final class ListWidget implements Renderable, EventAware
      * @return self 列表实例。
      *
      * 示例：
-     * `ListWidget::make('qa-info-list')`
+     * - `ListWidget::make('qa-info-list')`
      */
     public static function make(string $key): self
     {
@@ -57,7 +57,7 @@ final class ListWidget implements Renderable, EventAware
      * - `filters(Fields::text(...), Fields::select(...))`：直接传字段，内部会自动包装成 inline Form
      *
      * 显式传入时会保留这份 UI；若表格列还声明了
-     * `Column::searchable()`，
+     * - `Column::searchable()`，
      * V2 会继续自动补齐这份表单里尚未声明的筛选项，减少重复书写。
      * 同时，当前筛选表单里已声明的字段也会反向补齐到运行时 searchSchema；
      * 因此常见场景下只写 `filters()` 即可完成“筛选 UI + 查询协议”。
@@ -70,7 +70,7 @@ final class ListWidget implements Renderable, EventAware
      * @return self 当前列表实例。
      *
      * 示例：
-     * `ListWidget::make('qa-info-list')->filters(Fields::text('keyword', '关键词'), Fields::select('status', '状态'))`
+     * - `ListWidget::make('qa-info-list')->filters(Fields::text('keyword', '关键词'), Fields::select('status', '状态'))`
      */
     public function filters(Form|Field ...$filters): self
     {
@@ -92,7 +92,7 @@ final class ListWidget implements Renderable, EventAware
      * @return self 当前列表实例。
      *
      * 示例：
-     * `ListWidget::make('qa-info-list')->table(Tables::make('qa-info-table'))`
+     * - `ListWidget::make('qa-info-list')->table(Tables::make('qa-info-table'))`
      */
     public function table(Table $table): self
     {
@@ -110,7 +110,7 @@ final class ListWidget implements Renderable, EventAware
      * @return self 当前列表实例。
      *
      * 示例：
-     * `ListWidget::make('qa-info-list')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
+     * - `ListWidget::make('qa-info-list')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
      */
     public function dialogs(Dialog ...$dialogs): self
     {
@@ -140,7 +140,7 @@ final class ListWidget implements Renderable, EventAware
      * @return static 当前列表实例。
      *
      * 示例：
-     * `ListWidget::make('qa-info-list')->on('filterSubmit', '({ filters }) => console.log(filters)')`
+     * - `ListWidget::make('qa-info-list')->on('filterSubmit', '({ filters }) => console.log(filters)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]
@@ -165,7 +165,7 @@ final class ListWidget implements Renderable, EventAware
      * 若显式配置了 filters()，会优先保留显式字段，再按表格列搜索协议补齐缺失项；
      * 若未配置 filters()，则直接自动推导一份行内筛选表单。
      * 其中自动推导出来的筛选项默认隐藏 label，只保留 placeholder；
-     * `displayMapping()` / `displayTag()` / `displayBoolean*()` 会优先识别为 select。
+     * - `displayMapping()` / `displayTag()` / `displayBoolean*()` 会优先识别为 select。
      */
     public function resolveFilterForm(): ?Form
     {

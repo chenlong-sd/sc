@@ -59,7 +59,7 @@ final class RequestAction extends Action
      * @return static 请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('同步')->post('/admin/qa-info/sync')`
+     * - `RequestAction::make('同步')->post('/admin/qa-info/sync')`
      */
     public static function make(string $label): static
     {
@@ -68,7 +68,7 @@ final class RequestAction extends Action
 
     /**
      * 配置请求地址和请求方法。
-     * `url` 支持在前端运行时解析上下文 token。
+     * - `url` 支持在前端运行时解析上下文 token。
      * 常用可用字段：
      * - action / row / tableKey / listKey
      * - filters / forms / dialogs / selection / query / page / mode
@@ -83,7 +83,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('同步')->request('/admin/qa-info/sync', 'post')`
+     * - `RequestAction::make('同步')->request('/admin/qa-info/sync', 'post')`
      */
     public function request(string $url, string $method = 'post'): static
     {
@@ -103,7 +103,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('刷新统计')->get('/admin/qa-info/stats')`
+     * - `RequestAction::make('刷新统计')->get('/admin/qa-info/stats')`
      */
     public function get(string $url): static
     {
@@ -117,7 +117,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('同步')->post('/admin/qa-info/sync')`
+     * - `RequestAction::make('同步')->post('/admin/qa-info/sync')`
      */
     public function post(string $url): static
     {
@@ -131,7 +131,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('更新排序')->put('/admin/qa-info/sort')`
+     * - `RequestAction::make('更新排序')->put('/admin/qa-info/sort')`
      */
     public function put(string $url): static
     {
@@ -145,7 +145,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('局部更新')->patch('/admin/qa-info/status')`
+     * - `RequestAction::make('局部更新')->patch('/admin/qa-info/status')`
      */
     public function patch(string $url): static
     {
@@ -159,7 +159,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('删除缓存')->deleteRequest('/admin/cache/qa-info')`
+     * - `RequestAction::make('删除缓存')->deleteRequest('/admin/cache/qa-info')`
      */
     public function deleteRequest(string $url): static
     {
@@ -196,7 +196,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('批量审核')->payload(['ids' => '@selection'])`
+     * - `RequestAction::make('批量审核')->payload(['ids' => '@selection'])`
      */
     public function payload(array|string|JsExpression $payload): static
     {
@@ -223,7 +223,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->validateForm('qa-info-form')`
+     * - `RequestAction::make('保存')->validateForm('qa-info-form')`
      */
     public function validateForm(?string $scope = null): static
     {
@@ -251,7 +251,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->payloadFromForm('qa-info-form')`
+     * - `RequestAction::make('保存')->payloadFromForm('qa-info-form')`
      */
     public function payloadFromForm(?string $scope = null): static
     {
@@ -264,7 +264,7 @@ final class RequestAction extends Action
     /**
      * CRUD 表单保存快捷方式，等价于 validateForm()->payloadFromForm()。
      * 适合独立表单页的“保存”按钮，避免再手写 `ctx.vm.validateSimpleForm(...)` /
-     * `ctx.vm.getSimpleFormModel(...)` 这类内部运行时方法名。
+     * - `ctx.vm.getSimpleFormModel(...)` 这类内部运行时方法名。
      *
      * - 传表单 key 时，会同时用于校验和 payload 读取
      * - 不传时，仅在当前运行时能唯一定位表单时才会自动解析
@@ -273,7 +273,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->submitForm('qa-info-form')`
+     * - `RequestAction::make('保存')->submitForm('qa-info-form')`
      */
     public function submitForm(?string $scope = null): static
     {
@@ -307,7 +307,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
+     * - `RequestAction::make('保存')->saveUrls('/admin/qa-info/create', '/admin/qa-info/update')`
      */
     public function saveUrls(
         string $createUrl,
@@ -341,7 +341,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->post('/admin/qa-info/import')->enableImport()`
+     * - `RequestAction::make('导入')->post('/admin/qa-info/import')->enableImport()`
      */
     public function enableImport(bool $enabled = true): static
     {
@@ -364,7 +364,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importColumns(['name' => '名称', 'code' => '编码'])`
+     * - `RequestAction::make('导入')->importColumns(['name' => '名称', 'code' => '编码'])`
      */
     public function importColumns(array $columns): static
     {
@@ -386,14 +386,14 @@ final class RequestAction extends Action
      * - 会跳过 hidden / password / editor / upload / picker / icon / checkbox / cascader 等不适合直接导入的字段
      * - 静态 disabled 字段默认跳过
      *
-     * `overrides` 可对同名字段做整体覆盖，适合补 `ai_data` 或修正标题。
+     * - `overrides` 可对同名字段做整体覆盖，适合补 `ai_data` 或修正标题。
      *
      * @param Form $form 导入列来源表单。
      * @param array $overrides 按字段名覆盖自动推导结果。
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importColumnsFromForm($form, ['status' => ['title' => '状态', 'ai_data' => ['启用', '停用']]])`
+     * - `RequestAction::make('导入')->importColumnsFromForm($form, ['status' => ['title' => '状态', 'ai_data' => ['启用', '停用']]])`
      */
     public function importColumnsFromForm(Form $form, array $overrides = []): static
     {
@@ -417,7 +417,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importColumnsFromPage($formPage, 'profile-form')`
+     * - `RequestAction::make('导入')->importColumnsFromPage($formPage, 'profile-form')`
      */
     public function importColumnsFromPage(
         AbstractPage $page,
@@ -464,7 +464,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importRowsKey('items')`
+     * - `RequestAction::make('导入')->importRowsKey('items')`
      */
     public function importRowsKey(string $key = 'rows'): static
     {
@@ -483,7 +483,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importColumnInfoKey('columnInfo')`
+     * - `RequestAction::make('导入')->importColumnInfoKey('columnInfo')`
      */
     public function importColumnInfoKey(?string $key = 'import_column_info'): static
     {
@@ -502,7 +502,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importAccept('.xlsx,.xls')`
+     * - `RequestAction::make('导入')->importAccept('.xlsx,.xls')`
      */
     public function importAccept(string $accept): static
     {
@@ -521,7 +521,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importHeaderRow(2)`
+     * - `RequestAction::make('导入')->importHeaderRow(2)`
      */
     public function importHeaderRow(int $row = 1): static
     {
@@ -539,7 +539,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importDialogTitle('导入用户数据')`
+     * - `RequestAction::make('导入')->importDialogTitle('导入用户数据')`
      */
     public function importDialogTitle(?string $title): static
     {
@@ -558,7 +558,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importTemplateFileName('用户导入模板.xlsx')`
+     * - `RequestAction::make('导入')->importTemplateFileName('用户导入模板.xlsx')`
      */
     public function importTemplateFileName(?string $fileName): static
     {
@@ -577,7 +577,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->enableImportJson(false)`
+     * - `RequestAction::make('导入')->enableImportJson(false)`
      */
     public function enableImportJson(bool $enabled = true): static
     {
@@ -595,7 +595,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->enableImportAiPrompt(false)`
+     * - `RequestAction::make('导入')->enableImportAiPrompt(false)`
      */
     public function enableImportAiPrompt(bool $enabled = true): static
     {
@@ -613,7 +613,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('导入')->importAiPromptText('请生成 10 条测试 JSON 数据...')`
+     * - `RequestAction::make('导入')->importAiPromptText('请生成 10 条测试 JSON 数据...')`
      */
     public function importAiPromptText(?string $prompt): static
     {
@@ -639,7 +639,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
+     * - `RequestAction::make('保存')->returnTo('/admin/qa-info/lists', 'qa-info-table')`
      */
     public function returnTo(string|JsExpression|null $url = null, string|Table|null $table = null): static
     {
@@ -655,7 +655,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->successMessage('成功')`
+     * - `RequestAction::make('保存')->successMessage('成功')`
      */
     public function successMessage(?string $successMessage): static
     {
@@ -669,7 +669,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->errorMessage('保存失败，请重试')`
+     * - `RequestAction::make('保存')->errorMessage('保存失败，请重试')`
      */
     public function errorMessage(?string $errorMessage): static
     {
@@ -683,7 +683,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->loadingText('正在提交，请稍后...')`
+     * - `RequestAction::make('保存')->loadingText('正在提交，请稍后...')`
      */
     public function loadingText(?string $loadingText = '请稍后...'): static
     {
@@ -698,7 +698,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('批量审核')->reloadTable()`
+     * - `RequestAction::make('批量审核')->reloadTable()`
      */
     public function reloadTable(bool $reloadTable = true): static
     {
@@ -714,7 +714,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('重建缓存')->reloadPage()`
+     * - `RequestAction::make('重建缓存')->reloadPage()`
      */
     public function reloadPage(bool $reloadPage = true): static
     {
@@ -724,20 +724,71 @@ final class RequestAction extends Action
     }
 
     /**
-     * 请求成功后自动关闭当前弹窗。
-     * 仅当当前动作存在 dialog target 且运行时处于对应弹窗上下文时生效。
+     * 请求成功后自动关闭弹窗。
+     * 若当前动作存在 dialog target，会关闭对应的本地弹窗；
+     * 若动作运行在 iframe 宿主弹窗的子页面中且未指定 dialog target，会自动关闭宿主弹窗；
+     * 其它页面上下文会静默跳过。
      *
      * @param bool $closeAfterSuccess 是否在成功后关闭弹窗，默认值为 true。
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->dialog('qa-info-dialog')->closeAfterSuccess()`
+     * - `RequestAction::make('保存')->dialog('qa-info-dialog')->closeAfterSuccess()`
+     * - `Actions::save()->saveUrls($createUrl, $updateUrl)->closeAfterSuccess()`
      */
     public function closeAfterSuccess(bool $closeAfterSuccess = true): static
     {
         $this->closeAfterSuccess = $closeAfterSuccess;
 
         return $this;
+    }
+
+    public function getEventHandlers(?string $event = null): array
+    {
+        $events = parent::getEventHandlers();
+
+        if ($this->closeAfterSuccess) {
+            $events['success'] ??= [];
+            $events['success'][] = self::closeAfterSuccessHostHook();
+        }
+
+        return $event === null
+            ? $events
+            : ($events[$event] ?? []);
+    }
+
+    private static function closeAfterSuccessHostHook(): JsExpression
+    {
+        return JsExpression::make(<<<'JS'
+(ctx) => {
+  const query = ctx?.page?.query || ctx?.query || {};
+  const dialogKey = typeof query.__scV2DialogKey === 'string'
+    ? query.__scV2DialogKey.trim()
+    : '';
+
+  if (typeof ctx?.closeHostDialog === 'function' && ctx.closeHostDialog(dialogKey || null)) {
+    return true;
+  }
+
+  if (
+    typeof window !== 'undefined'
+    && window.parent
+    && window.parent !== window
+    && typeof window.parent.postMessage === 'function'
+  ) {
+    const payload = { action: 'close' };
+    if (dialogKey) {
+      payload.dialogKey = dialogKey;
+    }
+
+    window.parent.postMessage({ __scV2DialogHost: payload }, '*');
+
+    return true;
+  }
+
+  return null;
+}
+JS);
     }
 
     /**
@@ -759,7 +810,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->before('({ payload }) => { if (!payload.title) return false }')`
+     * - `RequestAction::make('保存')->before('({ payload }) => { if (!payload.title) return false }')`
      */
     public function before(string|JsExpression|StructuredEventInterface $beforeHook): static
     {
@@ -787,7 +838,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->afterSuccess(Events::returnTo('/admin/qa-info/lists'))`
+     * - `RequestAction::make('保存')->afterSuccess(Events::returnTo('/admin/qa-info/lists'))`
      */
     public function afterSuccess(string|JsExpression|StructuredEventInterface $afterSuccessHook): static
     {
@@ -815,7 +866,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->afterFail('({ error, vm }) => vm.$message.error(error?.message ?? \"保存失败\")')`
+     * - `RequestAction::make('保存')->afterFail('({ error, vm }) => vm.$message.error(error?.message ?? \"保存失败\")')`
      */
     public function afterFail(string|JsExpression|StructuredEventInterface $afterFailHook): static
     {
@@ -843,7 +894,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->afterFinally('({ vm }) => vm.finishSaving?.()')`
+     * - `RequestAction::make('保存')->afterFinally('({ vm }) => vm.finishSaving?.()')`
      */
     public function afterFinally(string|JsExpression|StructuredEventInterface $afterFinallyHook): static
     {
@@ -886,7 +937,7 @@ final class RequestAction extends Action
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * `RequestAction::make('保存')->on('success', '({ response }) => console.log(response)')`
+     * - `RequestAction::make('保存')->on('success', '({ response }) => console.log(response)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

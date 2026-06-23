@@ -18,7 +18,7 @@ final class PasswordField extends TextField
      * @return static 当前密码字段实例。
      *
      * 示例：
-     * `Fields::password('password', '密码')->showPassword()`
+     * - `Fields::password('password', '密码')->showPassword()`
      */
     public function showPassword(bool $showPassword = true): static
     {

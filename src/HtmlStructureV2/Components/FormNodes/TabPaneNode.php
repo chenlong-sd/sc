@@ -33,7 +33,7 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 标签面板实例。
      *
      * 示例：
-     * `TabPaneNode::make('基础信息')`
+     * - `TabPaneNode::make('基础信息')`
      */
     public static function make(string $label): self
     {
@@ -48,7 +48,7 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前标签面板。
      *
      * 示例：
-     * `Forms::tab('基础信息')->addContent(Fields::text('title', '标题'))`
+     * - `Forms::tab('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public function addContent(FormNode ...$children): self
     {
@@ -62,7 +62,7 @@ final class TabPaneNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前标签面板。
      *
      * 示例：
-     * `Forms::tab('高级设置')->lazy()`
+     * - `Forms::tab('高级设置')->lazy()`
      */
     public function lazy(bool $lazy = true): self
     {

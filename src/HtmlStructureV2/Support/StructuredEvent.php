@@ -29,18 +29,18 @@ final class StructuredEvent implements StructuredEventInterface
 
     /**
      * 创建一个打开链接的结构化事件。
-     * `query` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * - `query` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 具体可用字段以宿主组件 `on()` 的上下文为准；
      * 常见有 row / tableKey / listKey / filters / forms / dialogs / selection / vm，
      * 弹窗生命周期里还会额外带上 mode / dialogKey / dialogContext / data / dialog。
-     * `query` 传字符串时会自动包装成 JsExpression。
+     * - `query` 传字符串时会自动包装成 JsExpression。
      *
      * @param string|JsExpression $url 目标 URL。
      * @param array|string|JsExpression $query 查询参数。
      * @return self 打开链接事件实例。
      *
      * 示例：
-     * `StructuredEvent::openUrl('/admin/qa-info/form', ['id' => '@row.id'])`
+     * - `StructuredEvent::openUrl('/admin/qa-info/form', ['id' => '@row.id'])`
      */
     public static function openUrl(string|JsExpression $url, array|string|JsExpression $query = []): self
     {
@@ -59,7 +59,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 打开弹窗事件实例。
      *
      * 示例：
-     * `StructuredEvent::openDialog('qa-info-dialog')`
+     * - `StructuredEvent::openDialog('qa-info-dialog')`
      */
     public static function openDialog(string|Dialog $dialog): self
     {
@@ -77,7 +77,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 关闭弹窗事件实例。
      *
      * 示例：
-     * `StructuredEvent::closeDialog('qa-info-dialog')`
+     * - `StructuredEvent::closeDialog('qa-info-dialog')`
      */
     public static function closeDialog(string|Dialog $dialog): self
     {
@@ -96,7 +96,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 刷新表格事件实例。
      *
      * 示例：
-     * `StructuredEvent::reloadTable('qa-info-table')`
+     * - `StructuredEvent::reloadTable('qa-info-table')`
      */
     public static function reloadTable(string|Table|null $table = null): self
     {
@@ -115,7 +115,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 刷新列表事件实例。
      *
      * 示例：
-     * `StructuredEvent::reloadList('qa-info-list')`
+     * - `StructuredEvent::reloadList('qa-info-list')`
      */
     public static function reloadList(string|ListWidget|null $list = null): self
     {
@@ -132,7 +132,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 整页刷新事件实例。
      *
      * 示例：
-     * `StructuredEvent::reloadPage()`
+     * - `StructuredEvent::reloadPage()`
      */
     public static function reloadPage(): self
     {
@@ -146,7 +146,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 关闭宿主弹窗事件实例。
      *
      * 示例：
-     * `StructuredEvent::closeHostDialog()`
+     * - `StructuredEvent::closeHostDialog()`
      */
     public static function closeHostDialog(): self
     {
@@ -162,7 +162,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 刷新宿主表格事件实例。
      *
      * 示例：
-     * `StructuredEvent::reloadHostTable('qa-info-table')`
+     * - `StructuredEvent::reloadHostTable('qa-info-table')`
      */
     public static function reloadHostTable(string|Table|null $table = null): self
     {
@@ -184,7 +184,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 返回事件实例。
      *
      * 示例：
-     * `StructuredEvent::returnTo('/admin/qa-info/lists')`
+     * - `StructuredEvent::returnTo('/admin/qa-info/lists')`
      */
     public static function returnTo(string|JsExpression|null $url = null): self
     {
@@ -203,7 +203,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 整表赋值事件实例。
      *
      * 示例：
-     * `StructuredEvent::setFormModel(['status' => 1])->form('qa-info-form')`
+     * - `StructuredEvent::setFormModel(['status' => 1])->form('qa-info-form')`
      */
     public static function setFormModel(array|string|JsExpression $values): self
     {
@@ -222,7 +222,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 初始化表单模型事件实例。
      *
      * 示例：
-     * `StructuredEvent::initializeFormModel('@response.data')->form('qa-info-form')`
+     * - `StructuredEvent::initializeFormModel('@response.data')->form('qa-info-form')`
      */
     public static function initializeFormModel(array|string|JsExpression $values): self
     {
@@ -243,7 +243,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 重置表单事件实例。
      *
      * 示例：
-     * `StructuredEvent::resetForm('qa-info-form')`
+     * - `StructuredEvent::resetForm('qa-info-form')`
      */
     public static function resetForm(?string $scope = null): self
     {
@@ -256,7 +256,7 @@ final class StructuredEvent implements StructuredEventInterface
 
     /**
      * 创建一个消息提示的结构化事件。
-     * `message` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * - `message` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 可用字段同当前宿主组件 `on()` 的上下文。
      *
      * @param string|JsExpression $message 提示文案。
@@ -264,7 +264,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 消息提示事件实例。
      *
      * 示例：
-     * `StructuredEvent::message('保存成功', 'success')`
+     * - `StructuredEvent::message('保存成功', 'success')`
      */
     public static function message(string|JsExpression $message, string $type = 'info'): self
     {
@@ -275,12 +275,32 @@ final class StructuredEvent implements StructuredEventInterface
     }
 
     /**
+     * 创建一个 iframe 宿主页面消息提示的结构化事件。
+     * - `message` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * 若当前页面不在宿主 iframe 弹窗中，运行时会静默跳过。
+     *
+     * @param string|JsExpression $message 提示文案。
+     * @param string $type 提示类型，默认值为 success。
+     * @return self 宿主页面消息提示事件实例。
+     *
+     * 示例：
+     * - `StructuredEvent::hostMessage('保存成功', 'success')`
+     */
+    public static function hostMessage(string|JsExpression $message, string $type = 'success'): self
+    {
+        return new self('hostMessage', [
+            'message' => $message,
+            'messageType' => $type,
+        ]);
+    }
+
+    /**
      * 创建一个轻量请求的结构化事件。
-     * `query` 支持动态表达式，运行时会从当前 handler context 中解析。
+     * - `query` 支持动态表达式，运行时会从当前 handler context 中解析。
      * 具体可用字段同宿主组件 `on()` 的上下文；
      * 常见有 row / tableKey / listKey / filters / forms / dialogs / selection / vm，
      * 若运行在弹窗生命周期里，还可读取 mode / dialogKey / dialogContext / data / dialog。
-     * `query` 传字符串时会自动包装成 JsExpression。
+     * - `query` 传字符串时会自动包装成 JsExpression。
      *
      * @param string $url 请求地址。
      * @param string $method 请求方法，默认值为 post。
@@ -288,7 +308,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 轻量请求事件实例。
      *
      * 示例：
-     * `StructuredEvent::request('/admin/qa-info/delete', 'post', ['id' => '@row.id'])`
+     * - `StructuredEvent::request('/admin/qa-info/delete', 'post', ['id' => '@row.id'])`
      */
     public static function request(
         string $url,
@@ -312,7 +332,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::openUrl('/admin/qa-info/form')->target('_blank')`
+     * - `Events::openUrl('/admin/qa-info/form')->target('_blank')`
      */
     public function target(string $target): self
     {
@@ -327,7 +347,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::openUrl('/admin/qa-info/form')->newTab()`
+     * - `Events::openUrl('/admin/qa-info/form')->newTab()`
      */
     public function newTab(): self
     {
@@ -341,7 +361,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::openUrl('/report')->newTab()->features('width=1280,height=800')`
+     * - `Events::openUrl('/report')->newTab()->features('width=1280,height=800')`
      */
     public function features(?string $features): self
     {
@@ -360,7 +380,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::openDialog('qa-info-dialog')->row('@row')`
+     * - `Events::openDialog('qa-info-dialog')->row('@row')`
      */
     public function row(string|JsExpression|null $row): self
     {
@@ -377,7 +397,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::setFormModel(['status' => 1])->form('qa-info-form')`
+     * - `Events::setFormModel(['status' => 1])->form('qa-info-form')`
      */
     public function form(?string $scope): self
     {
@@ -395,7 +415,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::reloadTable()->table('qa-info-table')`
+     * - `Events::reloadTable()->table('qa-info-table')`
      */
     public function table(string|Table|null $table): self
     {
@@ -412,7 +432,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::returnTo('/admin/qa-info/lists')->hostTable('qa-info-table')`
+     * - `Events::returnTo('/admin/qa-info/lists')->hostTable('qa-info-table')`
      */
     public function hostTable(string|Table|null $table = null): self
     {
@@ -433,7 +453,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::reloadList()->list('qa-info-list')`
+     * - `Events::reloadList()->list('qa-info-list')`
      */
     public function list(string|ListWidget|null $list): self
     {
@@ -449,7 +469,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::request('/admin/qa-info/sync')->successMessage('同步成功')`
+     * - `Events::request('/admin/qa-info/sync')->successMessage('同步成功')`
      */
     public function successMessage(?string $message): self
     {
@@ -465,7 +485,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::request('/admin/qa-info/sync')->errorMessage('同步失败')`
+     * - `Events::request('/admin/qa-info/sync')->errorMessage('同步失败')`
      */
     public function errorMessage(?string $message): self
     {
@@ -481,7 +501,7 @@ final class StructuredEvent implements StructuredEventInterface
      * @return self 当前事件实例。
      *
      * 示例：
-     * `Events::request('/admin/qa-info/sync')->loadingText('同步中...')`
+     * - `Events::request('/admin/qa-info/sync')->loadingText('同步中...')`
      */
     public function loadingText(?string $message): self
     {

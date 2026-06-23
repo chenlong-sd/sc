@@ -48,7 +48,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 页面实例。
      *
      * 示例：
-     * `Page::make('问答信息')->header('问答信息管理')`
+     * - `Page::make('问答信息')->header('问答信息管理')`
      */
     public static function make(string $title, ?string $key = null): static
     {
@@ -63,7 +63,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->htmlTitle('问答信息管理')`
+     * - `Pages::make('问答信息')->htmlTitle('问答信息管理')`
      */
     public function htmlTitle(string $title): static
     {
@@ -81,7 +81,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->header('问答信息管理', '支持创建和编辑问答')`
+     * - `Pages::make('问答信息')->header('问答信息管理', '支持创建和编辑问答')`
      */
     public function header(string|AbstractHtmlElement|Renderable ...$content): static
     {
@@ -98,7 +98,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->background('#f5f7fa')`
+     * - `Pages::make('问答信息')->background('#f5f7fa')`
      */
     public function background(string $background): static
     {
@@ -116,7 +116,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->backgroundPreset('muted')`
+     * - `Pages::make('问答信息')->backgroundPreset('muted')`
      */
     public function backgroundPreset(string $preset): static
     {
@@ -140,7 +140,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->theme(new ElementPlusAdminTheme())`
+     * - `Pages::make('问答信息')->theme(new ElementPlusAdminTheme())`
      */
     public function theme(ThemeInterface $theme): static
     {
@@ -156,7 +156,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->actions(Actions::create()->dialog('qa-info-dialog'))`
+     * - `Pages::make('问答信息')->actions(Actions::create()->dialog('qa-info-dialog'))`
      */
     public function actions(Action ...$actions): static
     {
@@ -172,7 +172,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->addSection($list, $dialog)`
+     * - `Pages::make('问答信息')->addSection($list, $dialog)`
      */
     public function addSection(Renderable ...$sections): static
     {
@@ -188,7 +188,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * @return static 当前页面实例。
      *
      * 示例：
-     * `Pages::make('问答信息')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
+     * - `Pages::make('问答信息')->dialogs(Dialogs::make('qa-info-dialog', '编辑问答'))`
      */
     public function dialogs(Dialog ...$dialogs): static
     {

@@ -15,7 +15,7 @@ final class Tables
      * @return Table 表格实例。
      *
      * 示例：
-     * `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list')`
+     * - `Tables::make('qa-info-table')->dataUrl('/admin/qa-info/list')`
      */
     public static function make(string $key): Table
     {
@@ -31,7 +31,7 @@ final class Tables
      * @return Column 列实例。
      *
      * 示例：
-     * `Tables::column('标题', 'title')->searchable('LIKE')`
+     * - `Tables::column('标题', 'title')->searchable('LIKE')`
      */
     public static function column(string $label, string $prop): Column
     {

@@ -4,7 +4,9 @@
             emitConfiguredEvent,
             ensureSuccess,
             extractPayload,
+            getByPath,
             isEventCanceled,
+            isBlank,
             isObject,
             makeRequest,
             openHostTab: openHostTabBridge,
@@ -1005,9 +1007,22 @@
                 ? cloneRequestValue(this.getPageQuery())
                 : cloneRequestValue(readPageQuery());
               const pageLocation = readPageLocation();
+              const hostDialogKeyQueryKey = '__scV2DialogKey';
               const normalizeModeQueryKey = (queryKey) => {
                 const normalized = typeof queryKey === 'string' ? queryKey.trim() : '';
                 return normalized !== '' ? normalized : 'id';
+              };
+              const resolveHostDialogKey = (dialogKey = null) => {
+                const explicitDialogKey = typeof dialogKey === 'string' ? dialogKey.trim() : '';
+                if (explicitDialogKey !== '') {
+                  return explicitDialogKey;
+                }
+
+                const queryDialogKey = typeof pageQuery?.[hostDialogKeyQueryKey] === 'string'
+                  ? pageQuery[hostDialogKeyQueryKey].trim()
+                  : '';
+
+                return queryDialogKey !== '' ? queryDialogKey : null;
               };
               const resolveRuntimePageMode = (queryKey = null) => {
                 if (typeof this.resolvePageMode === 'function') {
@@ -1095,28 +1110,30 @@
                 reloadPage: () => window.location.reload(),
                 notifyDialogHost: (payload = {}) => notifyHost(payload),
                 closeHostDialog: (dialogKey = null) => {
+                  const resolvedDialogKey = resolveHostDialogKey(dialogKey);
                   if (typeof this.closeHostDialog === 'function') {
-                    return this.closeHostDialog(dialogKey);
+                    return this.closeHostDialog(resolvedDialogKey);
                   }
 
                   const payload = { action: 'close' };
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return notifyHost(payload);
                 },
                 reloadHostTable: (tableKey = resolvedTableKey, dialogKey = null) => {
+                  const resolvedDialogKey = resolveHostDialogKey(dialogKey);
                   if (typeof this.reloadHostTable === 'function') {
-                    return this.reloadHostTable(tableKey, dialogKey);
+                    return this.reloadHostTable(tableKey, resolvedDialogKey);
                   }
 
                   const payload = { action: 'reloadTable' };
                   if (typeof tableKey === 'string' && tableKey !== '') {
                     payload.tableKey = tableKey;
                   }
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return notifyHost(payload);
@@ -1327,10 +1344,15 @@
                 context.formScope = resolvedScope;
 
                 const formConfig = cfg?.forms?.[resolvedScope] || {};
-                return syncContextMode(
-                  resolveRuntimePageMode(formConfig?.modeQueryKey || null),
-                  resolvedScope
-                );
+                const modeQueryKey = formConfig?.modeQueryKey || null;
+                const normalizedModeQueryKey = normalizeModeQueryKey(modeQueryKey);
+                const model = getRuntimeFormModel(resolvedScope);
+                const modelKeyValue = getByPath(model, normalizedModeQueryKey);
+                const mode = !isBlank(modelKeyValue)
+                  ? 'edit'
+                  : resolveRuntimePageMode(modeQueryKey);
+
+                return syncContextMode(mode, resolvedScope);
               };
               context.getFormModel = (scope = null) => {
                 const resolvedScope = resolveContextFormScope(scope, 'form model');
@@ -1961,8 +1983,12 @@
 
                             return emitRequestSuccessLifecycle(request, payload)
                               .then(() => {
-                                if (resolvedActionConfig.closeDialog && resolvedActionConfig.dialogTarget) {
-                                  context.closeDialog(resolvedActionConfig.dialogTarget);
+                                if (resolvedActionConfig.closeDialog) {
+                                  if (resolvedActionConfig.dialogTarget) {
+                                    context.closeDialog(resolvedActionConfig.dialogTarget);
+                                  } else if (typeof context.closeHostDialog === 'function') {
+                                    context.closeHostDialog();
+                                  }
                                 }
                                 if (resolvedActionConfig.reloadTable) {
                                   if (resolvedActionConfig.listKey && !resolvedActionConfig.tableKey) {

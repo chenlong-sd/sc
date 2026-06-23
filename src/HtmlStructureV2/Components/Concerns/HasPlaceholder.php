@@ -13,7 +13,7 @@ trait HasPlaceholder
      * @return static 当前字段实例。
      *
      * 示例：
-     * `Fields::text('title', '标题')->placeholder('请输入标题')`
+     * - `Fields::text('title', '标题')->placeholder('请输入标题')`
      */
     public function placeholder(string $placeholder): static
     {

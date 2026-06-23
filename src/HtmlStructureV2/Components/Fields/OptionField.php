@@ -40,7 +40,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('status', '状态')->options([1 => '启用', 0 => '停用'])`
+     * - `Fields::select('status', '状态')->options([1 => '启用', 0 => '停用'])`
      */
     public function options(array $options): static
     {
@@ -63,7 +63,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
 
     /**
      * 配置远端选项加载接口及值/标签字段映射。
-     * `params` 中以 "@" 开头的顶层值会从当前表单 model 读取，
+     * - `params` 中以 "@" 开头的顶层值会从当前表单 model 读取，
      * 例如 `['dept_id' => "@dept_id"]`。返回列表会按 valueField/labelField 归一化成标准选项。
      * 这里默认只有当前作用域下的 form model 可用，不会注入 row / tableKey / listKey / vm。
      *
@@ -74,20 +74,57 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('dept_id', '部门')->remoteOptions('/admin/dept/options', 'id', 'name')`
+     * - `Fields::select('dept_id', '部门')->remoteOptions('/admin/dept/options', 'id', 'name')`
      */
     public function remoteOptions(
-        string $url,
+        string|\Stringable $url,
         string $valueField = 'id',
         string $labelField = 'name',
         array $params = []
     ): static {
         $this->remoteOptions = [
-            'url' => $url,
+            'url' => (string)$url,
             'method' => 'get',
             'valueField' => $valueField,
             'labelField' => $labelField,
             'params' => $params,
+        ];
+
+        return $this;
+    }
+
+    /**
+     * 开启下拉远程搜索，兼容旧版 select remoteSearch() 的默认请求格式。
+     * 用户输入会作为 `search.search[$searchField]` 发送，默认使用 like 查询；
+     * 字段已有值但选项为空时，会用 `$haveDefaultSearchField` 回查当前选中项。
+     *
+     * @param string|\Stringable $url 远程搜索接口地址。
+     * @param string|null $searchField 搜索字段，同时作为默认展示字段；不传时使用当前字段名。
+     * @param string|null $haveDefaultSearchField 当前表单已有值时回查的字段，默认 id。
+     * @param string|null $afterSearchHandle 搜索完成后的 JS 处理代码，运行时可读 data/options/ctx。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::select('user_id', '用户')->remoteSearch('/admin/user/listsData', 'name')`
+     */
+    public function remoteSearch(
+        string|\Stringable $url,
+        ?string $searchField = null,
+        ?string $haveDefaultSearchField = null,
+        ?string $afterSearchHandle = null
+    ): static {
+        $field = $this->normalizeRemoteSearchField($searchField ?: $this->name());
+        [$labelField, $valueField] = $this->resolveRemoteSearchLabelAndValue($field, $haveDefaultSearchField);
+
+        $this->remoteOptions($url, $valueField, $labelField);
+        $this->remoteOptions['remoteSearch'] = [
+            'enabled' => true,
+            'searchField' => $field,
+            'defaultSearchField' => $valueField,
+            'searchType' => 'like',
+            'page' => 1,
+            'pageSize' => 20,
+            'afterSearchHandle' => $afterSearchHandle,
         ];
 
         return $this;
@@ -101,7 +138,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('dept_id', '部门')->remoteOptionsMethod('post')`
+     * - `Fields::select('dept_id', '部门')->remoteOptionsMethod('post')`
      */
     public function remoteOptionsMethod(string $method): static
     {
@@ -123,7 +160,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('city_id', '城市')->remoteOptionsDependsOn('province_id')`
+     * - `Fields::select('city_id', '城市')->remoteOptionsDependsOn('province_id')`
      */
     public function remoteOptionsDependsOn(string ...$fields): static
     {
@@ -147,7 +184,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('city_id', '城市')->remoteOptionsClearOnChange(false)`
+     * - `Fields::select('city_id', '城市')->remoteOptionsClearOnChange(false)`
      */
     public function remoteOptionsClearOnChange(bool $clear = true): static
     {
@@ -178,7 +215,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('dept_id', '部门')->linkageUpdate('dept_name', '@label')`
+     * - `Fields::select('dept_id', '部门')->linkageUpdate('dept_name', '@label')`
      */
     public function linkageUpdate(string $targetField, string|JsExpression $valueTemplate = '@label'): static
     {
@@ -195,7 +232,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('dept_id', '部门')->linkageUpdates(['dept_name' => '@label', 'dept_code' => '@option.code'])`
+     * - `Fields::select('dept_id', '部门')->linkageUpdates(['dept_name' => '@label', 'dept_code' => '@option.code'])`
      */
     public function linkageUpdates(array $updates): static
     {
@@ -222,7 +259,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * `Fields::select('dept_id', '部门')->linkageClearOnEmpty(false)`
+     * - `Fields::select('dept_id', '部门')->linkageClearOnEmpty(false)`
      */
     public function linkageClearOnEmpty(bool $clear = true): static
     {
@@ -251,6 +288,11 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
             'dependencies' => $this->getRemoteOptionDependencies(),
             'clearOnChange' => $this->remoteOptionsClearOnChange,
         ]);
+    }
+
+    public function hasRemoteSearch(): bool
+    {
+        return ($this->remoteOptions['remoteSearch']['enabled'] ?? false) === true;
     }
 
     public function hasLinkageUpdates(): bool
@@ -322,5 +364,22 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         if ($field !== '') {
             $dependencies[] = $field;
         }
+    }
+
+    private function normalizeRemoteSearchField(string $field): string
+    {
+        $field = trim($field);
+
+        return $field === '' ? $this->name() : $field;
+    }
+
+    private function resolveRemoteSearchLabelAndValue(string $field, ?string $defaultSearchField): array
+    {
+        $labelSource = str_contains($field, '&') ? explode('&', $field)[0] : $field;
+        $fields = explode('.', $labelSource);
+        $labelField = count($fields) === 2 ? $fields[1] : $fields[0];
+        $valueField = $defaultSearchField ?: (count($fields) === 2 ? $fields[0] . '.id' : 'id');
+
+        return [$labelField, $valueField];
     }
 }

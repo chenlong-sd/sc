@@ -206,6 +206,36 @@
               formScope: null,
             });
           };
+          const createSimpleFormMethodsResult = createSimpleFormMethods({ cfg });
+          const buildComputedRules = () => {
+            const computed = {};
+            const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
+
+            if (conditionalValidation) {
+              Object.keys(forms || {}).forEach((scope) => {
+                const formCfg = forms[scope];
+
+                if (formCfg && formCfg.rulesVar && !formCfg.rulesPath) {
+                  const rulesVarName = formCfg.rulesVar;
+                  const modelVarName = formCfg.modelVar || formCfg.modelPath?.[0];
+
+                  computed[rulesVarName] = function() {
+                    // 从 config 读取规则，而不是从 state
+                    const rawRules = formCfg.rules || {};
+
+                    // 传入一个 getter 函数来获取最新的 model
+                    const getModel = () => {
+                      return modelVarName ? this[modelVarName] : {};
+                    };
+
+                    return conditionalValidation.processConditionalRules(rawRules, getModel);
+                  };
+                }
+              });
+            }
+
+            return computed;
+          };
           const app = Vue.createApp({
             data(){
               return Object.assign({
@@ -216,6 +246,7 @@
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
               }, state || {});
             },
+            computed: buildComputedRules(),
             created(){
               initializeConfiguredForms(forms, {
                 initializeArrayGroups: (scope) => this.initializeFormArrayGroups(scope),
@@ -577,20 +608,22 @@
                   return postDialogHostMessage(payload);
                 },
                 closeHostDialog(dialogKey = null){
+                  const resolvedDialogKey = this.resolveHostDialogKey(dialogKey);
                   const payload = { action: 'close' };
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return this.notifyDialogHost(payload);
                 },
                 reloadHostTable(tableKey = null, dialogKey = null){
+                  const resolvedDialogKey = this.resolveHostDialogKey(dialogKey);
                   const payload = { action: 'reloadTable' };
                   if (typeof tableKey === 'string' && tableKey !== '') {
                     payload.tableKey = tableKey;
                   }
-                  if (typeof dialogKey === 'string' && dialogKey !== '') {
-                    payload.dialogKey = dialogKey;
+                  if (typeof resolvedDialogKey === 'string' && resolvedDialogKey !== '') {
+                    payload.dialogKey = resolvedDialogKey;
                   }
 
                   return this.notifyDialogHost(payload);

@@ -56,7 +56,7 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
      * @return static 当前日期字段实例。
      *
      * 示例：
-     * `Fields::date('publish_date', '发布日期')->format('YYYY/MM/DD')`
+     * - `Fields::date('publish_date', '发布日期')->format('YYYY/MM/DD')`
      */
     public function format(string $format): static
     {
@@ -71,7 +71,7 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
      * @return static 当前日期字段实例。
      *
      * 示例：
-     * `Fields::datetime('published_at', '发布时间')->valueFormat('YYYY-MM-DD HH:mm:ss')`
+     * - `Fields::datetime('published_at', '发布时间')->valueFormat('YYYY-MM-DD HH:mm:ss')`
      */
     public function valueFormat(string $format): static
     {
@@ -87,7 +87,7 @@ final class DateField extends Field implements PlaceholderFieldInterface, Valida
      * @return static 当前日期字段实例。
      *
      * 示例：
-     * `Fields::datetime('service_time', '服务时间')->pickerType('datetimerange')`
+     * - `Fields::datetime('service_time', '服务时间')->pickerType('datetimerange')`
      */
     public function pickerType(
         #[ExpectedValues(self::SUPPORTED_PICKER_TYPES)]

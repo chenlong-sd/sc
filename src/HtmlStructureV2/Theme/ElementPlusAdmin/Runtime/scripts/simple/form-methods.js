@@ -1,7 +1,27 @@
         globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
           const { getConfigState } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
           const getFormConfig = (scope) => cfg?.forms?.[scope] || null;
+
+          // 包装获取规则的方法，自动处理条件验证
+          const getFormRules = (vm, scope) => {
+            const formConfig = getFormConfig(scope);
+            if (!formConfig) return null;
+
+            const rawRules = getConfigState(vm, formConfig, 'rulesVar', 'rulesPath');
+            const model = getConfigState(vm, formConfig, 'modelVar', 'modelPath');
+
+            // 如果有条件验证支持，则处理规则
+            if (conditionalValidation && rawRules && model) {
+              return conditionalValidation.createConditionalRules(
+                () => rawRules,
+                () => model
+              );
+            }
+
+            return rawRules;
+          };
 
           return createManagedFormMethods({
             tokenStoreKey: '__simpleRemoteRequestTokens',
@@ -47,6 +67,7 @@
             getFormConfig: (scope) => getFormConfig(scope),
             getRefName: (scope) => getFormConfig(scope)?.ref || null,
             getFormModel: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'modelVar', 'modelPath'),
+            getFormRules: getFormRules,
             getOptionState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionStateVar', 'optionStatePath', true),
             getOptionLoadingState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadingVar', 'optionLoadingPath', true),
             getOptionLoadedState: (vm, scope) => getConfigState(vm, getFormConfig(scope), 'optionLoadedVar', 'optionLoadedPath', true),

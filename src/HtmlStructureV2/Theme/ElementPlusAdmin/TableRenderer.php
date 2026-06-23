@@ -423,6 +423,7 @@ final class TableRenderer
         $defaultWidth = $this->resolveRowActionColumnWidth($table);
         $attrs = [
             'label' => '操作',
+            'class-name' => 'sc-v2-row-actions-column',
         ];
 
         if ($settingsEnabled && is_string($settingsKey) && $settingsKey !== '') {

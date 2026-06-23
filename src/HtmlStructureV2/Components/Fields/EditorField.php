@@ -23,7 +23,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
+     * - `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
      */
     public function uploadUrl(string $uploadUrl): static
     {
@@ -40,7 +40,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->initOptions(['toolbar' => ['bold', 'italic']])`
+     * - `Fields::editor('content', '内容')->initOptions(['toolbar' => ['bold', 'italic']])`
      */
     public function initOptions(array $options): static
     {
@@ -57,7 +57,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->option('layout.height', 420)`
+     * - `Fields::editor('content', '内容')->option('layout.height', 420)`
      */
     public function option(string $key, mixed $value): static
     {
@@ -92,7 +92,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->event('contentChanged', '({ html }) => console.log(html)')`
+     * - `Fields::editor('content', '内容')->event('contentChanged', '({ html }) => console.log(html)')`
      */
     public function event(string $event, string|JsExpression $handler): static
     {
@@ -116,7 +116,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->height(420)`
+     * - `Fields::editor('content', '内容')->height(420)`
      */
     public function height(int|string $height): static
     {
@@ -130,7 +130,7 @@ final class EditorField extends TextField
      * @return static 当前编辑器字段实例。
      *
      * 示例：
-     * `Fields::editor('content', '内容')->minHeight(320)`
+     * - `Fields::editor('content', '内容')->minHeight(320)`
      */
     public function minHeight(int|string $height): static
     {
@@ -139,7 +139,19 @@ final class EditorField extends TextField
 
     public function getUploadUrl(): string
     {
-        return $this->uploadUrl;
+        if ($this->uploadUrl !== '') {
+            return $this->uploadUrl;
+        }
+
+        if (!function_exists('sc_default_upload_url')) {
+            return '';
+        }
+
+        try {
+            return (string)\sc_default_upload_url();
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     public function getEditorOptions(): array

@@ -23,7 +23,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      * @return static 当前数字字段实例。
      *
      * 示例：
-     * `Fields::number('sort', '排序')->minValue(0)`
+     * - `Fields::number('sort', '排序')->minValue(0)`
      */
     public function minValue(int|float $min): static
     {
@@ -37,7 +37,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      * @return static 当前数字字段实例。
      *
      * 示例：
-     * `Fields::number('score', '分值')->maxValue(100)`
+     * - `Fields::number('score', '分值')->maxValue(100)`
      */
     public function maxValue(int|float $max): static
     {
@@ -51,7 +51,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      * @return static 当前数字字段实例。
      *
      * 示例：
-     * `Fields::number('sort', '排序')->step(1)`
+     * - `Fields::number('sort', '排序')->step(1)`
      */
     public function step(int|float $step): static
     {
@@ -65,7 +65,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      * @return static 当前数字字段实例。
      *
      * 示例：
-     * `Fields::number('price', '价格')->precision(2)`
+     * - `Fields::number('price', '价格')->precision(2)`
      */
     public function precision(int $precision): static
     {

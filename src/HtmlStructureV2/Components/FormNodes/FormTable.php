@@ -25,7 +25,7 @@ final class FormTable extends FormArrayGroup
      * @return static 当前表格节点。
      *
      * 示例：
-     * `Forms::table('items')->addColumns(Fields::text('name', '名称'))`
+     * - `Forms::table('items')->addColumns(Fields::text('name', '名称'))`
      */
     public function addColumns(FormNode ...$columns): static
     {
@@ -40,7 +40,7 @@ final class FormTable extends FormArrayGroup
      * @return static 当前表格节点。
      *
      * 示例：
-     * `Forms::table('items')->minRows(1)`
+     * - `Forms::table('items')->minRows(1)`
      */
     public function minRows(int $minRows): static
     {
@@ -56,7 +56,7 @@ final class FormTable extends FormArrayGroup
      * @return static 当前表格节点。
      *
      * 示例：
-     * `Forms::table('items')->maxRows(20)`
+     * - `Forms::table('items')->maxRows(20)`
      */
     public function maxRows(?int $maxRows): static
     {
@@ -72,7 +72,7 @@ final class FormTable extends FormArrayGroup
      * @return static 当前表格节点。
      *
      * 示例：
-     * `Forms::table('items')->emptyText('暂无明细')`
+     * - `Forms::table('items')->emptyText('暂无明细')`
      */
     public function emptyText(string $emptyText): static
     {
@@ -88,7 +88,7 @@ final class FormTable extends FormArrayGroup
      * @return static 当前表格节点。
      *
      * 示例：
-     * `Forms::table('items')->border(false)`
+     * - `Forms::table('items')->border(false)`
      */
     public function border(bool $border = true): static
     {

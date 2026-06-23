@@ -191,7 +191,7 @@ final class ActionButtonRenderer
             ActionIntent::EDIT => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target),
+                $this->openDialogExpression($action, $rowScoped ? 'context.row' : 'null', $target),
                 $actionKey !== null
             ),
             ActionIntent::DELETE => $this->wrapActionExecution(
@@ -227,7 +227,7 @@ final class ActionButtonRenderer
                     ? $this->wrapActionExecution(
                         $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                         $rowScoped,
-                        $this->openDialogExpression($action, $rowScoped ? 'scope.row' : 'null', $target),
+                        $this->openDialogExpression($action, $rowScoped ? 'context.row' : 'null', $target),
                         $actionKey !== null
                     )
                     : ($action->hasEventHandlers('click')

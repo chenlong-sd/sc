@@ -32,7 +32,7 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
      * @return self 折叠项实例。
      *
      * 示例：
-     * `CollapseItemNode::make('高级设置')`
+     * - `CollapseItemNode::make('高级设置')`
      */
     public static function make(string $title): self
     {
@@ -47,7 +47,7 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
      * @return self 当前折叠项。
      *
      * 示例：
-     * `Forms::collapseItem('高级设置')->addContent(Fields::text('remark', '备注'))`
+     * - `Forms::collapseItem('高级设置')->addContent(Fields::text('remark', '备注'))`
      */
     public function addContent(FormNode ...$children): self
     {

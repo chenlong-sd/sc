@@ -24,7 +24,7 @@ final class ImageField extends UploadField
      * @return static 当前图片字段实例。
      *
      * 示例：
-     * `Fields::image('gallery', '相册')->multiple()->uploadLimit(9)`
+     * - `Fields::image('gallery', '相册')->multiple()->uploadLimit(9)`
      */
     public function multiple(bool $enable = true): static
     {

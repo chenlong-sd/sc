@@ -44,7 +44,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 重复分组节点实例。
      *
      * 示例：
-     * `FormArrayGroup::make('contacts')`
+     * - `FormArrayGroup::make('contacts')`
      */
     public static function make(string $name): static
     {
@@ -59,7 +59,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->addSchema(Fields::text('name', '姓名'))`
+     * - `Forms::arrayGroup('contacts')->addSchema(Fields::text('name', '姓名'))`
      */
     public function addSchema(FormNode ...$children): static
     {
@@ -74,7 +74,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->defaultRows([['name' => '张三']])`
+     * - `Forms::arrayGroup('contacts')->defaultRows([['name' => '张三']])`
      */
     public function defaultRows(array $rows): static
     {
@@ -90,7 +90,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->title('联系人')`
+     * - `Forms::arrayGroup('contacts')->title('联系人')`
      */
     public function title(?string $title): static
     {
@@ -106,7 +106,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->addButtonText('新增联系人')`
+     * - `Forms::arrayGroup('contacts')->addButtonText('新增联系人')`
      */
     public function addButtonText(string $text): static
     {
@@ -123,7 +123,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->addable(false)`
+     * - `Forms::arrayGroup('contacts')->addable(false)`
      */
     public function addable(bool $addable = true): static
     {
@@ -140,7 +140,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->removable(false)`
+     * - `Forms::arrayGroup('contacts')->removable(false)`
      */
     public function removable(bool $removable = true): static
     {
@@ -157,7 +157,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->reorderable()`
+     * - `Forms::arrayGroup('contacts')->reorderable()`
      */
     public function reorderable(bool $reorderable = true): static
     {
@@ -174,7 +174,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->minRows(1)`
+     * - `Forms::arrayGroup('contacts')->minRows(1)`
      */
     public function minRows(int $minRows): static
     {
@@ -190,7 +190,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer
      * @return static 当前重复分组节点。
      *
      * 示例：
-     * `Forms::arrayGroup('contacts')->maxRows(5)`
+     * - `Forms::arrayGroup('contacts')->maxRows(5)`
      */
     public function maxRows(?int $maxRows): static
     {

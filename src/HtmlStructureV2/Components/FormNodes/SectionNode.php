@@ -38,7 +38,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 分组节点实例。
      *
      * 示例：
-     * `SectionNode::make('基础信息')`
+     * - `SectionNode::make('基础信息')`
      */
     public static function make(string $title): self
     {
@@ -53,7 +53,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前分组节点。
      *
      * 示例：
-     * `Forms::section('基础信息')->addContent(Fields::text('title', '标题'))`
+     * - `Forms::section('基础信息')->addContent(Fields::text('title', '标题'))`
      */
     public function addContent(FormNode ...$children): self
     {
@@ -67,7 +67,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前分组节点。
      *
      * 示例：
-     * `Forms::section('基础信息')->description('请先填写标题和分类')`
+     * - `Forms::section('基础信息')->description('请先填写标题和分类')`
      */
     public function description(?string $description): self
     {
@@ -83,7 +83,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前分组节点。
      *
      * 示例：
-     * `Forms::section('附件')->headerActions(Actions::make('新增附件'))`
+     * - `Forms::section('附件')->headerActions(Actions::make('新增附件'))`
      */
     public function headerActions(Action ...$actions): self
     {
@@ -99,7 +99,7 @@ final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScop
      * @return self 当前分组节点。
      *
      * 示例：
-     * `Forms::section('基础信息')->plain()`
+     * - `Forms::section('基础信息')->plain()`
      */
     public function plain(bool $plain = true): self
     {
