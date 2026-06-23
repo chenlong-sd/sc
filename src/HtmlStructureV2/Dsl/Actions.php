@@ -14,10 +14,10 @@ final class Actions
      * 默认按钮类型为 primary。
      *
      * @param string $label 按钮显示文案。
-     * @return Action 通用动作实例，可继续链式调用 type()/icon()/onClick() 等方法。
+     * @return Action 通用动作实例，可继续链式调用 type()/icon()/on('click', ...) 等方法。
      *
      * 示例：
-     * - `Actions::make('导出')->icon('Download')->onClick('({ vm }) => vm.handleExport?.()')`
+     * - `Actions::make('导出')->icon('Download')->on('click', '({ vm }) => vm.handleExport?.()')`
      */
     public static function make(string $label): Action
     {
@@ -195,7 +195,7 @@ final class Actions
     public static function back(string|JsExpression|null $url = null, string $label = '取消'): Action
     {
         return Action::custom($label)
-            ->onClick(Events::returnTo($url))
+            ->on('click', Events::returnTo($url))
             ->type('default');
     }
 
@@ -217,18 +217,17 @@ final class Actions
 
     /**
      * 创建一个自定义动作。
-     * 点击逻辑请继续链式调用 onClick() / on('click', ...) 配置；
-     * 若传 JS，handler 统一只接收一个 context 对象；
-     * 常用可读字段与 Action::on('click', ...) 一致，例如 row / tableKey / listKey /
-     * filters / forms / dialogs / selection / vm，以及目标弹窗上下文下的 dialog / dialogKey。
-     * 若传 Events::* 返回值，则按结构化事件执行。
+     * 点击逻辑请继续链式调用 on('click', ...) 或 onClick() 配置；
+     * 若需要 row / tableKey / listKey / filters / forms / dialogs / selection / vm 等动作上下文，
+     * 请使用 on('click', ...)。
+     * onClick() 只适合直接绑定原生点击表达式；若传 Events::* 返回值，则按结构化事件执行。
      * 默认按钮类型为 primary。
      *
      * @param string $label 按钮显示文案。
      * @return Action 自定义动作实例。
      *
      * 示例：
-     * - `Actions::custom('查看日志')->onClick('({ row, vm }) => vm.openLogDialog?.(row)')`
+     * - `Actions::custom('查看日志')->on('click', '({ row, vm }) => vm.openLogDialog?.(row)')`
      */
     public static function custom(string $label): Action
     {

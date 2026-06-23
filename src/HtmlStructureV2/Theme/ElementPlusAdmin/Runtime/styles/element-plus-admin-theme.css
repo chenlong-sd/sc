@@ -250,7 +250,15 @@ body {
 
 .sc-v2-form__suffix {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
   color: var(--sc-v2-text-secondary);
+}
+
+.sc-v2-form__suffix > .el-button + .el-button {
+  margin-left: 0;
 }
 
 .sc-v2-form__suffix-text,

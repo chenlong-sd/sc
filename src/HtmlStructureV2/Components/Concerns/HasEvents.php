@@ -16,8 +16,21 @@ trait HasEvents
      * 表示事件会直接绑定到其渲染根节点，可使用该节点支持的 DOM / Element Plus 事件名。
      *
      * handler 若为 JS 表达式，运行时统一只接收一个 context 对象，
-     * 推荐写法：`(context) => {}` 或 `({ vm }) => {}`；
+     * 推荐写法：`(context) => {}` 或 `({ vm, row, model }) => {}`；
      * 不支持 `function (a, b, c) {}` 这类按位置参数取值的写法。
+     *
+     * 不同组件会注入不同上下文，具体字段以各组件 on() 注释为准。
+     * 常见动作场景可读取 row / model / formScope / tableKey / listKey / filters /
+     * forms / dialogs / selection / vm，并可调用 reloadTable() / openDialog() /
+     * getFormModel() / cloneFormModel() / setFormModel() 等辅助方法。
+     *
+     * 示例：
+     * - `->on('click', '({ row }) => console.log(row?.id)')`
+     * - `->on('click', '({ cloneFormModel, setFormModel }) => {
+     *       const model = cloneFormModel()
+     *       model.secret = Math.random().toString(36).slice(2, 18)
+     *       setFormModel(model)
+     *   }')`
      */
     public function on(string $event, string|JsExpression|StructuredEventInterface $handler): static
     {

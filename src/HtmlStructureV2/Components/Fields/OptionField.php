@@ -21,6 +21,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     protected bool $remoteOptionsClearOnChange = true;
     protected array $linkageUpdates = [];
     protected bool $linkageClearOnEmpty = true;
+    protected bool $defaultedByMultiple = false;
 
     public function __construct(string $name, string $label, FieldType $type = FieldType::SELECT)
     {
@@ -59,6 +60,51 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         }
 
         return $this;
+    }
+
+    /**
+     * 将 select 切换为多选下拉。
+     * 开启后会透传 Element Plus 的 `multiple` 属性，并把空默认值初始化为数组。
+     *
+     * @param bool $enable 是否开启多选，默认值为 true。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::select('roles', '角色')->multiple()->options($roleOptions)`
+     */
+    public function multiple(bool $enable = true): static
+    {
+        if ($this->type() !== FieldType::SELECT) {
+            return $this;
+        }
+
+        $this->prop('multiple', $enable);
+
+        if ($enable && !is_array($this->default)) {
+            $this->default = [];
+            $this->defaultedByMultiple = true;
+        }
+
+        if (!$enable && $this->defaultedByMultiple && $this->default === []) {
+            $this->default = null;
+            $this->defaultedByMultiple = false;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 多选 select 的默认值必须是数组，避免前端 el-select 多选模型类型不匹配。
+     */
+    public function default(mixed $default): static
+    {
+        $this->defaultedByMultiple = false;
+
+        if ($this->isMultipleSelect() && !is_array($default)) {
+            $default = [];
+        }
+
+        return parent::default($default);
     }
 
     /**
@@ -318,7 +364,11 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
             return $this->default;
         }
 
-        return $this->type() === FieldType::CHECKBOX ? [] : null;
+        if ($this->type() === FieldType::CHECKBOX) {
+            return [];
+        }
+
+        return $this->isMultipleSelect() ? [] : null;
     }
 
     protected function defaultPromptPrefix(): string
@@ -335,6 +385,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     {
         return 'change';
     }
+
     private function getRemoteOptionDependencies(): array
     {
         $dependencies = $this->remoteOptionDependencies;
@@ -381,5 +432,16 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         $valueField = $defaultSearchField ?: (count($fields) === 2 ? $fields[0] . '.id' : 'id');
 
         return [$labelField, $valueField];
+    }
+
+    private function isMultipleSelect(): bool
+    {
+        if ($this->type() !== FieldType::SELECT) {
+            return false;
+        }
+
+        $multiple = $this->getProps()['multiple'] ?? null;
+
+        return $multiple !== null && $multiple !== false && $multiple !== 'false';
     }
 }

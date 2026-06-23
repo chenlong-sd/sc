@@ -6,6 +6,7 @@ use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
+use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
@@ -184,7 +185,7 @@ final class FieldRenderer
             $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
         }
 
-        $item->append($this->wrapFieldControl($field, $component, $renderContext));
+        $item->append($this->wrapFieldControl($field, $component, $modelName, $options->formScope, $renderContext));
         $this->appendHelpText($item, $field);
 
         if ($tableCell) {
@@ -1090,6 +1091,8 @@ final class FieldRenderer
     private function wrapFieldControl(
         Field $field,
         AbstractHtmlElement $component,
+        string $modelName,
+        ?string $formScope = null,
         ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
@@ -1111,12 +1114,51 @@ final class FieldRenderer
         }
 
         foreach ($field->getSuffixActions() as $action) {
-            $suffix->append($this->actionButtonRenderer->render($action, false, 'small', null, $renderContext));
+            $suffix->append(
+                $this->actionButtonRenderer->render(
+                    $this->normalizeSuffixActionProps($action, $modelName),
+                    false,
+                    'default',
+                    null,
+                    $renderContext,
+                    'default',
+                    null,
+                    $formScope
+                )
+            );
         }
 
         $control->append($suffix);
 
         return $control;
+    }
+
+    private function normalizeSuffixActionProps(Action $action, string $modelName): Action
+    {
+        $normalized = [];
+
+        foreach ($action->attrs() as $name => $value) {
+            if (!$this->shouldNormalizeSuffixActionProp((string)$name, $value)) {
+                continue;
+            }
+
+            $normalized[$name] = $this->normalizeFieldExpression(JsExpression::make((string)$value), $modelName);
+        }
+
+        if ($normalized === []) {
+            return $action;
+        }
+
+        return (clone $action)->props($normalized);
+    }
+
+    private function shouldNormalizeSuffixActionProp(string $name, mixed $value): bool
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return false;
+        }
+
+        return in_array($name, ['v-if', 'v-show'], true) || str_starts_with($name, ':');
     }
 
     private function ensureEditorAssets(RenderContext $renderContext): void

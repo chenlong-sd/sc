@@ -166,21 +166,22 @@ class Action implements
     public static function resetForm(string $label = '重置', ?string $scope = null): self
     {
         return self::custom($label)
-            ->onClick(Events::resetForm($scope))
+            ->on('click', Events::resetForm($scope))
             ->type('default')
             ->icon('RefreshLeft');
     }
 
     /**
      * 创建一个自定义动作。
-     * 点击逻辑请继续链式调用 onClick() / on('click', ...) 配置，
-     * 这样使用侧在 IDE 中能更直观看到“先创建动作，再配置点击行为”。
+     * 点击逻辑请继续链式调用 on('click', ...) 或 onClick() 配置；
+     * 需要 row / forms / dialogs / vm 等动作上下文时，请使用 on('click', ...)。
+     * onClick() 只适合直接绑定原生点击表达式。
      *
      * @param string $label 按钮显示文案。
      * @return self 自定义动作实例。
      *
      * 示例：
-     * - `Action::custom('查看')->onClick('({ row, vm }) => vm.openDetail?.(row)')`
+     * - `Action::custom('查看')->on('click', '({ row, vm }) => vm.openDetail?.(row)')`
      */
     public static function custom(string $label): self
     {
@@ -340,19 +341,19 @@ class Action implements
     }
 
     /**
-     * 绑定点击行为，可传 JS 表达式或结构化事件。
-     * 若传 JS 表达式，handler 签名与 on('click', ...) 一致，统一接收一个 context 对象。
-     * 常用可读字段：row / tableKey / listKey / filters / forms / dialogs / selection / vm，
-     * 若动作运行在 dialog footer 等弹窗上下文中，还可读取当前 dialog 的 dialog / dialogKey。
-     * 运行在 iframe 子页面时，还可调用：
-     * - closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab()
-     * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
+     * 绑定原生点击行为，可传 JS 表达式或结构化事件。
+     * 若传 JS 表达式，表达式会直接渲染到 Vue "@click" 上，参数是浏览器 click 事件；
+     * 不会自动注入 on('click', ...) 的 action context。
+     * 若需要 row / tableKey / listKey / filters / forms / dialogs / selection / vm 等上下文，
+     * 请使用 on('click', ...)。
+     * 若传结构化事件，则会自动转交给 on('click', ...) 执行。
      *
      * @param string|JsExpression|StructuredEventInterface $handler 点击处理逻辑。
      * @return static 当前动作实例。
      *
      * 示例：
-     * - `Action::make('预览')->onClick('({ row, vm }) => vm.openPreview?.(row)')`
+     * - `Action::make('阻止冒泡')->onClick('(event) => event.stopPropagation()')`
+     * - `Action::make('预览')->on('click', '({ row, vm }) => vm.openPreview?.(row)')`
      */
     public function onClick(string|JsExpression|StructuredEventInterface $handler): static
     {
@@ -450,7 +451,7 @@ class Action implements
      * 可用事件：click。
      *
      * handler 签名：`(context) => mixed`
-     * 推荐写法：`({ row, tableKey, listKey, filters, forms, dialogs, selection, vm }) => {}`
+     * 推荐写法：`({ row, model, formScope, tableKey, listKey, filters, forms, dialogs, selection, vm }) => {}`
      * 不按位置参数传值。
      *
      * click 上下文：
@@ -459,8 +460,10 @@ class Action implements
      * - tableKey / listKey: 当前动作命中的表格或列表 key
      * - filters / forms / dialogs / selection: 当前页面运行时上下文
      * - dialog / dialogKey: 当前 dialog 上下文存在时可用；动作显式指向目标弹窗时也会补齐
+     * - form / model / formScope: 当前动作可定位到表单时可用；suffixActions / footerActions 等表单场景会自动带入
      * - vm: 当前 Vue 实例
      * - reloadTable() / reloadList() / reloadPage() / closeDialog() / openDialog(): 常用运行时辅助方法
+     * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab(): iframe 子页面常用宿主桥接方法
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
      *
@@ -470,6 +473,13 @@ class Action implements
      *
      * 示例：
      * - `Action::make('详情')->on('click', '({ row, vm }) => vm.openDetail?.(row)')`
+     * - `Action::make('生成秘钥')->on('click', '({ cloneFormModel, setFormModel }) => {
+     *       const model = cloneFormModel()
+     *       model.secret = Math.random().toString(36).slice(2, 18)
+     *       setFormModel(model)
+     *   }')`
+     * - `Action::make('清空')->on('click', '({ formScope, setFormModel }) => setFormModel(formScope, { secret: "" })')`
+     * - `Action::make('打开详情')->on('click', '({ row, openDialog }) => openDialog("detail-dialog", row)')`
      */
     public function on(
         #[ExpectedValues(self::SUPPORTED_ON_EVENTS)]

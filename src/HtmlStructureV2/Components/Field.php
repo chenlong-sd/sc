@@ -346,12 +346,14 @@ abstract class Field implements FormNode
 
     /**
      * 在字段右侧追加操作按钮，适合“选择/查看/跳转”类辅助动作。
+     * 动作 props 中的 v-if / v-show / :xxx 表达式可使用 `model` 指代当前表单模型；
+     * 点击时如需读取/修改表单数据，请使用 Action::on('click', ...) 获取 action context。
      *
      * @param Action ...$actions 要追加的右侧动作。
      * @return static 当前字段实例。
      *
      * 示例：
-     * - `Fields::text('user_name', '用户')->suffixActions(Actions::make('选择'))`
+     * - `Fields::text('secret', '秘钥')->suffixActions(Actions::custom('生成')->props(['v-if' => '!model.id']))`
      */
     public function suffixActions(Action ...$actions): static
     {

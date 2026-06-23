@@ -166,9 +166,9 @@ final class Table implements Renderable, EventAware
      * 因此前端属性表达式可直接读取 `scope.row` / `scope.$index`，
      * 例如 `->props(['v-if' => 'scope.row.status == 1'])`。
      *
-     * 点击事件则会把当前行解构到 action context 的 `row` 字段中，
-     * 因此 `onClick()` / `on('click', ...)` 里通常直接写 `({ row }) => ...` 即可，
-     * 不需要再手动从 `scope.row` 取值。
+     * 点击事件通过 on('click', ...) 绑定时，会把当前行解构到 action context 的 `row` 字段中，
+     * 因此 handler 通常直接写 `({ row }) => ...` 即可，不需要再手动从 `scope.row` 取值。
+     * onClick() 是直接绑定到 Vue `@click` 的原生点击表达式，不会自动接收 action context。
      *
      * - `Actions::edit()` / `Actions::request()` / `Events::openDialog()` 等会自动携带当前行；
      * - `Actions::delete()` 仍是工具栏批量删除语义，不用于 rowActions() 单条删除。
@@ -180,7 +180,7 @@ final class Table implements Renderable, EventAware
      * - `Tables::make('qa-info-table')->rowActions(
      *     Actions::make('确认')
      *         ->props(['v-if' => 'scope.row.status == 1'])
-     *         ->onClick('({ row }) => console.log(row.id)')
+     *         ->on('click', '({ row }) => console.log(row.id)')
      * )`
      */
     public function rowActions(Action ...$actions): self
