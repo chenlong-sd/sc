@@ -87,6 +87,7 @@ final class Fields
     /**
      * 创建富文本编辑器字段。
      * 底层使用 SimpleRichEditor，并支持 uploadUrl()/initOptions()/event() 等编辑器配置。
+     * 默认表单模型保存 HTML 字符串；需要结构化提交或发布缓存时，可显式调用 submitPayload()/publishPayload()。
      *
      * @param string $name 字段名。
      * @param string|null $label 字段标签；传 null 时不显示标签。
@@ -94,6 +95,8 @@ final class Fields
      *
      * 示例：
      * - `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
+     * - `Fields::editor('content', '内容')->submitPayload(['includeText' => true])`
+     * - `Fields::editor('content', '内容')->publishPayload(['article' => ['inlineCSS' => true]])`
      */
     public static function editor(string $name, ?string $label = null): EditorField
     {

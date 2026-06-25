@@ -15,4 +15,5 @@ final class StaticResource
     public const XLSX = '/js/xlsx.full.min.js';
     public const SCEDITOR_JS = '/sceditor/editor.min.js';
     public const SCEDITOR_CSS = '/sceditor/editor.min.css';
+    public const SCEDITOR_ARTICLE_CSS = '/sceditor/sre-article.min.css';
 }

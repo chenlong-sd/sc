@@ -345,6 +345,25 @@ $form = Forms::make('profile')->addContent(
 );
 ```
 
+### 富文本字段与发布载荷
+
+`Fields::editor()` 底层使用 `SimpleRichEditor`。默认表单模型仍保存 HTML 字符串，和旧版 `FormItem::editor()` 行为一致；如果后台需要新版编辑器的结构化快照或详情页展示缓存，可以显式切换保存形态：
+
+```injectablephp
+Fields::editor('content', '正文')
+    ->submitPayload(['includeText' => true]); // 保存 { html, document, text, ... }
+
+Fields::editor('content', '正文')
+    ->publishPayload([
+        'article' => ['inlineCSS' => true],
+        'includeText' => true,
+    ]); // 保存 { html, document, publishHtml, text, ... }
+```
+
+发布页若不使用 `article.inlineCSS`，展示 `publishHtml` 时需要加载 `StaticResource::SCEDITOR_ARTICLE_CSS`，并按编辑器文档使用 `.sre-article` 包裹正文。
+
+旧版 ElementUI 主题下的 `FormItem::editor()` 也保留默认 HTML 字符串行为，并支持相同的 `submitPayload()` / `publishPayload()` 显式切换。
+
 这几个节点当前的边界要明确：
 
 - `Forms::object()` 只负责切换数据路径，不额外引入运行时实例。

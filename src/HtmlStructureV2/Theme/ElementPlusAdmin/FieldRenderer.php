@@ -348,6 +348,8 @@ final class FieldRenderer
                 'placeholder' => $placeholder,
                 ':config' => $this->jsValue($field instanceof EditorField ? $field->getEditorOptions() : []),
                 'upload-url' => $field instanceof EditorField ? $field->getUploadUrl() : '',
+                'value-mode' => $field instanceof EditorField ? $field->getValueMode() : EditorField::VALUE_MODE_HTML,
+                ':payload-options' => $this->jsValue($field instanceof EditorField ? $field->getPayloadOptions() : []),
                 'style' => $inline ? 'width:min(860px,100%)' : 'width:100%',
             ])),
             FieldType::NUMBER => El::double('el-input-number')->setAttrs($bindModelValue([

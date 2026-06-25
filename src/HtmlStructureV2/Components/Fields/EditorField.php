@@ -2,13 +2,20 @@
 
 namespace Sc\Util\HtmlStructureV2\Components\Fields;
 
+use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
 final class EditorField extends TextField
 {
+    public const VALUE_MODE_HTML = 'html';
+    public const VALUE_MODE_SUBMIT_PAYLOAD = 'submit';
+    public const VALUE_MODE_PUBLISH_PAYLOAD = 'publish';
+
     private string $uploadUrl = '';
     private array $initOptions = [];
+    private string $valueMode = self::VALUE_MODE_HTML;
+    private array $payloadOptions = [];
 
     public function __construct(string $name, string $label)
     {
@@ -110,6 +117,84 @@ final class EditorField extends TextField
     }
 
     /**
+     * 设置表单模型中保存的富文本值形态。
+     *
+     * 默认 `html` 与旧版行为一致，只保存 HTML 字符串。
+     * `submit` 会保存 SimpleRichEditor::getSubmitPayload() 的结构化提交载荷。
+     * `publish` 会保存 SimpleRichEditor::getPublishPayload() 的发布载荷，包含 publishHtml。
+     *
+     * @param string $mode html / submit / publish。
+     * @param array $payloadOptions getSubmitPayload()/getPublishPayload() 选项。
+     * @return static 当前编辑器字段实例。
+     *
+     * 示例：
+     * - `Fields::editor('content')->valueMode(EditorField::VALUE_MODE_PUBLISH_PAYLOAD, ['article' => ['inlineCSS' => true]])`
+     */
+    public function valueMode(string $mode, array $payloadOptions = []): static
+    {
+        $mode = trim($mode);
+        if (!in_array($mode, [
+            self::VALUE_MODE_HTML,
+            self::VALUE_MODE_SUBMIT_PAYLOAD,
+            self::VALUE_MODE_PUBLISH_PAYLOAD,
+        ], true)) {
+            throw new InvalidArgumentException(sprintf(
+                'Unsupported editor value mode [%s]. Supported modes: html, submit, publish.',
+                $mode
+            ));
+        }
+
+        $this->valueMode = $mode;
+        $this->payloadOptions = $payloadOptions;
+
+        return $this;
+    }
+
+    /**
+     * 表单模型保存 SimpleRichEditor::getSubmitPayload() 返回值。
+     *
+     * 返回值用于后台长期保存和再次编辑，通常包含 html / document / generatedAt 等字段。
+     *
+     * 参数说明：
+     * - includeText：追加纯文本摘要 text，便于搜索、预览或后端校验。
+     * - includeMarkdown：追加 markdown 字段，便于同时保留 Markdown 视图内容。
+     * - includeDiagnostics：追加 diagnostics 诊断信息，便于接入期排查格式、来源和恢复策略；正式提交通常不需要开启。
+     *
+     * 示例：
+     * - `Fields::editor('content')->submitPayload(['includeText' => true])`
+     *
+     * @param array $options getSubmitPayload() 选项。
+     */
+    public function submitPayload(array $options = []): static
+    {
+        return $this->valueMode(self::VALUE_MODE_SUBMIT_PAYLOAD, $options);
+    }
+
+    /**
+     * 表单模型保存 SimpleRichEditor::getPublishPayload() 返回值。
+     *
+     * 返回值用于文章/新闻发布场景，会在 submitPayload 的基础上追加 publishHtml。
+     * html 用于再次编辑，publishHtml 用于详情页展示缓存。
+     *
+     * 参数说明：
+     * - article.inlineCSS：将文章展示样式内联到 publishHtml；适合详情页不方便额外加载 CSS 的场景。
+     * - article.wrapperTag：设置 publishHtml 外层包裹标签，默认由编辑器决定。
+     * - article.wrapperClass：设置 publishHtml 外层包裹 class，通常保持 sre-article。
+     * - includeText：追加纯文本摘要 text，便于搜索、预览或后端校验。
+     * - includeMarkdown：追加 markdown 字段，便于同时保留 Markdown 视图内容。
+     * - includeDiagnostics：追加 diagnostics 诊断信息，便于接入期排查；正式提交通常不需要开启。
+     *
+     * 示例：
+     * - `Fields::editor('content')->publishPayload(['article' => ['inlineCSS' => true]])`
+     *
+     * @param array $options getPublishPayload() 选项。
+     */
+    public function publishPayload(array $options = []): static
+    {
+        return $this->valueMode(self::VALUE_MODE_PUBLISH_PAYLOAD, $options);
+    }
+
+    /**
      * 便捷设置编辑区高度。
      *
      * @param int|string $height 编辑区高度。
@@ -174,5 +259,15 @@ final class EditorField extends TextField
             'enableDraftAutosave' => false,
             'draftRestorePrompt' => false,
         ], $options);
+    }
+
+    public function getValueMode(): string
+    {
+        return $this->valueMode;
+    }
+
+    public function getPayloadOptions(): array
+    {
+        return $this->payloadOptions;
     }
 }

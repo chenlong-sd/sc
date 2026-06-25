@@ -38,21 +38,91 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
         $fieldName = (string)($formItemEditor->getName() ?? '');
         $uniqueKey = preg_replace('/[^a-zA-Z0-9_]/', '_', trim($formModel . '_' . $fieldName, '_')) ?: 'default';
 
-        $editorId    = 'sre-editor-' . $uniqueKey;
-        $optionsName = 'sreEditorOptions_' . $uniqueKey;
+        $editorId           = 'sre-editor-' . $uniqueKey;
+        $optionsName        = 'sreEditorOptions_' . $uniqueKey;
+        $payloadOptionsName = 'sreEditorPayloadOptions_' . $uniqueKey;
         $instanceKey = $formModel && $fieldName ? ($formModel . '.' . $fieldName) : $uniqueKey;
 
         $vModel = $this->getVModel($formItemEditor);
         $options = $formItemEditor->getInitOptions();
+        $valueMode = $formItemEditor instanceof FormItemEditor
+            ? $formItemEditor->getValueMode()
+            : FormItemEditor::VALUE_MODE_HTML;
+        $payloadOptions = $formItemEditor instanceof FormItemEditor
+            ? $formItemEditor->getPayloadOptions()
+            : [];
+        $payloadOptionsJs = $payloadOptions === [] ? (object)[] : $payloadOptions;
 
         $options['instanceKey'] ??= $instanceKey;
-        $options['initialHTML'] ??= $vModel ? Js::grammar("this.$vModel || ''") : '';
+        $options['initialHTML'] ??= $vModel
+            ? Js::grammar("(() => { const value = this.$vModel; if (value && typeof value === 'object') { return value.html ?? value.publishHtml ?? ''; } return value == null ? '' : String(value); })()")
+            : '';
 
         $uploadUrl = (string)($formItemEditor->getUploadUrl() ?? '');
-        $onChangeSyncCode = $vModel ? "VueApp.{$vModel} = payload.html ?? '';" : '';
+        $onChangeSyncCode = $vModel ? "VueApp.{$vModel} = __buildSreModelValue(payload);" : '';
 
         $initCode = Js::code(
             Js::let($optionsName, $options),
+            Js::let($payloadOptionsName, $payloadOptionsJs),
+            <<<JS
+                let __sreEditor = null;
+                const __sreValueMode = "{$valueMode}";
+                const __normalizeSreValue = (value) => {
+                    if (value && typeof value === 'object') {
+                        if (Object.prototype.hasOwnProperty.call(value, 'html')) {
+                            return value.html == null ? '' : String(value.html);
+                        }
+                        if (Object.prototype.hasOwnProperty.call(value, 'publishHtml')) {
+                            return value.publishHtml == null ? '' : String(value.publishHtml);
+                        }
+                    }
+
+                    return value == null ? '' : String(value);
+                };
+                const __resolveSreHtml = (payload) => {
+                    if (payload && Object.prototype.hasOwnProperty.call(payload, 'html')) {
+                        return __normalizeSreValue(payload.html);
+                    }
+                    if (__sreEditor && typeof __sreEditor.getHTML === 'function') {
+                        return __normalizeSreValue(__sreEditor.getHTML());
+                    }
+
+                    return '';
+                };
+                const __buildFallbackSrePayload = (payload, publish = false) => {
+                    const output = {};
+                    if (payload && typeof payload === 'object') {
+                        ['format', 'mode', 'source', 'sourceKind', 'markdown', 'text', 'document', 'diagnostics', 'generatedAt'].forEach((key) => {
+                            if (Object.prototype.hasOwnProperty.call(payload, key)) {
+                                output[key] = payload[key];
+                            }
+                        });
+                    }
+
+                    output.html = __resolveSreHtml(payload);
+                    if (publish && !Object.prototype.hasOwnProperty.call(output, 'publishHtml')) {
+                        output.publishHtml = output.html;
+                    }
+
+                    return output;
+                };
+                const __buildSreModelValue = (payload) => {
+                    if (__sreValueMode === 'html') {
+                        return __resolveSreHtml(payload);
+                    }
+
+                    const method = __sreValueMode === 'publish' ? 'getPublishPayload' : 'getSubmitPayload';
+                    if (__sreEditor && typeof __sreEditor[method] === 'function') {
+                        try {
+                            return __sreEditor[method]({$payloadOptionsName});
+                        } catch (e) {
+                            console.warn(e);
+                        }
+                    }
+
+                    return __buildFallbackSrePayload(payload, __sreValueMode === 'publish');
+                };
+            JS,
             <<<JS
                 const __userOnChange = {$optionsName}.onChange;
                 {$optionsName}.onChange = (payload) => {
@@ -123,7 +193,7 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
             JS : '',
             <<<JS
                 this.__sreEditors = this.__sreEditors || {};
-                const __sreEditor = new SimpleRichEditor("#{$editorId}", {$optionsName}).init();
+                __sreEditor = new SimpleRichEditor("#{$editorId}", {$optionsName}).init();
                 this.__sreEditors["{$editorId}"] = __sreEditor;
             JS,
             $vModel ? <<<JS
@@ -131,10 +201,10 @@ class FormItemEditorTheme extends AbstractFormItemTheme implements FormItemEdito
                     this.\$watch(
                         () => this.{$vModel},
                         (val) => {
-                            const next = val == null ? '' : String(val);
+                            const next = __normalizeSreValue(val);
                             try {
                                 if (__sreEditor && typeof __sreEditor.getHTML === 'function' && typeof __sreEditor.setHTML === 'function') {
-                                    if (__sreEditor.getHTML() !== next) __sreEditor.setHTML(next);
+                                    if (__normalizeSreValue(__sreEditor.getHTML()) !== next) __sreEditor.setHTML(next);
                                 }
                             } catch (e) {
                                 console.warn(e);

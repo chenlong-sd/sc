@@ -777,7 +777,7 @@
                 inheritAttrs: false,
                 props: {
                   modelValue: {
-                    type: String,
+                    type: [String, Object],
                     default: ''
                   },
                   placeholder: {
@@ -791,6 +791,14 @@
                   uploadUrl: {
                     type: String,
                     default: ''
+                  },
+                  valueMode: {
+                    type: String,
+                    default: 'html'
+                  },
+                  payloadOptions: {
+                    type: [Object, Array],
+                    default: () => ({})
                   },
                   disabled: {
                     type: Boolean,
@@ -826,7 +834,23 @@
                 },
                 methods: {
                   normalizeValue(value) {
+                    if (isObject(value)) {
+                      if (Object.prototype.hasOwnProperty.call(value, 'html')) {
+                        return value.html == null ? '' : String(value.html);
+                      }
+                      if (Object.prototype.hasOwnProperty.call(value, 'publishHtml')) {
+                        return value.publishHtml == null ? '' : String(value.publishHtml);
+                      }
+                    }
+
                     return value == null ? '' : String(value);
+                  },
+                  resolveValueMode() {
+                    const mode = String(this.valueMode || '').trim();
+                    return ['submit', 'publish'].includes(mode) ? mode : 'html';
+                  },
+                  resolvePayloadOptions() {
+                    return isObject(this.payloadOptions) ? clone(this.payloadOptions) : {};
                   },
                   resolveDisabledState(disabled = this.disabled) {
                     return Boolean(disabled) || (isObject(this.config) && this.config.disabled === true);
@@ -883,6 +907,52 @@
 
                     return url;
                   },
+                  resolveChangeHtml(payload) {
+                    if (payload && Object.prototype.hasOwnProperty.call(payload, 'html')) {
+                      return this.normalizeValue(payload.html);
+                    }
+
+                    if (this.editor && typeof this.editor.getHTML === 'function') {
+                      return this.normalizeValue(this.editor.getHTML());
+                    }
+
+                    return '';
+                  },
+                  buildFallbackPayload(payload, publish = false) {
+                    const output = {};
+
+                    if (isObject(payload)) {
+                      ['format', 'mode', 'source', 'sourceKind', 'markdown', 'text', 'document', 'diagnostics', 'generatedAt'].forEach((key) => {
+                        if (Object.prototype.hasOwnProperty.call(payload, key)) {
+                          output[key] = payload[key];
+                        }
+                      });
+                    }
+
+                    output.html = this.resolveChangeHtml(payload);
+                    if (publish && !Object.prototype.hasOwnProperty.call(output, 'publishHtml')) {
+                      output.publishHtml = output.html;
+                    }
+
+                    return output;
+                  },
+                  buildModelValue(payload) {
+                    const mode = this.resolveValueMode();
+                    if (mode === 'html') {
+                      return this.resolveChangeHtml(payload);
+                    }
+
+                    const method = mode === 'publish' ? 'getPublishPayload' : 'getSubmitPayload';
+                    if (this.editor && typeof this.editor[method] === 'function') {
+                      try {
+                        return this.editor[method](this.resolvePayloadOptions());
+                      } catch (error) {
+                        console.warn(error);
+                      }
+                    }
+
+                    return this.buildFallbackPayload(payload, mode === 'publish');
+                  },
                   buildEditorOptions() {
                     const options = isObject(this.config) ? clone(this.config) : {};
                     const userOnChange = typeof options.onChange === 'function' ? options.onChange : null;
@@ -902,13 +972,7 @@
                         console.warn(error);
                       }
 
-                      const html = this.normalizeValue(
-                        payload && Object.prototype.hasOwnProperty.call(payload, 'html')
-                          ? payload.html
-                          : ''
-                      );
-
-                      this.$emit('update:modelValue', html);
+                      this.$emit('update:modelValue', this.buildModelValue(payload));
                     };
 
                     options.onFocus = (payload) => {
