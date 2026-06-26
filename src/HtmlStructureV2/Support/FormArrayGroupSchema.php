@@ -82,6 +82,7 @@ final class FormArrayGroupSchema
             'rowPickers' => $this->rowSchema()->pickers(),
             'rowPickerPaths' => $this->rowSchema()->pickerPaths(),
             'rowLinkages' => $this->rowSchema()->linkages(),
+            'rowEditors' => $this->rowSchema()->editors(),
             'rowUploads' => $this->rowSchema()->uploads(),
             'rowUploadPaths' => $this->rowSchema()->uploadPaths(),
             'rowArrayGroups' => array_map(

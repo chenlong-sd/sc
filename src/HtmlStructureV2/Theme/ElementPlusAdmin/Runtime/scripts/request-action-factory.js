@@ -9,6 +9,7 @@
             isBlank,
             isObject,
             makeRequest,
+            normalizeEditorSubmitModel,
             openHostTab: openHostTabBridge,
             postDialogHostMessage,
             readPageLocation,
@@ -1361,7 +1362,18 @@
 
                 return getRuntimeFormModel(resolvedScope);
               };
-              context.cloneFormModel = (scope = null) => cloneRequestValue(context.getFormModel(scope));
+              context.cloneFormModel = (scope = null) => {
+                const resolvedScope = resolveContextFormScope(scope, 'form model');
+                context.formScope = resolvedScope;
+                context.resolveFormMode(resolvedScope);
+                const formConfig = cfg?.forms?.[resolvedScope] || {};
+
+                return normalizeEditorSubmitModel(
+                  getRuntimeFormModel(resolvedScope),
+                  formConfig?.editors || [],
+                  formConfig?.arrayGroups || []
+                );
+              };
               context.setFormModel = (arg1 = null, arg2 = undefined) => {
                 const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
                 const resolvedScope = resolveContextFormScope(scope, 'form model update');
@@ -1560,7 +1572,7 @@
 
                 const formConfig = getRuntimeFormConfig(scope);
                 const mode = context.resolveFormMode(scope);
-                const model = cloneRequestValue(context.getFormModel(scope));
+                const model = context.cloneFormModel(scope);
                 const currentPageQuery = typeof context.getPageQuery === 'function'
                   ? cloneRequestValue(context.getPageQuery())
                   : cloneRequestValue(context.page?.query || {});

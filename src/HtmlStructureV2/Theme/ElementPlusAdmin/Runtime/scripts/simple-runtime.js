@@ -11,6 +11,7 @@
             initializeConfiguredForms,
             isObject,
             makeRequest,
+            normalizeEditorSubmitModel,
             openHostTab: openHostTabBridge,
             postDialogHostMessage,
             pickRows,
@@ -93,7 +94,16 @@
               return vm.getFormModel(resolvedScope) || {};
             };
             const isReadonly = (scope = null) => resolvePublicFormReadonly(scope);
-            const cloneFormModel = (scope = null) => clone(getFormModel(scope));
+            const cloneFormModel = (scope = null) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              const formCfg = getFormConfig(resolvedScope) || {};
+
+              return normalizeEditorSubmitModel(
+                getFormModel(resolvedScope),
+                formCfg?.editors || [],
+                formCfg?.arrayGroups || []
+              );
+            };
             const setFormModel = (arg1 = null, arg2 = undefined) => {
               const { scope, values } = resolveFormModelSetArgs(arg1, arg2);
               const resolvedScope = resolvePublicFormScope(scope);

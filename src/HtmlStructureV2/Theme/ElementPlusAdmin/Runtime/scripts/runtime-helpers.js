@@ -314,6 +314,53 @@
 
             current[segments[segments.length - 1]] = value;
           };
+          const normalizeEditorHtmlValue = (value) => {
+            if (isObject(value)) {
+              if (Object.prototype.hasOwnProperty.call(value, 'html')) {
+                return value.html == null ? '' : String(value.html);
+              }
+              if (Object.prototype.hasOwnProperty.call(value, 'publishHtml')) {
+                return value.publishHtml == null ? '' : String(value.publishHtml);
+              }
+            }
+
+            return value == null ? '' : String(value);
+          };
+          const normalizeEditorSubmitModel = (model = {}, editors = [], arrayGroups = []) => {
+            const output = isObject(model) ? clone(model) : {};
+
+            (Array.isArray(editors) ? editors : []).forEach((editorCfg) => {
+              const path = typeof editorCfg?.path === 'string' ? editorCfg.path.trim() : '';
+              const valueMode = typeof editorCfg?.valueMode === 'string'
+                ? editorCfg.valueMode.trim()
+                : 'html';
+              if (path === '' || valueMode !== 'html') {
+                return;
+              }
+
+              setByPath(output, path, normalizeEditorHtmlValue(getByPath(output, path)));
+            });
+
+            (Array.isArray(arrayGroups) ? arrayGroups : []).forEach((groupCfg) => {
+              const path = typeof groupCfg?.path === 'string' ? groupCfg.path.trim() : '';
+              if (path === '') {
+                return;
+              }
+
+              const rows = getByPath(output, path);
+              if (!Array.isArray(rows)) {
+                return;
+              }
+
+              setByPath(output, path, rows.map((row) => {
+                return isObject(row)
+                  ? normalizeEditorSubmitModel(row, groupCfg?.rowEditors || [], groupCfg?.rowArrayGroups || [])
+                  : row;
+              }));
+            });
+
+            return output;
+          };
           const findArrayGroupConfig = (arrayGroups = [], path = '') => {
             const target = typeof path === 'string' ? path.trim() : '';
             if (target === '') {
@@ -2565,6 +2612,7 @@
             normalizeArrayGroupRow,
             normalizeArrayGroupRows,
             normalizeDependencies,
+            normalizeEditorSubmitModel,
             normalizeOption,
             normalizePickerItem,
             normalizePickerItems,

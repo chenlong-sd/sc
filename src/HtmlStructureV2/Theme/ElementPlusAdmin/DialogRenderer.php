@@ -242,25 +242,40 @@ final class DialogRenderer
 
             return $filteredActions !== []
                 ? $filteredActions
-                : [Action::close('关闭')->dialog($dialog->key())];
+                : [$this->defaultCloseAction($dialog, '关闭')];
         }
 
         if ($form) {
             if ($formReadonly) {
                 return [
-                    Action::close('关闭')->dialog($dialog->key()),
+                    $this->defaultCloseAction($dialog, '关闭'),
                 ];
             }
 
             return [
-                Action::close('取消')->dialog($dialog->key()),
+                $this->defaultCloseAction($dialog, '取消'),
                 Actions::save()
+                    ->key($this->defaultFooterActionKey($dialog, 'save'))
+                    ->dialog($dialog->key())
+                    ->submitForm(FormScope::dialog($dialog->key())->value())
                     ->closeAfterSuccess()
                     ->reloadTable(),
             ];
         }
 
         return [];
+    }
+
+    private function defaultCloseAction(Dialog $dialog, string $label): Action
+    {
+        return Action::close($label)
+            ->key($this->defaultFooterActionKey($dialog, 'close'))
+            ->dialog($dialog->key());
+    }
+
+    private function defaultFooterActionKey(Dialog $dialog, string $name): string
+    {
+        return sprintf('sc_dialog_%s:%s', $name, $dialog->key());
     }
 
     /**

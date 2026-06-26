@@ -2,6 +2,8 @@
 
 namespace Sc\Util\HtmlStructureV2\Support;
 
+use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
+
 final class FormSchema
 {
     /**
@@ -38,6 +40,25 @@ final class FormSchema
             static fn(FormFieldSchema $fieldSchema) => $fieldSchema->path(),
             $this->fields
         );
+    }
+
+    public function editors(): array
+    {
+        return array_values(array_map(
+            static function (FormFieldSchema $fieldSchema): array {
+                /** @var EditorField $field */
+                $field = $fieldSchema->field();
+
+                return [
+                    'path' => $fieldSchema->path(),
+                    'valueMode' => $field->getValueMode(),
+                ];
+            },
+            array_filter(
+                $this->fields,
+                static fn(FormFieldSchema $fieldSchema): bool => $fieldSchema->field() instanceof EditorField
+            )
+        ));
     }
 
     public function defaults(): array

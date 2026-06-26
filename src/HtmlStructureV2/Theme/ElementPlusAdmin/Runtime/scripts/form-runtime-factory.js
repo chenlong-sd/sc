@@ -43,6 +43,7 @@
             makeRequest,
             normalizeArrayGroupRow,
             normalizeDependencies,
+            normalizeEditorSubmitModel,
             normalizeOption,
             normalizePickerItems,
             normalizeUploadFiles,
@@ -64,6 +65,7 @@
             validateForm: 'validateManagedForm',
             clearFormValidate: 'clearManagedFormValidate',
             getFormModel: 'getManagedFormModel',
+            cloneSubmitModel: 'cloneManagedFormSubmitModel',
             setFormModel: 'setManagedFormModel',
             initializeFormModel: 'initializeManagedFormModel',
             getFormPathStateValue: 'getFormPathStateValue',
@@ -224,6 +226,15 @@
                 formCfg?.arrayGroups || []
               )
             };
+          };
+          const cloneFormSubmitModel = (vm, scope) => {
+            const formCfg = (typeof getFormConfig === 'function' ? getFormConfig(scope, vm) : null) || {};
+
+            return normalizeEditorSubmitModel(
+              getFormModel(vm, scope) || {},
+              formCfg?.editors || [],
+              formCfg?.arrayGroups || []
+            );
           };
           const resolveUploadFileUrl = (uploadFile) => {
             const url = uploadFile?.url
@@ -841,6 +852,9 @@
             },
             [names.getFormModel](scope){
               return getFormModel(this, scope) || {};
+            },
+            [names.cloneSubmitModel](scope){
+              return cloneFormSubmitModel(this, scope);
             },
             [names.setFormModel](scope, values = {}){
               const { formCfg, nextModel } = buildNextFormModel(this, scope, values);

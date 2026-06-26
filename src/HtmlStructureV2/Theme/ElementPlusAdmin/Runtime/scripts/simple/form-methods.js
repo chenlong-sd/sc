@@ -30,6 +30,7 @@
               validateForm: 'validateSimpleForm',
               clearFormValidate: 'clearSimpleFormValidate',
               getFormModel: 'getSimpleFormModel',
+              cloneSubmitModel: 'cloneSimpleFormSubmitModel',
               setFormModel: 'setSimpleFormModel',
               initializeFormModel: 'initializeSimpleFormModel',
               setFormPathValue: 'setSimpleFormPathValue',

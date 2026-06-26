@@ -31,6 +31,7 @@
               validateForm: 'validateForm',
               clearFormValidate: 'clearFormValidate',
               getFormModel: 'getFormModel',
+              cloneSubmitModel: 'cloneFormSubmitModel',
               setFormModel: 'setFormModel',
               initializeFormModel: 'initializeFormModel',
               setFormPathValue: 'setFormPathValue',

@@ -107,6 +107,7 @@ final class FormRenderState
             'pickers' => $schema->pickers(),
             'pickerPaths' => $schema->pickerPaths(),
             'linkages' => $schema->linkages(),
+            'editors' => $schema->editors(),
             'uploads' => $schema->uploads(),
             'uploadPaths' => $schema->uploadPaths(),
             'modeQueryKey' => $form->getModeQueryKey(),

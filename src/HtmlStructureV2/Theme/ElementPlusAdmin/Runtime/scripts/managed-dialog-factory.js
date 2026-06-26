@@ -16,6 +16,7 @@
             isEventCanceled,
             isObject,
             makeRequest,
+            normalizeEditorSubmitModel,
             toDialogScope,
             resolveContextValue,
             resolveTitleTemplate,
@@ -417,9 +418,15 @@
               );
             },
             resolveDialogSubmitData(dialogKey){
-              return this.initializeDialogFormModel(
-                dialogKey,
-                this.dialogForms?.[dialogKey] || {}
+              const formCfg = this.getDialogFormConfig(dialogKey);
+
+              return normalizeEditorSubmitModel(
+                this.initializeDialogFormModel(
+                  dialogKey,
+                  this.dialogForms?.[dialogKey] || {}
+                ),
+                formCfg?.editors || [],
+                formCfg?.arrayGroups || []
               );
             },
             invokeDialogComponentMethod(dialogKey, methodName, context){
