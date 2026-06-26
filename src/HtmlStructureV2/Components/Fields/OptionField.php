@@ -261,7 +261,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * - `Fields::select('dept_id', '部门')->linkageUpdate('dept_name', '@label')`
+     * - Fields::select('dept_id', '部门')->linkageUpdate('dept_name', "@label")
      */
     public function linkageUpdate(string $targetField, string|JsExpression $valueTemplate = '@label'): static
     {
