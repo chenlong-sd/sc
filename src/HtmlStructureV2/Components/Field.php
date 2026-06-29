@@ -18,6 +18,7 @@ abstract class Field implements FormNode
     protected mixed $default = null;
     protected array $props = [];
     protected string $helpText = '';
+    protected bool $visible = true;
     protected bool $disabled = false;
     protected bool $readonly = false;
     protected array $suffixActions = [];
@@ -379,6 +380,25 @@ abstract class Field implements FormNode
     }
 
     /**
+     * 控制当前字段是否在 PHP 层生效。
+     *
+     * 不可见时字段不会参与渲染、表单 schema、默认值、校验规则、选项/上传/弹窗等收集；
+     * 适合权限、页面模式这类服务端已知条件。若需要根据表单 model 动态切换展示，请使用 visibleWhen()。
+     *
+     * @param bool $visible 是否显示并参与表单构建，默认值为 true。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * - `Fields::text('cost', '成本')->visible($canViewCost)`
+     */
+    public function visible(bool $visible = true): static
+    {
+        $this->visible = $visible;
+
+        return $this;
+    }
+
+    /**
      * 按条件控制字段显示，表达式上下文中的 model 指向当前表单数据。
      * 传入字符串时会按原样作为前端 JS 表达式注入，不会再包裹引号。
      * 在 object/arrayGroup/table 等子作用域中，`model` 会自动切到当前子模型。
@@ -516,6 +536,11 @@ abstract class Field implements FormNode
     public function isReadonly(): bool
     {
         return $this->readonly;
+    }
+
+    public function isVisible(): bool
+    {
+        return $this->visible;
     }
 
     public function getSuffixActions(): array

@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Support;
 
+use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 
@@ -19,6 +20,10 @@ final class FormNodeWalker
 
     public function visit(FormNode $node, callable $visitor): void
     {
+        if ($node instanceof Field && !$node->isVisible()) {
+            return;
+        }
+
         $visitor($node);
 
         foreach ($this->childrenOf($node) as $child) {

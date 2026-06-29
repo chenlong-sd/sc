@@ -1593,6 +1593,7 @@ Blocks::button('查看源数据')
 
 - 静态/远端选项：`options()` / `remoteOptions()`
 - 选项联动回填：`linkageUpdate()` / `linkageUpdates()`
+- PHP 层字段显示：`visible()`，不可见字段不会参与渲染、schema、默认值、校验和运行时配置收集
 - 显示/禁用/只读条件：`visibleWhen()` / `disabledWhen()` / `readonlyWhen()`
 - 结构化事件：`Events::*()`
 
@@ -1868,6 +1869,7 @@ JS);
 - 其余如 `select` / `radio` / `checkbox` / `cascader` / `upload` / `switch` / `picker` / `editor` 等会自动退化为 `disabled`
 - `Form::readonly()` 会把整表单切为只读，并自动关闭 array/table 的新增、删除、排序入口；筛选表单默认提交/重置按钮也会隐藏
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` 也支持 `readonly()`，只影响各自子树
+- 所有字段都支持 `visible($condition)` 做 PHP 层显示控制；条件不成立时字段会从渲染和表单 schema 中移除
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`

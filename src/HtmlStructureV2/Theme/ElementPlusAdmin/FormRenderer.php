@@ -113,6 +113,10 @@ final class FormRenderer
 
     private function renderNode(FormNode $node, FormNodeRenderContext $context): AbstractHtmlElement
     {
+        if ($node instanceof Field && !$node->isVisible()) {
+            return El::fictitious();
+        }
+
         $method = $this->resolveNodeRendererMethod($node);
         if ($method === null) {
             throw new InvalidArgumentException('Unsupported V2 form node: ' . $node::class);
@@ -503,7 +507,7 @@ final class FormRenderer
 
         if ($columnSchema->isField()) {
             $field = $columnSchema->field();
-            if ($field === null || $field->type() === FieldType::HIDDEN) {
+            if ($field === null || !$field->isVisible() || $field->type() === FieldType::HIDDEN) {
                 return El::fictitious();
             }
 
