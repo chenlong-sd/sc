@@ -16,7 +16,7 @@ final class Descriptions implements Renderable, EventAware
 
     private ?string $title = null;
     private int $columns = 3;
-    /** @var array<int, array{label:string, value:mixed}> */
+    /** @var array<int, DescriptionItem> */
     private array $items = [];
 
     /**
@@ -50,9 +50,24 @@ final class Descriptions implements Renderable, EventAware
     /**
      * 追加一项详情数据。
      */
-    public function item(string $label, mixed $value): self
+    public function item(string|DescriptionItem $label, mixed $value = null, array|callable|null $attributes = null): self
     {
-        $this->items[] = ['label' => $label, 'value' => $value];
+        if ($label instanceof DescriptionItem) {
+            $item = $label;
+            if ($attributes === null && (is_array($value) || is_callable($value))) {
+                $attributes = $value;
+            }
+        } else {
+            $item = DescriptionItem::make($label, $value);
+        }
+
+        if (is_array($attributes)) {
+            $this->applyItemAttributes($item, $attributes);
+        } elseif (is_callable($attributes)) {
+            $attributes($item);
+        }
+
+        $this->items[] = $item;
 
         return $this;
     }
@@ -84,5 +99,22 @@ final class Descriptions implements Renderable, EventAware
     public function getItems(): array
     {
         return $this->items;
+    }
+
+    private function applyItemAttributes(DescriptionItem $item, array $attributes): void
+    {
+        foreach ($attributes as $name => $value) {
+            if (!is_string($name)) {
+                continue;
+            }
+
+            if ($name === 'span') {
+                $item->span((int) $value);
+
+                continue;
+            }
+
+            $item->attr($name, $value);
+        }
     }
 }

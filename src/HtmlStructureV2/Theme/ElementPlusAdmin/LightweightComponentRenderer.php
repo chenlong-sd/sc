@@ -282,9 +282,12 @@ final class LightweightComponentRenderer
 
         foreach ($descriptions->getItems() as $item) {
             $element->append(
-                El::double('el-descriptions-item')
-                    ->setAttr('label', $item['label'])
-                    ->append((string) $item['value'])
+                $this->applyComponentRootAttributes(
+                    El::double('el-descriptions-item')
+                        ->setAttr('label', $item->getLabel())
+                        ->append((string) $item->getValue()),
+                    $item
+                )
             );
         }
 

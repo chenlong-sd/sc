@@ -29,6 +29,8 @@ abstract class Field implements FormNode
     protected ?string $labelWidth = null;
     protected ?array $searchConfig = null;
     protected bool $searchEnabled = true;
+    /** @var array<string, array<int, JsExpression>> */
+    protected array $eventHandlers = [];
 
     public function __construct(
         private readonly string $name,
@@ -178,6 +180,67 @@ abstract class Field implements FormNode
     public function style(?string $style): static
     {
         return $this->prop('style', $style);
+    }
+
+    /**
+     * 为字段底层表单组件绑定事件。
+     * 事件会直接绑定到最终渲染的 Element Plus / 自定义字段组件上，不作用于外层 el-form-item。
+     * handler 使用组件原生事件参数，例如 change 通常写成 `(value) => {}`，blur 通常写成 `(event) => {}`。
+     *
+     * handler 函数体内可以直接读取两个辅助变量：
+     * - `model`：当前字段所在的数据对象。普通表单里通常就是表单模型；
+     *   在 Forms::object()、Forms::table() 行内会变成当前子对象或当前行对象。
+     * - `form`：当前表单根模型，适合跨分组、跨行读取其他字段。
+     *
+     * 若字段内部也需要同名事件（例如 linkageUpdate 的 change），会自动与自定义事件串行执行。
+     * 旧写法 `attr("@change", '...')` / `prop("@change", '...')` 仍会原样绑定到底层组件；
+     * 新代码建议优先使用 on()，以获得 model/form 上下文和同名事件合并能力。
+     *
+     * @param string $event 事件名，可写 change / blur，也可写 @change / @update:model-value。
+     * @param string|JsExpression $handler 前端事件处理函数或方法引用。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * - `Fields::text('title', '标题')->on('change', "(value) => console.log(value, model.category_id, form.id)")`
+     */
+    public function on(string $event, string|JsExpression $handler): static
+    {
+        $event = ltrim(trim($event), '@');
+        if ($event === '') {
+            return $this;
+        }
+
+        $this->eventHandlers[$event] ??= [];
+        $this->eventHandlers[$event][] = $handler instanceof JsExpression
+            ? $handler
+            : JsExpression::make($handler);
+
+        return $this;
+    }
+
+    /**
+     * 批量绑定字段底层组件事件。
+     * 事件参数、model/form 上下文和同名事件合并规则与 on() 一致。
+     *
+     * @param array<string, string|JsExpression|array<int, string|JsExpression>> $events
+     * @return static 当前字段实例。
+     */
+    public function events(array $events): static
+    {
+        foreach ($events as $event => $handlers) {
+            if (!is_string($event)) {
+                continue;
+            }
+
+            $handlers = is_array($handlers) ? $handlers : [$handlers];
+            foreach ($handlers as $handler) {
+                if (is_string($handler) || $handler instanceof JsExpression) {
+                    $this->on($event, $handler);
+                }
+            }
+        }
+
+        return $this;
     }
 
     /**
@@ -516,6 +579,26 @@ abstract class Field implements FormNode
     public function getProps(): array
     {
         return $this->props;
+    }
+
+    public function getEventHandlers(?string $event = null): array
+    {
+        if ($event === null) {
+            return $this->eventHandlers;
+        }
+
+        $event = ltrim(trim($event), '@');
+
+        return $this->eventHandlers[$event] ?? [];
+    }
+
+    public function hasEventHandlers(?string $event = null): bool
+    {
+        if ($event === null) {
+            return $this->eventHandlers !== [];
+        }
+
+        return $this->getEventHandlers($event) !== [];
     }
 
     public function getSpan(): int

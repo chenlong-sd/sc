@@ -164,6 +164,8 @@ final class FieldRenderer
                 $readonlyWhen,
                 $formReadonly
             );
+            $this->applyFieldProps($component, $field);
+            $this->applyFieldEventHandlers($component, $field, $modelName, $options->formScope);
         } else {
             $usesExplicitModelBinding = $propExpression !== null;
             $component = $this->buildFieldComponent(
@@ -183,6 +185,7 @@ final class FieldRenderer
             $this->applyInteractivityState($component, $field, $disabledWhen, $readonlyWhen, $formReadonly);
             $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
             $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
+            $this->applyFieldEventHandlers($component, $field, $modelName, $options->formScope);
         }
 
         $item->append($this->wrapFieldControl($field, $component, $modelName, $options->formScope, $renderContext));
@@ -392,6 +395,9 @@ final class FieldRenderer
         $props = [];
 
         foreach ($field->getProps() as $attr => $value) {
+            if ($this->isComponentEventAttribute((string)$attr)) {
+                continue;
+            }
             if ($field->type() === FieldType::TEXTAREA && $attr === 'rows') {
                 continue;
             }
@@ -410,6 +416,182 @@ final class FieldRenderer
         }
 
         $this->applyRenderableAttributes($component, $props);
+    }
+
+    private function applyFieldEventHandlers(
+        AbstractHtmlElement $component,
+        Field $field,
+        string $modelName,
+        ?string $formScope = null
+    ): void
+    {
+        $propHandlersByEvent = [];
+        $fieldHandlersByEvent = [];
+
+        foreach ($field->getProps() as $attr => $value) {
+            if (!$this->isComponentEventAttribute((string)$attr)) {
+                continue;
+            }
+
+            $event = ltrim(trim((string)$attr), '@');
+            if ($event === '') {
+                continue;
+            }
+
+            $expression = $this->normalizeFieldEventHandlerExpression($value);
+            if ($expression !== null) {
+                $propHandlersByEvent[$event][] = $expression;
+            }
+        }
+
+        foreach ($field->getEventHandlers() as $event => $handlers) {
+            if (!is_string($event)) {
+                continue;
+            }
+
+            $event = ltrim(trim($event), '@');
+            if ($event === '') {
+                continue;
+            }
+
+            foreach ($handlers as $handler) {
+                $expression = $this->normalizeFieldEventHandlerExpression($handler);
+                if ($expression !== null) {
+                    $fieldHandlersByEvent[$event][] = $expression;
+                }
+            }
+        }
+
+        foreach (array_unique(array_merge(array_keys($propHandlersByEvent), array_keys($fieldHandlersByEvent))) as $event) {
+            $fieldHandlers = $fieldHandlersByEvent[$event] ?? [];
+            $propHandlers = $propHandlersByEvent[$event] ?? [];
+
+            $this->appendComponentEventHandlers(
+                $component,
+                '@' . $event,
+                array_merge($propHandlers, $fieldHandlers),
+                $modelName,
+                $formScope,
+                $fieldHandlers === [] && count($propHandlers) === 1
+            );
+        }
+    }
+
+    private function isComponentEventAttribute(string $attr): bool
+    {
+        return str_starts_with(trim($attr), '@');
+    }
+
+    private function normalizeFieldEventHandlerExpression(mixed $handler): ?string
+    {
+        if ($handler instanceof JsExpression) {
+            $handler = $handler->expression();
+        } elseif ($handler instanceof \Stringable) {
+            $handler = (string)$handler;
+        } elseif (!is_string($handler) && !is_int($handler)) {
+            return null;
+        }
+
+        $handler = trim((string)$handler);
+
+        return $handler === '' ? null : $handler;
+    }
+
+    /**
+     * @param array<int, string> $handlers
+     */
+    private function appendComponentEventHandlers(
+        AbstractHtmlElement $component,
+        string $eventAttr,
+        array $handlers,
+        string $modelName,
+        ?string $formScope = null,
+        bool $preserveRawSingleHandler = false
+    ): void
+    {
+        $eventAttr = '@' . ltrim(trim($eventAttr), '@');
+        if ($eventAttr === '@') {
+            return;
+        }
+
+        $expressions = [];
+        $existing = $component->getAttr($eventAttr);
+        if (is_string($existing) && trim($existing) !== '') {
+            $expressions[] = trim($existing);
+        }
+
+        foreach ($handlers as $handler) {
+            $handler = trim($handler);
+            if ($handler !== '') {
+                $expressions[] = $handler;
+            }
+        }
+
+        if ($expressions === []) {
+            return;
+        }
+
+        if ($preserveRawSingleHandler && count($expressions) === 1 && $existing === null) {
+            $component->setAttr($eventAttr, $expressions[0]);
+
+            return;
+        }
+
+        $component->setAttr($eventAttr, $this->composeComponentEventHandlers($expressions, $modelName, $formScope));
+    }
+
+    /**
+     * @param array<int, string> $handlers
+     */
+    private function composeComponentEventHandlers(array $handlers, string $modelName, ?string $formScope = null): string
+    {
+        $handlers = array_values(array_filter(
+            $handlers,
+            static fn(string $handler): bool => trim($handler) !== ''
+        ));
+
+        if ($handlers === []) {
+            return '';
+        }
+
+        $calls = [];
+        $modelExpression = trim($modelName) === '' ? '{}' : trim($modelName);
+        $formExpression = $this->fieldEventFormModelExpression($modelName, $formScope);
+        foreach ($handlers as $index => $handler) {
+            $calls[] = sprintf(
+                '(() => { const __scHandler%s = ((model, form) => (%s))(%s, %s); if (typeof __scHandler%s === "function") { return __scHandler%s(...args); } })();',
+                $index,
+                $handler,
+                $modelExpression,
+                $formExpression,
+                $index,
+                $index
+            );
+        }
+
+        return sprintf(
+            '(...args) => { const $event = args[0]; %s }',
+            implode(' ', $calls)
+        );
+    }
+
+    private function fieldEventFormModelExpression(string $modelName, ?string $formScope = null): string
+    {
+        $modelName = trim($modelName);
+        if ($modelName === '') {
+            $modelName = '{}';
+        }
+
+        if ($formScope === null || trim($formScope) === '') {
+            return $modelName;
+        }
+
+        return sprintf(
+            '(typeof getFormModel === "function" ? (getFormModel(%s) || %s) : %s)',
+            $this->jsValue($formScope),
+            $modelName,
+            $modelName
+        );
     }
 
     private function applyInteractivityState(
