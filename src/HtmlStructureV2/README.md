@@ -1260,7 +1260,7 @@ Actions::import('导入')
 - `importTemplateFileName('用户导入模板.xlsx')`: 设置“下载模板”的文件名；不带后缀也可以
 - `enableImportJson(false)`: 关闭 JSON 导入页签
 - `enableImportAiPrompt(false)`: 关闭 “复制 AI 提示词” 按钮
-- `importAiPromptText('请生成 10 条测试 JSON 数据...')`: 自定义 AI 提示词；不传时会按 `importColumns()` 自动生成
+- `importAiPromptText('请生成 10 条测试 JSON 数据...')`: 自定义 AI 提示词；不传时会优先按 `importColumns()` 自动生成，未配置导入列时使用通用提示词
 - `importColumnsFromForm($form, [...])`: 从 V2 表单自动推导顶层导入列，第二个参数可覆盖同名字段配置
 - `importColumnsFromPage($page, 'form-key', [...])`: 从 V2 页面中定位表单并自动推导；页面只有一个表单时可省略 form key
 - `importColumnsFromDialog($dialog, $iframePage, 'form-key', [...])`: 从 V2 dialog 推导；普通 form dialog 可直接传 dialog，iframe dialog 需显式补充子页 Form/Page 来源
@@ -1872,7 +1872,7 @@ JS);
 - 所有字段都支持 `visible($condition)` 做 PHP 层显示控制；条件不成立时字段会从渲染和表单 schema 中移除
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
-- `Fields::select()`、`Fields::radio()`、`Fields::checkbox()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
+- `Fields::select()`、`Fields::radio()`、`Fields::checkbox()`、`Fields::cascader()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`
 - `Fields::cascader()` 才暴露 `cascaderProps()`、`emitPath()`、`checkStrictly()`、`closeAfterSelection()`
 - `Fields::upload()`、`Fields::image()`、`Fields::video()` 才暴露上传相关方法
 - 上传字段值约定：单图字段存字符串路径；普通文件和多图字段存 `[{ uid, url, name, status }]`

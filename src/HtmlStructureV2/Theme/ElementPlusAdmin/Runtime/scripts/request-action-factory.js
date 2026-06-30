@@ -483,7 +483,11 @@
             const columns = normalizeImportColumnsForPayload(importConfig?.columns || {});
             const fields = Object.keys(columns);
             if (fields.length === 0) {
-              return '';
+              return [
+                '请生成10条可用于导入测试的JSON数据，返回JSON数组，每个元素是一个对象。',
+                '字段名请根据当前业务导入场景或模板语义自行选择，值要尽量接近真实后台数据。',
+                '只返回纯JSON，不要包含Markdown代码块或额外说明。'
+              ].join('\n');
             }
 
             const lines = ['请生成10条测试数据，返回JSON数组，每个元素是一个对象。字段说明如下：', ''];

@@ -202,10 +202,33 @@ final class FormSchemaWalker
             );
         }
 
-        return [
+        $normalized = [
             'updates' => $updates,
             'clearOnEmpty' => $config['clearOnEmpty'] ?? true,
         ];
+
+        if ($field instanceof CascaderField) {
+            $cascaderProps = $field->getCascaderProps();
+            $valueField = $this->normalizeCascaderPropName($cascaderProps['value'] ?? null);
+            $labelField = $this->normalizeCascaderPropName($cascaderProps['label'] ?? null);
+            $childrenField = $this->normalizeCascaderPropName($cascaderProps['children'] ?? null);
+            $disabledField = $this->normalizeCascaderPropName($cascaderProps['disabled'] ?? null);
+
+            if ($valueField !== null) {
+                $normalized['valueField'] = $valueField;
+            }
+            if ($labelField !== null) {
+                $normalized['labelField'] = $labelField;
+            }
+            if ($childrenField !== null) {
+                $normalized['childrenField'] = $childrenField;
+            }
+            if ($disabledField !== null) {
+                $normalized['disabledField'] = $disabledField;
+            }
+        }
+
+        return $normalized;
     }
 
     private function normalizeModelTokens(mixed $value, string $prefix): mixed

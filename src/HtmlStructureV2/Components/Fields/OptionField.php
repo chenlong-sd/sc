@@ -254,7 +254,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * - value: 当前选中值
      * - option: 当前命中的标准化选项对象
      * - model: 当前作用域下的表单模型
-     * 当前联动主要用于 select/radio 的 change 行为。
+     * 当前联动主要用于 select/radio/cascader 的 change 行为。
      *
      * @param string $targetField 要更新的目标字段路径。
      * @param string|JsExpression $valueTemplate 更新模板，默认值为 @label。

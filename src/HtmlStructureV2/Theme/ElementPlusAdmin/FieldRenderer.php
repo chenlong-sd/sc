@@ -571,11 +571,7 @@ final class FieldRenderer
             return;
         }
 
-        if (
-            in_array($field->type(), [FieldType::SELECT, FieldType::RADIO], true)
-            && $optionField->hasLinkageUpdates()
-            && $options->hasLinkageContext()
-        ) {
+        if ($this->supportsOptionLinkage($field) && $optionField->hasLinkageUpdates() && $options->hasLinkageContext()) {
             $component->setAttr(
                 '@change',
                 $fieldPathExpression === null
@@ -643,6 +639,11 @@ final class FieldRenderer
                 $this->applyCascaderCloseAfterSelection($component, $fieldPath, $fieldPathExpression);
             }
         }
+    }
+
+    private function supportsOptionLinkage(Field $field): bool
+    {
+        return in_array($field->type(), [FieldType::SELECT, FieldType::RADIO, FieldType::CASCADER], true);
     }
 
     private function applyCascaderCloseAfterSelection(

@@ -429,6 +429,12 @@ class Action implements
      */
     protected function hasForbiddenUrl(): bool
     {
+        return $this->hasActionForbiddenUrl()
+            || ($this->dialog !== null && $this->hasDialogForbiddenUrl($this->dialog));
+    }
+
+    protected function hasActionForbiddenUrl(): bool
+    {
         return match ($this->intent) {
             ActionIntent::DELETE => $this->isForbiddenUrl($this->deleteUrl),
             ActionIntent::SUBMIT, ActionIntent::CREATE, ActionIntent::EDIT => $this->isForbiddenUrl($this->saveUrl)
@@ -439,6 +445,34 @@ class Action implements
                 || $this->isForbiddenUrl($this->updateUrl)
                 || $this->isForbiddenUrl($this->deleteUrl),
         };
+    }
+
+    protected function hasDialogForbiddenUrl(Dialog $dialog): bool
+    {
+        $form = $dialog->getForm();
+        $save = $dialog->getSaveUrl();
+        $create = $dialog->getCreateUrl() ?? $form?->getSaveCreateUrl();
+        $update = $dialog->getUpdateUrl() ?? $form?->getSaveUpdateUrl();
+        $iframe = $dialog->getIframeUrl();
+
+        return match ($this->intent) {
+            ActionIntent::CREATE => $this->hasAnyForbiddenUrl($create, $save, $iframe),
+            ActionIntent::EDIT => $this->hasAnyForbiddenUrl($update, $save, $iframe),
+            ActionIntent::SUBMIT => $this->hasAnyForbiddenUrl($save, $create, $update, $iframe),
+            ActionIntent::CUSTOM => $this->hasAnyForbiddenUrl($save, $create, $update, $iframe),
+            default => false,
+        };
+    }
+
+    protected function hasAnyForbiddenUrl(?string ...$urls): bool
+    {
+        foreach ($urls as $url) {
+            if ($this->isForbiddenUrl($url)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function isForbiddenUrl(?string $url): bool

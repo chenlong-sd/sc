@@ -2076,7 +2076,16 @@
             const path = String(token || '').replace(/^@/, '');
             if (path === '') return '';
             if (path === 'value') return context.value;
-            if (path === 'label') return context.option?.label ?? '';
+            if (path === 'label') {
+              if (context.option?.label !== undefined) {
+                return context.option.label;
+              }
+
+              const labelField = typeof context.fieldCfg?.labelField === 'string' && context.fieldCfg.labelField !== ''
+                ? context.fieldCfg.labelField
+                : 'label';
+              return getByPath(context.option || {}, labelField) ?? '';
+            }
             if (path.startsWith('model.')) return getByPath(context.model, path.slice(6));
             if (path.startsWith('option.')) return getByPath(context.option, path.slice(7));
 

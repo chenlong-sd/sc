@@ -682,6 +682,41 @@
 
             return Object.assign({}, linkageConfig, { updates });
           };
+          const findOptionInTree = (options, value, fieldCfg = {}) => {
+            if (!Array.isArray(options)) {
+              return null;
+            }
+
+            const valueField = typeof fieldCfg?.valueField === 'string' && fieldCfg.valueField !== ''
+              ? fieldCfg.valueField
+              : 'value';
+            const childrenField = typeof fieldCfg?.childrenField === 'string' && fieldCfg.childrenField !== ''
+              ? fieldCfg.childrenField
+              : 'children';
+            const isPathValue = Array.isArray(value);
+            const targetValue = isPathValue ? value[value.length - 1] : value;
+
+            for (const option of options) {
+              if (!isObject(option)) {
+                continue;
+              }
+
+              const optionValue = option.value !== undefined ? option.value : getByPath(option, valueField);
+              if (isSameValue(optionValue, value) || (isPathValue && isSameValue(optionValue, targetValue))) {
+                return option;
+              }
+
+              const children = Array.isArray(option.children)
+                ? option.children
+                : (Array.isArray(getByPath(option, childrenField)) ? getByPath(option, childrenField) : []);
+              const matched = findOptionInTree(children, value, fieldCfg);
+              if (matched) {
+                return matched;
+              }
+            }
+
+            return null;
+          };
           const rebuildUploadFileState = (vm, scope) => {
             const model = vm[names.getFormModel](scope);
             const nextState = {};
@@ -1171,7 +1206,11 @@
               return nextFiles;
             },
             [names.setFieldOptions](scope, fieldName, options = []){
-              const fieldCfg = resolveOptionFieldConfig(this, scope, fieldName);
+              const fieldCfg = Object.assign(
+                {},
+                resolveOptionFieldConfig(this, scope, fieldName) || {},
+                linkCfg || {}
+              );
               const nextOptions = (Array.isArray(options) ? options : [])
                 .map((item, index) => normalizeOption(item, fieldCfg, index));
 
@@ -1227,8 +1266,12 @@
                 return;
               }
 
-              const option = this[names.getFieldOptions](scope, fieldName)
-                .find((item) => isSameValue(item?.value, currentValue));
+              const fieldCfg = resolveOptionFieldConfig(this, scope, fieldName);
+              const option = findOptionInTree(
+                this[names.getFieldOptions](scope, fieldName),
+                currentValue,
+                fieldCfg
+              );
               if (!option) {
                 return;
               }
@@ -1238,6 +1281,7 @@
                 fieldName,
                 value: currentValue,
                 option,
+                fieldCfg,
                 model
               };
 

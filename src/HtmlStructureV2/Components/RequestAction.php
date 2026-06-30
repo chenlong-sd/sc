@@ -607,7 +607,8 @@ final class RequestAction extends Action
 
     /**
      * 设置自定义 AI 测试数据提示词文本。
-     * 不传时会根据 `importColumns()` 自动生成提示词；如需关闭按钮，请调用 `enableImportAiPrompt(false)`。
+     * 不传时会优先根据 `importColumns()` 自动生成提示词；未配置导入列时使用通用提示词。
+     * 如需关闭按钮，请调用 `enableImportAiPrompt(false)`。
      *
      * @param string|null $prompt AI 提示词文本；传 null 表示使用默认自动生成内容。
      * @return static 当前请求动作实例。
