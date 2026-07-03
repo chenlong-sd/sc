@@ -7,6 +7,7 @@
             extractLoadData,
             extractPayload,
             ensureSuccess,
+            getByPath,
             getConfigState,
             initializeConfiguredForms,
             isObject,
@@ -23,6 +24,7 @@
             resolveContextValue,
             resolveMessage,
             resolvePageMode,
+            setByPath,
             setConfigState,
             startVideoUploadPreviewObserver,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
@@ -93,6 +95,45 @@
               const resolvedScope = resolvePublicFormScope(scope);
               return vm.getFormModel(resolvedScope) || {};
             };
+            const getState = (path = null, fallback = null) => {
+              if (typeof vm.getState === 'function') {
+                return vm.getState(path, fallback);
+              }
+
+              const root = vm.pageState || {};
+              if (path === null || path === undefined || String(path).trim() === '') {
+                return root;
+              }
+
+              const value = getByPath(root, path);
+              return value === undefined ? fallback : value;
+            };
+            const setState = (path, value) => {
+              if (typeof vm.setState === 'function') {
+                return vm.setState(path, value);
+              }
+
+              if (!isObject(vm.pageState)) {
+                vm.pageState = {};
+              }
+              setByPath(vm.pageState, path, value);
+
+              return value;
+            };
+            const getFormState = (scope = null, path = null, fallback = null) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              const formState = getState(`forms.${resolvedScope}`, {});
+              if (path === null || path === undefined || String(path).trim() === '') {
+                return formState;
+              }
+
+              const value = getByPath(formState, path);
+              return value === undefined ? fallback : value;
+            };
+            const setFormState = (scope, path, value) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              return setState(`forms.${resolvedScope}.${path}`, value);
+            };
             const isReadonly = (scope = null) => resolvePublicFormReadonly(scope);
             const cloneFormModel = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
@@ -139,6 +180,37 @@
 
               throw new Error('Current runtime does not expose public resetForm() support.');
             };
+            const setFieldOptions = (arg1, arg2 = undefined, arg3 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const options = hasExplicitScope ? arg3 : arg2;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.setFieldOptions === 'function') {
+                return vm.setFieldOptions(resolvedScope, fieldName, options);
+              }
+              if (typeof vm.setSimpleFieldOptions === 'function') {
+                return vm.setSimpleFieldOptions(resolvedScope, fieldName, options);
+              }
+
+              throw new Error('Current runtime does not expose public setFieldOptions() support.');
+            };
+            const getFieldOptions = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptions === 'function') {
+                return vm.getFieldOptions(resolvedScope, fieldName);
+              }
+              if (typeof vm.getSimpleFieldOptions === 'function') {
+                return vm.getSimpleFieldOptions(resolvedScope, fieldName);
+              }
+
+              return [];
+            };
             const validateForm = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return Promise.resolve(vm.validateForm(resolvedScope)).then((valid) => valid !== false);
@@ -156,6 +228,9 @@
               get query(){
                 return getPageQuery();
               },
+              get state(){
+                return getState();
+              },
               get mode(){
                 try {
                   return vm.resolveFormMode();
@@ -164,6 +239,10 @@
                 }
               },
               getPageQuery,
+              getState,
+              setState,
+              getFormState,
+              setFormState,
               resolvePageMode: (queryKey = null) => vm.resolvePageMode(queryKey),
               resolveFormScope: (scope = null) => resolvePublicFormScope(scope),
               resolveFormMode: (scope = null) => vm.resolveFormMode(resolvePublicFormScope(scope)),
@@ -181,6 +260,8 @@
               setFormModel,
               initializeFormModel,
               resetForm,
+              getFieldOptions,
+              setFieldOptions,
               loadFormData: (scope = null, force = false) => vm.loadFormData(resolvePublicFormScope(scope), force),
               submit,
               syncHostDialogSubmitState: (...args) => vm.syncHostDialogSubmitState(...args),
@@ -250,6 +331,7 @@
             data(){
               return Object.assign({
                 actionLoading: {},
+                pageState: {},
                 pageQuery: clone(initialPageQuery),
                 tableConfigs: cfg.tables || {},
                 tableStates: buildTableStates(cfg.tables),
@@ -298,6 +380,39 @@
               }),
               createSimpleFormMethods({ cfg }),
               {
+                getState(path = null, fallback = null){
+                  if (!isObject(this.pageState)) {
+                    this.pageState = {};
+                  }
+                  if (path === null || path === undefined || String(path).trim() === '') {
+                    return this.pageState;
+                  }
+
+                  const value = getByPath(this.pageState, path);
+                  return value === undefined ? fallback : value;
+                },
+                setState(path, value){
+                  if (!isObject(this.pageState)) {
+                    this.pageState = {};
+                  }
+                  setByPath(this.pageState, path, value);
+
+                  return value;
+                },
+                getFormState(scope = null, path = null, fallback = null){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const formState = this.getState(`forms.${resolvedScope}`, {});
+                  if (path === null || path === undefined || String(path).trim() === '') {
+                    return formState;
+                  }
+
+                  const value = getByPath(formState, path);
+                  return value === undefined ? fallback : value;
+                },
+                setFormState(scope, path, value){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  return this.setState(`forms.${resolvedScope}.${path}`, value);
+                },
                 getPageQuery(){
                   return clone(this.pageQuery || initialPageQuery);
                 },
@@ -588,6 +703,9 @@
                 },
                 getFormModel(scope){
                   return this.getSimpleFormModel(scope);
+                },
+                getFieldOptions(scope, fieldName){
+                  return this.getSimpleFieldOptions(scope, fieldName);
                 },
                 setFormModel(scope, values = {}){
                   return this.setSimpleFormModel(scope, values);

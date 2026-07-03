@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\Document;
+use Sc\Util\HtmlStructureV2\Support\FormPath;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdminTheme;
 
@@ -30,6 +31,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     private array $headerContent = [];
     private array $sections = [];
     private array $dialogs = [];
+    private array $state = [];
     private ?string $background = null;
     private ?ThemeInterface $renderTheme = null;
 
@@ -182,6 +184,42 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     }
 
     /**
+     * 设置页面级前端运行时 state。
+     * 数据会挂到 Vue 的 pageState 上，可被 optionsState()/computedOptions() 和 __SC_V2_PAGE__ API 读取或更新。
+     *
+     * @param string $path state 路径。
+     * @param mixed $value state 值。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * - `Pages::make('文章')->state('statusOptions', [...])`
+     */
+    public function state(string $path, mixed $value): static
+    {
+        $path = FormPath::normalize($path);
+        if ($path === '') {
+            return $this;
+        }
+
+        FormPath::set($this->state, $path, $value);
+
+        return $this;
+    }
+
+    /**
+     * 批量合并页面级前端运行时 state。
+     *
+     * @param array $state state 数据。
+     * @return static 当前页面实例。
+     */
+    public function states(array $state): static
+    {
+        $this->state = array_replace_recursive($this->state, $state);
+
+        return $this;
+    }
+
+    /**
      * 显式挂载页面级托管弹窗。
      *
      * @param Dialog ...$dialogs 页面级弹窗。
@@ -228,6 +266,11 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     public function getSections(): array
     {
         return $this->sections;
+    }
+
+    public function getState(): array
+    {
+        return $this->state;
     }
 
     public function getDialogs(): array

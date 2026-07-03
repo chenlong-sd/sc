@@ -22,6 +22,7 @@
             registerScV2Components,
             resolveMessage,
             resolvePageMode,
+            setByPath,
             startVideoUploadPreviewObserver,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const forms = cfg.forms || {};
@@ -56,6 +57,116 @@
               : '';
 
             return queryDialogKey !== '' ? queryDialogKey : null;
+          };
+          const knownFormScopes = () => Object.keys(forms || {});
+          const normalizeFormScope = (scope) => {
+            const normalized = typeof scope === 'string' ? scope.trim() : '';
+            return normalized !== '' ? normalized : null;
+          };
+          const resolvePublicFormScope = (scope = null) => {
+            const explicitScope = normalizeFormScope(scope);
+            if (explicitScope) {
+              if (forms?.[explicitScope]) {
+                return explicitScope;
+              }
+
+              throw new Error(`Unknown public form scope [${explicitScope}] requested by "__SC_V2_PAGE__".`);
+            }
+
+            const scopes = knownFormScopes();
+            if (scopes.length === 1) {
+              return scopes[0];
+            }
+            if (forms?.filter) {
+              return 'filter';
+            }
+
+            throw new Error('Current V2 list page cannot resolve a public form scope automatically; please pass an explicit form scope.');
+          };
+          const createPublicPageApi = (vm) => {
+            const getState = (path = null, fallback = null) => {
+              if (typeof vm.getState === 'function') {
+                return vm.getState(path, fallback);
+              }
+
+              const root = vm.pageState || {};
+              if (path === null || path === undefined || String(path).trim() === '') {
+                return root;
+              }
+
+              const value = getByPath(root, path);
+              return value === undefined ? fallback : value;
+            };
+            const setState = (path, value) => {
+              if (typeof vm.setState === 'function') {
+                return vm.setState(path, value);
+              }
+              if (!vm.pageState || typeof vm.pageState !== 'object' || Array.isArray(vm.pageState)) {
+                vm.pageState = {};
+              }
+
+              setByPath(vm.pageState, path, value);
+
+              return value;
+            };
+            const getFormState = (scope = null, path = null, fallback = null) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              const formState = getState(`forms.${resolvedScope}`, {});
+              if (path === null || path === undefined || String(path).trim() === '') {
+                return formState;
+              }
+
+              const value = getByPath(formState, path);
+              return value === undefined ? fallback : value;
+            };
+            const setFormState = (scope, path, value) => {
+              const resolvedScope = resolvePublicFormScope(scope);
+              return setState(`forms.${resolvedScope}.${path}`, value);
+            };
+            const setFieldOptions = (arg1, arg2 = undefined, arg3 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const options = hasExplicitScope ? arg3 : arg2;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.setFieldOptions === 'function') {
+                return vm.setFieldOptions(resolvedScope, fieldName, options);
+              }
+
+              throw new Error('Current runtime does not expose public setFieldOptions() support.');
+            };
+            const getFieldOptions = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptions === 'function') {
+                return vm.getFieldOptions(resolvedScope, fieldName);
+              }
+
+              return [];
+            };
+
+            return {
+              vm,
+              get state(){
+                return getState();
+              },
+              getState,
+              setState,
+              getFormState,
+              setFormState,
+              getFieldOptions,
+              setFieldOptions,
+              reloadList: (...args) => vm.reloadList(...args),
+              reloadTable: (...args) => vm.reloadTable(...args),
+              closeHostDialog: (...args) => vm.closeHostDialog(...args),
+              reloadHostTable: (...args) => vm.reloadHostTable(...args),
+              openHostDialog: (...args) => vm.openHostDialog(...args),
+              openHostTab: (...args) => vm.openHostTab(...args),
+            };
           };
 
           const pickTotal = (payload, depth = 0) => {
@@ -266,6 +377,7 @@
             data(){
               return Object.assign({
                 actionLoading: {},
+                pageState: {},
                 tableConfigs: tables,
                 tableStates: buildTableStates(tables),
                 ...buildManagedDialogRuntimeState(cfg.dialogs, forms),
@@ -304,6 +416,39 @@
               }),
               createListFormMethods({ cfg }),
               {
+                getState(path = null, fallback = null){
+                  if (!this.pageState || typeof this.pageState !== 'object' || Array.isArray(this.pageState)) {
+                    this.pageState = {};
+                  }
+                  if (path === null || path === undefined || String(path).trim() === '') {
+                    return this.pageState;
+                  }
+
+                  const value = getByPath(this.pageState, path);
+                  return value === undefined ? fallback : value;
+                },
+                setState(path, value){
+                  if (!this.pageState || typeof this.pageState !== 'object' || Array.isArray(this.pageState)) {
+                    this.pageState = {};
+                  }
+                  setByPath(this.pageState, path, value);
+
+                  return value;
+                },
+                getFormState(scope = null, path = null, fallback = null){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  const formState = this.getState(`forms.${resolvedScope}`, {});
+                  if (path === null || path === undefined || String(path).trim() === '') {
+                    return formState;
+                  }
+
+                  const value = getByPath(formState, path);
+                  return value === undefined ? fallback : value;
+                },
+                setFormState(scope, path, value){
+                  const resolvedScope = resolvePublicFormScope(scope);
+                  return this.setState(`forms.${resolvedScope}.${path}`, value);
+                },
                 validateSimpleForm(scope){
                   return this.validateForm(scope);
                 },
@@ -511,7 +656,8 @@
           registerElementPlusIcons(app);
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
-          app.mount('#app');
+          const vm = app.mount('#app');
+          globalThis.__SC_V2_PAGE__ = createPublicPageApi(vm);
           startVideoUploadPreviewObserver();
           hideAppLoadingShell();
         };

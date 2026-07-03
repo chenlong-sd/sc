@@ -80,6 +80,7 @@
             getRemoteOptionsMap: (scope) => getScopedFormConfig(scope)?.remoteOptions || {},
             getRemoteOptionPaths: (scope) => getScopedFormConfig(scope)?.remoteOptionPaths || [],
             getSelectOptionsMap: (scope) => getScopedFormConfig(scope)?.selectOptions || {},
+            getOptionSourcesMap: (scope) => getScopedFormConfig(scope)?.optionSources || {},
             getPickersMap: (scope) => getScopedFormConfig(scope)?.pickers || {},
             getPickerPaths: (scope) => getScopedFormConfig(scope)?.pickerPaths || [],
             getLinkagesMap: (scope) => getScopedFormConfig(scope)?.linkages || {},

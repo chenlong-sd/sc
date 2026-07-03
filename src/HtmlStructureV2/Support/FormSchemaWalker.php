@@ -26,6 +26,7 @@ final class FormSchemaWalker
     private array $rules = [];
     private array $remoteOptions = [];
     private array $selectOptions = [];
+    private array $optionSources = [];
     private array $pickers = [];
     private array $linkages = [];
     private array $uploads = [];
@@ -69,6 +70,7 @@ final class FormSchemaWalker
             rules: $this->rules,
             remoteOptions: $this->remoteOptions,
             selectOptions: $this->selectOptions,
+            optionSources: $this->optionSources,
             pickers: $this->pickers,
             linkages: $this->linkages,
             uploads: $this->uploads,
@@ -87,6 +89,7 @@ final class FormSchemaWalker
         $this->rules = [];
         $this->remoteOptions = [];
         $this->selectOptions = [];
+        $this->optionSources = [];
         $this->pickers = [];
         $this->linkages = [];
         $this->uploads = [];
@@ -114,6 +117,10 @@ final class FormSchemaWalker
 
         if ($field instanceof OptionField) {
             FormPath::set($this->selectOptions, $path, $field->getOptions());
+            $optionSource = $this->normalizeOptionSource($field);
+            if ($optionSource !== null) {
+                FormPath::set($this->optionSources, $path, $optionSource);
+            }
 
             if ($field->hasRemoteOptions()) {
                 $this->remoteOptionPaths[] = $path;
@@ -137,6 +144,36 @@ final class FormSchemaWalker
             $this->uploadPaths[] = $path;
             FormPath::set($this->uploads, $path, $field->getUpload());
         }
+    }
+
+    private function normalizeOptionSource(OptionField $field): ?array
+    {
+        if ($field->hasRemoteOptions()) {
+            return null;
+        }
+
+        if ($field->getOptionsStatePath() !== null) {
+            return [
+                'type' => 'state',
+                'path' => $field->getOptionsStatePath(),
+            ];
+        }
+
+        if ($field->getOptionsExpression() !== null) {
+            return [
+                'type' => 'expression',
+                'expression' => $field->getOptionsExpression()->expression(),
+            ];
+        }
+
+        if ($field->getComputedOptions() !== null) {
+            return [
+                'type' => 'computed',
+                'resolver' => $field->getComputedOptions()->expression(),
+            ];
+        }
+
+        return null;
     }
 
     private function collectArrayGroup(FormArrayGroup $group, FormNodePathContext $context): void

@@ -19,6 +19,9 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     protected ?array $remoteOptions = null;
     protected array $remoteOptionDependencies = [];
     protected bool $remoteOptionsClearOnChange = true;
+    protected ?string $optionsStatePath = null;
+    protected ?JsExpression $optionsExpression = null;
+    protected ?JsExpression $computedOptions = null;
     protected array $linkageUpdates = [];
     protected bool $linkageClearOnEmpty = true;
     protected bool $defaultedByMultiple = false;
@@ -46,6 +49,9 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     public function options(array $options): static
     {
         $this->options = [];
+        $this->optionsStatePath = null;
+        $this->optionsExpression = null;
+        $this->computedOptions = null;
 
         foreach ($options as $value => $label) {
             if (is_array($label) && array_key_exists('value', $label) && array_key_exists('label', $label)) {
@@ -58,6 +64,78 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
                 'label' => $label,
             ];
         }
+
+        return $this;
+    }
+
+    /**
+     * 使用页面运行时 state 中的数组作为选项源。
+     * path 会交给前端 getState(path, []) 读取，适合 `Pages::state()` / `__SC_V2_PAGE__.setState()` 维护的响应式数据。
+     *
+     * @param string $path 页面 state 路径，例如 statusOptions 或 forms.article-form.statusOptions。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::radio('status', '状态')->optionsState('statusOptions')`
+     */
+    public function optionsState(string $path): static
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return $this;
+        }
+
+        $this->optionsStatePath = $path;
+        $this->optionsExpression = null;
+        $this->computedOptions = null;
+
+        return $this;
+    }
+
+    /**
+     * 使用前端表达式作为选项源。
+     * 表达式应返回标准选项数组，适合直接绑定已有 Vue 响应式变量。
+     *
+     * @param string|JsExpression $expression 前端表达式，例如 `pageState.statusOptions`。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::radio('status')->optionsExpression('pageState.statusOptions')`
+     */
+    public function optionsExpression(string|JsExpression $expression): static
+    {
+        $expression = JsExpression::ensure($expression);
+        if (trim($expression->expression()) === '') {
+            return $this;
+        }
+
+        $this->optionsExpression = $expression;
+        $this->optionsStatePath = null;
+        $this->computedOptions = null;
+
+        return $this;
+    }
+
+    /**
+     * 使用前端计算函数动态返回选项。
+     * 函数会收到 context：model、form、state、pageState、scope、vm。
+     *
+     * @param string|JsExpression $resolver 返回选项数组的表达式或函数。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::radio('status')->computedOptions('({ model, state }) => model.type === 1 ? state.articleOptions : state.videoOptions')`
+     */
+    public function computedOptions(string|JsExpression $resolver): static
+    {
+        $resolver = JsExpression::ensure($resolver);
+        if (trim($resolver->expression()) === '') {
+            return $this;
+        }
+
+        $this->computedOptions = $resolver;
+        $this->optionsStatePath = null;
+        $this->optionsExpression = null;
 
         return $this;
     }
@@ -317,6 +395,21 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     public function getOptions(): array
     {
         return $this->options;
+    }
+
+    public function getOptionsStatePath(): ?string
+    {
+        return $this->optionsStatePath;
+    }
+
+    public function getOptionsExpression(): ?JsExpression
+    {
+        return $this->optionsExpression;
+    }
+
+    public function getComputedOptions(): ?JsExpression
+    {
+        return $this->computedOptions;
     }
 
     public function hasRemoteOptions(): bool

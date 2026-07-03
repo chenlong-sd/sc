@@ -16,6 +16,7 @@
           getRemoteOptionsMap,
           getRemoteOptionPaths,
           getSelectOptionsMap,
+          getOptionSourcesMap = () => ({}),
           getPickersMap,
           getPickerPaths,
           getLinkagesMap,
@@ -644,6 +645,142 @@
 
             return isObject(staticConfig) ? staticConfig : {};
           };
+          const resolveOptionSourceConfig = (vm, scope, fieldName) => {
+            const direct = getByPath(getOptionSourcesMap(scope, vm) || {}, fieldName);
+            if (direct !== undefined && direct !== null) {
+              return direct;
+            }
+
+            const context = resolveArrayGroupFieldContext(vm, scope, fieldName);
+            if (!context?.rowFieldPath) {
+              return null;
+            }
+
+            return getByPath(context.groupConfig?.rowOptionSources || {}, context.rowFieldPath) || null;
+          };
+          const readPageStateValue = (vm, path = null, fallback = null) => {
+            if (typeof vm?.getState === 'function') {
+              return vm.getState(path, fallback);
+            }
+
+            const root = vm?.pageState || {};
+            if (path === null || path === undefined || String(path).trim() === '') {
+              return root;
+            }
+
+            const value = getByPath(root, path);
+            return value === undefined ? fallback : value;
+          };
+          const writePageStateValue = (vm, path, value) => {
+            if (typeof vm?.setState === 'function') {
+              return vm.setState(path, value);
+            }
+
+            if (!isObject(vm.pageState)) {
+              vm.pageState = {};
+            }
+
+            setByPath(vm.pageState, path, value);
+
+            return value;
+          };
+          const resolveFieldLocalModel = (formModel, fieldName) => {
+            const segments = String(fieldName || '').split('.').filter((segment) => segment !== '');
+            if (segments.length <= 1) {
+              return formModel || {};
+            }
+
+            const parent = getByPath(formModel, segments.slice(0, -1).join('.'));
+            return (isObject(parent) || Array.isArray(parent)) ? parent : (formModel || {});
+          };
+          const buildOptionSourceContext = (vm, scope, fieldName) => {
+            const form = vm[names.getFormModel](scope) || {};
+            const state = readPageStateValue(vm, null, {});
+
+            return {
+              scope,
+              fieldName,
+              model: resolveFieldLocalModel(form, fieldName),
+              form,
+              state,
+              pageState: state,
+              vm,
+              getState: (path = null, fallback = null) => readPageStateValue(vm, path, fallback),
+              setState: (path, value) => writePageStateValue(vm, path, value)
+            };
+          };
+          const evaluateOptionSourceExpression = (vm, expression, context) => {
+            if (typeof expression !== 'string' || expression.trim() === '') {
+              return [];
+            }
+
+            return new Function('ctx', `
+              const model = ctx.model;
+              const form = ctx.form;
+              const state = ctx.state;
+              const pageState = ctx.pageState;
+              const scope = ctx.scope;
+              const fieldName = ctx.fieldName;
+              const vm = ctx.vm;
+              const getState = ctx.getState;
+              const setState = ctx.setState;
+              with (vm || {}) {
+                return (${expression});
+              }
+            `).call(vm, context);
+          };
+          const evaluateComputedOptionSource = (vm, resolver, context) => {
+            if (typeof resolver !== 'string' || resolver.trim() === '') {
+              return [];
+            }
+
+            return new Function('ctx', `
+              const model = ctx.model;
+              const form = ctx.form;
+              const state = ctx.state;
+              const pageState = ctx.pageState;
+              const scope = ctx.scope;
+              const fieldName = ctx.fieldName;
+              const vm = ctx.vm;
+              const getState = ctx.getState;
+              const setState = ctx.setState;
+              with (vm || {}) {
+                const __scOptionsValue = (${resolver});
+                return typeof __scOptionsValue === "function" ? __scOptionsValue(ctx) : __scOptionsValue;
+              }
+            `).call(vm, context);
+          };
+          const resolveOptionSourceOptions = (vm, scope, fieldName, fieldCfg = {}) => {
+            const sourceCfg = resolveOptionSourceConfig(vm, scope, fieldName);
+            if (!sourceCfg?.type) {
+              return null;
+            }
+
+            let rawOptions = [];
+            try {
+              if (sourceCfg.type === 'state') {
+                rawOptions = readPageStateValue(vm, sourceCfg.path, []);
+              } else if (sourceCfg.type === 'expression') {
+                rawOptions = evaluateOptionSourceExpression(
+                  vm,
+                  sourceCfg.expression,
+                  buildOptionSourceContext(vm, scope, fieldName)
+                );
+              } else if (sourceCfg.type === 'computed') {
+                rawOptions = evaluateComputedOptionSource(
+                  vm,
+                  sourceCfg.resolver,
+                  buildOptionSourceContext(vm, scope, fieldName)
+                );
+              }
+            } catch (error) {
+              console.error('[sc-v2] dynamic option source failed', error, sourceCfg);
+              rawOptions = [];
+            }
+
+            return (Array.isArray(rawOptions) ? rawOptions : [])
+              .map((item, index) => normalizeOption(item, fieldCfg, index));
+          };
           const contextualizeArrayRowLinkageTemplate = (template, arrayPath, rowIndex) => {
             if (typeof template !== 'string') {
               return template;
@@ -1206,13 +1343,17 @@
               return nextFiles;
             },
             [names.setFieldOptions](scope, fieldName, options = []){
+              const sourceCfg = resolveOptionSourceConfig(this, scope, fieldName);
               const fieldCfg = Object.assign(
                 {},
-                resolveOptionFieldConfig(this, scope, fieldName) || {},
-                linkCfg || {}
+                resolveOptionFieldConfig(this, scope, fieldName) || {}
               );
               const nextOptions = (Array.isArray(options) ? options : [])
                 .map((item, index) => normalizeOption(item, fieldCfg, index));
+
+              if (sourceCfg?.type === 'state' && typeof sourceCfg.path === 'string' && sourceCfg.path.trim() !== '') {
+                writePageStateValue(this, sourceCfg.path, nextOptions);
+              }
 
               setByPath(this[names.getOptionState](scope), fieldName, nextOptions);
               setByPath(this[names.getOptionLoadingState](scope), fieldName, false);
@@ -1221,7 +1362,29 @@
               return nextOptions;
             },
             [names.getFieldOptions](scope, fieldName){
+              const sourceCfg = resolveOptionSourceConfig(this, scope, fieldName);
+              const fieldCfg = resolveOptionFieldConfig(this, scope, fieldName) || {};
               const stateOptions = getByPath(this[names.getOptionState](scope), fieldName);
+              const isManuallyLoaded = getByPath(this[names.getOptionLoadedState](scope), fieldName) === true;
+
+              if (sourceCfg?.type === 'state') {
+                const sourceOptions = resolveOptionSourceOptions(this, scope, fieldName, fieldCfg);
+                if (Array.isArray(sourceOptions)) {
+                  return sourceOptions;
+                }
+              }
+
+              if (sourceCfg && isManuallyLoaded && Array.isArray(stateOptions)) {
+                return stateOptions;
+              }
+
+              if (sourceCfg) {
+                const sourceOptions = resolveOptionSourceOptions(this, scope, fieldName, fieldCfg);
+                if (Array.isArray(sourceOptions)) {
+                  return sourceOptions;
+                }
+              }
+
               if (Array.isArray(stateOptions)) {
                 return stateOptions;
               }

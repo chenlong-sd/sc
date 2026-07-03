@@ -50,6 +50,13 @@ final class FormRenderState
         // $this->putRuntimeStateValue($state, $this->rules, $this->rulesPath, $schema->rules());
 
         $this->putRuntimeStateValue($state, $this->optionState, $this->optionStatePath, $this->buildInitialOptionState($schema));
+        if ($form->getState() !== []) {
+            $this->putRuntimeStateValue($state, 'pageState', null, [
+                'forms' => [
+                    $this->scope->value() => $form->getState(),
+                ],
+            ]);
+        }
         $this->putRuntimeStateValue(
             $state,
             $this->optionLoading,
@@ -104,6 +111,7 @@ final class FormRenderState
             'remoteOptions' => $schema->remoteOptions(),
             'remoteOptionPaths' => $schema->remoteOptionPaths(),
             'selectOptions' => $schema->selectOptions(),
+            'optionSources' => $schema->optionSources(),
             'pickers' => $schema->pickers(),
             'pickerPaths' => $schema->pickerPaths(),
             'linkages' => $schema->linkages(),

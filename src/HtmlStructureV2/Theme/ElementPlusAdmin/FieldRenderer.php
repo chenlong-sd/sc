@@ -183,7 +183,7 @@ final class FieldRenderer
 
             $this->applyFieldProps($component, $field);
             $this->applyInteractivityState($component, $field, $disabledWhen, $readonlyWhen, $formReadonly);
-            $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression);
+            $this->applyOptionFieldBehavior($component, $field, $fieldPath, $optionField, $hasRemoteOptions, $options, $propExpression, $modelName);
             $this->applyUploadFieldBehavior($component, $fieldPath, $field, $uploadField, $options, $propExpression);
             $this->applyFieldEventHandlers($component, $field, $modelName, $options->formScope);
         }
@@ -747,7 +747,8 @@ final class FieldRenderer
         ?OptionField $optionField,
         bool $hasRemoteOptions,
         FormRenderOptions $options,
-        ?string $fieldPathExpression = null
+        ?string $fieldPathExpression = null,
+        string $modelName = ''
     ): void {
         if ($optionField === null) {
             return;
@@ -762,11 +763,13 @@ final class FieldRenderer
             );
         }
 
-        $optionsExpression = $options->hasOptionStateContext()
-            ? ($fieldPathExpression === null
-                ? $options->optionExpression($fieldPath)
-                : $options->optionExpressionByPathExpression($fieldPathExpression))
-            : null;
+        $optionsExpression = $this->resolveOptionItemsExpression(
+            $optionField,
+            $fieldPath,
+            $options,
+            $fieldPathExpression,
+            $modelName
+        );
 
         if ($field->type() === FieldType::SELECT) {
             if ($hasRemoteOptions) {
@@ -826,6 +829,70 @@ final class FieldRenderer
     private function supportsOptionLinkage(Field $field): bool
     {
         return in_array($field->type(), [FieldType::SELECT, FieldType::RADIO, FieldType::CASCADER], true);
+    }
+
+    private function resolveOptionItemsExpression(
+        OptionField $field,
+        string $fieldPath,
+        FormRenderOptions $options,
+        ?string $fieldPathExpression,
+        string $modelName
+    ): ?string {
+        if ($options->hasFieldOptionsContext()) {
+            return $fieldPathExpression === null
+                ? $options->fieldOptionsExpression($fieldPath)
+                : $options->fieldOptionsExpressionByPathExpression($fieldPathExpression);
+        }
+
+        if ($field->hasRemoteOptions() && $options->hasOptionStateContext()) {
+            return $fieldPathExpression === null
+                ? $options->optionExpression($fieldPath)
+                : $options->optionExpressionByPathExpression($fieldPathExpression);
+        }
+
+        if ($field->getOptionsExpression() !== null) {
+            return $field->getOptionsExpression()->expression();
+        }
+
+        if ($field->getOptionsStatePath() !== null) {
+            return sprintf(
+                '(typeof getState === "function" ? getState(%s, []) : [])',
+                $this->jsValue($field->getOptionsStatePath())
+            );
+        }
+
+        if ($field->getComputedOptions() !== null) {
+            return $this->buildComputedOptionsExpression(
+                $field->getComputedOptions()->expression(),
+                $modelName,
+                $options->formScope
+            );
+        }
+
+        if ($options->hasOptionStateContext()) {
+            return $fieldPathExpression === null
+                ? $options->optionExpression($fieldPath)
+                : $options->optionExpressionByPathExpression($fieldPathExpression);
+        }
+
+        return null;
+    }
+
+    private function buildComputedOptionsExpression(string $resolver, string $modelName, ?string $formScope): string
+    {
+        $modelExpression = trim($modelName) === '' ? '{}' : trim($modelName);
+        $formExpression = $this->fieldEventFormModelExpression($modelName, $formScope);
+        $scopeExpression = $formScope === null || trim($formScope) === ''
+            ? 'null'
+            : $this->jsValue($formScope);
+
+        return sprintf(
+            '(() => { const __scOptionsValue = (%s); const __scState = typeof getState === "function" ? getState() : {}; const __scVm = typeof $root !== "undefined" ? $root : (globalThis.__SC_V2_PAGE__?.vm ?? null); const __scCtx = { model: %s, form: %s, state: __scState, pageState: __scState, scope: %s, vm: __scVm }; const __scResolved = typeof __scOptionsValue === "function" ? __scOptionsValue(__scCtx) : __scOptionsValue; return Array.isArray(__scResolved) ? __scResolved : []; })()',
+            trim($resolver),
+            $modelExpression,
+            $formExpression,
+            $scopeExpression
+        );
     }
 
     private function applyCascaderCloseAfterSelection(

@@ -19,6 +19,7 @@ final class FormSchema
         private readonly array $rules = [],
         private readonly array $remoteOptions = [],
         private readonly array $selectOptions = [],
+        private readonly array $optionSources = [],
         private readonly array $pickers = [],
         private readonly array $linkages = [],
         private readonly array $uploads = [],
@@ -89,6 +90,11 @@ final class FormSchema
     public function selectOptions(): array
     {
         return $this->selectOptions;
+    }
+
+    public function optionSources(): array
+    {
+        return $this->optionSources;
     }
 
     public function pickers(): array

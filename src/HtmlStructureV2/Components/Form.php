@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Support\AutoKey;
+use Sc\Util\HtmlStructureV2\Support\FormPath;
 use Sc\Util\HtmlStructureV2\Support\FormSchema;
 use Sc\Util\HtmlStructureV2\Support\FormSchemaWalker;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -65,6 +66,7 @@ final class Form implements Renderable, EventAware
     private ?string $saveSuccessMessage = null;
     private ?string $saveErrorMessage = null;
     private ?array $initialData = null;
+    private array $state = [];
 
     private readonly string $key;
 
@@ -409,6 +411,42 @@ final class Form implements Renderable, EventAware
     }
 
     /**
+     * 设置当前表单专属的前端运行时 state。
+     * 数据会挂到 pageState.forms.{scope} 下，供 optionsState()/computedOptions() 或事件读取。
+     *
+     * @param string $path state 路径。
+     * @param mixed $value state 值。
+     * @return self 当前表单实例。
+     *
+     * 示例：
+     * - `Forms::make('article-form')->state('statusOptions', [...])`
+     */
+    public function state(string $path, mixed $value): self
+    {
+        $path = FormPath::normalize($path);
+        if ($path === '') {
+            return $this;
+        }
+
+        FormPath::set($this->state, $path, $value);
+
+        return $this;
+    }
+
+    /**
+     * 批量合并当前表单的前端运行时 state。
+     *
+     * @param array $state state 数据。
+     * @return self 当前表单实例。
+     */
+    public function states(array $state): self
+    {
+        $this->state = array_replace_recursive($this->state, $state);
+
+        return $this;
+    }
+
+    /**
      * 设置表单提交请求方法，默认值为 post。
      *
      * @param string $method 请求方法，默认值为 post。
@@ -675,6 +713,11 @@ final class Form implements Renderable, EventAware
     public function initialData(): array
     {
         return $this->schema()->initializeData($this->initialData ?? []);
+    }
+
+    public function getState(): array
+    {
+        return $this->state;
     }
 
     public function rules(): array

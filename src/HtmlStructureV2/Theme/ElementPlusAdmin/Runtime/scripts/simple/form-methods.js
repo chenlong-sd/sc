@@ -79,6 +79,7 @@
             getRemoteOptionsMap: (scope) => getFormConfig(scope)?.remoteOptions || {},
             getRemoteOptionPaths: (scope) => getFormConfig(scope)?.remoteOptionPaths || [],
             getSelectOptionsMap: (scope) => getFormConfig(scope)?.selectOptions || {},
+            getOptionSourcesMap: (scope) => getFormConfig(scope)?.optionSources || {},
             getPickersMap: (scope) => getFormConfig(scope)?.pickers || {},
             getPickerPaths: (scope) => getFormConfig(scope)?.pickerPaths || [],
             getLinkagesMap: (scope) => getFormConfig(scope)?.linkages || {},

@@ -36,6 +36,17 @@ final class PageRuntimeRegistry
         ));
     }
 
+    public function mergePageState(array $state): void
+    {
+        if ($state === []) {
+            return;
+        }
+
+        $this->mergeSimpleState([
+            'pageState' => $state,
+        ]);
+    }
+
     public function mergeSimpleConfig(array $config): void
     {
         $current = $this->context->get(self::SIMPLE_CONFIG, []);
