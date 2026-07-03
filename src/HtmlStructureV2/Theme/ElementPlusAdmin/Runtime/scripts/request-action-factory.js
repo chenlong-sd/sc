@@ -233,16 +233,30 @@
               throw new Error('Excel 文件解析失败');
             }
 
-            const rawHeaderRow = Number(importConfig?.headerRow || 1);
-            const headerRow = Number.isFinite(rawHeaderRow) && rawHeaderRow > 0
-              ? Math.floor(rawHeaderRow)
-              : 1;
-            const aoa = xlsx.utils.sheet_to_json(worksheet, {
+            const rawAoa = xlsx.utils.sheet_to_json(worksheet, {
               header: 1,
               defval: '',
               raw: false,
               blankrows: false,
             });
+            const detectDescriptionRow = (rows) => {
+              return Array.isArray(rows) && rows.some((row) => {
+                return Array.isArray(row) && row.some((cell) => {
+                  const s = String(cell || "").trim();
+                  return s.includes("可选值") || s.includes("必填") || s.includes("最少") || s.includes("最多");
+                });
+              });
+            };
+            const rawHeaderRow = Number(importConfig?.headerRow || 1);
+            let headerRow = Number.isFinite(rawHeaderRow) && rawHeaderRow > 0
+              ? Math.floor(rawHeaderRow)
+              : 1;
+            if (headerRow <= 1 && detectDescriptionRow(rawAoa)) {
+              headerRow = 2;
+            } else if (headerRow >= 2 && !detectDescriptionRow(rawAoa)) {
+              headerRow = 1;
+            }
+            const aoa = rawAoa;
             const normalizedRows = Array.isArray(aoa)
               ? aoa.map((row) => Array.isArray(row) ? row.map((cell) => normalizeImportCellValue(cell)) : [])
               : [];
@@ -449,30 +463,62 @@
             if (normalized === '') {
               normalized = '导入模板';
             }
+            if (!/模板/.test(normalized)) {
+              normalized = normalized.replace(/\.xlsx$/i, '') + '模板';
+            }
             if (!/\.xlsx$/i.test(normalized)) {
               normalized += '.xlsx';
             }
 
             return normalized;
           };
-          const downloadImportTemplate = (importConfig = {}, fallbackTitle = '导入') => {
-            const xlsx = globalThis.XLSX || (typeof window !== 'undefined' ? window?.XLSX : null);
-            if (!xlsx?.utils || typeof xlsx.writeFile !== 'function') {
-              throw new Error('当前页面未加载 Excel 导出库');
+          const buildImportColumnDescriptionText = (column = {}) => {
+            const customDescription = typeof column.description === "string" ? column.description.trim() : "";
+            const options = Array.isArray(column.options) ? column.options : null;
+            const parts = [];
+            if (options && options.length > 0) {
+              const items = options.map((opt) => {
+                const label = isObject(opt) ? (opt.label ?? opt.value ?? "") : String(opt ?? "");
+                const value = isObject(opt) ? (opt.value ?? opt.label ?? "") : String(opt ?? "");
+                return String(label);
+              });
+              parts.push(`可选值: ${items.join(", ")}`);
+            }
+            if (customDescription !== "") {
+              parts.push(customDescription);
+            }
+            return parts.join("; ");
+          };
+          const downloadImportTemplate = (importConfig = {}, fallbackTitle = "导入") => {
+            const xlsx = globalThis.XLSX || (typeof window !== "undefined" ? window?.XLSX : null);
+            if (!xlsx?.utils || typeof xlsx.writeFile !== "function") {
+              throw new Error("当前页面未加载 Excel 导出库");
             }
 
             const columns = normalizeImportColumns(importConfig?.columns || {});
-            const headers = Object.keys(columns).map((field) => columns[field]?.title || field);
-            const worksheet = xlsx.utils.aoa_to_sheet([headers]);
-            worksheet['!cols'] = headers.map((header) => ({
-              wch: Math.max(String(header || '').length * 2.5, 12),
-            }));
+            const fields = Object.keys(columns);
+            const headers = fields.map((field) => columns[field]?.title || field);
+            const descriptions = fields.map((field) => buildImportColumnDescriptionText(columns[field] || {}));
+
+            const aoa = [descriptions, headers];
+            const worksheet = xlsx.utils.aoa_to_sheet(aoa);
+
+            worksheet["!cols"] = headers.map((header, index) => {
+              const headerWidth = Math.max(String(header || "").length * 2.5, 12);
+              const descWidth = Math.max(String(descriptions[index] || "").length * 1.5, 0);
+              return { wch: Math.max(headerWidth, descWidth) };
+            });
+
+            const hasAnyDescription = descriptions.some((t) => t !== "");
+            worksheet["!rows"] = hasAnyDescription
+              ? [{ hpt: 28 }, { hpt: 20 }]
+              : [];
 
             const workbook = xlsx.utils.book_new();
-            xlsx.utils.book_append_sheet(workbook, worksheet, 'sheet1');
+            xlsx.utils.book_append_sheet(workbook, worksheet, "sheet1");
             xlsx.writeFile(
               workbook,
-              normalizeImportTemplateFileName(importConfig?.templateFileName, fallbackTitle || document.title || '导入模板')
+              normalizeImportTemplateFileName(importConfig?.templateFileName, fallbackTitle || document.title || "导入模板")
             );
           };
           const buildImportAiPromptText = (importConfig = {}) => {

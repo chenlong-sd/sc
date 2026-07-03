@@ -138,17 +138,20 @@ final class ImportColumnResolver
         return $columns;
     }
 
-    private function buildColumnForField(Field $field): array|string|null
+    private function buildColumnForField(Field $field): ?array
     {
         if (!$this->isImportableField($field)) {
             return null;
         }
 
         $title = $field->hasLabel() ? $field->label() : $field->name();
+        $description = $this->generateFieldDescription($field);
+
         if ($field instanceof OptionField && $field->getOptions() !== []) {
             return [
                 'title' => $title,
                 'options' => $this->normalizeOptions($field->getOptions()),
+                'description' => $description,
             ];
         }
 
@@ -158,11 +161,41 @@ final class ImportColumnResolver
                 return [
                     'title' => $title,
                     'options' => $switchOptions,
+                    'description' => $description,
                 ];
             }
         }
 
-        return $title;
+        return [
+            'title' => $title,
+            'description' => $description,
+        ];
+    }
+
+    private function generateFieldDescription(Field $field): string
+    {
+        $parts = [];
+
+        if ($field->isRequired()) {
+            $parts[] = '必填';
+        }
+
+        $rules = $field->getRules();
+        foreach ($rules as $rule) {
+            if (is_array($rule)) {
+                if (isset($rule['min'])) {
+                    $parts[] = '最少' . $rule['min'] . '字';
+                }
+                if (isset($rule['max'])) {
+                    $parts[] = '最多' . $rule['max'] . '字';
+                }
+                if (isset($rule['type']) && in_array($rule['type'], ['number', 'integer', 'float'], true)) {
+                    $parts[] = '数值';
+                }
+            }
+        }
+
+        return implode('，', $parts);
     }
 
     private function isImportableField(Field $field): bool

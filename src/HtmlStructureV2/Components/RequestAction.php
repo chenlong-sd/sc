@@ -358,7 +358,13 @@ final class RequestAction extends Action
      * 支持写法：
      * - `['name' => '名称']`
      * - `['sex' => ['title' => '性别', 'options' => [1 => '男', 2 => '女']]]`
+     * - `['status' => ['title' => '状态', 'description' => '0=停用，1=启用']]`
      * - `['status' => ['title' => '状态', 'ai_data' => ['正常', '停用']]]`
+     *
+     * 下载模板时，每个字段会在表头上方自动生成说明行：
+     * - 有 `options` 的字段会显示"可选值: ..."
+     * - 有 `description` 的字段会显示自定义说明文字
+     * - `ImportColumnResolver` 从表单推导时，会自动附带"必填"等校验说明
      *
      * @param array $columns 导入字段配置。
      * @return static 当前请求动作实例。
@@ -515,13 +521,13 @@ final class RequestAction extends Action
 
     /**
      * 设置 Excel 表头所在的行号，按 1 开始计数。
-     * 默认值为 1，表示第一行是表头。
+     * 默认值为 1。下载模板时若含有字段说明行，前端会自动使用 headerRow + 1 解析。
      *
      * @param int $row 表头行号，最小值为 1。
      * @return static 当前请求动作实例。
      *
      * 示例：
-     * - `RequestAction::make('导入')->importHeaderRow(2)`
+     * - `RequestAction::make('导入')->importHeaderRow(2)` // 手动指定模板有额外行时
      */
     public function importHeaderRow(int $row = 1): static
     {
@@ -950,7 +956,7 @@ JS);
 
     public function getRequestUrl(): ?string
     {
-        return $this->requestUrl;
+        return $this->normalizeImportPostUrl($this->requestUrl);
     }
 
     protected function hasForbiddenUrl(): bool
@@ -1138,5 +1144,37 @@ JS);
         $scope = is_string($scope) ? trim($scope) : null;
 
         return $scope !== '' ? $scope : null;
+    }
+
+    private function normalizeImportPostUrl(?string $url): ?string
+    {
+        if (!$this->importEnabled || $url === null || $url === '' || $this->requestMethod !== 'post') {
+            return $url;
+        }
+
+        return self::appendImportQueryIfMissing($url);
+    }
+
+    private static function appendImportQueryIfMissing(string $url): string
+    {
+        $fragment = '';
+        $baseUrl = $url;
+        $fragmentPosition = strpos($url, '#');
+        if ($fragmentPosition !== false) {
+            $baseUrl = substr($url, 0, $fragmentPosition);
+            $fragment = substr($url, $fragmentPosition);
+        }
+
+        $queryPosition = strpos($baseUrl, '?');
+        $query = $queryPosition === false ? '' : substr($baseUrl, $queryPosition + 1);
+        if ($query !== '' && preg_match('/(?:^|&)import(?:=|&|$)/', $query) === 1) {
+            return $url;
+        }
+
+        $separator = $queryPosition === false
+            ? '?'
+            : (str_ends_with($baseUrl, '?') || str_ends_with($baseUrl, '&') ? '' : '&');
+
+        return $baseUrl . $separator . 'import=1' . $fragment;
     }
 }

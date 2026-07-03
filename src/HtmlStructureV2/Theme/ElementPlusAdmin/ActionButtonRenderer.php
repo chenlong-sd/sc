@@ -311,7 +311,7 @@ final class ActionButtonRenderer
                 'rowsKey' => $action->getImportRowsKey(),
                 'columnInfoKey' => $action->getImportColumnInfoKey(),
                 'accept' => $action->getImportAccept(),
-                'headerRow' => $action->getImportHeaderRow(),
+                'headerRow' => max(2, $action->getImportHeaderRow()),
                 'dialogTitle' => $action->getImportDialogTitle(),
                 'templateFileName' => $action->getImportTemplateFileName(),
                 'jsonEnabled' => $action->isImportJsonEnabled(),
