@@ -552,7 +552,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * - `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => ‘@row.id’])`
+     * - `Dialogs::make('qa-info-dialog', '选择题库')->iframe('/admin/qa-bank/lists', ['id' => "@row.id"])`
      */
     public function iframe(string $url, array|string|JsExpression $query = []): self
     {
