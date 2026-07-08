@@ -70,13 +70,24 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
 
     /**
      * 使用页面运行时 state 中的数组作为选项源。
-     * path 会交给前端 getState(path, []) 读取，适合 `Pages::state()` / `__SC_V2_PAGE__.setState()` 维护的响应式数据。
+     * path 会交给前端 `getState(path, [])` 读取，适合以下场景：
+     * - 选项已经放在 `Pages::state()` 写入的页面级 state 中
+     * - 选项已经放在 `Forms::state()` 写入的表单级 state 中
+     * - 运行时希望通过 `setState()` / `setFieldOptions()` 继续更新同一份 state
+     *
+     * 路径是相对于 pageState 根对象的绝对路径：
+     * - 页面级 state 直接写，例如 `statusOptions`
+     * - 表单级 state 默认挂在 `forms.{scope}.xxx`，例如 `forms.article-form.statusOptions`
+     *
+     * 这个来源只做“按路径取值”，不执行表达式；如果需要前端实时计算，请改用
+     * `optionsExpression()` 或 `computedOptions()`。
      *
      * @param string $path 页面 state 路径，例如 statusOptions 或 forms.article-form.statusOptions。
      * @return static 当前选项字段实例。
      *
      * 示例：
      * - `Fields::radio('status', '状态')->optionsState('statusOptions')`
+     * - `Fields::select('project_id', '项目')->optionsState('forms.issue-form.project')`
      */
     public function optionsState(string $path): static
     {
@@ -94,13 +105,28 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
 
     /**
      * 使用前端表达式作为选项源。
-     * 表达式应返回标准选项数组，适合直接绑定已有 Vue 响应式变量。
+     * 表达式应返回标准选项数组，适合直接绑定已有 Vue 响应式变量，或做一层轻量过滤。
+     *
+     * 与 `computedOptions()` 不同，这里传入的是“表达式本身”，不是接收 context 的函数。
+     * 运行时会在当前页面上下文中直接注入以下变量供表达式使用：
+     * - model: 当前字段所在的局部模型
+     * - form: 当前表单完整模型
+     * - state / pageState: 当前页面运行时 state，当前实现里两者是同一份对象
+     * - scope: 当前表单 scope / key
+     * - vm: 当前页面根实例
+     * - fieldName: 当前字段路径
+     * - getState(path, fallback): 读取页面 state
+     * - setState(path, value): 写入页面 state
+     *
+     * 如果逻辑已经复杂到更适合写成函数，或你希望显式解构 context，请改用
+     * `computedOptions()`。
      *
      * @param string|JsExpression $expression 前端表达式，例如 `pageState.statusOptions`。
      * @return static 当前选项字段实例。
      *
      * 示例：
-     * - `Fields::radio('status')->optionsExpression('pageState.statusOptions')`
+     * - `Fields::radio('status')->optionsExpression("pageState.statusOptions")`
+     * - `Fields::select('project_id')->optionsExpression("(pageState.forms?.[scope]?.project || []).filter(item => item.business_type_id === form.business_type_id)")`
      */
     public function optionsExpression(string|JsExpression $expression): static
     {
@@ -118,13 +144,33 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
 
     /**
      * 使用前端计算函数动态返回选项。
-     * 函数会收到 context：model、form、state、pageState、scope、vm。
+     * 函数会收到一个 context 对象，当前可用字段如下：
+     * - model: 当前字段所在的“局部模型”。
+     *   顶层字段时通常等于整个 form；嵌套对象字段时是其父对象；
+     *   数组行字段时通常是当前行数据，适合读取同级字段。
+     * - form: 当前表单的完整模型根对象，可读取当前表单任意字段。
+     * - state: 当前页面运行时 state。
+     *   包含 `Pages::state()` 写入的数据，也包含 `Forms::state()` 写入的数据。
+     *   其中表单专属 state 默认挂在 `state.forms.{scope}` 下。
+     * - pageState: `state` 的语义化别名，当前实现里两者指向同一份对象。
+     *   当你想强调“页面级运行时状态”时可使用这个名字。
+     * - scope: 当前表单 scope / key，例如 `article-form`。
+     *   若当前渲染上下文没有显式 scope，可能为 `null`。
+     * - vm: 当前页面运行时 Vue 实例 / 根 VM。
+     *   适合访问公开的运行时方法或页面级能力；仅做选项计算时通常优先使用
+     *   `model` / `form` / `state` 即可。
+     *
+     * 另外，运行时还会额外注入以下辅助字段：
+     * - fieldName: 当前字段路径，例如 `status`、`profile.dept_id`。
+     * - getState(path, fallback): 读取页面 state 的辅助方法。
+     * - setState(path, value): 写入页面 state 的辅助方法。
      *
      * @param string|JsExpression $resolver 返回选项数组的表达式或函数。
      * @return static 当前选项字段实例。
      *
      * 示例：
      * - `Fields::radio('status')->computedOptions('({ model, state }) => model.type === 1 ? state.articleOptions : state.videoOptions')`
+     * - `Fields::select('project_id')->computedOptions('({ form, pageState, scope }) => (pageState.forms?.[scope]?.project || []).filter(item => item.business_type_id === form.business_type_id)')`
      */
     public function computedOptions(string|JsExpression $resolver): static
     {

@@ -693,6 +693,13 @@
             const parent = getByPath(formModel, segments.slice(0, -1).join('.'));
             return (isObject(parent) || Array.isArray(parent)) ? parent : (formModel || {});
           };
+          // computed/expression 选项源上下文：
+          // - model: 当前字段所在的局部模型；顶层字段时通常等于整个 form
+          // - form: 当前表单完整模型
+          // - state/pageState: 页面运行时 state，当前实现里两者是同一份对象
+          // - scope: 当前表单作用域
+          // - vm: 当前页面根实例
+          // - fieldName/getState/setState: 额外辅助字段
           const buildOptionSourceContext = (vm, scope, fieldName) => {
             const form = vm[names.getFormModel](scope) || {};
             const state = readPageStateValue(vm, null, {});

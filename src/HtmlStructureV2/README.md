@@ -1714,6 +1714,78 @@ JS))
 
 `setFieldOptions()` 会负责把传入数组归一化为标准选项结构，并同步更新当前字段的 `optionLoading / optionLoaded` 状态。
 
+### optionsState 与 optionsExpression
+
+三种动态选项来源里，最轻的是 `optionsState()`，其次是 `optionsExpression()`，最灵活的是 `computedOptions()`。
+
+`optionsState()` 只做“按路径读取页面 state”，适合选项本身已经放在 `Pages::state()` 或 `Forms::state()` 里：
+
+```php
+Forms::make('issue-form')
+    ->state('project', $projects)
+    ->addFields(
+        Fields::select('project_id', '项目')
+            ->optionsState('forms.issue-form.project')
+    );
+```
+
+这里的路径是相对于 `pageState` 根对象的绝对路径：
+
+- 页面级 state 直接写，例如 `statusOptions`
+- 表单级 state 默认挂在 `forms.{scope}.xxx`，例如 `forms.issue-form.project`
+
+`optionsExpression()` 则适合“已有响应式数据，再做一层轻量过滤或映射”。它接收的是一个前端表达式，不是函数：
+
+```php
+Fields::select('project_id', '项目')
+    ->optionsExpression('(pageState.forms?.[scope]?.project || []).filter(item => item.business_type_id === form.business_type_id)');
+```
+
+表达式运行时可直接使用这些变量：
+
+- `model`：当前字段所在的局部模型
+- `form`：当前表单完整模型
+- `state` / `pageState`：页面运行时 state；当前实现里两者是同一份对象
+- `scope`：当前表单 scope / key
+- `vm`：当前页面根实例
+- `fieldName`：当前字段路径
+- `getState(path, fallback)` / `setState(path, value)`：读写页面 state 的辅助方法
+
+使用建议：
+
+- 已经有固定 state 路径，优先用 `optionsState()`
+- 只是基于现有响应式变量做一层简单过滤，优先用 `optionsExpression()`
+- 逻辑已经更适合写成函数并显式解构 context，再用 `computedOptions()`
+
+### computedOptions 上下文
+
+`computedOptions()` 适合“根据当前表单值或运行时 state，直接计算一份前端选项数组”。
+
+```php
+Fields::select('project_id', '项目')
+    ->computedOptions('({ form, pageState, scope }) => {
+        const rows = pageState.forms?.[scope]?.project || [];
+        return rows.filter(item => item.business_type_id === form.business_type_id);
+    }');
+```
+
+计算函数当前会收到一个 context 对象，最常用的是这几个字段：
+
+- `model`：当前字段所在的局部模型；顶层字段时通常等于整个 `form`，嵌套字段时通常是其父对象或当前数组行
+- `form`：当前表单完整模型
+- `state` / `pageState`：页面运行时 state；当前实现里两者是同一份对象
+- `scope`：当前表单 scope / key，例如 `qa-case`
+- `vm`：当前页面根实例，可调用公开运行时方法
+- `fieldName`：当前字段路径，例如 `status`、`profile.dept_id`
+- `getState(path, fallback)` / `setState(path, value)`：读写页面 state 的辅助方法
+
+使用建议：
+
+- 读同级字段，优先用 `model`
+- 读当前表单任意字段，优先用 `form`
+- 读 `Pages::state()` 或 `Forms::state()` 写入的数据，优先用 `pageState`
+- 只有需要调用运行时公开方法时，再用 `vm`
+
 3. 请求成功后，不仅要更新选项，还要顺手改几个表单值
 
 ```php

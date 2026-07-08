@@ -82,7 +82,11 @@ final class FormRenderer
             $attrs[':rules'] = $renderOptions->rules;
         }
 
-        $element = El::double('el-form')->setAttrs($attrs);
+        $hasFooterActions = !$renderOptions->isFilterMode() && $form->getFooterActions() !== [];
+        $element = El::double('el-form')->setAttrs($attrs)->addClass('sc-v2-form');
+        if ($hasFooterActions) {
+            $element->addClass('sc-v2-form--has-footer-actions');
+        }
         $context = new FormNodeRenderContext(
             modelName: $modelName,
             inline: $form->isInline(),
@@ -100,7 +104,7 @@ final class FormRenderer
             $element->append($row);
         }
 
-        if (!$renderOptions->isFilterMode() && $form->getFooterActions() !== []) {
+        if ($hasFooterActions) {
             $element->append($this->renderFooterActions($form, $context));
         }
 

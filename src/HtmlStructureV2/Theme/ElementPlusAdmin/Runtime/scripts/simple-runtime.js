@@ -55,6 +55,18 @@
 
             return dialogKey !== '' ? dialogKey : null;
           };
+          const syncIframeDialogChildClass = () => {
+            const className = 'sc-v2-iframe-dialog-child';
+            const body = document.body;
+            if (!body?.classList) {
+              return false;
+            }
+
+            const isIframeDialogChild = resolveHostDialogKey() !== null;
+            body.classList.toggle(className, isIframeDialogChild);
+
+            return isIframeDialogChild;
+          };
           const resolvePublicFormScope = (scope = null) => {
             const explicitScope = normalizeFormScope(scope);
             if (explicitScope) {
@@ -888,6 +900,7 @@
           hideAppLoadingShell();
           const pageApi = createPublicPageApi(vm);
           globalThis.__SC_V2_PAGE__ = pageApi;
+          syncIframeDialogChildClass();
           if (typeof vm.syncHostDialogSubmitState === 'function') {
             vm.syncHostDialogSubmitState();
           }

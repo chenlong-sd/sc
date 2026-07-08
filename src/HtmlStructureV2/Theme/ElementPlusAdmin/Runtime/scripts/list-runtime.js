@@ -58,6 +58,18 @@
 
             return queryDialogKey !== '' ? queryDialogKey : null;
           };
+          const syncIframeDialogChildClass = () => {
+            const className = 'sc-v2-iframe-dialog-child';
+            const body = document.body;
+            if (!body?.classList) {
+              return false;
+            }
+
+            const isIframeDialogChild = resolveHostDialogKey() !== null;
+            body.classList.toggle(className, isIframeDialogChild);
+
+            return isIframeDialogChild;
+          };
           const knownFormScopes = () => Object.keys(forms || {});
           const normalizeFormScope = (scope) => {
             const normalized = typeof scope === 'string' ? scope.trim() : '';
@@ -658,6 +670,7 @@
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
           globalThis.__SC_V2_PAGE__ = createPublicPageApi(vm);
+          syncIframeDialogChildClass();
           startVideoUploadPreviewObserver();
           hideAppLoadingShell();
         };
