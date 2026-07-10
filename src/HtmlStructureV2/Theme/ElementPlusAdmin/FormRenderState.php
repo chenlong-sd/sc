@@ -112,6 +112,7 @@ final class FormRenderState
             'remoteOptionPaths' => $schema->remoteOptionPaths(),
             'selectOptions' => $schema->selectOptions(),
             'optionSources' => $schema->optionSources(),
+            'fieldMetas' => $schema->fieldMetas(),
             'pickers' => $schema->pickers(),
             'pickerPaths' => $schema->pickerPaths(),
             'linkages' => $schema->linkages(),

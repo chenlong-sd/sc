@@ -18,8 +18,20 @@ trait HasValidation
      * @param bool $required 是否必填，默认值为 true。
      * @param string|null $message 必填提示文案；传 null 时自动生成。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
-     * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证，否则只在条件为真时验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证，否则只在条件为真时验证。 表达式上下文与 visibleWhen() 一致，当前默认可用变量包括：
+     *   - `model`：当前字段所在的局部模型；顶层字段时通常等于整个 form， object 分组里是当前对象，arrayGroup/table 行内通常是当前行对象。
+     *   - `form`：当前表单根模型，可读取当前表单任意字段。
+     *   - `state`：当前页面运行时 state，包含 `Pages::state()` 与 `Forms::state()` 数据。
+     *   - `pageState`：`state` 的语义化别名，当前实现里两者指向同一份对象。
+     *   - `scope`：当前表单 scope / key，例如 `article-form`。
+     *   - `fieldName`：当前字段完整路径，例如 `status`、`profile.dept_id`。
+     *   - `vm`：当前页面根 Vue 实例 / runtime 宿主对象。
+     *   - `options`：当前字段的已解析选项数组；非选项字段通常为空数组。
+     *   - `fieldConfig`：当前字段运行时配置；对动态/远端选项字段尤其有用。
+     *   - `optionLoading`：当前字段选项是否正在加载。
+     *   - `optionLoaded`：当前字段选项是否至少完成过一次加载/写入。
+     *   - `field`：当前字段静态元信息快照，至少包含 name/path/label/type/props 等。
+     *   - `props`：`field.props` 的快捷别名，可直接判断 `props.multiple` 等配置。
      * @return static 当前字段实例。
      *
      * 示例：
@@ -68,7 +80,8 @@ trait HasValidation
      *
      * @param array $rule 原始校验规则。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证，否则只在条件为真时验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 完全一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前字段实例。
      *
      * 示例：

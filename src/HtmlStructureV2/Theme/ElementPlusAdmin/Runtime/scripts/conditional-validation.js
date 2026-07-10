@@ -11,13 +11,14 @@
    * @param {Function} getModel - 获取表单模型的函数
    * @returns {Function} - 返回一个 computed 函数
    */
-  function createConditionalRules(getRules, getModel) {
+  function createConditionalRules(getRules, getModel, getContext = null) {
     // 如果环境中有 Vue 3
     if (typeof Vue !== 'undefined' && Vue.computed) {
       return Vue.computed(() => {
         const rules = getRules();
         const model = getModel();
-        return processConditionalRules(rules, model);
+        const context = typeof getContext === 'function' ? getContext() : null;
+        return processConditionalRules(rules, model, context);
       });
     }
 
@@ -25,7 +26,8 @@
     return () => {
       const rules = getRules();
       const model = getModel();
-      return processConditionalRules(rules, model);
+      const context = typeof getContext === 'function' ? getContext() : null;
+      return processConditionalRules(rules, model, context);
     };
   }
 
@@ -35,7 +37,7 @@
    * @param {Object|Function} model - 表单模型（响应式对象）或获取模型的函数
    * @returns {Object} - 处理后的验证规则
    */
-  function processConditionalRules(rules, model) {
+  function processConditionalRules(rules, model, context = null) {
     if (!rules || typeof rules !== 'object') {
       return rules;
     }
@@ -59,13 +61,34 @@
         const { __when__, ...ruleWithoutCondition } = rule;
 
         // 创建条件验证器
+        const baseContext = normalizeConditionalContext(field, getModel, context);
+
         return {
           validator: (ruleObj, value, callback) => {
             try {
               // 评估条件表达式 - 在验证时获取最新的 model
-              const checkCondition = new Function('model', 'return ' + condition);
-              const currentModel = getModel();
-              const shouldValidate = checkCondition(currentModel);
+              const currentContext = normalizeConditionalContext(field, getModel, context);
+              const currentModel = currentContext.model;
+              const checkCondition = new Function(
+                'model',
+                'ctx',
+                `
+                  const form = ctx.form;
+                  const state = ctx.state;
+                  const pageState = ctx.pageState;
+                  const scope = ctx.scope;
+                  const fieldName = ctx.fieldName;
+                  const vm = ctx.vm;
+                  const options = ctx.options;
+                  const fieldConfig = ctx.fieldConfig;
+                  const optionLoading = ctx.optionLoading;
+                  const optionLoaded = ctx.optionLoaded;
+                  const field = ctx.field;
+                  const props = ctx.props;
+                  return (${condition});
+                `
+              );
+              const shouldValidate = checkCondition(currentModel, currentContext);
 
               // 如果条件不满足，跳过验证
               if (!shouldValidate) {
@@ -81,12 +104,43 @@
               callback();
             }
           },
-          trigger: rule.trigger || ['blur', 'change']
+          trigger: rule.trigger || ['blur', 'change'],
+          __scContext: baseContext
         };
       });
     }
 
     return processedRules;
+  }
+
+  function normalizeConditionalContext(field, getModel, context) {
+    const source = typeof context === 'function'
+      ? context(field)
+      : (context && typeof context === 'object'
+        ? (typeof context[field] === 'function' ? context[field]() : (context[field] || context.default || context))
+        : null);
+    const resolved = source && typeof source === 'object' ? source : {};
+    const model = typeof getModel === 'function' ? (getModel() || {}) : {};
+    const form = resolved.form && typeof resolved.form === 'object' ? resolved.form : model;
+    const state = resolved.state && typeof resolved.state === 'object' ? resolved.state : (resolved.pageState && typeof resolved.pageState === 'object' ? resolved.pageState : {});
+    const fieldMeta = resolved.field && typeof resolved.field === 'object' ? resolved.field : {};
+    const props = fieldMeta.props && typeof fieldMeta.props === 'object' ? fieldMeta.props : {};
+
+    return {
+      model,
+      form,
+      state,
+      pageState: resolved.pageState && typeof resolved.pageState === 'object' ? resolved.pageState : state,
+      scope: resolved.scope ?? null,
+      fieldName: resolved.fieldName ?? field,
+      vm: resolved.vm ?? null,
+      options: Array.isArray(resolved.options) ? resolved.options : [],
+      fieldConfig: resolved.fieldConfig && typeof resolved.fieldConfig === 'object' ? resolved.fieldConfig : {},
+      optionLoading: resolved.optionLoading === true,
+      optionLoaded: resolved.optionLoaded === true,
+      field: fieldMeta,
+      props,
+    };
   }
 
   /**

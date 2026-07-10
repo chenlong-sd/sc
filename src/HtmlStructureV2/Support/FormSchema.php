@@ -20,6 +20,7 @@ final class FormSchema
         private readonly array $remoteOptions = [],
         private readonly array $selectOptions = [],
         private readonly array $optionSources = [],
+        private readonly array $fieldMetas = [],
         private readonly array $pickers = [],
         private readonly array $linkages = [],
         private readonly array $uploads = [],
@@ -95,6 +96,11 @@ final class FormSchema
     public function optionSources(): array
     {
         return $this->optionSources;
+    }
+
+    public function fieldMetas(): array
+    {
+        return $this->fieldMetas;
     }
 
     public function pickers(): array

@@ -80,6 +80,7 @@ final class FormArrayGroupSchema
             'rowRemoteOptionPaths' => $this->rowSchema()->remoteOptionPaths(),
             'rowSelectOptions' => $this->rowSchema()->selectOptions(),
             'rowOptionSources' => $this->rowSchema()->optionSources(),
+            'rowFieldMetas' => $this->rowSchema()->fieldMetas(),
             'rowPickers' => $this->rowSchema()->pickers(),
             'rowPickerPaths' => $this->rowSchema()->pickerPaths(),
             'rowLinkages' => $this->rowSchema()->linkages(),

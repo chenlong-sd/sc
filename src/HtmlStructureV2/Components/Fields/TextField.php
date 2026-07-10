@@ -26,7 +26,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -59,7 +60,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -97,7 +99,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -130,7 +133,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -163,7 +167,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -197,7 +202,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -233,7 +239,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：
@@ -304,7 +311,8 @@ class TextField extends Field implements PlaceholderFieldInterface, ValidatableF
      * @param string|null $message 提示文案；传 null 时使用默认文案。
      * @param string|array|null $trigger 校验触发时机；传 null 时使用字段默认触发器。
      * @param string|JsExpression|null $when 条件表达式；传 null 时始终验证。
-     *                                       表达式中可用变量：model（当前表单数据对象）
+     *                                       表达式上下文与 validateRequired() / visibleWhen() 一致，
+     *                                       详细变量说明见 validateRequired() 注释。
      * @return static 当前文本字段实例。
      *
      * 示例：

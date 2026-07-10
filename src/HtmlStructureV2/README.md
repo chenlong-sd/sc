@@ -1610,13 +1610,34 @@ Fields::select('status', '状态')
 - 显示/禁用/只读条件：`visibleWhen()` / `disabledWhen()` / `readonlyWhen()`
 - 结构化事件：`Events::*()`
 
-2. 如果最终展示条件依赖“运行时派生状态”，先把它转成 `model` 字段
+2. 如果最终展示条件依赖“当前字段运行时状态”，可以直接读字段上下文
 
-- `visibleWhen()` / `disabledWhen()` / `readonlyWhen()` 默认只保证 `model` 可用
-- 不建议直接在 `visibleWhen()` 里依赖 `dialogOptions` / `tableStates` / `vm.xxx` 这类页面 runtime 变量
-- 更稳的做法是：在事件回调里把派生结果写回表单模型，再让展示逻辑只依赖 `model`
+- `visibleWhen()` / `disabledWhen()` / `readonlyWhen()` / `validateRequired(when: ...)` 默认可用变量包括：
+- `model` / `form`
+- `state` / `pageState`
+- `scope` / `fieldName` / `vm`
+- `options` / `fieldConfig` / `optionLoading` / `optionLoaded`
+- `field` / `props`
+- 常见判断可以直接写成：`options.length > 0`、`props.multiple === true`、`fieldConfig.remoteSearch?.enabled === true`
 
-典型例子：根据某个远端 select 的选项数量决定是否显示补充字段。
+典型例子：根据某个远端 radio 当前是否拿到审核选项来决定是否显示。
+
+```php
+Fields::radio("result", "确认结果")
+    ->remoteOptions(
+        sc_route([IcWorkOrderController::class, 'yzAuditOptions']),
+        params: ['business_type_id' => '@business_type_id']
+    )
+    ->visibleWhen('options.length > 0')
+    ->validateRequired(true, null, null, 'options.length > 0');
+```
+
+3. 如果条件依赖“跨字段、多步异步、复杂派生结果”，再考虑回写到 `model`
+
+- 不建议直接在表达式里依赖过多页面级内部状态，例如 `tableStates`、未公开的局部变量等
+- 复杂派生逻辑仍然建议在事件里统一计算，再写回 `model`，让显示与校验都只读一个稳定字段
+
+典型例子：根据某个远端 select 的选项数量决定是否显示补充字段，且这个数量还要被其他字段复用。
 
 ```php
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -1652,9 +1673,9 @@ JS));
 
 - 事件层负责“拿到真实运行时数据”
 - `vm` 负责“把派生状态写回当前作用域”
-- `visibleWhen()` / `disabledWhen()` / `readonlyWhen()` 只负责“读 model 做纯展示判断”
+- 条件表达式只负责“读一个稳定字段做纯判断”
 
-3. 如果不是字段，而是说明块/自定义块，也尽量复用同一套思路
+4. 如果不是字段，而是说明块/自定义块，也尽量复用同一套思路
 
 - 推荐先把派生值写入 `model`
 - 再在 `Forms::custom()` / 轻组件根节点上写 `v-if`

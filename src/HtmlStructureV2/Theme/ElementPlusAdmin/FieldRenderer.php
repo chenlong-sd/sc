@@ -121,15 +121,48 @@ final class FieldRenderer
         }
 
         $modelAccessor = $this->jsModelAccessor($modelName, $field->name());
-        $visibleWhen = $this->normalizeFieldExpression($field->getVisibleWhen(), $modelName);
-        $disabledWhen = $this->normalizeFieldExpression($field->getDisabledWhen(), $modelName);
-        $readonlyWhen = $this->normalizeFieldExpression($field->getReadonlyWhen(), $modelName);
+        $fieldPathExpression = $propExpression === null
+            ? $this->jsLiteral($fieldPath)
+            : $propExpression;
+        $formExpression = $this->fieldEventFormModelExpression($modelName, $options->formScope);
+        $scopeExpression = $options->formScope === null || trim($options->formScope) === ''
+            ? 'null'
+            : $this->jsValue($options->formScope);
+        $fieldMeta = $this->buildFieldExpressionMeta($field, $fieldPath);
+        $visibleWhen = $this->buildFieldExpression(
+            $field->getVisibleWhen(),
+            $modelName,
+            $formExpression,
+            $scopeExpression,
+            $fieldPathExpression,
+            $fieldMeta
+        );
+        $disabledWhen = $this->buildFieldExpression(
+            $field->getDisabledWhen(),
+            $modelName,
+            $formExpression,
+            $scopeExpression,
+            $fieldPathExpression,
+            $fieldMeta
+        );
+        $readonlyWhen = $this->buildFieldExpression(
+            $field->getReadonlyWhen(),
+            $modelName,
+            $formExpression,
+            $scopeExpression,
+            $fieldPathExpression,
+            $fieldMeta
+        );
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
         $requiredWhen = null;
         if ($validatableField?->isConditionalRequired() && $validatableField->getRequiredCondition()) {
-            $requiredWhen = $this->normalizeFieldExpression(
+            $requiredWhen = $this->buildFieldExpression(
                 JsExpression::make($validatableField->getRequiredCondition()),
-                $modelName
+                $modelName,
+                $formExpression,
+                $scopeExpression,
+                $fieldPathExpression,
+                $fieldMeta
             );
         }
         $optionField = $field instanceof OptionField ? $field : null;
@@ -188,7 +221,15 @@ final class FieldRenderer
             $this->applyFieldEventHandlers($component, $field, $modelName, $options->formScope);
         }
 
-        $item->append($this->wrapFieldControl($field, $component, $modelName, $options->formScope, $renderContext));
+        $item->append($this->wrapFieldControl(
+            $field,
+            $component,
+            $modelName,
+            $options->formScope,
+            $renderContext,
+            $fieldPathExpression,
+            $fieldPath
+        ));
         $this->appendHelpText($item, $field);
 
         if ($tableCell) {
@@ -1345,7 +1386,9 @@ final class FieldRenderer
         AbstractHtmlElement $component,
         string $modelName,
         ?string $formScope = null,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        ?string $fieldPathExpression = null,
+        ?string $fieldPath = null
     ): AbstractHtmlElement
     {
         $control = El::double('div')->addClass('sc-v2-form__control')->append($component);
@@ -1368,7 +1411,13 @@ final class FieldRenderer
         foreach ($field->getSuffixActions() as $action) {
             $suffix->append(
                 $this->actionButtonRenderer->render(
-                    $this->normalizeSuffixActionProps($action, $modelName),
+                    $this->normalizeSuffixActionProps(
+                        $action,
+                        $modelName,
+                        $formScope,
+                        $fieldPathExpression,
+                        $field !== null && $fieldPath !== null ? $this->buildFieldExpressionMeta($field, $fieldPath) : []
+                    ),
                     false,
                     'default',
                     null,
@@ -1385,16 +1434,33 @@ final class FieldRenderer
         return $control;
     }
 
-    private function normalizeSuffixActionProps(Action $action, string $modelName): Action
+    private function normalizeSuffixActionProps(
+        Action $action,
+        string $modelName,
+        ?string $formScope = null,
+        ?string $fieldPathExpression = null,
+        array $fieldMeta = []
+    ): Action
     {
         $normalized = [];
+        $formExpression = $this->fieldEventFormModelExpression($modelName, $formScope);
+        $scopeExpression = $formScope === null || trim($formScope) === ''
+            ? 'null'
+            : $this->jsValue($formScope);
 
         foreach ($action->attrs() as $name => $value) {
             if (!$this->shouldNormalizeSuffixActionProp((string)$name, $value)) {
                 continue;
             }
 
-            $normalized[$name] = $this->normalizeFieldExpression(JsExpression::make((string)$value), $modelName);
+            $normalized[$name] = $this->buildFieldExpression(
+                JsExpression::make((string)$value),
+                $modelName,
+                $formExpression,
+                $scopeExpression,
+                $fieldPathExpression,
+                $fieldMeta
+            );
         }
 
         if ($normalized === []) {
@@ -1411,6 +1477,20 @@ final class FieldRenderer
         }
 
         return in_array($name, ['v-if', 'v-show'], true) || str_starts_with($name, ':');
+    }
+
+    private function buildFieldExpressionMeta(Field $field, string $fieldPath): array
+    {
+        return [
+            'name' => $field->name(),
+            'path' => $fieldPath,
+            'label' => $field->label(),
+            'type' => $field->type()->value,
+            'visible' => $field->isVisible(),
+            'disabled' => $field->isDisabled(),
+            'readonly' => $field->isReadonly(),
+            'props' => $field->getProps(),
+        ];
     }
 
     private function ensureEditorAssets(RenderContext $renderContext): void

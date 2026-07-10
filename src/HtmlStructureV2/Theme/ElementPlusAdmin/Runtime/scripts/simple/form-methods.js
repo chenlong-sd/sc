@@ -1,8 +1,70 @@
         globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
-          const { getConfigState } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const { getConfigState, getByPath } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
           const getFormConfig = (scope) => cfg?.forms?.[scope] || null;
+          const buildConditionalFieldContexts = (vm, scope) => {
+            const formConfig = getFormConfig(scope) || {};
+            const model = getConfigState(vm, formConfig, 'modelVar', 'modelPath') || {};
+            const state = typeof vm?.getState === 'function' ? (vm.getState() || {}) : (vm?.pageState || {});
+            const fieldMetas = formConfig?.fieldMetas || {};
+
+            const getFieldOptions = (fieldName) => {
+              if (typeof vm?.getSimpleFieldOptions === 'function') {
+                return vm.getSimpleFieldOptions(scope, fieldName);
+              }
+
+              return [];
+            };
+            const getFieldConfig = (fieldName) => {
+              if (typeof vm?.getSimpleFieldConfig === 'function') {
+                return vm.getSimpleFieldConfig(scope, fieldName);
+              }
+
+              return {};
+            };
+            const getFieldOptionLoading = (fieldName) => {
+              if (typeof vm?.getSimpleFieldOptionLoading === 'function') {
+                return vm.getSimpleFieldOptionLoading(scope, fieldName);
+              }
+
+              return false;
+            };
+            const getFieldOptionLoaded = (fieldName) => {
+              if (typeof vm?.getSimpleFieldOptionLoaded === 'function') {
+                return vm.getSimpleFieldOptionLoaded(scope, fieldName);
+              }
+
+              return false;
+            };
+
+            return Object.keys(formConfig?.rules || {}).reduce((contexts, fieldName) => {
+              contexts[fieldName] = () => {
+                const fieldMeta = fieldMetas[fieldName] || {};
+                const parentPath = String(fieldName || '').split('.').slice(0, -1).join('.');
+                const localModel = parentPath === '' || typeof getByPath !== 'function'
+                  ? model
+                  : (getByPath(model, parentPath) || model);
+
+                return {
+                  model: localModel,
+                  form: model,
+                  state,
+                  pageState: state,
+                  scope,
+                  fieldName,
+                  vm,
+                  options: getFieldOptions(fieldName),
+                  fieldConfig: getFieldConfig(fieldName),
+                  optionLoading: getFieldOptionLoading(fieldName),
+                  optionLoaded: getFieldOptionLoaded(fieldName),
+                  field: fieldMeta,
+                };
+              };
+
+              return contexts;
+            }, {});
+          };
 
           // 包装获取规则的方法，自动处理条件验证
           const getFormRules = (vm, scope) => {
@@ -16,12 +78,15 @@
             if (conditionalValidation && rawRules && model) {
               return conditionalValidation.createConditionalRules(
                 () => rawRules,
-                () => model
+                () => model,
+                () => buildConditionalFieldContexts(vm, scope)
               );
             }
 
             return rawRules;
           };
+
+          globalThis.__SC_V2_BUILD_SIMPLE_FIELD_CONDITIONAL_CONTEXTS__ = buildConditionalFieldContexts;
 
           return createManagedFormMethods({
             tokenStoreKey: '__simpleRemoteRequestTokens',
@@ -43,6 +108,9 @@
               setUploadFileList: 'setSimpleUploadFileList',
               setFieldOptions: 'setSimpleFieldOptions',
               getFieldOptions: 'getSimpleFieldOptions',
+              getFieldConfig: 'getSimpleFieldConfig',
+              getFieldOptionLoading: 'getSimpleFieldOptionLoading',
+              getFieldOptionLoaded: 'getSimpleFieldOptionLoaded',
               getLinkageConfig: 'getSimpleLinkageConfig',
               clearLinkageTargets: 'clearSimpleLinkageTargets',
               applyFormLinkage: 'applySimpleFormLinkage',

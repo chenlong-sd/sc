@@ -160,6 +160,42 @@
 
               return [];
             };
+            const getFieldConfig = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldConfig === 'function') {
+                return vm.getFieldConfig(resolvedScope, fieldName);
+              }
+
+              return {};
+            };
+            const getFieldOptionLoading = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptionLoading === 'function') {
+                return vm.getFieldOptionLoading(resolvedScope, fieldName);
+              }
+
+              return false;
+            };
+            const getFieldOptionLoaded = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptionLoaded === 'function') {
+                return vm.getFieldOptionLoaded(resolvedScope, fieldName);
+              }
+
+              return false;
+            };
 
             return {
               vm,
@@ -171,6 +207,9 @@
               getFormState,
               setFormState,
               getFieldOptions,
+              getFieldConfig,
+              getFieldOptionLoading,
+              getFieldOptionLoaded,
               setFieldOptions,
               reloadList: (...args) => vm.reloadList(...args),
               reloadTable: (...args) => vm.reloadTable(...args),
@@ -376,7 +415,13 @@
                       return modelVarName ? this[modelVarName] : {};
                     };
 
-                    return conditionalValidation.processConditionalRules(rawRules, getModel);
+                    return conditionalValidation.processConditionalRules(
+                      rawRules,
+                      getModel,
+                      typeof globalThis.__SC_V2_BUILD_LIST_FIELD_CONDITIONAL_CONTEXTS__ === 'function'
+                        ? () => globalThis.__SC_V2_BUILD_LIST_FIELD_CONDITIONAL_CONTEXTS__(this, scope)
+                        : null
+                    );
                   };
                 }
               });

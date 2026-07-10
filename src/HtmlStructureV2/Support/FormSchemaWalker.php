@@ -27,6 +27,7 @@ final class FormSchemaWalker
     private array $remoteOptions = [];
     private array $selectOptions = [];
     private array $optionSources = [];
+    private array $fieldMetas = [];
     private array $pickers = [];
     private array $linkages = [];
     private array $uploads = [];
@@ -71,6 +72,7 @@ final class FormSchemaWalker
             remoteOptions: $this->remoteOptions,
             selectOptions: $this->selectOptions,
             optionSources: $this->optionSources,
+            fieldMetas: $this->fieldMetas,
             pickers: $this->pickers,
             linkages: $this->linkages,
             uploads: $this->uploads,
@@ -90,6 +92,7 @@ final class FormSchemaWalker
         $this->remoteOptions = [];
         $this->selectOptions = [];
         $this->optionSources = [];
+        $this->fieldMetas = [];
         $this->pickers = [];
         $this->linkages = [];
         $this->uploads = [];
@@ -103,6 +106,7 @@ final class FormSchemaWalker
     {
         $path = $context->fieldPath($field->name());
         $this->fields[] = new FormFieldSchema($field, $path);
+        FormPath::set($this->fieldMetas, $path, end($this->fields)->runtimeMeta());
         FormPath::set($this->defaults, $path, $field->getDefault());
 
         if ($field instanceof PickerField) {

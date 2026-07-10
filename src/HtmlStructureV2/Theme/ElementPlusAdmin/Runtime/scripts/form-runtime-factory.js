@@ -95,6 +95,9 @@
             setUploadFileList: 'setManagedUploadFileList',
             setFieldOptions: 'setManagedFieldOptions',
             getFieldOptions: 'getManagedFieldOptions',
+            getFieldConfig: 'getManagedFieldConfig',
+            getFieldOptionLoading: 'getManagedFieldOptionLoading',
+            getFieldOptionLoaded: 'getManagedFieldOptionLoaded',
             getLinkageConfig: 'getManagedLinkageConfig',
             clearLinkageTargets: 'clearManagedLinkageTargets',
             applyFormLinkage: 'applyManagedFormLinkage',
@@ -657,6 +660,19 @@
             }
 
             return getByPath(context.groupConfig?.rowOptionSources || {}, context.rowFieldPath) || null;
+          };
+          const resolveFieldMeta = (vm, scope, fieldName) => {
+            const direct = getByPath((typeof getFormConfig === 'function' ? getFormConfig(scope, vm) : null)?.fieldMetas || {}, fieldName);
+            if (direct !== undefined && direct !== null) {
+              return direct;
+            }
+
+            const context = resolveArrayGroupFieldContext(vm, scope, fieldName);
+            if (!context?.rowFieldPath) {
+              return null;
+            }
+
+            return getByPath(context.groupConfig?.rowFieldMetas || {}, context.rowFieldPath) || null;
           };
           const readPageStateValue = (vm, path = null, fallback = null) => {
             if (typeof vm?.getState === 'function') {
@@ -1405,6 +1421,28 @@
               ) || [];
 
               return Array.isArray(options) ? clone(options) : [];
+            },
+            [names.getFieldConfig](scope, fieldName){
+              const sourceCfg = resolveOptionSourceConfig(this, scope, fieldName);
+              const fieldCfg = resolveOptionFieldConfig(this, scope, fieldName) || {};
+              const fieldMeta = resolveFieldMeta(this, scope, fieldName) || null;
+
+              if (!sourceCfg) {
+                return fieldMeta
+                  ? Object.assign({}, fieldCfg, { field: fieldMeta })
+                  : fieldCfg;
+              }
+
+              return Object.assign({}, fieldCfg, {
+                optionSource: sourceCfg,
+                field: fieldMeta,
+              });
+            },
+            [names.getFieldOptionLoading](scope, fieldName){
+              return getByPath(this[names.getOptionLoadingState](scope), fieldName) === true;
+            },
+            [names.getFieldOptionLoaded](scope, fieldName){
+              return getByPath(this[names.getOptionLoadedState](scope), fieldName) === true;
             },
             [names.getLinkageConfig](scope, fieldName){
               return buildResolvedLinkageConfig(this, scope, fieldName);

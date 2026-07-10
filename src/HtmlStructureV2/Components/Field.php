@@ -462,11 +462,36 @@ abstract class Field implements FormNode
     }
 
     /**
-     * 按条件控制字段显示，表达式上下文中的 model 指向当前表单数据。
+     * 按条件控制字段显示，表达式上下文会自动注入当前字段相关的运行时信息。
      * 传入字符串时会按原样作为前端 JS 表达式注入，不会再包裹引号。
      * 在 object/arrayGroup/table 等子作用域中，`model` 会自动切到当前子模型。
-     * 这里只有 `model` 是默认可用变量，不会额外注入 row / tableKey / listKey / vm。
-     * 例如：`model.type === "custom"`、`model.user?.status === 1`。
+     * 当前默认可用变量包括：
+     * - `model`：当前字段所在的局部模型。
+     *   顶层字段时通常就是整个表单；object 分组里是当前对象；arrayGroup/table 行内通常是当前行对象。
+     * - `form`：当前表单根模型，适合跨分组、跨行读取其它字段。
+     * - `state`：当前页面运行时 state。
+     *   包含 `Pages::state()` 写入的数据，也包含 `Forms::state()` 写入的数据；
+     *   表单级 state 通常挂在 `state.forms[scope]` 下。
+     * - `pageState`：`state` 的语义化别名，当前实现里两者指向同一份对象。
+     * - `scope`：当前表单 scope / key，例如 `article-form`、`dialog:detail`。
+     *   若当前上下文没有显式 scope，可能为 `null`。
+     * - `fieldName`：当前字段在表单中的完整路径，例如 `status`、`profile.dept_id`。
+     *   数组行内会自动解析成当前行的运行时字段路径。
+     * - `vm`：当前页面根 Vue 实例 / runtime 宿主对象。
+     *   可用于调用公开 runtime 方法，但纯条件判断通常优先使用前面的结构化变量。
+     * - `options`：当前字段已解析完成的选项数组。
+     *   适用于 select/radio/checkbox/cascader 等选项字段；其它字段默认通常是空数组。
+     * - `fieldConfig`：当前字段的运行时配置对象。
+     *   目前主要用于选项类字段，可能包含远端选项配置、选项来源配置等；无配置时通常为 `{}`。
+     * - `optionLoading`：当前字段选项是否正在加载。
+     *   主要对远端或动态选项字段有意义，其它字段通常为 `false`。
+     * - `optionLoaded`：当前字段选项是否至少完成过一次加载/写入。
+     *   主要对远端或动态选项字段有意义，其它字段通常为 `false`。
+     * - `field`：当前字段的静态元信息快照。
+     *   当前至少包含 `name`、`path`、`label`、`type`、`visible`、`disabled`、`readonly`、`props`。
+     * - `props`：`field.props` 的快捷别名，表示当前字段最终声明的组件属性。
+     *   适合直接判断 `props.multiple`、`props.clearable` 这类配置。
+     * 例如：`model.type === "custom"`、`options.length > 0`、`props.multiple === true`。
      *
      * @param string|JsExpression $expression 前端可执行表达式。
      * @return static 当前字段实例。
@@ -484,9 +509,9 @@ abstract class Field implements FormNode
     }
 
     /**
-     * 按条件控制字段禁用，表达式上下文中的 model 指向当前表单数据。
+     * 按条件控制字段禁用，表达式上下文与 visibleWhen() 一致。
      * 用法与 visibleWhen() 一致，只是最终作用到组件的 `disabled` 状态。
-     * 默认同样只有 `model` 可用。
+     * 详细变量说明见 visibleWhen() 注释。
      *
      * @param string|JsExpression $expression 前端可执行表达式。
      * @return static 当前字段实例。
@@ -504,9 +529,10 @@ abstract class Field implements FormNode
     }
 
     /**
-     * 按条件控制字段只读，表达式上下文中的 model 指向当前表单数据。
+     * 按条件控制字段只读，表达式上下文与 visibleWhen() 一致。
      * 支持 readonly 的组件会绑定 `readonly`；
      * 其余组件会自动退化为 `disabled`。
+     * 详细变量说明见 visibleWhen() 注释。
      *
      * @param string|JsExpression $expression 前端可执行表达式。
      * @return static 当前字段实例。

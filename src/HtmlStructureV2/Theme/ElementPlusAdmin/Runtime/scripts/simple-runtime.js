@@ -223,6 +223,51 @@
 
               return [];
             };
+            const getFieldConfig = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldConfig === 'function') {
+                return vm.getFieldConfig(resolvedScope, fieldName);
+              }
+              if (typeof vm.getSimpleFieldConfig === 'function') {
+                return vm.getSimpleFieldConfig(resolvedScope, fieldName);
+              }
+
+              return {};
+            };
+            const getFieldOptionLoading = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptionLoading === 'function') {
+                return vm.getFieldOptionLoading(resolvedScope, fieldName);
+              }
+              if (typeof vm.getSimpleFieldOptionLoading === 'function') {
+                return vm.getSimpleFieldOptionLoading(resolvedScope, fieldName);
+              }
+
+              return false;
+            };
+            const getFieldOptionLoaded = (arg1, arg2 = undefined) => {
+              const hasExplicitScope = typeof arg2 === 'string';
+              const scope = hasExplicitScope ? arg1 : null;
+              const fieldName = hasExplicitScope ? arg2 : arg1;
+              const resolvedScope = resolvePublicFormScope(scope);
+
+              if (typeof vm.getFieldOptionLoaded === 'function') {
+                return vm.getFieldOptionLoaded(resolvedScope, fieldName);
+              }
+              if (typeof vm.getSimpleFieldOptionLoaded === 'function') {
+                return vm.getSimpleFieldOptionLoaded(resolvedScope, fieldName);
+              }
+
+              return false;
+            };
             const validateForm = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return Promise.resolve(vm.validateForm(resolvedScope)).then((valid) => valid !== false);
@@ -273,6 +318,9 @@
               initializeFormModel,
               resetForm,
               getFieldOptions,
+              getFieldConfig,
+              getFieldOptionLoading,
+              getFieldOptionLoaded,
               setFieldOptions,
               loadFormData: (scope = null, force = false) => vm.loadFormData(resolvePublicFormScope(scope), force),
               submit,
@@ -331,7 +379,13 @@
                       return modelVarName ? this[modelVarName] : {};
                     };
 
-                    return conditionalValidation.processConditionalRules(rawRules, getModel);
+                    return conditionalValidation.processConditionalRules(
+                      rawRules,
+                      getModel,
+                      typeof globalThis.__SC_V2_BUILD_SIMPLE_FIELD_CONDITIONAL_CONTEXTS__ === 'function'
+                        ? () => globalThis.__SC_V2_BUILD_SIMPLE_FIELD_CONDITIONAL_CONTEXTS__(this, scope)
+                        : null
+                    );
                   };
                 }
               });
@@ -718,6 +772,15 @@
                 },
                 getFieldOptions(scope, fieldName){
                   return this.getSimpleFieldOptions(scope, fieldName);
+                },
+                getFieldConfig(scope, fieldName){
+                  return this.getSimpleFieldConfig(scope, fieldName);
+                },
+                getFieldOptionLoading(scope, fieldName){
+                  return this.getSimpleFieldOptionLoading(scope, fieldName);
+                },
+                getFieldOptionLoaded(scope, fieldName){
+                  return this.getSimpleFieldOptionLoaded(scope, fieldName);
                 },
                 setFormModel(scope, values = {}){
                   return this.setSimpleFormModel(scope, values);
