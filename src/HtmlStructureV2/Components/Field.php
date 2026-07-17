@@ -6,11 +6,12 @@ use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 
-abstract class Field implements FormNode
+abstract class Field implements FormNode, ConditionalFormNode
 {
     use HasFormTableColumnAttributes;
     use HasSpan;
@@ -62,6 +63,8 @@ abstract class Field implements FormNode
      * 若属性名以 ":" 开头：
      * - 传字符串时按原样作为前端表达式输出
      * - 传数组/布尔/数字/null 时会自动转成 JS 字面量
+     * 字段渲染在弹窗 body 内时，动态属性表达式也可直接读取 `dialogRow`；
+     * `dialogRow` 只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。
      *
      * @param string $name 属性名，可带 ":" 或 "@" 前缀。
      * @param mixed $value 属性值。
@@ -69,6 +72,7 @@ abstract class Field implements FormNode
      *
      * 示例：
      * - `Fields::text('title', '标题')->prop('clearable', true)`
+     * - `Fields::text('title', '标题')->prop(':disabled', 'dialogRow?.status == 1')`
      */
     public function prop(string $name, mixed $value): static
     {
@@ -100,12 +104,14 @@ abstract class Field implements FormNode
      * 批量设置底层组件属性。
      * 规则与 prop() 一致：键名按原样输出，动态属性请自行写成 ":prop" / "@event"；
      * 其中 ":" 开头属性的数组/布尔/数字/null 值会自动按 JS 字面量处理。
+     * 字段渲染在弹窗 body 内时，动态属性表达式也可直接读取 `dialogRow`。
      *
      * @param array $props 要批量合并的属性。
      * @return static 当前字段实例。
      *
      * 示例：
      * - `Fields::text('title', '标题')->props(['clearable' => true, 'maxlength' => 100])`
+     * - `Fields::text('title', '标题')->props([':disabled' => 'dialogRow?.status == 1'])`
      */
     public function props(array $props): static
     {
@@ -124,6 +130,7 @@ abstract class Field implements FormNode
      * 设置字段组件根节点的单个属性。
      * 这是 prop() 的语义化别名，便于与 Blocks / 布局节点 / 表单结构节点保持统一写法。
      * 属性会直接透传到字段实际渲染的组件根节点，不作用于外层 form-item。
+     * 动态属性表达式上下文与 prop() 一致，弹窗 body 内可读取 `dialogRow`。
      *
      * @param string $name 属性名，可带 `":prop"` 或 `"@event"` 前缀。
      * @param mixed $value 属性值。
@@ -140,6 +147,7 @@ abstract class Field implements FormNode
     /**
      * 批量设置字段组件根节点属性。
      * 这是 props() 的语义化别名，便于在使用侧统一使用 attrs 风格 API。
+     * 动态属性表达式上下文与 props() 一致，弹窗 body 内可读取 `dialogRow`。
      *
      * @param array $attributes 属性集合。
      * @return static 当前字段实例。
@@ -187,10 +195,12 @@ abstract class Field implements FormNode
      * 事件会直接绑定到最终渲染的 Element Plus / 自定义字段组件上，不作用于外层 el-form-item。
      * handler 使用组件原生事件参数，例如 change 通常写成 `(value) => {}`，blur 通常写成 `(event) => {}`。
      *
-     * handler 函数体内可以直接读取两个辅助变量：
+     * handler 函数体内可以直接读取这些辅助变量：
      * - `model`：当前字段所在的数据对象。普通表单里通常就是表单模型；
      *   在 Forms::object()、Forms::table() 行内会变成当前子对象或当前行对象。
      * - `form`：当前表单根模型，适合跨分组、跨行读取其他字段。
+     * - `dialogRow`：字段渲染在弹窗 body 内时可用，表示来源表格行上下文；
+     *   它不属于表单 `model`，不会随表单提交。
      *
      * 若字段内部也需要同名事件（例如 linkageUpdate 的 change），会自动与自定义事件串行执行。
      * 旧写法 `attr("@change", '...')` / `prop("@change", '...')` 仍会原样绑定到底层组件；
@@ -202,6 +212,7 @@ abstract class Field implements FormNode
      *
      * 示例：
      * - `Fields::text('title', '标题')->on('change', "(value) => console.log(value, model.category_id, form.id)")`
+     * - `Fields::radio('result', '确认结果')->on('change', "(value) => console.log(value, dialogRow?.id)")`
      */
     public function on(string $event, string|JsExpression $handler): static
     {
@@ -474,7 +485,9 @@ abstract class Field implements FormNode
      *   表单级 state 通常挂在 `state.forms[scope]` 下。
      * - `pageState`：`state` 的语义化别名，当前实现里两者指向同一份对象。
      * - `scope`：当前表单 scope / key，例如 `article-form`、`dialog:detail`。
-     *   若当前上下文没有显式 scope，可能为 `null`。
+     *   若当前上下文没有显式 scope，可能为 `null`；它不是 Element Plus 表格插槽的 `scope`。
+     * - `dialogRow`：当字段渲染在弹窗 body/footer 内时可用，表示打开弹窗的当前表格行数据。
+     *   它不属于表单 `model`，不会随表单提交；适合只用于显示、禁用、只读、校验条件判断。
      * - `fieldName`：当前字段在表单中的完整路径，例如 `status`、`profile.dept_id`。
      *   数组行内会自动解析成当前行的运行时字段路径。
      * - `vm`：当前页面根 Vue 实例 / runtime 宿主对象。
@@ -491,7 +504,10 @@ abstract class Field implements FormNode
      *   当前至少包含 `name`、`path`、`label`、`type`、`visible`、`disabled`、`readonly`、`props`。
      * - `props`：`field.props` 的快捷别名，表示当前字段最终声明的组件属性。
      *   适合直接判断 `props.multiple`、`props.clearable` 这类配置。
-     * 例如：`model.type === "custom"`、`options.length > 0`、`props.multiple === true`。
+     * 在 `Forms::table()` 的条件表达式里读取当前行时，优先使用 `model.xxx`；
+     * `scope.row` / `scope.$index` 只适合表格单元格自定义模板内容本身。
+     * 行操作弹窗表单里若只需要读取来源表格行而不提交该值，使用 `dialogRow.xxx`。
+     * 例如：`model.type === "custom"`、`dialogRow?.business_type?.scene == 1`、`options.length > 0`。
      *
      * @param string|JsExpression $expression 前端可执行表达式。
      * @return static 当前字段实例。

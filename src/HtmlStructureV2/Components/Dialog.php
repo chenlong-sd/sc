@@ -399,6 +399,7 @@ final class Dialog implements Renderable, EventAware
      * 内容模板里可直接读取当前弹窗行数据别名 `dialogRow`，
      * 等价于当前 dialogKey 对应的 `dialogRows[dialogKey]`；
      * 无 row 打开时该值为 null。
+     * `dialogRow` 只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。
      *
      * @param string|AbstractHtmlElement|null $content 纯内容块。
      * @return self 当前弹窗实例。
@@ -686,7 +687,7 @@ final class Dialog implements Renderable, EventAware
      * @return self 当前弹窗实例。
      *
      * 示例：
-     * - `Dialogs::make('confirm', '确认')->rowData(['work_order_id' => '@row.id'])`
+     * - `Dialogs::make('confirm', '确认')->rowData(['work_order_id' => "@row.id"])`
      */
     public function rowData(array|string|JsExpression $rowData): self
     {
@@ -879,6 +880,7 @@ final class Dialog implements Renderable, EventAware
      * 其中 `Actions::save()` / `Actions::close()` 放在 footer 里时，会默认作用到当前 dialog，
      * 一般不再需要额外写 `->dialog($this->key())`。
      * footer 区域中的前端表达式同样可直接读取 `dialogRow`，
+     * 适合控制按钮显隐/禁用；它不会进入表单 `model`，也不会随表单提交。
      * 例如 `Actions::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`。
      *
      * @param Action ...$actions 底部动作按钮。

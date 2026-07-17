@@ -43,7 +43,9 @@ final class FieldRenderer
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
         bool $formReadonly = false,
-        ?string $containerLabelWidth = null
+        ?string $containerLabelWidth = null,
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement
     {
         return $this->renderField(
@@ -55,6 +57,8 @@ final class FieldRenderer
             renderContext: $renderContext,
             formReadonly: $formReadonly,
             containerLabelWidth: $containerLabelWidth,
+            inheritedDisabledWhen: $inheritedDisabledWhen,
+            inheritedReadonlyWhen: $inheritedReadonlyWhen,
         );
     }
 
@@ -67,7 +71,9 @@ final class FieldRenderer
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
         bool $formReadonly = false,
-        ?string $containerLabelWidth = null
+        ?string $containerLabelWidth = null,
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -79,6 +85,8 @@ final class FieldRenderer
             renderContext: $renderContext,
             formReadonly: $formReadonly,
             containerLabelWidth: $containerLabelWidth,
+            inheritedDisabledWhen: $inheritedDisabledWhen,
+            inheritedReadonlyWhen: $inheritedReadonlyWhen,
         );
     }
 
@@ -89,7 +97,9 @@ final class FieldRenderer
         string $propExpression,
         FormRenderOptions $options,
         ?RenderContext $renderContext = null,
-        bool $formReadonly = false
+        bool $formReadonly = false,
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement {
         return $this->renderField(
             field: $field,
@@ -101,6 +111,8 @@ final class FieldRenderer
             tableCell: true,
             renderContext: $renderContext,
             formReadonly: $formReadonly,
+            inheritedDisabledWhen: $inheritedDisabledWhen,
+            inheritedReadonlyWhen: $inheritedReadonlyWhen,
         );
     }
 
@@ -114,7 +126,9 @@ final class FieldRenderer
         bool $tableCell = false,
         ?RenderContext $renderContext = null,
         bool $formReadonly = false,
-        ?string $containerLabelWidth = null
+        ?string $containerLabelWidth = null,
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement {
         if ($field->type() === FieldType::HIDDEN) {
             return El::fictitious();
@@ -137,7 +151,7 @@ final class FieldRenderer
             $fieldPathExpression,
             $fieldMeta
         );
-        $disabledWhen = $this->buildFieldExpression(
+        $fieldDisabledWhen = $this->buildFieldExpression(
             $field->getDisabledWhen(),
             $modelName,
             $formExpression,
@@ -145,7 +159,7 @@ final class FieldRenderer
             $fieldPathExpression,
             $fieldMeta
         );
-        $readonlyWhen = $this->buildFieldExpression(
+        $fieldReadonlyWhen = $this->buildFieldExpression(
             $field->getReadonlyWhen(),
             $modelName,
             $formExpression,
@@ -153,6 +167,8 @@ final class FieldRenderer
             $fieldPathExpression,
             $fieldMeta
         );
+        $disabledWhen = $this->resolveBooleanStateExpression(false, $inheritedDisabledWhen, $fieldDisabledWhen);
+        $readonlyWhen = $this->resolveBooleanStateExpression(false, $inheritedReadonlyWhen, $fieldReadonlyWhen);
         $validatableField = $field instanceof ValidatableFieldInterface ? $field : null;
         $requiredWhen = null;
         if ($validatableField?->isConditionalRequired() && $validatableField->getRequiredCondition()) {

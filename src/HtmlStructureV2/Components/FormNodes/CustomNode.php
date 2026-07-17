@@ -6,14 +6,17 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
+use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 
-final class CustomNode implements FormNode
+final class CustomNode implements FormNode, ConditionalFormNode
 {
     use HasFormTableColumnAttributes;
     use HasRenderAttributes;
     use HasSpan;
+    use HasFormNodeConditions;
 
     private ?string $columnLabel = null;
 

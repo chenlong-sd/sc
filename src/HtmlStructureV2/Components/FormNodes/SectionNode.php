@@ -5,20 +5,23 @@ namespace Sc\Util\HtmlStructureV2\Components\FormNodes;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
+use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathContext;
 use Sc\Util\HtmlStructureV2\Support\FormNodePathScopedContainer;
 
-final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer
+final class SectionNode implements FormNode, FormNodeContainer, FormNodePathScopedContainer, ConditionalFormNode
 {
     use HasRenderAttributes;
     use HasSpan;
     use HasFormNodeChildren;
     use HasReadonly;
+    use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
 
     /** @var Action[] */

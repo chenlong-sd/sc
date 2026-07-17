@@ -18,6 +18,7 @@ use Sc\Util\HtmlStructureV2\Components\FormNodes\InlineNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\SectionNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\TabPaneNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\TabsNode;
+use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\RenderContext;
@@ -117,7 +118,7 @@ final class FormRenderer
 
     private function renderNode(FormNode $node, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        if ($node instanceof Field && !$node->isVisible()) {
+        if ($node instanceof ConditionalFormNode && !$node->isVisible()) {
             return El::fictitious();
         }
 
@@ -126,7 +127,25 @@ final class FormRenderer
             throw new InvalidArgumentException('Unsupported V2 form node: ' . $node::class);
         }
 
-        return $this->{$method}($node, $context);
+        $rendered = $this->{$method}($node, $context);
+        if (!$node instanceof Field) {
+            $visibleWhen = $this->buildNodeExpression(
+                $node instanceof ConditionalFormNode ? $node->getVisibleWhen() : null,
+                $context,
+                $this->nodePathExpression($node, $context),
+                $this->buildNodeExpressionMeta($node)
+            );
+
+            if ($visibleWhen !== null) {
+                if ($node instanceof FormObjectGroup || $node->getAfterSpan() > 0) {
+                    return El::double('template')->setAttr('v-if', $visibleWhen)->append($rendered);
+                }
+
+                $rendered->setAttr('v-if', $visibleWhen);
+            }
+        }
+
+        return $rendered;
     }
 
     private function renderFieldNode(Field $field, FormNodeRenderContext $context): AbstractHtmlElement
@@ -142,7 +161,9 @@ final class FormRenderer
                 $context->options,
                 $context->renderContext,
                 $context->formReadonly,
-                $context->labelWidth
+                $context->labelWidth,
+                $context->disabledWhen,
+                $context->readonlyWhen
             );
         }
 
@@ -155,13 +176,15 @@ final class FormRenderer
             $context->options,
             $context->renderContext,
             $context->formReadonly,
-            $context->labelWidth
+            $context->labelWidth,
+            $context->disabledWhen,
+            $context->readonlyWhen
         );
     }
 
     private function renderSectionNode(SectionNode $section, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $sectionContext = $context
+        $sectionContext = $this->contextForConditionalNode($context, $section)
             ->mergeReadonly($section->isReadonly())
             ->inheritLabelWidth($section->getLabelWidth());
         $body = El::double('div')->addClass('sc-v2-form-section');
@@ -192,7 +215,7 @@ final class FormRenderer
 
     private function renderInlineNode(InlineNode $inlineNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $inlineContext = $context
+        $inlineContext = $this->contextForConditionalNode($context, $inlineNode)
             ->mergeReadonly($inlineNode->isReadonly())
             ->inheritLabelWidth($inlineNode->getLabelWidth());
         $body = $this->applyRenderableAttributes(
@@ -206,7 +229,7 @@ final class FormRenderer
 
     private function renderGridNode(GridNode $gridNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $gridContext = $context
+        $gridContext = $this->contextForConditionalNode($context, $gridNode)
             ->mergeReadonly($gridNode->isReadonly())
             ->inheritLabelWidth($gridNode->getLabelWidth());
         $row = $this->applyRenderableAttributes(
@@ -220,7 +243,7 @@ final class FormRenderer
 
     private function renderTabsNode(TabsNode $tabsNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $tabsContext = $context
+        $tabsContext = $this->contextForConditionalNode($context, $tabsNode)
             ->mergeReadonly($tabsNode->isReadonly())
             ->inheritLabelWidth($tabsNode->getLabelWidth());
         $tabs = $this->applyRenderableAttributes(
@@ -239,7 +262,11 @@ final class FormRenderer
         }
 
         foreach ($tabsNode->getTabs() as $index => $tab) {
-            $tabContext = $tabsContext
+            if (!$tab->isVisible()) {
+                continue;
+            }
+
+            $tabContext = $this->contextForConditionalNode($tabsContext, $tab)
                 ->mergeReadonly($tab->isReadonly())
                 ->inheritLabelWidth($tab->getLabelWidth());
             $pane = El::double('el-tab-pane')->setAttrs([
@@ -247,6 +274,15 @@ final class FormRenderer
                 'name' => (string) $index,
             ]);
             $pane = $this->applyRenderableAttributes($pane, $tab->getRenderAttributes());
+            $visibleWhen = $this->buildNodeExpression(
+                $tab->getVisibleWhen(),
+                $tabsContext,
+                $this->nodePathExpression($tab, $tabsContext),
+                $this->buildNodeExpressionMeta($tab)
+            );
+            if ($visibleWhen !== null) {
+                $pane->setAttr('v-if', $visibleWhen);
+            }
             if ($tab->isLazy()) {
                 $pane->setAttr('lazy', '');
             }
@@ -260,7 +296,7 @@ final class FormRenderer
 
     private function renderCollapseNode(CollapseNode $collapseNode, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $collapseContext = $context
+        $collapseContext = $this->contextForConditionalNode($context, $collapseNode)
             ->mergeReadonly($collapseNode->isReadonly())
             ->inheritLabelWidth($collapseNode->getLabelWidth());
         $collapse = $this->applyRenderableAttributes(
@@ -272,7 +308,11 @@ final class FormRenderer
         }
 
         foreach ($collapseNode->getItems() as $index => $item) {
-            $itemContext = $collapseContext
+            if (!$item->isVisible()) {
+                continue;
+            }
+
+            $itemContext = $this->contextForConditionalNode($collapseContext, $item)
                 ->mergeReadonly($item->isReadonly())
                 ->inheritLabelWidth($item->getLabelWidth());
             $itemElement = El::double('el-collapse-item')->setAttrs([
@@ -280,6 +320,15 @@ final class FormRenderer
                     'name' => (string) $index,
                 ]);
             $itemElement = $this->applyRenderableAttributes($itemElement, $item->getRenderAttributes());
+            $visibleWhen = $this->buildNodeExpression(
+                $item->getVisibleWhen(),
+                $collapseContext,
+                $this->nodePathExpression($item, $collapseContext),
+                $this->buildNodeExpressionMeta($item)
+            );
+            if ($visibleWhen !== null) {
+                $itemElement->setAttr('v-if', $visibleWhen);
+            }
 
             $collapse->append(
                 $itemElement->append($this->renderChildrenBodyContainer(
@@ -313,7 +362,7 @@ final class FormRenderer
 
     private function renderObjectGroup(FormObjectGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $groupContext = $context
+        $groupContext = $this->contextForConditionalNode($context, $group)
             ->mergeReadonly($group->isReadonly())
             ->inheritLabelWidth($group->getLabelWidth());
         $content = El::fictitious();
@@ -330,7 +379,7 @@ final class FormRenderer
 
     private function renderArrayGroup(FormArrayGroup $group, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $groupContext = $context
+        $groupContext = $this->contextForConditionalNode($context, $group)
             ->mergeReadonly($group->isReadonly())
             ->inheritLabelWidth($group->getLabelWidth());
         $arrayPath = FormPath::resolve($groupContext->pathPrefix, $group->name());
@@ -365,7 +414,8 @@ final class FormRenderer
             $scopeLiteral,
             $arrayPathExpression,
             $rowIndexVariable,
-            $groupContext->formReadonly
+            $groupContext->formReadonly,
+            $this->interactionDisabledExpression($groupContext)
         ));
         $card->append($this->renderArrayGroupRowBody(
             $group,
@@ -383,7 +433,8 @@ final class FormRenderer
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-array__footer',
                 $group->getAddButtonText(),
-                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression)
+                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression),
+                $this->interactionDisabledExpression($groupContext)
             ));
         }
 
@@ -396,7 +447,7 @@ final class FormRenderer
 
     private function renderFormTable(FormTable $table, FormNodeRenderContext $context): AbstractHtmlElement
     {
-        $tableContext = $context
+        $tableContext = $this->contextForConditionalNode($context, $table)
             ->mergeReadonly($table->isReadonly())
             ->inheritLabelWidth($table->getLabelWidth());
         $columns = $this->formTableColumnWalker->build($table->getChildren(), $table->name());
@@ -434,7 +485,9 @@ final class FormRenderer
                     $tableContext->renderContext,
                     $tableContext->formReadonly,
                     $tableContext->arrayDepth,
-                    $tableScopeVariable
+                    $tableScopeVariable,
+                    $tableContext->disabledWhen,
+                    $tableContext->readonlyWhen
                 )
             );
         }
@@ -445,7 +498,8 @@ final class FormRenderer
                 $scopeLiteral,
                 $arrayPathExpression,
                 $tableScopeVariable,
-                $this->tableRowIndexExpression($tableScopeVariable)
+                $this->tableRowIndexExpression($tableScopeVariable),
+                $this->interactionDisabledExpression($tableContext)
             ));
         }
 
@@ -455,7 +509,8 @@ final class FormRenderer
             $body->append($this->renderAddRowFooter(
                 'sc-v2-form-table__footer',
                 $table->getAddButtonText(),
-                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression)
+                sprintf('addFormArrayRow(%s, %s)', $scopeLiteral, $arrayPathExpression),
+                $this->interactionDisabledExpression($tableContext)
             ));
         }
 
@@ -473,7 +528,9 @@ final class FormRenderer
         ?RenderContext $renderContext = null,
         bool $formReadonly = false,
         int $tableArrayDepth = 0,
-        string $tableScopeVariable = 'scope'
+        string $tableScopeVariable = 'scope',
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement {
         $column = El::double('el-table-column');
         if ($columnSchema->label() !== '') {
@@ -496,7 +553,9 @@ final class FormRenderer
                     $renderContext,
                     $formReadonly,
                     $tableArrayDepth,
-                    $tableScopeVariable
+                    $tableScopeVariable,
+                    $inheritedDisabledWhen,
+                    $inheritedReadonlyWhen
                 ));
             }
 
@@ -533,7 +592,9 @@ final class FormRenderer
                     $propExpression,
                     $options,
                     $renderContext,
-                    $formReadonly || $columnSchema->isReadonly()
+                    $formReadonly || $columnSchema->isReadonly(),
+                    $inheritedDisabledWhen,
+                    $inheritedReadonlyWhen
                 )
             );
         } elseif ($columnSchema->arrayGroup() !== null) {
@@ -544,7 +605,9 @@ final class FormRenderer
                 $renderContext,
                 $formReadonly || $columnSchema->isReadonly(),
                 $tableArrayDepth,
-                $tableScopeVariable
+                $tableScopeVariable,
+                $inheritedDisabledWhen,
+                $inheritedReadonlyWhen
             ));
         } else {
             $customNode = $columnSchema->customNode();
@@ -552,14 +615,16 @@ final class FormRenderer
                 return El::fictitious();
             }
 
-            $aliasedContent->append($this->renderCustomNode(
+            $aliasedContent->append($this->renderNode(
                 $customNode,
                 new FormNodeRenderContext(
                     modelName: $tableRowModelExpression,
                     inline: true,
                     formReadonly: $formReadonly,
                     options: $options,
-                    renderContext: $renderContext
+                    renderContext: $renderContext,
+                    disabledWhen: $inheritedDisabledWhen,
+                    readonlyWhen: $inheritedReadonlyWhen
                 )
             ));
         }
@@ -577,7 +642,9 @@ final class FormRenderer
         ?RenderContext $renderContext = null,
         bool $formReadonly = false,
         int $tableArrayDepth = 0,
-        string $tableScopeVariable = 'scope'
+        string $tableScopeVariable = 'scope',
+        ?string $inheritedDisabledWhen = null,
+        ?string $inheritedReadonlyWhen = null
     ): AbstractHtmlElement {
         $group = $columnSchema->arrayGroup();
         if ($group === null) {
@@ -596,13 +663,11 @@ final class FormRenderer
             arrayPathExpression: $arrayPathExpression,
             rowIndexExpression: $tableRowIndexExpression,
             arrayDepth: $tableArrayDepth + 1,
+            disabledWhen: $inheritedDisabledWhen,
+            readonlyWhen: $inheritedReadonlyWhen,
         );
 
-        if ($group instanceof FormTable) {
-            return $this->renderFormTable($group, $rowContext);
-        }
-
-        return $this->renderArrayGroup($group, $rowContext);
+        return $this->renderNode($group, $rowContext);
     }
 
     private function renderFormTableActionColumn(
@@ -610,7 +675,8 @@ final class FormRenderer
         string $scopeLiteral,
         string $arrayPathExpression,
         string $tableScopeVariable,
-        string $rowIndexExpression
+        string $rowIndexExpression,
+        ?string $disabledExpression = null
     ): AbstractHtmlElement {
         $column = El::double('el-table-column')->setAttrs([
             'label' => '操作',
@@ -628,9 +694,12 @@ final class FormRenderer
                     'type' => 'primary',
                     'size' => 'small',
                     ':disabled' => sprintf(
-                        'getFormArrayRows(%s, %s).length <= 1',
-                        $scopeLiteral,
-                        $arrayPathExpression
+                        '%s',
+                        $this->resolveBooleanStateExpression(
+                            false,
+                            sprintf('getFormArrayRows(%s, %s).length <= 1', $scopeLiteral, $arrayPathExpression),
+                            $disabledExpression
+                        ) ?? 'false'
                     ),
                     'class' => self::DRAG_SORT_HANDLE_CLASS,
                     'icon' => 'Rank',
@@ -644,6 +713,7 @@ final class FormRenderer
                     'link' => '',
                     'type' => 'danger',
                     'size' => 'small',
+                    ':disabled' => $disabledExpression ?? 'false',
                     '@click' => sprintf(
                         'removeFormArrayRow(%s, %s, %s)',
                         $scopeLiteral,
@@ -665,7 +735,8 @@ final class FormRenderer
         string $scopeLiteral,
         string $arrayPathExpression,
         string $rowIndexVariable,
-        bool $formReadonly = false
+        bool $formReadonly = false,
+        ?string $disabledExpression = null
     ): AbstractHtmlElement {
         $header = El::double('template')->setAttr('#header');
         $container = El::double('div')->addClass('sc-v2-form-array__item-header');
@@ -684,7 +755,11 @@ final class FormRenderer
                         'link' => '',
                         'type' => 'primary',
                         'size' => 'small',
-                        ':disabled' => sprintf('%s === 0', $rowIndexVariable),
+                        ':disabled' => $this->resolveBooleanStateExpression(
+                            false,
+                            sprintf('%s === 0', $rowIndexVariable),
+                            $disabledExpression
+                        ) ?? 'false',
                         '@click' => sprintf(
                             'moveFormArrayRow(%s, %s, %s, "up")',
                             $scopeLiteral,
@@ -697,10 +772,17 @@ final class FormRenderer
                         'type' => 'primary',
                         'size' => 'small',
                         ':disabled' => sprintf(
-                            '%s >= getFormArrayRows(%s, %s).length - 1',
-                            $rowIndexVariable,
-                            $scopeLiteral,
-                            $arrayPathExpression
+                            '%s',
+                            $this->resolveBooleanStateExpression(
+                                false,
+                                sprintf(
+                                    '%s >= getFormArrayRows(%s, %s).length - 1',
+                                    $rowIndexVariable,
+                                    $scopeLiteral,
+                                    $arrayPathExpression
+                                ),
+                                $disabledExpression
+                            ) ?? 'false'
                         ),
                         '@click' => sprintf(
                             'moveFormArrayRow(%s, %s, %s, "down")',
@@ -718,6 +800,7 @@ final class FormRenderer
                         'link' => '',
                         'type' => 'danger',
                         'size' => 'small',
+                        ':disabled' => $disabledExpression ?? 'false',
                         '@click' => sprintf(
                             'removeFormArrayRow(%s, %s, %s)',
                             $scopeLiteral,
@@ -830,14 +913,20 @@ final class FormRenderer
     private function renderAddRowFooter(
         string $className,
         string $buttonText,
-        string $clickExpression
+        string $clickExpression,
+        ?string $disabledExpression = null
     ): AbstractHtmlElement {
-        return El::double('div')->addClass($className)->append(
-            El::double('el-button')->setAttrs([
+        $buttonAttrs = [
                 'type' => 'primary',
                 'plain' => '',
                 '@click' => $clickExpression,
-            ])->append($buttonText)
+            ];
+        if ($disabledExpression !== null) {
+            $buttonAttrs[':disabled'] = $disabledExpression;
+        }
+
+        return El::double('div')->addClass($className)->append(
+            El::double('el-button')->setAttrs($buttonAttrs)->append($buttonText)
         );
     }
 
@@ -855,6 +944,122 @@ final class FormRenderer
                 $container->append($rendered);
             }
         }
+    }
+
+    private function contextForConditionalNode(FormNodeRenderContext $context, FormNode $node): FormNodeRenderContext
+    {
+        if (!$node instanceof ConditionalFormNode) {
+            return $context;
+        }
+
+        $nodePathExpression = $this->nodePathExpression($node, $context);
+        $nodeMeta = $this->buildNodeExpressionMeta($node);
+        $disabledWhen = $node->isDisabled()
+            ? 'true'
+            : $this->buildNodeExpression($node->getDisabledWhen(), $context, $nodePathExpression, $nodeMeta);
+        $readonlyWhen = $this->buildNodeExpression($node->getReadonlyWhen(), $context, $nodePathExpression, $nodeMeta);
+
+        return $context
+            ->mergeDisabledWhen($disabledWhen)
+            ->mergeReadonlyWhen($readonlyWhen);
+    }
+
+    private function buildNodeExpression(
+        ?\Stringable $expression,
+        FormNodeRenderContext $context,
+        ?string $nodePathExpression = null,
+        array $nodeMeta = []
+    ): ?string {
+        $scopeExpression = $context->options->formScope === null || trim($context->options->formScope) === ''
+            ? 'null'
+            : $this->jsValue($context->options->formScope);
+
+        return $this->buildFieldExpression(
+            $expression,
+            $context->modelName,
+            $this->formModelExpression($context->modelName, $context->options->formScope),
+            $scopeExpression,
+            $nodePathExpression,
+            $nodeMeta
+        );
+    }
+
+    private function nodePathExpression(FormNode $node, FormNodeRenderContext $context): ?string
+    {
+        if ($node instanceof Field) {
+            return $this->jsLiteral($context->fieldPath($node->name()));
+        }
+
+        if ($node instanceof FormObjectGroup || $node instanceof FormArrayGroup) {
+            return $this->jsLiteral(FormPath::resolve($context->pathPrefix, $node->name()));
+        }
+
+        return null;
+    }
+
+    private function buildNodeExpressionMeta(FormNode $node): array
+    {
+        $meta = [
+            'node' => $node::class,
+            'visible' => $node instanceof ConditionalFormNode ? $node->isVisible() : true,
+            'disabled' => $node instanceof ConditionalFormNode ? $node->isDisabled() : false,
+        ];
+
+        if (method_exists($node, 'isReadonly')) {
+            $meta['readonly'] = $node->isReadonly();
+        }
+
+        return $meta;
+    }
+
+    private function formModelExpression(string $modelName, ?string $formScope = null): string
+    {
+        $modelName = trim($modelName);
+        if ($modelName === '') {
+            $modelName = '{}';
+        }
+
+        if ($formScope === null || trim($formScope) === '') {
+            return $modelName;
+        }
+
+        return sprintf(
+            '(typeof getFormModel === "function" ? (getFormModel(%s) || %s) : %s)',
+            $this->jsValue($formScope),
+            $modelName,
+            $modelName
+        );
+    }
+
+    private function resolveBooleanStateExpression(bool $staticEnabled, ?string ...$dynamicExpressions): ?string
+    {
+        if ($staticEnabled) {
+            return 'true';
+        }
+
+        $conditions = array_values(array_filter(
+            $dynamicExpressions,
+            static fn(?string $expression): bool => is_string($expression) && trim($expression) !== ''
+        ));
+
+        if ($conditions === []) {
+            return null;
+        }
+
+        if (in_array('true', $conditions, true)) {
+            return 'true';
+        }
+
+        if (count($conditions) === 1) {
+            return $conditions[0];
+        }
+
+        return sprintf('(%s)', implode(') || (', $conditions));
+    }
+
+    private function interactionDisabledExpression(FormNodeRenderContext $context): ?string
+    {
+        return $this->resolveBooleanStateExpression(false, $context->disabledWhen, $context->readonlyWhen);
     }
 
     private function arrayFieldPropExpression(FormNodeRenderContext $context, string $fieldPath): string

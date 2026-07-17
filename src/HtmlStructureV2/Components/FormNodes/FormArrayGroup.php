@@ -6,19 +6,22 @@ use InvalidArgumentException;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasRenderAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasFormTableColumnAttributes;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
+use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNodeContainer;
 
-class FormArrayGroup implements FormNode, FormNodeContainer
+class FormArrayGroup implements FormNode, FormNodeContainer, ConditionalFormNode
 {
     use HasRenderAttributes;
     use HasFormTableColumnAttributes;
     use HasSpan;
     use HasFormNodeChildren;
     use HasReadonly;
+    use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
     private array $defaultRows = [];
     private ?string $title = null;

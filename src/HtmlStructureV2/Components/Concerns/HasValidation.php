@@ -24,6 +24,8 @@ trait HasValidation
      *   - `state`：当前页面运行时 state，包含 `Pages::state()` 与 `Forms::state()` 数据。
      *   - `pageState`：`state` 的语义化别名，当前实现里两者指向同一份对象。
      *   - `scope`：当前表单 scope / key，例如 `article-form`。
+     *   - `dialogRow`：当字段渲染在弹窗 body/footer 内时可用，表示打开弹窗的当前表格行数据；
+     *     它不属于表单 `model`，不会随表单提交，适合只用于条件校验判断。
      *   - `fieldName`：当前字段完整路径，例如 `status`、`profile.dept_id`。
      *   - `vm`：当前页面根 Vue 实例 / runtime 宿主对象。
      *   - `options`：当前字段的已解析选项数组；非选项字段通常为空数组。
@@ -37,6 +39,7 @@ trait HasValidation
      * 示例：
      * - `Fields::text('title', '标题')->validateRequired(true, '标题不能为空')`
      * - `Fields::text('other', '其他')->validateRequired(true, null, null, 'model.type === "other"')`
+     * - `Fields::text('other', '其他')->validateRequired(true, null, null, 'dialogRow?.business_type?.scene == 1')`
      * - `Fields::text('remark', '备注')->validateRequired(true, null, null, 'model.needRemark === true')`
      */
     public function validateRequired(
@@ -87,6 +90,7 @@ trait HasValidation
      * 示例：
      * - `Fields::text('title', '标题')->validateRule(['min' => 2, 'message' => '至少 2 个字符'])`
      * - `Fields::text('price', '价格')->validateRule(['type' => 'number'], 'model.needPrice === true')`
+     * - `Fields::text('remark', '备注')->validateRule(['max' => 100], 'dialogRow?.status == 1')`
      * - `Fields::text('desc', '描述')->validateRule(['max' => 100], 'model.category === "brief"')`
      */
     public function validateRule(array $rule, string|JsExpression|null $when = null): static

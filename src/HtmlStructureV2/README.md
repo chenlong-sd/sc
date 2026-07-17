@@ -382,6 +382,7 @@ Fields::editor('content', '正文')
 - `Fields::*()` 原本已有 `prop()` / `props()`；现在也补了统一别名 `attr()` / `attrs()` / `className()` / `style()`，仍然直接作用到字段实际渲染的组件根节点，不作用于外层 form-item。
 - `Fields::*()` 现在支持 `on()` / `events()` 绑定底层字段组件事件；handler 按 Element Plus 原生事件参数调用，例如 `->on('change', '(value) => console.log(value)')`。如果字段内部也绑定同名事件（例如 `linkageUpdate()` 的 `change`），会和自定义事件串行执行。
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `attr()` / `attrs()` / `className()` / `style()`；属性会挂到各自的主要渲染根节点上。
+- `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `visible()` / `disabled()` / `visibleWhen()` / `disabledWhen()` / `readonlyWhen()`；`visible(false)` 会跳过整棵子树，动态禁用/只读会向下作用到内部字段。
 - `Forms::tabs()` / `Forms::collapse()` 属于纯结构节点，主要补“分标签布局 / 折叠分组”这类高级表单布局能力；它们继续复用表单树 walker，不单独引入 managed runtime。
 - `Forms::section()` / `Forms::tab()` / `Forms::collapseItem()` 用 `->addContent(...)` 追加面板内容。
 - `Forms::inline()` / `Forms::grid()` 用 `->addItems(...)` 追加布局项。
@@ -755,6 +756,24 @@ Actions::make('确认')->dialog(
 );
 ```
 
+如果只是想在弹窗表单的条件表达式里读取来源表格行，而不希望这个值进入表单提交，不要额外放进 `rowData()` 或隐藏字段，直接使用弹窗上下文 `dialogRow`：
+
+```php
+Actions::make('确认')->dialog(
+    Dialogs::make('confirm-work-order', '确认工单')
+        ->rowData([
+            'work_order_id' => '@row.id',
+        ])
+        ->form(
+            Forms::make('confirmWork')->addFields(
+                Fields::hidden('work_order_id'),
+                Fields::radio('result', '确认结果')
+                    ->visibleWhen('dialogRow?.business_type?.scene == 1')
+            )->saveUrl('/admin/work-order/confirm')
+        )
+);
+```
+
 为了兼容旧写法，未配置 `load()` 的表单弹窗里，`loadPayload(['work_order_id' => '@row.id'])` 也会作为表单初始数据映射使用；配置了 `load()` 时，`loadPayload()` 仍只表示详情加载请求参数。
 
 ### 非表单弹窗示例
@@ -799,6 +818,8 @@ $iframeDialog = Dialogs::make('preview', '页面预览')
     ->afterClose(JsExpression::make('(ctx) => console.log("closed", ctx.dialogKey)'));
 ```
 
+`content(...)` 的模板内容运行在弹窗 body 作用域内，可直接读取 `dialogRow`。这个值只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。
+
 `component()` 适合已经在页面全局注册过的 Vue 组件。打开弹窗后，runtime 会在 `nextTick` 后尝试调用组件实例上的 `onShow(ctx)`；关闭完成后如果配置了 `componentCloseMethod()`，也会调用对应实例方法。
 
 `context()` 解析后会同时挂到弹窗上下文的顶层字段和 `ctx.dialogContext` 上，所以你既可以写 `@currentId`，也可以在 hook 里用 `ctx.dialogContext.currentId`。
@@ -820,7 +841,7 @@ $fillDialog = Dialogs::make('work-order-fill', '填写')
     );
 ```
 
-`footer(...)` 里的 `Actions::submit()` / `Actions::close()` 现在会默认作用到当前 dialog；只有把动作写到弹窗外部时，才需要显式 `->dialog('work-order-fill')`。
+`footer(...)` 里的 `Actions::submit()` / `Actions::close()` 现在会默认作用到当前 dialog；只有把动作写到弹窗外部时，才需要显式 `->dialog('work-order-fill')`。footer 动作的前端属性表达式也可直接读取 `dialogRow`，例如 `Actions::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`。
 
 V2 子页面默认可直接使用：
 
@@ -1529,7 +1550,7 @@ Actions::custom('取消')->onClick('vm.closeHostDialog()');
 
 `Form / Table / List / Dialog / Action / Layouts / Blocks / Displays` 都统一走 `->on($event, $handler)` / `->events([...])`。默认优先用结构化 `Events::*()`，只有在确实抽不出结构时再退回 `JsExpression::make('(ctx) => { ... }')`。
 
-字段也支持 `Fields::*()->on()`，但它绑定的是底层 Element Plus 字段组件事件，不走结构化 `ctx` 协议；handler 接收该组件原生事件参数。事件函数体里可直接读取 `model` 和 `form`：`model` 是当前字段所在的数据对象（在 `object()` / 表格行内会变成子对象或行对象），`form` 是当前表单根模型。旧的 `attr('@change', ...)` / `prop('@change', ...)` 仍可用，并会和 `on()` 及内部联动事件合并执行。
+字段也支持 `Fields::*()->on()`，但它绑定的是底层 Element Plus 字段组件事件，不走结构化 `ctx` 协议；handler 接收该组件原生事件参数。事件函数体里可直接读取 `model` 和 `form`：`model` 是当前字段所在的数据对象（在 `object()` / 表格行内会变成子对象或行对象），`form` 是当前表单根模型。字段渲染在弹窗 body 内时还可读取 `dialogRow`，它只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。旧的 `attr('@change', ...)` / `prop('@change', ...)` 仍可用，并会和 `on()` 及内部联动事件合并执行。
 
 ```php
 use Sc\Util\HtmlStructureV2\Dsl\Events;
@@ -1616,6 +1637,7 @@ Fields::select('status', '状态')
 - `model` / `form`
 - `state` / `pageState`
 - `scope` / `fieldName` / `vm`
+- 弹窗 body/footer 内额外可读 `dialogRow`，表示打开弹窗的来源表格行数据；它不属于表单 `model`，不会随表单提交
 - `options` / `fieldConfig` / `optionLoading` / `optionLoaded`
 - `field` / `props`
 - 常见判断可以直接写成：`options.length > 0`、`props.multiple === true`、`fieldConfig.remoteSearch?.enabled === true`

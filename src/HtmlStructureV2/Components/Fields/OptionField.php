@@ -117,6 +117,8 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * - fieldName: 当前字段路径
      * - getState(path, fallback): 读取页面 state
      * - setState(path, value): 写入页面 state
+     * 字段渲染在弹窗 body 内时，表达式还可直接读取外层模板变量 `dialogRow`；
+     * `dialogRow` 只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。
      *
      * 如果逻辑已经复杂到更适合写成函数，或你希望显式解构 context，请改用
      * `computedOptions()`。
@@ -127,6 +129,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * 示例：
      * - `Fields::radio('status')->optionsExpression("pageState.statusOptions")`
      * - `Fields::select('project_id')->optionsExpression("(pageState.forms?.[scope]?.project || []).filter(item => item.business_type_id === form.business_type_id)")`
+     * - `Fields::radio('result')->optionsExpression("dialogRow?.business_type?.scene == 1 ? yesOptions : noOptions")`
      */
     public function optionsExpression(string|JsExpression $expression): static
     {
@@ -164,6 +167,8 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * - fieldName: 当前字段路径，例如 `status`、`profile.dept_id`。
      * - getState(path, fallback): 读取页面 state 的辅助方法。
      * - setState(path, value): 写入页面 state 的辅助方法。
+     * 字段渲染在弹窗 body 内时，resolver 函数体还可直接读取外层模板变量 `dialogRow`；
+     * 注意它不是 context 对象字段，不能通过 `({ dialogRow }) => ...` 解构获取。
      *
      * @param string|JsExpression $resolver 返回选项数组的表达式或函数。
      * @return static 当前选项字段实例。
@@ -171,6 +176,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * 示例：
      * - `Fields::radio('status')->computedOptions('({ model, state }) => model.type === 1 ? state.articleOptions : state.videoOptions')`
      * - `Fields::select('project_id')->computedOptions('({ form, pageState, scope }) => (pageState.forms?.[scope]?.project || []).filter(item => item.business_type_id === form.business_type_id)')`
+     * - `Fields::radio('result')->computedOptions('({ state }) => dialogRow?.status == 1 ? state.yesOptions : state.noOptions')`
      */
     public function computedOptions(string|JsExpression $resolver): static
     {

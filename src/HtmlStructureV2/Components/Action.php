@@ -681,12 +681,14 @@ class Action implements
      * 字符串值仍按原始前端表达式输出。
      * 若动作运行在 `Table::rowActions()` 中，表达式可直接读取 `scope.row` / `scope.$index`；
      * 若动作运行在 dialog body/footer 中，可直接读取 `dialogRow`。
+     * `dialogRow` 只表示打开弹窗的来源表格行上下文，不属于表单 `model`，不会随表单提交。
      *
      * @param array $props 要合并到按钮上的额外属性。
      * @return static 当前动作实例。
      *
      * 示例：
      * - `Action::make('打开')->props(['plain' => true, 'v-if' => 'scope.row.enabled'])`
+     * - `Action::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`
      */
     public function props(array $props): static
     {

@@ -19,6 +19,8 @@ final class FormNodeRenderContext
         public readonly ?string $rowIndexExpression = null,
         public readonly int $arrayDepth = 0,
         public readonly ?string $labelWidth = null,
+        public readonly ?string $disabledWhen = null,
+        public readonly ?string $readonlyWhen = null,
     ) {
     }
 
@@ -36,6 +38,8 @@ final class FormNodeRenderContext
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
             labelWidth: $this->labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $this->readonlyWhen,
         );
     }
 
@@ -53,6 +57,8 @@ final class FormNodeRenderContext
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
             labelWidth: $this->labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $this->readonlyWhen,
         );
     }
 
@@ -79,6 +85,8 @@ final class FormNodeRenderContext
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
             labelWidth: $labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $this->readonlyWhen,
         );
     }
 
@@ -105,6 +113,8 @@ final class FormNodeRenderContext
             rowIndexExpression: $this->rowIndexExpression,
             arrayDepth: $this->arrayDepth,
             labelWidth: $this->labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $this->readonlyWhen,
         );
     }
 
@@ -129,6 +139,56 @@ final class FormNodeRenderContext
             rowIndexExpression: $rowIndexExpression,
             arrayDepth: $arrayDepth ?? $this->arrayDepth,
             labelWidth: $this->labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $this->readonlyWhen,
+        );
+    }
+
+    public function mergeDisabledWhen(?string $expression): self
+    {
+        $merged = $this->mergeBooleanExpression($this->disabledWhen, $expression);
+        if ($merged === $this->disabledWhen) {
+            return $this;
+        }
+
+        return new self(
+            modelName: $this->modelName,
+            inline: $this->inline,
+            formReadonly: $this->formReadonly,
+            options: $this->options,
+            renderContext: $this->renderContext,
+            pathPrefix: $this->pathPrefix,
+            arrayPath: $this->arrayPath,
+            arrayPathExpression: $this->arrayPathExpression,
+            rowIndexExpression: $this->rowIndexExpression,
+            arrayDepth: $this->arrayDepth,
+            labelWidth: $this->labelWidth,
+            disabledWhen: $merged,
+            readonlyWhen: $this->readonlyWhen,
+        );
+    }
+
+    public function mergeReadonlyWhen(?string $expression): self
+    {
+        $merged = $this->mergeBooleanExpression($this->readonlyWhen, $expression);
+        if ($merged === $this->readonlyWhen) {
+            return $this;
+        }
+
+        return new self(
+            modelName: $this->modelName,
+            inline: $this->inline,
+            formReadonly: $this->formReadonly,
+            options: $this->options,
+            renderContext: $this->renderContext,
+            pathPrefix: $this->pathPrefix,
+            arrayPath: $this->arrayPath,
+            arrayPathExpression: $this->arrayPathExpression,
+            rowIndexExpression: $this->rowIndexExpression,
+            arrayDepth: $this->arrayDepth,
+            labelWidth: $this->labelWidth,
+            disabledWhen: $this->disabledWhen,
+            readonlyWhen: $merged,
         );
     }
 
@@ -142,5 +202,27 @@ final class FormNodeRenderContext
         return $this->arrayPath !== null
             && $this->arrayPathExpression !== null
             && $this->rowIndexExpression !== null;
+    }
+
+    private function mergeBooleanExpression(?string ...$expressions): ?string
+    {
+        $conditions = array_values(array_filter(
+            $expressions,
+            static fn(?string $expression): bool => is_string($expression) && trim($expression) !== ''
+        ));
+
+        if ($conditions === []) {
+            return null;
+        }
+
+        if (in_array('true', $conditions, true)) {
+            return 'true';
+        }
+
+        if (count($conditions) === 1) {
+            return $conditions[0];
+        }
+
+        return sprintf('(%s)', implode(') || (', $conditions));
     }
 }

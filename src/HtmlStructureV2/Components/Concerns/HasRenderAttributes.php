@@ -11,6 +11,8 @@ trait HasRenderAttributes
      * 属性名会原样输出到最终 HTML / 组件根节点上；动态绑定请自行写成 `":prop"` 或 `"@event"`。
      * 其中 `class` / `style` 会与同一节点上此前通过该方法设置的值自动合并；
      * 传 null 可移除该属性；非动态属性传 true 时会按布尔属性输出。
+     * 当前节点实际渲染在 dialog body/footer 内时，动态属性表达式可读取 `dialogRow`；
+     * `dialogRow` 只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。
      *
      * @param string $name 属性名。
      * @param mixed $value 属性值。
@@ -18,6 +20,7 @@ trait HasRenderAttributes
      *
      * 示例：
      * - `Blocks::button('查看')->attr(':disabled', 'loading')`
+     * - `Forms::custom('提示')->attr('v-if', 'dialogRow?.status == 1')`
      */
     public function attr(string $name, mixed $value = ''): static
     {
@@ -48,12 +51,14 @@ trait HasRenderAttributes
     /**
      * 批量设置当前节点渲染根元素属性。
      * 规则与 attr() 一致；键名按原样输出，动态绑定请自行写成 `":prop"` / `"@event"`。
+     * 当前节点实际渲染在 dialog body/footer 内时，动态属性表达式可读取 `dialogRow`。
      *
      * @param array $attributes 要设置的属性集合。
      * @return static 当前节点实例。
      *
      * 示例：
      * - `Layouts::stack()->attrs(['data-role' => 'summary', ':loading' => 'loading'])`
+     * - `Forms::grid()->attrs(['v-if' => 'dialogRow?.status == 1'])`
      */
     public function attrs(array $attributes): static
     {
