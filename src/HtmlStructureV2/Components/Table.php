@@ -602,6 +602,35 @@ final class Table implements Renderable, EventAware
     }
 
     /**
+     * 简易模式 / 静态表格。
+     *
+     * 仅保留表格数据的展示：关闭分页、列设置、批量勾选、最大高度自适应。
+     * 不会清理已经添加的列、行数据，也不会主动移除已配置的工具栏/行操作（简易语义下本就不该配置这些）；
+     * 若仍配了 toolbar/rowActions，会在渲染时按各自开关正常显示，调用方应保持简洁。
+     *
+     * 适用：纯展示型表格（无翻页、无操作、无列控面板），数据建议用 `rows()` 直接提供。
+     *
+     * @param bool $simple 是否启用简易模式，默认值为 true。传 false 可恢复到常规表格（已显式开启的开关不会自动重置）。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * - `Tables::make('qa-info-table')->simple()->addColumns($c1,$c2)->rows($rows)`
+     * - `Tables::make('qa-info-table')->simple(false)` // 再次切回常规（需自行恢复相关开关）
+     */
+    public function simple(bool $simple = true): self
+    {
+        if ($simple) {
+            $this->pagination = false;
+            $this->settings = false;
+            $this->selection = false;
+            // 关掉动态高度限制，静态表格跟随内容自然撑高
+            $this->maxHeight = 0;
+        }
+
+        return $this;
+    }
+
+    /**
      * 控制是否显示分页。
      *
      * @param bool $pagination 是否启用分页，默认值为 true。

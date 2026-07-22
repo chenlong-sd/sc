@@ -70,9 +70,9 @@ body {
 .sc-v2-block-title h2,
 .sc-v2-section__header,
 .sc-v2-form-section__heading {
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 0.5;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
   color: var(--sc-v2-text);
   position: relative;
   padding-left: 10px;
@@ -85,8 +85,8 @@ body {
   content: '';
   position: absolute;
   left: 0;
-  top: 53%;
-  transform: translateY(-55%);
+  top: 50%;
+  transform: translateY(-50%);
   width: 3px;
   height: 1.4em;
   border-radius: 2px;
@@ -98,6 +98,10 @@ body {
   margin: 0;
   line-height: 1.7;
   color: var(--sc-v2-text-secondary);
+}
+
+.sc-v2-descriptions > .sc-v2-section__header {
+  margin-bottom: 12px;
 }
 
 .sc-v2-block-text--muted {
@@ -1148,4 +1152,14 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
 
 .sc-v2-image-preview-close:hover {
   color: #f56c6c;
+}
+
+/* 附件列表：每个附件链左对齐，图标与文件名之间留 4px 间距，避免 el-link 默认 inline-flex 把图标与文字做居中处理 */
+.sc-v2-media-files .el-link {
+  justify-content: flex-start;
+  text-align: left;
+}
+.sc-v2-media-files .el-link .el-icon {
+  margin-right: 4px;
+  vertical-align: middle;
 }

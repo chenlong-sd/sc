@@ -714,7 +714,10 @@
           registerScV2Components(app);
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
-          globalThis.__SC_V2_PAGE__ = createPublicPageApi(vm);
+          globalThis.__SC_V2_PAGE__ = Object.assign(
+            globalThis.__SC_V2_PAGE__ || {},
+            createPublicPageApi(vm)
+          );
           syncIframeDialogChildClass();
           startVideoUploadPreviewObserver();
           hideAppLoadingShell();

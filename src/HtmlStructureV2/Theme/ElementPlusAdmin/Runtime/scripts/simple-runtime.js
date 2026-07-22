@@ -961,7 +961,10 @@
           const vm = app.mount('#app');
           startVideoUploadPreviewObserver();
           hideAppLoadingShell();
-          const pageApi = createPublicPageApi(vm);
+          const pageApi = Object.assign(
+            globalThis.__SC_V2_PAGE__ || {},
+            createPublicPageApi(vm)
+          );
           globalThis.__SC_V2_PAGE__ = pageApi;
           syncIframeDialogChildClass();
           if (typeof vm.syncHostDialogSubmitState === 'function') {

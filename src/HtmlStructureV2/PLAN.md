@@ -40,6 +40,63 @@ So the next phase should focus on missing feature bodies, not on re-creating old
 
 ## Recently Completed
 
+### Done. V2-native media display for detail pages (single/multi image, single/multi video, attachments)
+
+V1 exposed `Image / Images / Video / Videos` for detail-side media rendering. V2 previously only had
+`Descriptions`, and the only media handling lived inside `ColumnRenderer` (table cells). This phase
+adds V2-native media display components for the detail side and wires them into Descriptions.
+
+Evidence:
+
+- New components under `Components/Display/Media/`:
+  - `Image` (single image, `el-image` + click preview)
+  - `Images` (multi image, shared `el-image-viewer` preview group, `:initial-index`)
+  - `Video` / `Videos` (thumbnail + play overlay; click opens a shared `el-dialog` player)
+  - `File` / `Files` (attachment as `el-link` + auto icon by extension)
+- Both forms preserved from V1: PHP array (static) and JS variable string (dynamic). `prop` resolves
+  the real address field for object entries.
+- New runtime `Theme/ElementPlusAdmin/MediaRuntime.php` injects CSS + a shared `el-dialog` player only
+  when a video component is present on the page; zero overhead otherwise (verified).
+- The video player dialog uses `width="auto" append-to-body align-center` and the `<video>` is
+  constrained by `max-width:100%; max-height:70vh`, so aspect ratio adapts automatically without
+  reading metadata or recomputing dialog geometry.
+- `LightweightComponentRenderer::renderDescriptions()` now renders `Renderable` item values through the
+  theme renderer (instead of `(string)` cast), so media components can be used directly as Descriptions
+  items while plain string values keep behaving as before.
+- DSL entry points added in `Dsl/Displays.php`:
+  `Displays::image / images / video / videos / file / files`.
+
+Outcome:
+
+- Detail pages can now show images, videos and attachments without falling back to V1.
+- Migration cost stays low: behavior of `Images` (array vs JS variable) mirrors V1.
+- The shared video player is a page-level lightweight runtime; it does not touch the main runtime
+  boot flow and does not depend on the legacy `layer` library.
+
+Usage:
+
+```php
+use Sc\Util\HtmlStructureV2\Dsl\Displays;
+
+$detail = Displays::descriptions()
+    ->title('用户信息')
+    ->columns(2)
+    ->border(false)
+    ->labelWidth(120)
+    ->item('姓名', '张三')
+    ->item('头像', Displays::image('/av.jpg', true))
+    ->item('作品', Displays::images(['p1.jpg', 'p2.jpg'], 'url')->limit(2))
+    ->item('介绍视频', Displays::video('/intro.mp4', true)->poster('/p.jpg'))
+    ->item('附件', Displays::files([
+        ['name' => '合同.pdf', 'url' => '/c.pdf', 'size' => '1MB'],
+    ]));
+```
+
+```
+static form:   Displays::image('/av.jpg', true)         // src="/av.jpg"
+dynamic form:  Displays::image('row.avatar', false)    // :src="row.avatar"
+```
+
 ### Done. V2-native drag sort / tree drag sort
 
 This gap is no longer theoretical work.

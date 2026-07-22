@@ -30,6 +30,8 @@ final class ImitateAopProxy
 
     private array $aspectMapping = [];
 
+    private ?\ReflectionMethod $classAspectMethod = null;
+
     /**
      * @param object|string $class
      *
@@ -79,6 +81,11 @@ final class ImitateAopProxy
 
             foreach ($reflectionAttributes as $attribute) {
                 $aspect = $attribute->newInstance();
+                if ($aspect instanceof ClassAspect && $method->isPrivate()) {
+                    $this->classAspectMethod = $method;
+                    break;
+                }
+
                 if ($aspect instanceof ImitateAspects) {
                     $this->aspectMapping[$method->getName()] = array_merge($this->aspectMapping[$method->getName()], $aspect->getImitateAspects());
                 } elseif ($aspect instanceof ImitateAspectAttrInterface) {
@@ -92,15 +99,23 @@ final class ImitateAopProxy
      * 调用
      *
      * @param string $name
-     * @param array  $arguments
+     * @param array $arguments
      *
      * @return mixed
+     * @throws \ReflectionException
      */
     private function call(string $name, array $arguments): mixed
     {
         $aspectClass = $this->aspectMapping[$name] ?? [];
 
         if (!$aspectClass) {
+            if ($this->classAspectMethod) {
+                return $this->classAspectMethod->invoke(
+                    $this->proxyClass,
+                    $arguments,
+                    fn($arg) => $this->proxyClass->{$name}(...$arg)
+                );
+            }
             return $this->proxyClass->{$name}(...$arguments);
         }
 
@@ -109,6 +124,9 @@ final class ImitateAopProxy
         $aspectClass = array_reverse($aspectClass);
         $call = array_reduce($aspectClass, fn($upCallable, $aspect) => fn($arg) => $aspect->handle($upCallable ?: $originHandle, $arg));
 
+        if ($this->classAspectMethod) {
+            return $this->classAspectMethod->invoke($this->proxyClass, $arguments, $call);
+        }
         return $call($arguments);
     }
 }
