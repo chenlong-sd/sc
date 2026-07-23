@@ -185,13 +185,13 @@ final class ActionButtonRenderer
             ActionIntent::CREATE => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->openDialogExpression($action, null, $target),
+                $this->openDialogExpression($action, null, $target, $contextDialogKey),
                 $actionKey !== null
             ),
             ActionIntent::EDIT => $this->wrapActionExecution(
                 $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                 $rowScoped,
-                $this->openDialogExpression($action, $rowScoped ? 'context.row' : 'null', $target),
+                $this->openDialogExpression($action, 'context.row', $target, $contextDialogKey),
                 $actionKey !== null
             ),
             ActionIntent::DELETE => $this->wrapActionExecution(
@@ -227,7 +227,7 @@ final class ActionButtonRenderer
                     ? $this->wrapActionExecution(
                         $actionKey !== null ? $this->jsString($actionKey) : $this->jsValue($actionConfig),
                         $rowScoped,
-                        $this->openDialogExpression($action, $rowScoped ? 'context.row' : 'null', $target),
+                        $this->openDialogExpression($action, 'context.row', $target, $contextDialogKey),
                         $actionKey !== null
                     )
                     : ($action->hasEventHandlers('click')
@@ -324,9 +324,18 @@ final class ActionButtonRenderer
     private function openDialogExpression(
         Action $action,
         ?string $rowExpression,
-        ActionRenderTarget $renderTarget
+        ActionRenderTarget $renderTarget,
+        ?string $contextDialogKey = null
     ): string {
         $dialogTarget = $action->targetName() ?: 'editor';
+
+        if ($contextDialogKey !== null && $contextDialogKey !== '') {
+            return sprintf(
+                'context.openDialog(%s, %s)',
+                $this->jsString($dialogTarget),
+                $rowExpression ?? 'null'
+            );
+        }
 
         return $renderTarget->openDialogExpression($dialogTarget, $rowExpression);
     }

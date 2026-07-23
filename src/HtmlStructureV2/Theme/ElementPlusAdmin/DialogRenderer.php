@@ -105,8 +105,12 @@ final class DialogRenderer
         if ($footerActions) {
             $footer = El::double('template')->setAttr('#footer');
             $footerScope = El::double('template')->setAttr('v-for', $this->dialogRowScopeExpression($dialog));
+            $footerRowScope = El::double('template')->setAttr(
+                'v-for',
+                'scope in [{ row: dialogRow, $index: 0 }]'
+            );
             foreach ($footerActions as $action) {
-                $footerScope->append($this->actionButtonRenderer->render(
+                $footerRowScope->append($this->actionButtonRenderer->render(
                     $action,
                     false,
                     'default',
@@ -116,7 +120,16 @@ final class DialogRenderer
                     $dialog->key()
                 ));
             }
-            $footer->append($footerScope);
+            $footerScope->append($footerRowScope);
+            if ($dialog->hasOnlyMirroredFooterActions()) {
+                $footer->append(
+                    El::double('div')
+                        ->setAttr('style', 'display:flex;justify-content:center;align-items:center;gap:12px;')
+                        ->append($footerScope)
+                );
+            } else {
+                $footer->append($footerScope);
+            }
             $element->append($footer);
         }
 

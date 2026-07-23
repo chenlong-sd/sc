@@ -46,6 +46,10 @@ final class ActionTargetValidator
                 $this->assertKnownTarget('dialog', $dialogTarget, $knownDialogKeys, $action, $owner);
             }
 
+            foreach (array_keys($action->getDialogFooterTargets()) as $dialogFooterTarget) {
+                $this->assertKnownTarget('dialog footer', $dialogFooterTarget, $knownDialogKeys, $action, $owner);
+            }
+
             if ($action->hasEventHandlers()) {
                 $this->structuredEventInspector->validateEventMap(
                     $action->getEventHandlers(),

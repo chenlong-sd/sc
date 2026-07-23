@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use InvalidArgumentException;
 use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlStructureV2\Components\Concerns\HasEvents;
 use Sc\Util\HtmlStructureV2\Contracts\EventAware;
@@ -28,6 +29,8 @@ class Action implements
     private ?string $icon = null;
     private ?string $key = null;
     private ?string $target = null;
+    /** @var array<string, Dialog|null> */
+    private array $dialogFooterTargets = [];
     private ?string $tableTarget = null;
     private ?string $listTarget = null;
     private string|JsExpression|null $handler = null;
@@ -294,6 +297,56 @@ class Action implements
         $this->target = $dialog->key();
 
         return $this;
+    }
+
+    /**
+     * 在保留原动作位置的同时，将当前动作镜像到指定弹窗的 footer。
+     *
+     * 镜像会复制当前 Action 的完整配置，但仍复用目标 dialog 引用；
+     * 这样列表行操作和详情 footer 可以共用同一套权限、显隐、事件及提交配置。
+     *
+     * @param string|Dialog ...$dialogs 目标弹窗 key 或 Dialog 对象。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Actions::make('确认')->dialog($confirmDialog)->alsoInDialogFooter('detail-dialog')`
+     */
+    public function alsoInDialogFooter(string|Dialog ...$dialogs): static
+    {
+        foreach ($dialogs as $dialog) {
+            $key = $dialog instanceof Dialog ? $dialog->key() : trim($dialog);
+            if ($key === '') {
+                throw new InvalidArgumentException('Action dialog footer target cannot be empty.');
+            }
+
+            $this->dialogFooterTargets[$key] = $dialog instanceof Dialog ? $dialog : null;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return array<string, Dialog|null>
+     */
+    public function getDialogFooterTargets(): array
+    {
+        return $this->dialogFooterTargets;
+    }
+
+    /**
+     * 创建 footer 镜像实例。
+     * 目标 dialog 仍保持同一对象，避免复制弹窗及其表单状态。
+     */
+    public function copyForDialogFooter(string $dialogKey): static
+    {
+        $copy = clone $this;
+        $copy->dialogFooterTargets = [];
+
+        if ($copy->key !== null) {
+            $copy->key .= '@dialog-footer:' . substr(sha1($dialogKey), 0, 10);
+        }
+
+        return $copy;
     }
 
     /**

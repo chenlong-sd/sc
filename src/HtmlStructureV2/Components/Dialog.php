@@ -52,6 +52,8 @@ final class Dialog implements Renderable, EventAware
     private ?string $titleTemplate = null;
     private ?string $implicitTitleTemplate = null;
     private array $footerActions = [];
+    /** @var array<string, Action> */
+    private array $mirroredFooterActions = [];
     private string $title = '';
     private ?Form $form = null;
     private string|AbstractHtmlElement|null $content = null;
@@ -896,6 +898,26 @@ final class Dialog implements Renderable, EventAware
         return $this;
     }
 
+    /**
+     * 追加一个由页面动作镜像生成的 footer 动作。
+     * 同一个来源动作重复收集时保持幂等，避免页面重复渲染时出现重复按钮。
+     */
+    public function addMirroredFooterAction(Action $action): self
+    {
+        $key = (string) spl_object_id($action);
+        $this->mirroredFooterActions[$key] ??= $action->copyForDialogFooter($this->key);
+
+        return $this;
+    }
+
+    /**
+     * 纯镜像 footer 没有业务方自定义的布局，可由渲染器采用居中样式。
+     */
+    public function hasOnlyMirroredFooterActions(): bool
+    {
+        return $this->footerActions === [] && $this->mirroredFooterActions !== [];
+    }
+
     public function key(): string
     {
         return $this->key;
@@ -1140,7 +1162,7 @@ final class Dialog implements Renderable, EventAware
     public function getFooterActions(): array
     {
         return array_values(array_filter(
-            $this->footerActions,
+            array_merge($this->footerActions, array_values($this->mirroredFooterActions)),
             static fn (Action $action): bool => $action->isAvailable()
         ));
     }

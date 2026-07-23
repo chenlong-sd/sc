@@ -2342,6 +2342,9 @@
 
                   if (tableCfg.dataSource?.type !== 'remote' || !tableCfg.dataSource?.url) {
                     const rows = this.applyClientTableState(resolvedKey);
+                    if (typeof this.syncDialogRowsFromTable === 'function') {
+                      this.syncDialogRowsFromTable(resolvedKey, this.getTableState(resolvedKey)?.allRows || rows);
+                    }
 
                     return emitTableEvent(this, resolvedKey, tableCfg, state, 'loadSuccess', {
                       rows,
@@ -2379,6 +2382,9 @@
                         state.total = nextTotal;
                         state.selection = normalizeActiveTableSelection(state, tableCfg);
                         syncGlobalTableSelection(this, resolvedKey);
+                        if (typeof this.syncDialogRowsFromTable === 'function') {
+                          this.syncDialogRowsFromTable(resolvedKey, state.allRows);
+                        }
 
                         return emitTableEvent(this, resolvedKey, tableCfg, state, 'loadSuccess', {
                           response,

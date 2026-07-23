@@ -23,6 +23,7 @@ final class PageCompositionInspector
         private readonly MetadataRegistry $metadataRegistry = new MetadataRegistry(),
         private readonly StructuredEventInspector $structuredEventInspector = new StructuredEventInspector(),
         private readonly FormCustomRenderableEventInspector $formCustomRenderableEventInspector = new FormCustomRenderableEventInspector(),
+        private readonly DialogFooterActionMirror $dialogFooterActionMirror = new DialogFooterActionMirror(),
     ) {
     }
 
@@ -44,6 +45,28 @@ final class PageCompositionInspector
                 $this->registerCollectedDialogs($dialogs, $this->collectRenderableManagedDialogs($component));
             }
         );
+
+        $actions = $page->getHeaderActions();
+        $this->renderableComponentWalker->walk(
+            $components,
+            function (Renderable $component) use (&$actions): void {
+                foreach ($this->metadataRegistry->actionCollections($component) as $collection) {
+                    foreach ($collection->actions as $action) {
+                        $actions[] = $action;
+                    }
+                }
+            }
+        );
+
+        foreach ($dialogs as $dialog) {
+            foreach ($this->metadataRegistry->actionCollections($dialog) as $collection) {
+                foreach ($collection->actions as $action) {
+                    $actions[] = $action;
+                }
+            }
+        }
+
+        $this->dialogFooterActionMirror->collectAndApply($actions, $dialogs);
 
         return array_values($dialogs);
     }

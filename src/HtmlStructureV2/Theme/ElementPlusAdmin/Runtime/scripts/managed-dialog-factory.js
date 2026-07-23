@@ -644,6 +644,55 @@
 
               return context;
             },
+            syncDialogRowsFromTable(tableKey, rows = null){
+              const resolvedTableKey = typeof this.resolveTableKey === 'function'
+                ? this.resolveTableKey(tableKey)
+                : tableKey;
+              if (typeof resolvedTableKey !== 'string' || resolvedTableKey === '') {
+                return 0;
+              }
+
+              const tableCfg = typeof this.getTableConfig === 'function'
+                ? this.getTableConfig(resolvedTableKey)
+                : cfg.tables?.[resolvedTableKey];
+              const rowKey = typeof tableCfg?.rowKey === 'string' && tableCfg.rowKey !== ''
+                ? tableCfg.rowKey
+                : 'id';
+              const sourceRows = Array.isArray(rows)
+                ? rows
+                : (typeof this.getTableRows === 'function' ? this.getTableRows(resolvedTableKey) : []);
+              const dialogTableKeys = this.ensureDialogTableKeyStore();
+              let synced = 0;
+
+              Object.keys(dialogTableKeys).forEach((dialogKey) => {
+                if (!this.dialogVisible?.[dialogKey] || dialogTableKeys[dialogKey] !== resolvedTableKey) {
+                  return;
+                }
+
+                const currentRow = this.dialogRows?.[dialogKey] || null;
+                const currentKey = getByPath(currentRow || {}, rowKey);
+                if (currentKey === undefined || currentKey === null || currentKey === '') {
+                  return;
+                }
+
+                const nextRow = sourceRows.find((item) => {
+                  const nextKey = getByPath(item || {}, rowKey);
+                  return nextKey !== undefined
+                    && nextKey !== null
+                    && nextKey !== ''
+                    && String(nextKey) === String(currentKey);
+                });
+                if (!nextRow) {
+                  return;
+                }
+
+                this.dialogRows[dialogKey] = clone(nextRow);
+                this.syncDialogRuntimeState(dialogKey);
+                synced += 1;
+              });
+
+              return synced;
+            },
             resetDialogFormState(dialogKey, row = undefined, data = null){
               const dialogCfg = cfg.dialogs?.[dialogKey];
               if (!dialogCfg) {

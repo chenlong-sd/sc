@@ -10,9 +10,9 @@ use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\Conditionable;
+use Sc\Util\HtmlStructureV2\Support\DialogFooterActionMirror;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\ListAutoFilterFormFactory;
-use Sc\Util\HtmlStructureV2\Support\StructuredEventInspector;
 
 final class ListWidget implements Renderable, EventAware
 {
@@ -202,6 +202,7 @@ final class ListWidget implements Renderable, EventAware
     public function getDialogs(): array
     {
         $dialogs = [];
+        $actions = [];
 
         if ($this->table !== null) {
             $trashDialog = $this->table->getTrashDialog();
@@ -209,38 +210,20 @@ final class ListWidget implements Renderable, EventAware
                 $dialogs[$trashDialog->key()] = $trashDialog;
             }
 
-            $this->collectDialogsFromActions($dialogs, $this->table->getToolbarLeftActions());
-            $this->collectDialogsFromActions($dialogs, $this->table->getToolbarRightActions());
-            $this->collectDialogsFromActions($dialogs, $this->table->getRowActions());
+            $actions = array_merge(
+                $this->table->getToolbarLeftActions(),
+                $this->table->getToolbarRightActions(),
+                $this->table->getRowActions()
+            );
         }
 
         foreach ($this->dialogs as $key => $dialog) {
             $dialogs[$key] = $dialog;
         }
 
+        (new DialogFooterActionMirror())->collectAndApply($actions, $dialogs);
+
         return array_values($dialogs);
-    }
-
-    /**
-     * @param Action[] $actions
-     * @param array<string, Dialog> $dialogs
-     */
-    private function collectDialogsFromActions(array &$dialogs, array $actions): void
-    {
-        foreach ($actions as $action) {
-            if ($action instanceof Action && $action->hasEventHandlers()) {
-                foreach ((new StructuredEventInspector())->collectDialogsFromEventMap($action->getEventHandlers()) as $dialog) {
-                    $dialogs[$dialog->key()] = $dialog;
-                }
-            }
-
-            if ($action instanceof Action) {
-                $dialog = $action->getDialog();
-                if ($dialog !== null) {
-                    $dialogs[$dialog->key()] ??= $dialog;
-                }
-            }
-        }
     }
 
     private function buildResolvedFilterForm(): ?Form

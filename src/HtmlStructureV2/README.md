@@ -456,6 +456,8 @@ Fields::picker('user_ids', '用户')
 
 如果动作直接通过 `->dialog($dialog)` 绑定的是 `Dialog` 对象，V2 会在页面构建时自动把它收集进当前页面，包括独立 `Table` 区块和 dialog footer 里的二级弹窗；如果只写字符串 key，例如 `Actions::create('打开')->dialog('editor')`、`Actions::submit('保存')->dialog('editor')`、`Actions::request(...)->dialog('editor')`，对应 key 必须能在当前页面解析到，否则会在构建期直接抛错。
 
+列表刷新成功后，仍然打开的行弹窗会按来源表格的 `rowKey`（未配置时使用 `id`）同步更新 `dialogRow`。因此 dialog body/footer 中依赖 `dialogRow` 的 `v-if`、禁用状态和镜像动作会跟随最新列表行重新计算；弹窗表单 `model` 不会被重置。
+
 直接传 Dialog 对象时，`Dialogs::make('弹窗标题')` 可省略 key，运行时会自动生成内部 key；自动 key 不承诺跨请求固定，需要 `Events::openDialog('editor')` 或 `Actions::custom()->dialog('editor')` 这类字符串引用时，请继续使用 `Dialogs::make('editor', '弹窗标题')`。
 
 ## 常见页面示例
@@ -842,6 +844,19 @@ $fillDialog = Dialogs::make('work-order-fill', '填写')
 ```
 
 `footer(...)` 里的 `Actions::submit()` / `Actions::close()` 现在会默认作用到当前 dialog；只有把动作写到弹窗外部时，才需要显式 `->dialog('work-order-fill')`。footer 动作的前端属性表达式也可直接读取 `dialogRow`，例如 `Actions::make('确认')->props(['v-if' => 'dialogRow?.status == 1'])`。
+
+同一个动作需要同时出现在原位置和某个详情弹窗 footer 时，可直接镜像完整 Action 配置：
+
+```injectablephp
+<?php
+
+Actions::make('确认')
+    ->props(['v-if' => 'scope.row.status == 1'])
+    ->dialog($confirmDialog)
+    ->alsoInDialogFooter('work-order-detail');
+```
+
+镜像会保留按钮属性、显隐条件、事件和请求配置，并复用原动作绑定的 Dialog；footer 中的 `scope.row` 会自动指向打开详情弹窗的当前行。
 
 V2 子页面默认可直接使用：
 
