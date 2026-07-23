@@ -121,7 +121,7 @@ final class TableRuntimeConfigBuilder
                 'sort' => $exportMeta['sort'] ?? null,
                 '_index' => $position++,
                 'respectVisibility' => $column->supportsSettings(),
-                'format' => $column->getFormat(),
+                'format' => $this->normalizeExportFormat($column->getFormat()),
                 'display' => $column->getDisplay(),
             ];
         }
@@ -139,6 +139,15 @@ final class TableRuntimeConfigBuilder
         unset($column);
 
         return $columns;
+    }
+
+    private function normalizeExportFormat(mixed $format): ?string
+    {
+        if (is_string($format)) {
+            return $format;
+        }
+
+        return $format instanceof \Stringable ? (string)$format : null;
     }
 
     private function buildStatusToggleItems(Table $table): array

@@ -113,15 +113,19 @@ final class Table implements Renderable, EventAware
     /**
      * 追加表格列定义。
      *
-     * @param Column ...$columns 要追加的列定义。
+     * @param Column|SpecialColumn ...$columns 要追加的列定义。
      * @return self 当前表格实例。
      *
      * 示例：
      * - `Tables::make('qa-info-table')->addColumns(Tables::column('标题', 'title'))`
      */
-    public function addColumns(Column ...$columns): self
+    public function addColumns(Column|SpecialColumn ...$columns): self
     {
-        $this->columns = array_merge($this->columns, $columns);
+        foreach ($columns as $column) {
+            $this->columns[] = $column instanceof SpecialColumn
+                ? $column->toColumnDefinition()
+                : $column;
+        }
 
         return $this;
     }

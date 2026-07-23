@@ -1937,6 +1937,37 @@ JS));
 - 复杂逻辑放到事件回调里
 - 回调结果回落到 `model` 或显式 runtime 方法，不把页面模板变成“直接操作内部状态”的大杂烩
 
+### 特殊表格列
+
+`Column::selection()`、`Column::index()`、`Column::expand()`、`Column::event()` 会返回各自的专用列类型，IDE 只会提示该列类型支持的链式方法。
+
+- `selection()` / `index()`：支持 `width()`、`align()`、`fixed()`、`props()`
+- `expand()`：支持 `displayFormat()`、`props()`；`displayFormat()` 可接收模板字符串、HTML 节点以及 `Displays::*` / `Layouts::*` 等 V2 可渲染组件
+- `event()`：支持 `width()`、`minWidth()`、`align()`、`fixed()`、`displayFormat()`、`appendContent()`、`addTip()`、`props()`
+- 所有特殊列都支持 `notShow()`；搜索、排序和导出方法仅适用于普通数据列
+
+展开列示例：
+
+```php
+use Sc\Util\HtmlStructureV2\Components\Column;
+use Sc\Util\HtmlStructureV2\Dsl\Displays;
+use Sc\Util\HtmlStructureV2\Dsl\Layouts;
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+Tables::make('order-table')->addColumns(
+    Column::expand()->displayFormat(
+        Layouts::stack(
+            Displays::descriptions()
+                ->columns(2)
+                ->item('订单号', '{{ scope.row.order_no }}')
+                ->item('备注', '{{ scope.row.remark }}'),
+            Displays::images('scope.row.images')
+        )
+    ),
+    Tables::column('订单号', 'order_no')
+);
+```
+
 ## 附录：筛选和排序
 
 - `filters(Form)` 只描述筛选输入 UI；也支持直接写成 `filters(Fields::text(...), Fields::select(...))`

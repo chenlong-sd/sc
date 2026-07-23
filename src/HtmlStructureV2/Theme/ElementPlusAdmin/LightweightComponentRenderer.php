@@ -586,8 +586,11 @@ final class LightweightComponentRenderer
             'download' => $files->isDownload() ? '' : null,
         ], static fn(mixed $value): bool => $value !== null));
 
-        if ($files->getDefaultIcon() !== null) {
-            $item->append(El::double('el-icon')->append(El::double((string) $files->getDefaultIcon())));
+        if ($files->isAutoIcon() || $files->getDefaultIcon() !== null) {
+            $iconExpression = $files->isAutoIcon()
+                ? $this->buildDynamicFileIconExpression($nameExpr, $files->getDefaultIcon())
+                : $this->jsString((string) $files->getDefaultIcon());
+            $item->append($this->buildFileIconElement($iconExpression));
         }
 
         $item->append(El::double('span')->setAttr('class', 'sc-v2-media-file__name')->append('{{ ' . $nameExpr . ' }}'));
@@ -597,6 +600,46 @@ final class LightweightComponentRenderer
         $wrapper->append($item);
 
         return $this->applyComponentEvents($wrapper, $files, $eventContextExpression, $context);
+    }
+
+    /**
+     * 动态附件按文件名扩展名选择 Element Plus 图标组件。
+     * 使用 component :is 避免 Link 等图标名被浏览器当作原生 HTML 标签解析。
+     */
+    private function buildDynamicFileIconExpression(string $nameExpression, ?string $fallbackIcon): string
+    {
+        $name = sprintf('String(%s || "")', $nameExpression);
+        $fallback = $this->jsString($fallbackIcon ?? 'Link');
+        $groups = [
+            'Picture' => 'png|jpg|jpeg|gif|webp|bmp',
+            'VideoPlay' => 'mp4|mov|avi|mkv|webm',
+            'Headset' => 'mp3|wav|flac|aac',
+            'Document' => 'pdf',
+            'Files' => 'zip|rar|7z|tar|gz',
+            'EditPen' => 'doc|docx',
+            'Grid' => 'xls|xlsx',
+            'Tickets' => 'ppt|pptx',
+        ];
+
+        $expression = $fallback;
+        foreach (array_reverse($groups, true) as $icon => $extensions) {
+            $expression = sprintf(
+                '/\\.(?:%s)(?:[?#].*)?$/i.test(%s) ? %s : (%s)',
+                $extensions,
+                $name,
+                $this->jsString($icon),
+                $expression,
+            );
+        }
+
+        return $expression;
+    }
+
+    private function buildFileIconElement(string $iconExpression): AbstractHtmlElement
+    {
+        return El::double('el-icon')->append(
+            El::double('component')->setAttr(':is', $iconExpression)
+        );
     }
 
     /**
@@ -623,7 +666,7 @@ final class LightweightComponentRenderer
 
         $resolvedIcon = $icon ?? $autoIcon;
         if ($resolvedIcon !== null && $resolvedIcon !== '') {
-            $link->append(El::double('el-icon')->append(El::double((string) $resolvedIcon)));
+            $link->append($this->buildFileIconElement($this->jsString((string) $resolvedIcon)));
         }
 
         if ($name !== null && $name !== '') {

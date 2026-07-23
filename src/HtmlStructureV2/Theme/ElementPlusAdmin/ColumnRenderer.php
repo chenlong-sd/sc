@@ -2,9 +2,12 @@
 
 namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
+use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructureV2\Components\Column;
+use Sc\Util\HtmlStructureV2\Contracts\Renderable;
+use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\EncodesJsValues;
 
@@ -17,7 +20,8 @@ final class ColumnRenderer
         Column $column,
         ?TableRenderBindings $bindings = null,
         bool $settingsEnabled = false,
-        ?string $settingsKey = null
+        ?string $settingsKey = null,
+        ?RenderContext $renderContext = null
     ): AbstractHtmlElement
     {
         if ($column->isSelectionColumn()) {
@@ -29,7 +33,7 @@ final class ColumnRenderer
         }
 
         if ($column->isExpandColumn()) {
-            return $this->renderExpandColumn($column, $bindings);
+            return $this->renderExpandColumn($column, $bindings, $renderContext);
         }
 
         $attrs = [
@@ -68,7 +72,7 @@ final class ColumnRenderer
         $element = El::double('el-table-column')->setAttrs($this->normalizeRenderableAttributes($attrs));
 
         if ($column->getFormat()) {
-            $element->append($this->renderFormatTemplate($column));
+            $element->append($this->renderFormatTemplate($column, $renderContext));
 
             return $this->decorateColumnElement($column, $element);
         }
@@ -102,10 +106,28 @@ final class ColumnRenderer
         return $attrs;
     }
 
-    private function renderFormatTemplate(Column $column): AbstractHtmlElement
+    private function renderFormatTemplate(Column $column, ?RenderContext $renderContext = null): AbstractHtmlElement
     {
         $template = El::double('template')->setAttr('#default', 'scope');
-        $format = trim($column->getFormat());
+        $format = $column->getFormat();
+
+        if ($format instanceof Renderable) {
+            if ($renderContext === null) {
+                throw new InvalidArgumentException('Rendering a component as column content requires a RenderContext.');
+            }
+
+            $template->append($renderContext->theme()->render($format, $renderContext));
+
+            return $template;
+        }
+
+        if ($format instanceof AbstractHtmlElement) {
+            $template->append($format->copy());
+
+            return $template;
+        }
+
+        $format = trim((string)$format);
         $template->append(str_starts_with($format, '<') ? El::fromCode($format) : $format);
 
         return $template;
@@ -451,7 +473,11 @@ final class ColumnRenderer
         return El::double('el-table-column')->setAttrs($attrs);
     }
 
-    private function renderExpandColumn(Column $column, ?TableRenderBindings $bindings = null): AbstractHtmlElement
+    private function renderExpandColumn(
+        Column $column,
+        ?TableRenderBindings $bindings = null,
+        ?RenderContext $renderContext = null
+    ): AbstractHtmlElement
     {
         $attrs = array_merge([
             'type' => 'expand',
@@ -461,7 +487,7 @@ final class ColumnRenderer
         $element = El::double('el-table-column')->setAttrs($attrs);
 
         if ($column->getFormat()) {
-            $element->append($this->renderFormatTemplate($column));
+            $element->append($this->renderFormatTemplate($column, $renderContext));
 
             return $this->decorateColumnElement($column, $element);
         }

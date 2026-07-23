@@ -282,7 +282,7 @@ final class TableRenderer
                     $orderedEntries = [];
                 }
 
-                $element->append($this->columnRenderer->render($column, $bindings, true));
+                $element->append($this->columnRenderer->render($column, $bindings, true, null, $renderContext));
             }
 
             if ($rowActionSettingsEntry !== null) {
@@ -294,7 +294,7 @@ final class TableRenderer
             }
         } else {
             foreach ($renderableColumns as $column) {
-                $element->append($this->columnRenderer->render($column, $bindings, false));
+                $element->append($this->columnRenderer->render($column, $bindings, false, null, $renderContext));
             }
 
             if ($table->hasManagedRowActionColumn()) {
@@ -797,7 +797,7 @@ final class TableRenderer
                     sprintf('renderColumnKey === %s', $this->jsValue($columnKey))
                 )->append(
                     $definitionColumn instanceof Column
-                        ? $this->columnRenderer->render($definitionColumn, $bindings, true, $columnKey)
+                        ? $this->columnRenderer->render($definitionColumn, $bindings, true, $columnKey, $renderContext)
                         : $this->renderSyntheticSettingsColumn(
                             $table,
                             (string)($column['kind'] ?? ''),
@@ -832,7 +832,7 @@ final class TableRenderer
 
     private function buildAutoSelectionColumn(Table $table): Column
     {
-        $column = Column::selection();
+        $column = Column::selection()->toColumnDefinition();
         if ($table->getSelectionFixed() !== null) {
             $column->fixed($table->getSelectionFixed());
         }

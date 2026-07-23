@@ -6,6 +6,7 @@ use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlStructure\Table\ColumnTags;
+use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 
 final class Column
 {
@@ -34,7 +35,7 @@ final class Column
     private bool $showOverflowTooltip = true;
     private bool $sortable = false;
     private ?string $sortField = null;
-    private ?string $format = null;
+    private mixed $format = null;
     private ?array $display = null;
     private ?array $search = null;
     private array $attrs = [];
@@ -98,50 +99,42 @@ final class Column
     /**
      * 创建勾选列。
      *
-     * @return self 勾选列实例。
+     * @return SelectionColumn 勾选列实例。
      *
      * 示例：
      * - `Column::selection()`
      */
-    public static function selection(): self
+    public static function selection(): SelectionColumn
     {
-        return (new self('', ''))
-            ->type(self::COLUMN_TYPE_SELECTION)
-            ->width(48)
-            ->align('center');
+        return SelectionColumn::make();
     }
 
     /**
      * 创建序号列。
      *
      * @param string $title 列标题，默认值为 序号。
-     * @return self 序号列实例。
+     * @return IndexColumn 序号列实例。
      *
      * 示例：
      * - `Column::index()`
      */
-    public static function index(string $title = '序号'): self
+    public static function index(string $title = '序号'): IndexColumn
     {
-        return (new self($title, ''))
-            ->type(self::COLUMN_TYPE_INDEX)
-            ->width(80)
-            ->fixed('left')
-            ->align('center');
+        return IndexColumn::make($title);
     }
 
     /**
      * 创建展开列。
      *
      * @param string $title 列标题，默认值为空字符串。
-     * @return self 展开列实例。
+     * @return ExpandColumn 展开列实例。
      *
      * 示例：
      * - `Column::expand()`
      */
-    public static function expand(string $title = ''): self
+    public static function expand(string $title = ''): ExpandColumn
     {
-        return (new self($title, ''))
-            ->type(self::COLUMN_TYPE_EXPAND);
+        return ExpandColumn::make($title);
     }
 
     /**
@@ -149,20 +142,14 @@ final class Column
      *
      * @param string $title 列标题，默认值为 操作。
      * @param string $prop 绑定字段名，默认值为空字符串。
-     * @return self 操作列实例。
+     * @return EventColumn 操作列实例。
      *
      * 示例：
      * - `Column::event('操作')`
      */
-    public static function event(string $title = '操作', string $prop = ''): self
+    public static function event(string $title = '操作', string $prop = ''): EventColumn
     {
-        return (new self($title, $prop))
-            ->type(self::COLUMN_TYPE_EVENT)
-            ->props([
-                'mark-event' => 'true',
-                'class-name' => 'sc-v2-event-column',
-                ':show-overflow-tooltip' => 'false',
-            ]);
+        return EventColumn::make($title, $prop);
     }
 
     /**
@@ -393,15 +380,15 @@ final class Column
      * 会直接作为列插槽内容输出；可传原始 HTML/Vue 模板片段，当前行变量名是 `scope`，
      * 例如 `{{ scope.row.name }} / {{ scope.row.id }}`。
      *
-     * @param string|\Stringable $format 展示模板字符串。
+     * @param Renderable|AbstractHtmlElement|string|\Stringable $format 展示模板或可渲染组件。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('标题', 'title')->displayFormat('{{ scope.row.title }}')`
      */
-    public function displayFormat(string|\Stringable $format): self
+    public function displayFormat(Renderable|AbstractHtmlElement|string|\Stringable $format): self
     {
-        $this->format = (string)$format;
+        $this->format = $format;
 
         return $this;
     }
@@ -886,7 +873,7 @@ final class Column
         return $this->sortable;
     }
 
-    public function getFormat(): ?string
+    public function getFormat(): mixed
     {
         return $this->format;
     }
