@@ -224,6 +224,47 @@ $table = Tables::make('qa')
 
 和 `ListWidget` 自动筛选联动的真实组合示例同样可参考 `plugins/QA/Http/Admin/View/QaCase/lists.sc.php`。
 
+### 表头搜索框（headerSearch）
+
+在表格顶部提供一个关键词搜索框，一个词即可对多个字段做 OR 模糊匹配（如 标题/内容/作者 命中其一即返回）。
+
+- `Table::headerSearch($fields, $placeholder = '请输入关键词搜索', $type = 'LIKE')`
+- `$fields` 传字段名数组或单个字段名：
+  - 与某个“可搜索列”的 prop 同名时，自动取该列 `searchable()/searchField()` 声明的后端真实字段；
+  - 否则按字面当作后端字段名（可写 `table.field`）。
+- 多字段最终以 `a&b&c` 形式下发，后端 EasySearch 会展开成 `(a LIKE .. OR b LIKE .. OR c LIKE ..)`——与 `searchable('LIKE', 'name&code')` 是同一套 OR 约定。
+- `$type` 是应用于全部字段的统一操作符，默认 `LIKE`。
+
+行为规则：
+
+- 搜索框是一个紧凑输入框，渲染在表格工具栏那一行（与“列设置 / 导出”等表头操作同排）；
+- 默认按回车（或点击清空）即触发查询，复用当前列表的 filter model、分页与排序流程，无需额外的“搜索”按钮；
+- 若同时配置了“指定字段搜索”（`filters()` 或列上的 `searchable()`），工具栏搜索框旁会出现“更多搜索”，点击后展开/收起完整筛选表单，默认收起；
+- 若未配置 `headerSearch()`，保持原状：直接展示指定字段搜索。
+
+```injectablephp
+<?php
+
+use Sc\Util\HtmlStructureV2\Dsl\Lists;
+use Sc\Util\HtmlStructureV2\Dsl\Tables;
+
+$list = Lists::make('qa')
+    ->filters(
+        // 指定字段搜索：点“更多搜索”展开
+        \Sc\Util\HtmlStructureV2\Dsl\Fields::select('status', '状态')
+            ->options([['value' => 1, 'label' => '启用'], ['value' => 0, 'label' => '停用']]),
+    )
+    ->table(
+        Tables::make('qa')
+            ->dataUrl('/admin/qa/list')
+            ->headerSearch(['title', 'content'], '搜索标题/内容')
+            ->addColumns(
+                Tables::column('标题', 'title'),
+                Tables::column('内容', 'content'),
+            )
+    );
+```
+
 ## 轻组件怎么用
 
 V2 后续页面灵活性优先通过轻组件补齐，而不是继续把标题、提示语、说明文案、详情块之类内容塞进重交互组件。
@@ -352,7 +393,48 @@ $form = Forms::make('profile')->addContent(
 
 ### 富文本字段与发布载荷
 
-`Fields::editor()` 底层使用 `SimpleRichEditor`。默认表单模型仍保存 HTML 字符串，和旧版 `FormItem::editor()` 行为一致；如果后台需要新版编辑器的结构化快照或详情页展示缓存，可以显式切换保存形态：
+`Fields::editor()` 底层使用 `SimpleRichEditor`。默认表单模型仍保存 HTML 字符串，和旧版 `FormItem::editor()` 行为一致；`uploadUrl()` 会给图片、视频、附件补默认上传处理，其它编辑器能力可继续通过 `initOptions()` 透传；如果后台需要新版编辑器的结构化快照或详情页展示缓存，可以显式切换保存形态：
+
+常用对象配置现在也有快捷方法，可直接链式调用：
+
+```injectablephp
+Fields::editor('content', '正文')
+    ->layout(['height' => 480, 'padding' => 20])
+    ->comments(['enabled' => true, 'authorName' => '运营'])
+    ->versionHistory(['enabled' => true, 'maxEntries' => 50])
+    ->useBuiltInTemplates();
+```
+
+常见做法是把编辑器原生构造参数直接通过 `initOptions()` 透传；键名与 `public/sceditor/使用文档.md` 中 `new SimpleRichEditor('#app', options)` 保持一致：
+
+```injectablephp
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
+
+Fields::editor('content', '正文')
+    ->uploadUrl('/admin/upload/editor')
+    ->initOptions([
+        'placeholder' => '请输入正文',
+        'layout' => [
+            'height' => 480,
+            'padding' => 20,
+        ],
+        'enableDraftAutosave' => true,
+        'draftRestorePrompt' => true,
+        'templates' => [
+            ['id' => 'summary', 'label' => '摘要块', 'html' => '<p><strong>摘要：</strong></p><p><br></p>'],
+        ],
+        'comments' => [
+            'enabled' => true,
+            'authorName' => '运营',
+        ],
+        'onChange' => JsExpression::make('({ html, mode, source }) => console.log(mode, source, html)'),
+    ]);
+```
+
+- 简单标量配置（如 `placeholder`、`enableDraftAutosave`）可直接传字符串、数字、布尔。
+- 对象配置（如 `layout`、`toolbar`、`templates`、`comments`、`ai`、`versionHistory`、`draftSync`）按编辑器原生结构传。
+- 函数配置必须用 `JsExpression::make()` 包起来，否则会被当成普通字符串；只改 `onChange` / `onFocus` / `onBlur` 时也可继续用 `event()` 简写。
+- 只改单个键时可用 `->option('layout.height', 480)`；多次 `initOptions()` 会递归合并，但列表型配置建议一次传完整数组。
 
 ```injectablephp
 Fields::editor('content', '正文')

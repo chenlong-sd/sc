@@ -679,6 +679,7 @@ final class FieldRenderer
             FieldType::TEXT,
             FieldType::PASSWORD,
             FieldType::TEXTAREA,
+            FieldType::EDITOR,
             FieldType::DATE,
             FieldType::DATETIME,
             FieldType::DATE_RANGE => true,

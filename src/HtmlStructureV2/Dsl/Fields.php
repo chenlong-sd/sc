@@ -87,6 +87,12 @@ final class Fields
     /**
      * 创建富文本编辑器字段。
      * 底层使用 SimpleRichEditor，并支持 uploadUrl()/initOptions()/event() 等编辑器配置。
+     * `uploadUrl()` 会为图片、视频、附件自动补默认上传处理；`initOptions()` 的键名与
+     * `public/sceditor/使用文档.md` 中的 SimpleRichEditor 构造参数一致，
+     * 标量可直接传值，回调型选项需传 `JsExpression`。
+     * 常用对象配置也可直接用快捷方法，如 `layout()`、`toolbar()`、`comments()`、
+     * `versionHistory()`、`draftSync()`、`collaboration()`、`ai()`、`forms()`；
+     * 模板列表可用 `templates()`，启用编辑器内置模板可用 `useBuiltInTemplates()`。
      * 默认表单模型保存 HTML 字符串；需要结构化提交或发布缓存时，可显式调用 submitPayload()/publishPayload()。
      *
      * @param string $name 字段名。
@@ -95,6 +101,7 @@ final class Fields
      *
      * 示例：
      * - `Fields::editor('content', '内容')->uploadUrl('/admin/upload/editor-image')`
+     * - `Fields::editor('content', '内容')->layout(['height' => 480])->comments(['enabled' => true])->useBuiltInTemplates()`
      * - `Fields::editor('content', '内容')->submitPayload(['includeText' => true])`
      * - `Fields::editor('content', '内容')->publishPayload(['article' => ['inlineCSS' => true]])`
      */

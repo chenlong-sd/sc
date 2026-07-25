@@ -104,6 +104,20 @@ body {
   margin-bottom: 12px;
 }
 
+/* 等宽模式（Descriptions::equalWidth，默认开启）：内部 <table> 切到 fixed 布局，
+   标签列由 label-width 固定，各内容列均分剩余宽度，多列时每列（标签+内容）宽度一致。 */
+.sc-v2-descriptions--equal .el-descriptions__table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+/* fixed 布局下内容不再撑宽列，长文本需自动换行以免溢出列边界。 */
+.sc-v2-descriptions--equal .el-descriptions__table th,
+.sc-v2-descriptions--equal .el-descriptions__table td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 .sc-v2-block-text--muted {
   color: var(--sc-v2-text-muted);
 }

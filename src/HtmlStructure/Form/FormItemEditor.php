@@ -31,7 +31,56 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
     private array $payloadOptions = [];
 
     /**
-     * 初始化选项
+     * 批量设置 SimpleRichEditor 初始化选项。
+     *
+     * 传入键名与 `public/sceditor/使用文档.md` 中
+     * `new SimpleRichEditor(selector, options)` 的 options 一致。
+     * 标量值可直接传；对象型参数如 `layout`、`toolbar`、`templates`、
+     * `comments`、`versionHistory`、`draftSync`、`collaboration`、`ai`
+     * 也可按编辑器原生结构直接透传。
+     *
+     * 对象里的函数值同样需要按 JS 函数传递，而不是普通字符串。
+     * 常见场景如：
+     * - 顶层回调：`onChange`、`onFocus`、`onBlur`
+     * - 嵌套对象回调：`draftSync.load/save/clear`、`ai.request/stream`、
+     *   `collaboration.loadSnapshot/submitBatch/subscribe`
+     *
+     * 该旧接口不会像 V2 那样递归合并；每次调用都会整体覆盖之前的 initOptions。
+     * 因此如果你要设置对象型参数，建议一次把该对象的完整目标结构组好后再传入。
+     * 例如只想改 `layout.height`，也应把整个 `layout` 子对象一起传：
+     * `['layout' => ['height' => 420, 'padding' => 20]]`
+     *
+     * 若需要递归合并，请在外部先把数组合并好后再传入。
+     *
+     * 完整版示例：
+     *   use Sc\Util\HtmlStructure\Form\FormItemEditor;
+     *   use Sc\Util\HtmlStructure\Html\Js\JsFunc;
+     *
+     *   $field = (new FormItemEditor('content', '正文'))
+     *       ->uploadUrl('/admin/upload/editor')
+     *       ->initOptions([
+     *           'placeholder' => '请输入正文',
+     *           'layout' => [
+     *               'width' => '100%',
+     *               'height' => 520,
+     *               'padding' => 20,
+     *           ],
+     *           'comments' => [
+     *               'enabled' => true,
+     *               'authorName' => '运营',
+     *           ],
+     *           'versionHistory' => [
+     *               'enabled' => true,
+     *               'maxEntries' => 50,
+     *           ],
+     *           'draftSync' => [
+     *               'prefer' => 'newer',
+     *               'load' => JsFunc::anonymous(['payload'], 'return null;'),
+     *               'save' => JsFunc::anonymous(['payload'], 'return payload;'),
+     *               'clear' => JsFunc::anonymous(['payload'], 'return undefined;'),
+     *           ],
+     *           'onChange' => JsFunc::anonymous(['payload'], 'console.log(payload.html);'),
+     *       ]);
      *
      * @param array $options
      * @return $this

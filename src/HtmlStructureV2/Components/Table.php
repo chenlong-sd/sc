@@ -47,6 +47,9 @@ final class Table implements Renderable, EventAware
     private const SETTINGS_ROW_ACTION_COLUMN_KEY = '__sc_v2_row_actions__';
     private const SETTINGS_EVENT_COLUMN_KEY_PREFIX = '__sc_v2_event__';
 
+    /** 表头搜索关键词在筛选表单 model 中的槽位 key。 */
+    public const HEADER_SEARCH_MODEL_KEY = '__sc_v2_header_search__';
+
     private array $columns = [];
     private array $toolbarLeftActions = [];
     private array $toolbarRightActions = [];
@@ -90,6 +93,7 @@ final class Table implements Renderable, EventAware
     private ?string $trashRecoverUrl = null;
     private ?Dialog $trashDialog = null;
     private ?JsExpression $remoteDataHandle = null;
+    private ?array $headerSearch = null;
 
     public function __construct(
         private readonly string $key
@@ -886,6 +890,109 @@ final class Table implements Renderable, EventAware
         $this->trashRecoverUrl = $this->normalizeNullableString($recoverUrl);
 
         return $this;
+    }
+
+    /**
+     * 在表格顶部启用一个“表头搜索框”。
+     * 这是一个关键词输入框，可同时对多个字段做 OR 模糊匹配（例如 标题/内容/作者 命中其一即返回）。
+     * - `$fields` 传字段名数组或单个字段名：若某项与当前某个“可搜索列”的 prop 同名，
+     *   会自动取该列 searchable()/searchField() 声明的后端真实字段；否则按字面当作后端字段名。
+     * - 多个字段最终以 `a&b&c` 形式下发，后端 EasySearch 会展开成 `(a LIKE .. OR b LIKE .. OR c LIKE ..)`。
+     * - `$type` 是应用于所有字段的统一操作符，默认 `LIKE`。
+     *
+     * 联动规则：
+     * - 若同时配置了“指定字段搜索”（`ListWidget::filters()` 或列的 `searchable()`），
+     *   表头搜索框旁会出现“更多搜索”，点击后就地向下展开完整筛选表单，默认收起；
+     * - 若未配置表头搜索，则维持原状，直接展示指定字段搜索。
+     *
+     * @param string|array $fields 参与关键词 OR 搜索的字段（列 prop 或后端字段名）。
+     * @param string $placeholder 输入框占位文案。
+     * @param string $type 应用于全部字段的搜索操作符，默认 LIKE。
+     * @return self 当前表格实例。
+     *
+     * 示例：
+     * - `Tables::make('qa-info-table')->headerSearch(['title', 'content'], '搜索标题/内容')`
+     */
+    public function headerSearch(
+        string|array $fields,
+        string $placeholder = '请输入关键词搜索',
+        #[ExpectedValues(Column::SUPPORTED_SEARCH_TYPES)]
+        string $type = 'LIKE'
+    ): self {
+        $backendFields = $this->resolveHeaderSearchFields((array)$fields);
+        if ($backendFields === []) {
+            return $this;
+        }
+
+        $normalizedPlaceholder = trim($placeholder);
+
+        $this->headerSearch = [
+            'fields' => $backendFields,
+            'placeholder' => $normalizedPlaceholder !== '' ? $normalizedPlaceholder : '请输入关键词搜索',
+            'type' => strtoupper(trim($type)) !== '' ? strtoupper(trim($type)) : 'LIKE',
+        ];
+
+        return $this;
+    }
+
+    public function hasHeaderSearch(): bool
+    {
+        return $this->headerSearch !== null;
+    }
+
+    public function getHeaderSearch(): ?array
+    {
+        return $this->headerSearch;
+    }
+
+    /**
+     * 表头搜索的后端字段组合，多字段以 `&` 连接以触发后端 OR 分组。
+     */
+    public function getHeaderSearchField(): string
+    {
+        return implode('&', $this->headerSearch['fields'] ?? []);
+    }
+
+    public function getHeaderSearchType(): string
+    {
+        return (string)($this->headerSearch['type'] ?? 'LIKE');
+    }
+
+    public function getHeaderSearchPlaceholder(): string
+    {
+        return (string)($this->headerSearch['placeholder'] ?? '请输入关键词搜索');
+    }
+
+    /**
+     * 把传入字段解析为后端真实字段名：
+     * 命中某个可搜索列的 prop 时取该列的真实搜索字段，否则按字面使用。
+     *
+     * @param array $fields
+     * @return array<int, string>
+     */
+    private function resolveHeaderSearchFields(array $fields): array
+    {
+        $columnFieldMap = [];
+        foreach ($this->columns as $column) {
+            if (!$column->isSearchable() || $column->isSpecialColumn()) {
+                continue;
+            }
+
+            $columnFieldMap[$column->getSearchName()] = $column->getSearchConfig()['field']
+                ?? $column->getSearchName();
+        }
+
+        $resolved = [];
+        foreach ($fields as $field) {
+            $name = is_string($field) ? trim($field) : '';
+            if ($name === '') {
+                continue;
+            }
+
+            $resolved[] = $columnFieldMap[$name] ?? $name;
+        }
+
+        return array_values(array_unique($resolved));
     }
 
     /**

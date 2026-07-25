@@ -838,6 +838,14 @@ final class LightweightComponentRenderer
             array_filter($descriptionsAttrs, static fn(mixed $value): bool => $value !== null)
         );
 
+        // 等宽模式：给 el-descriptions 挂标记 class，主题 CSS 会把内部 <table> 切到
+        // table-layout:fixed，使多列时各内容列均分宽度（见 Descriptions::equalWidth）。
+        // class 始终落在 el-descriptions 本身：无 title 时根属性也合并到此，有 title 时
+        // 根属性挂在外层 wrapper，二者用后代选择器均可命中内部 table。
+        if ($descriptions->isEqualWidth()) {
+            $element->addClass('sc-v2-descriptions--equal');
+        }
+
         foreach ($descriptions->getItems() as $item) {
             $value = $item->getValue();
             $itemEl = El::double('el-descriptions-item')->setAttr('label', $item->getLabel());

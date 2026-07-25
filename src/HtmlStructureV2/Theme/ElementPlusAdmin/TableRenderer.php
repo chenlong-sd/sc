@@ -45,7 +45,8 @@ final class TableRenderer
     public function renderToolbar(
         Table $table,
         TableRenderBindings $bindings,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        ?ListHeaderSearchContext $headerSearch = null
     ): AbstractHtmlElement
     {
         if ($table->useExport()) {
@@ -56,6 +57,10 @@ final class TableRenderer
         $left = El::double('div')->addClass('sc-v2-toolbar__actions');
         $right = El::double('div')->addClass('sc-v2-toolbar__tools');
         $trashModeExpression = $bindings->trashModeExpression();
+
+        if ($headerSearch !== null && $table->hasHeaderSearch()) {
+            $right->append($this->renderToolbarHeaderSearch($table, $bindings, $headerSearch, $trashModeExpression));
+        }
 
         foreach ($table->getToolbarLeftActions() as $action) {
             $left->append($this->renderToolbarAction($table, $bindings, $action, $renderContext, $trashModeExpression));
@@ -133,6 +138,50 @@ final class TableRenderer
         }
 
         return $toolbar;
+    }
+
+    /**
+     * 渲染工具栏内的“表头搜索框”：
+     * 紧凑关键词输入框（回车 / 清空即触发查询），命中多字段 OR；
+     * 当存在可见的指定字段搜索时，在输入框 #append 插槽内放“更多搜索”，切换筛选表单展开态。
+     */
+    private function renderToolbarHeaderSearch(
+        Table $table,
+        TableRenderBindings $bindings,
+        ListHeaderSearchContext $headerSearch,
+        string $trashModeExpression
+    ): AbstractHtmlElement {
+        $keywordExpr = sprintf("%s['%s']", $headerSearch->filterModelVar, Table::HEADER_SEARCH_MODEL_KEY);
+        $submitExpr = sprintf("submitFilters('%s')", $headerSearch->listKey);
+
+        $container = El::double('div')
+            ->addClass('sc-v2-toolbar__search')
+            ->setAttrs(['v-if' => sprintf('!%s', $trashModeExpression)]);
+
+        $input = El::double('el-input')->addClass('sc-v2-toolbar__search-input')->setAttrs([
+            'v-model' => $keywordExpr,
+            'placeholder' => $table->getHeaderSearchPlaceholder(),
+            'clearable' => '',
+            'prefix-icon' => 'Search',
+            'style' => 'width: 340px',
+            '@keyup.enter' => $submitExpr,
+            '@clear' => $submitExpr,
+        ]);
+
+        if ($headerSearch->hasVisibleFilters) {
+            $input->append(
+                El::double('template')->setAttr('#append')->append(
+                    El::double('el-button')->setAttrs([
+                        'style' => 'height:100%;display:flex;align-items:center',
+                        '@click' => $bindings->toggleMoreSearchExpression(),
+                    ])->append('更多')
+                )
+            );
+        }
+
+        $container->append($input);
+
+        return $container;
     }
 
     public function renderStatusToggleBar(Table $table, TableRenderBindings $bindings): AbstractHtmlElement

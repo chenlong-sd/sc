@@ -143,6 +143,24 @@ final class TableRenderBindings
         return sprintf('isTableTrashMode(%s)', $this->tableKeyLiteral());
     }
 
+    /**
+     * 表头搜索“更多”面板展开态（读），存放于表格 state，避免筛选重置时被清空。
+     */
+    public function moreSearchOpenExpression(): string
+    {
+        return sprintf('(%s?.moreSearchOpen ?? false)', $this->stateExpression());
+    }
+
+    /**
+     * 切换表头搜索“更多”面板展开态（写）。
+     */
+    public function toggleMoreSearchExpression(): string
+    {
+        $state = $this->stateExpression();
+
+        return sprintf('%s && (%s.moreSearchOpen = !%s.moreSearchOpen)', $state, $state, $state);
+    }
+
     public function recoverSelectionExpression(): string
     {
         return sprintf('recoverTableSelection(%s)', $this->tableKeyLiteral());

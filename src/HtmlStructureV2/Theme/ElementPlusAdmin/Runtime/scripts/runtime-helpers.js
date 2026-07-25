@@ -847,6 +847,10 @@
                     type: [Object, Array],
                     default: () => ({})
                   },
+                  readonly: {
+                    type: Boolean,
+                    default: false
+                  },
                   disabled: {
                     type: Boolean,
                     default: false
@@ -864,8 +868,11 @@
                   modelValue(newValue) {
                     this.syncEditorValue(newValue);
                   },
+                  readonly(newValue) {
+                    this.syncInteractivityState(this.resolveDisabledState(), this.resolveReadonlyState(newValue));
+                  },
                   disabled(newValue) {
-                    this.syncDisabledState(this.resolveDisabledState(newValue));
+                    this.syncInteractivityState(this.resolveDisabledState(newValue), this.resolveReadonlyState());
                   }
                 },
                 mounted() {
@@ -873,6 +880,13 @@
                 },
                 beforeUnmount() {
                   this.clearMountRetry();
+                  if (this.editor && typeof this.editor.destroy === 'function') {
+                    try {
+                      this.editor.destroy();
+                    } catch (error) {
+                      console.warn(error);
+                    }
+                  }
                   const mountEl = document.getElementById(this.mountId);
                   if (mountEl) {
                     mountEl.innerHTML = '';
@@ -898,6 +912,12 @@
                   },
                   resolvePayloadOptions() {
                     return isObject(this.payloadOptions) ? clone(this.payloadOptions) : {};
+                  },
+                  resolveReadonlyState(readonly = this.readonly) {
+                    return Boolean(readonly) || (
+                      isObject(this.config)
+                      && (this.config.readOnly === true || this.config.readonly === true)
+                    );
                   },
                   resolveDisabledState(disabled = this.disabled) {
                     return Boolean(disabled) || (isObject(this.config) && this.config.disabled === true);
@@ -1008,6 +1028,7 @@
 
                     options.placeholder = options.placeholder || this.placeholder || '请输入内容...';
                     options.initialHTML = this.normalizeValue(this.modelValue);
+                    options.readOnly = this.resolveReadonlyState();
                     options.disabled = this.resolveDisabledState();
 
                     options.onChange = (payload) => {
@@ -1047,6 +1068,10 @@
                         options.onImageUpload = (file, hooks = {}) => this.uploadFile(file, hooks);
                       }
 
+                      if (typeof options.onVideoUpload !== 'function') {
+                        options.onVideoUpload = (file, hooks = {}) => this.uploadFile(file, hooks);
+                      }
+
                       if (typeof options.onFileUpload !== 'function') {
                         options.onFileUpload = (file, hooks = {}) => this.uploadFile(file, hooks);
                       }
@@ -1070,7 +1095,7 @@
                     try {
                       this.editor = new Editor('#' + this.mountId, this.buildEditorOptions()).init();
                       this.syncEditorValue(this.modelValue);
-                      this.syncDisabledState(this.resolveDisabledState());
+                      this.syncInteractivityState(this.resolveDisabledState(), this.resolveReadonlyState());
                     } catch (error) {
                       console.warn(error);
                       this.queueMountRetry();
@@ -1095,7 +1120,7 @@
                       console.warn(error);
                     }
                   },
-                  syncDisabledState(disabled) {
+                  syncInteractivityState(disabled, readonly) {
                     if (!this.editor) {
                       return;
                     }
@@ -1103,11 +1128,14 @@
                     try {
                       if (typeof this.editor.setDisabled === 'function') {
                         this.editor.setDisabled(Boolean(disabled));
+                        if (typeof this.editor.setReadOnly === 'function') {
+                          this.editor.setReadOnly(Boolean(!disabled && readonly));
+                        }
                         return;
                       }
 
                       if (typeof this.editor.setReadOnly === 'function') {
-                        this.editor.setReadOnly(Boolean(disabled));
+                        this.editor.setReadOnly(Boolean(disabled || readonly));
                       }
                     } catch (error) {
                       console.warn(error);
@@ -2397,7 +2425,8 @@
               settingsDraft: clone(settingsDefault),
               settingsTab: 'display',
               settingsVisible: false,
-              settingsLoaded: false
+              settingsLoaded: false,
+              moreSearchOpen: false
             };
           };
           const buildTableStates = (tables = {}) => {

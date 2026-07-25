@@ -23,6 +23,7 @@ final class Descriptions implements Renderable, EventAware
     private ?string $direction = null;
     private ?string $size = null;
     private ?string $extra = null;
+    private bool $equalWidth = true;
 
     /**
      * 直接创建一个 descriptions 展示块实例。
@@ -110,7 +111,47 @@ final class Descriptions implements Renderable, EventAware
     }
 
     /**
+     * 是否让多列时每列（标签 + 内容）严格等宽，默认 true。
+     *
+     * true：底层 <table> 切到 table-layout:fixed —— 标签列被 labelWidth 固定，
+     * 剩余宽度在各内容列间「平均分」，于是每列宽度一致、不随内容长度变化；
+     * 内容过长时自动换行（word-break）而非把某一列撑宽。
+     * false：回退到 Element Plus 原生 auto 布局，列宽按内容自适应（多列时通常不等宽）。
+     *
+     * 注意：等宽依赖本块内所有 item 的 span 一致（默认都是 1）。fixed 布局按
+     * 「column 数」把整行划成等宽网格，span=2 的项会占据 2 个网格列 ≈ 2 倍宽，
+     * 该行等宽即被打破。想严格等宽就别混用不同 span；确需跨列时可关掉本项。
+     */
+    public function equalWidth(bool $equalWidth = true): self
+    {
+        $this->equalWidth = $equalWidth;
+
+        return $this;
+    }
+
+    /**
      * 追加一项详情数据。
+     *
+     * @param string|DescriptionItem $label 标签文案；也可直接传入已配置好的 DescriptionItem 实例，
+     *                                       此时若 $value 为数组/闭包，会被当作 $attributes 使用。
+     * @param mixed $value 展示值；可为字符串/数字，或 Renderable（如 Displays::image()/videos() 等）。
+     * @param array|callable|null $attributes 该 item 的附加配置，支持两种形态：
+     *   - 数组：键值对形式。其中 `span` 为特殊键，映射为占用列数（渲染成 `:span`，最小 1）；
+     *     其余键按 Element Plus el-descriptions-item 原生属性「原样输出」，故键名需用中划线写法。常用：
+     *       · `width`            内容列宽度（px）
+     *       · `min-width`        内容列最小宽度（px）
+     *       · `align`            内容对齐：left / center / right
+     *       · `label-align`      标签对齐：left / center / right
+     *       · `class-name`       内容自定义类名
+     *       · `label-class-name` 标签自定义类名
+     *     动态绑定 / 事件请自行写成 `:prop` / `@event` 形式的键（如 `[':span' => 'cols']`）。
+     *   - 闭包：接收 DescriptionItem 实例，可链式调用 span()/labelAlign()/width()/minWidth()/attr() 等自行配置。
+     * @return self 当前 descriptions 实例。
+     *
+     * 示例：
+     * - `->item('地址', '北京市朝阳区', ['span' => 2])`                       // 跨 2 列
+     * - `->item('金额', '￥100', ['align' => 'right', 'width' => 160])`       // 右对齐 + 定宽
+     * - `->item('备注', $remark, fn($item) => $item->span(3)->labelAlign('right'))`
      */
     public function item(string|DescriptionItem $label, mixed $value = null, array|callable|null $attributes = null): self
     {
@@ -186,6 +227,11 @@ final class Descriptions implements Renderable, EventAware
     public function getExtra(): ?string
     {
         return $this->extra;
+    }
+
+    public function isEqualWidth(): bool
+    {
+        return $this->equalWidth;
     }
 
     private function applyItemAttributes(DescriptionItem $item, array $attributes): void

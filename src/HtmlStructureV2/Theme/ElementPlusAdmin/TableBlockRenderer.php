@@ -17,7 +17,8 @@ final class TableBlockRenderer
     public function render(
         Table $table,
         TableRenderBindings $bindings,
-        ?RenderContext $renderContext = null
+        ?RenderContext $renderContext = null,
+        ?ListHeaderSearchContext $headerSearch = null
     ): DoubleLabel
     {
         $block = El::double('div')->addClass('sc-v2-table-block');
@@ -26,8 +27,15 @@ final class TableBlockRenderer
             $block->append($this->tableRenderer->renderStatusToggleBar($table, $bindings));
         }
 
-        if ($table->getToolbarLeftActions() || $table->getToolbarRightActions() || $table->useTrash() || $table->useExport() || $table->useSettings()) {
-            $block->append($this->tableRenderer->renderToolbar($table, $bindings, $renderContext));
+        if (
+            $table->getToolbarLeftActions()
+            || $table->getToolbarRightActions()
+            || $table->useTrash()
+            || $table->useExport()
+            || $table->useSettings()
+            || $headerSearch !== null
+        ) {
+            $block->append($this->tableRenderer->renderToolbar($table, $bindings, $renderContext, $headerSearch));
         }
 
         $block->append($this->tableRenderer->renderTable($table, $bindings, $renderContext));

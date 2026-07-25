@@ -9,6 +9,8 @@ use Sc\Util\HtmlStructureV2\Contracts\EventAware;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
+use Sc\Util\HtmlStructureV2\Dsl\Fields;
+use Sc\Util\HtmlStructureV2\Dsl\Forms;
 use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\DialogFooterActionMirror;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
@@ -232,6 +234,17 @@ final class ListWidget implements Renderable, EventAware
             ? null
             : (new ListAutoFilterFormFactory())->build($this->key, $this->table);
 
+        $resolvedForm = $this->combineFilterForms($autoFilterForm);
+
+        if ($this->table !== null && $this->table->hasHeaderSearch()) {
+            $resolvedForm = $this->applyHeaderSearchField($resolvedForm);
+        }
+
+        return $resolvedForm;
+    }
+
+    private function combineFilterForms(?Form $autoFilterForm): ?Form
+    {
         if ($this->filterForm === null) {
             return $autoFilterForm;
         }
@@ -256,6 +269,37 @@ final class ListWidget implements Renderable, EventAware
         }
 
         return $mergedForm;
+    }
+
+    /**
+     * 为解析后的筛选表单补一个隐藏的“表头搜索”关键词字段。
+     * 该字段承载表头搜索框的 model 槽位与搜索协议（type + `a&b&c` 后端字段），
+     * 隐藏所以不出现在可见筛选 UI，仅参与 searchSchema 与请求组装。
+     * 即便原本没有任何筛选字段，也会因此产出一个非空表单以保证存在 filterScope。
+     */
+    private function applyHeaderSearchField(?Form $form): Form
+    {
+        $table = $this->table;
+
+        if ($form === null) {
+            $form = Forms::make($this->key . '-filters')->inline();
+        } elseif ($form === $this->filterForm) {
+            // 避免直接改动调用方显式传入的 Form 实例
+            $form = clone $this->filterForm;
+        }
+
+        foreach ($form->fields() as $field) {
+            if ($field->name() === Table::HEADER_SEARCH_MODEL_KEY) {
+                return $form;
+            }
+        }
+
+        $form->addFields(
+            Fields::hidden(Table::HEADER_SEARCH_MODEL_KEY)
+                ->searchable($table->getHeaderSearchType(), $table->getHeaderSearchField())
+        );
+
+        return $form;
     }
 
     /**

@@ -12,6 +12,7 @@ use Sc\Util\HtmlStructureV2\Components\ListWidget;
 use Sc\Util\HtmlStructureV2\Components\Table;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Contracts\ThemeInterface;
+use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Page\AbstractPage;
 use Sc\Util\HtmlStructureV2\Page\Page;
 use Sc\Util\HtmlStructureV2\RenderContext;
@@ -27,6 +28,7 @@ use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderOptions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\FormRenderStateFactory;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\LightweightComponentRenderer;
+use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\ListHeaderSearchContext;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PageFrameRenderer;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PageRuntimeRegistry;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\PreparedListWidget;
@@ -323,21 +325,49 @@ final class ElementPlusAdminTheme implements ThemeInterface
     {
         $body = El::double('div')->addClass('sc-v2-list');
 
+        $table = $list->getTable();
+        $tableState = $prepared->tableState;
+        $hasHeaderSearch = $table !== null && $table->hasHeaderSearch() && $tableState !== null;
+        $headerSearchContext = null;
+
         $filterForm = $prepared->filterForm;
         $filterState = $prepared->filterState;
         if ($filterForm !== null && $filterState !== null) {
             $filterContent = $this->renderForm($filterForm, $filterState->model, $filterState->renderOptions, $context);
-            $body->append(
-                $wrapInSectionCards
-                    ? $this->wrapInSectionCard($filterContent)
-                    : El::double('div')->addClass('sc-v2-list__filters')->append($filterContent)
-            );
+
+            $filterBlock = $wrapInSectionCards
+                ? $this->wrapInSectionCard($filterContent)
+                : El::double('div')->addClass('sc-v2-list__filters')->append($filterContent);
+
+            if ($hasHeaderSearch) {
+                // 启用表头搜索时，“指定字段搜索”默认折叠，由工具栏“更多”按钮控制展开。
+                // 展开态存放于表格 state（而非筛选 model），避免点“重置”清空筛选时把面板一起关闭。
+                $hasVisibleFilters = $this->filterFormHasVisibleFields($filterForm);
+                if ($hasVisibleFilters) {
+                    $filterBlock->setAttrs([
+                        'v-show' => $tableState->bindings->moreSearchOpenExpression(),
+                    ]);
+                } else {
+                    $filterBlock->setAttrs(['style' => 'display:none']);
+                }
+
+                $headerSearchContext = new ListHeaderSearchContext(
+                    $list->key(),
+                    $filterState->model,
+                    $hasVisibleFilters
+                );
+            }
+
+            $body->append($filterBlock);
         }
 
-        $table = $list->getTable();
-        $tableState = $prepared->tableState;
         if ($table !== null && $tableState !== null) {
-            $tableContent = $this->tableBlockRenderer()->render($table, $tableState->bindings, $context);
+            $tableContent = $this->tableBlockRenderer()->render(
+                $table,
+                $tableState->bindings,
+                $context,
+                $headerSearchContext
+            );
             $body->append(
                 $wrapInSectionCards
                     ? $this->wrapInSectionCard($tableContent)
@@ -350,6 +380,17 @@ final class ElementPlusAdminTheme implements ThemeInterface
         }
 
         return $body;
+    }
+
+    private function filterFormHasVisibleFields(Form $filterForm): bool
+    {
+        foreach ($filterForm->fields() as $field) {
+            if ($field->type() !== FieldType::HIDDEN) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function wrapInSectionCard(AbstractHtmlElement $content, string $title = ''): AbstractHtmlElement
