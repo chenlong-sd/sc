@@ -844,6 +844,17 @@ final class LightweightComponentRenderer
         // 根属性挂在外层 wrapper，二者用后代选择器均可命中内部 table。
         if ($descriptions->isEqualWidth()) {
             $element->addClass('sc-v2-descriptions--equal');
+
+            // 设置了内容列最小宽度时：反推整表最小总宽 = 列数 ×（标签列宽 + 内容列最小宽），
+            // 通过 CSS 变量下发到内部 table；容器不足时由 __body 横向滚动，避免列被压过窄。
+            // CSS 变量会继承给内部 table，故挂在 el-descriptions 根上即可（title/无 title 均适用）。
+            $minColumnWidth = $descriptions->getMinColumnWidth();
+            if ($minColumnWidth !== null && $minColumnWidth > 0) {
+                $labelWidth = $descriptions->getLabelWidth() ?? 0;
+                $tableMinWidth = $descriptions->getColumns() * ($labelWidth + $minColumnWidth);
+                $element->addClass('sc-v2-descriptions--equal-scroll');
+                $element->setAttr('style', sprintf('--sc-v2-desc-min-width:%dpx', $tableMinWidth));
+            }
         }
 
         foreach ($descriptions->getItems() as $item) {

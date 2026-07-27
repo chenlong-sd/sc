@@ -118,6 +118,15 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* 设置了内容列最小宽度（equalWidth 第二参数）时：整表保持最小总宽，容器不足则横向滚动，
+   而不是把内容列继续压窄。最小总宽由渲染层算好，通过 --sc-v2-desc-min-width 下发。 */
+.sc-v2-descriptions--equal-scroll .el-descriptions__body {
+  overflow-x: auto;
+}
+.sc-v2-descriptions--equal-scroll .el-descriptions__table {
+  min-width: var(--sc-v2-desc-min-width, auto);
+}
+
 .sc-v2-block-text--muted {
   color: var(--sc-v2-text-muted);
 }

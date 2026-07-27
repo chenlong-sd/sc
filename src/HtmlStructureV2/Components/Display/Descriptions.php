@@ -24,6 +24,7 @@ final class Descriptions implements Renderable, EventAware
     private ?string $size = null;
     private ?string $extra = null;
     private bool $equalWidth = true;
+    private ?int $minColumnWidth = null;
 
     /**
      * 直接创建一个 descriptions 展示块实例。
@@ -121,10 +122,18 @@ final class Descriptions implements Renderable, EventAware
      * 注意：等宽依赖本块内所有 item 的 span 一致（默认都是 1）。fixed 布局按
      * 「column 数」把整行划成等宽网格，span=2 的项会占据 2 个网格列 ≈ 2 倍宽，
      * 该行等宽即被打破。想严格等宽就别混用不同 span；确需跨列时可关掉本项。
+     *
+     * @param bool $equalWidth 是否开启等宽（fixed 布局）。
+     * @param int|null $minColumnWidth 可选，内容列的最小宽度（px）。设置后，当容器宽度不足以
+     *   让每个内容列都达到该最小值时，表格保持「最小总宽」并由内部横向滚动，而不是把列继续压窄；
+     *   容器足够宽时仍等分撑满。最小总宽 = 列数 ×（labelWidth + 该值），故 labelWidth 为 null
+     *   时按 0 计（标签列另占宽度，最小值会略偏小，建议配合固定 labelWidth 使用）。
+     *   传 null 不限制。仅在 $equalWidth=true 时生效。
      */
-    public function equalWidth(bool $equalWidth = true): self
+    public function equalWidth(bool $equalWidth = true, ?int $minColumnWidth = null): self
     {
         $this->equalWidth = $equalWidth;
+        $this->minColumnWidth = $minColumnWidth;
 
         return $this;
     }
@@ -232,6 +241,11 @@ final class Descriptions implements Renderable, EventAware
     public function isEqualWidth(): bool
     {
         return $this->equalWidth;
+    }
+
+    public function getMinColumnWidth(): ?int
+    {
+        return $this->minColumnWidth;
     }
 
     private function applyItemAttributes(DescriptionItem $item, array $attributes): void
