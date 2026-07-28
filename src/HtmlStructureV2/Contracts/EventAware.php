@@ -3,6 +3,7 @@
 namespace Sc\Util\HtmlStructureV2\Contracts;
 
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\NamedEventHandler;
 
 interface EventAware
 {
@@ -14,11 +15,11 @@ interface EventAware
     public function supportedEvents(): array;
 
     /**
-     * @return array<string, array<int, JsExpression|StructuredEventInterface>>
+     * @return array<string, array<int, JsExpression|NamedEventHandler|StructuredEventInterface>>
      */
     public function getEventHandlers(?string $event = null): array;
 
-    public function getFirstEventHandler(string $event): JsExpression|StructuredEventInterface|null;
+    public function getFirstEventHandler(string $event): JsExpression|NamedEventHandler|StructuredEventInterface|null;
 
     public function hasEventHandlers(?string $event = null): bool;
 }

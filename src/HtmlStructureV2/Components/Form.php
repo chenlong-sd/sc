@@ -67,6 +67,8 @@ final class Form implements Renderable, EventAware
     private ?string $saveErrorMessage = null;
     private ?array $initialData = null;
     private array $state = [];
+    /** @var array<string, JsExpression> */
+    private array $methods = [];
 
     private readonly string $key;
 
@@ -447,6 +449,64 @@ final class Form implements Renderable, EventAware
     }
 
     /**
+     * 注册当前表单可复用的前端方法。
+     * 适合把字段联动、表单事件回调里的复杂逻辑抽出来复用。
+     *
+     * 被字段 `->on('change', 'methodName')` 调用时，方法会收到一个 `ctx` 对象，常用字段：
+     * - `ctx.value`: 当前事件第一个参数，change 事件通常就是当前值
+     * - `ctx.event`: 当前事件第一个参数，blur 等事件通常是原始事件对象
+     * - `ctx.args`: 当前事件全部参数数组
+     * - `ctx.model`: 当前字段所在的数据对象
+     * - `ctx.form`: 当前表单根模型
+     * - `ctx.scope` / `ctx.formScope`: 当前表单 scope
+     * - `ctx.fieldName`: 当前触发字段名
+     * - `ctx.vm`: 当前页面 Vue 实例
+     *
+     * 被表单 `->on()` 这类上下文事件调用时，方法同样只接收一个 `ctx` 对象，
+     * 具体会附带当前事件上下文中的 `payload` / `response` / `error` / `fieldName` 等字段。
+     *
+     * @param string $name 方法名。事件里可直接写 `->on('change', 'name')` 调用。
+     * @param string|JsExpression $handler 前端函数表达式，推荐写成 `(ctx) => { ... }`。
+     * @return self 当前表单实例。
+     */
+    public function method(string $name, string|JsExpression $handler): self
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return $this;
+        }
+
+        $this->methods[$name] = $handler instanceof JsExpression
+            ? $handler
+            : JsExpression::make($handler);
+
+        return $this;
+    }
+
+    /**
+     * 批量注册当前表单可复用的前端方法。
+     *
+     * @param array<string, string|JsExpression> $methods 方法集合，键为方法名，值为函数表达式。
+     * @return self 当前表单实例。
+     */
+    public function methods(array $methods): self
+    {
+        foreach ($methods as $name => $handler) {
+            if (!is_string($name) || trim($name) === '') {
+                continue;
+            }
+
+            if (!is_string($handler) && !$handler instanceof JsExpression) {
+                continue;
+            }
+
+            $this->method($name, $handler);
+        }
+
+        return $this;
+    }
+
+    /**
      * 设置表单提交请求方法，默认值为 post。
      *
      * @param string $method 请求方法，默认值为 post。
@@ -718,6 +778,11 @@ final class Form implements Renderable, EventAware
     public function getState(): array
     {
         return $this->state;
+    }
+
+    public function getMethods(): array
+    {
+        return $this->methods;
     }
 
     public function rules(): array

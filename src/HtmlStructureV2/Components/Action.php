@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Enums\ActionIntent;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\JsValueEncoder;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\ScTool;
 
@@ -300,6 +301,52 @@ class Action implements
     }
 
     /**
+     * 在 iframe 子页面中请求宿主页面打开指定 URL 的通用 iframe 弹窗。
+     * 不需要预先在父页面注册 Dialog；仅当当前页面由 Dialog::iframe() 且启用了宿主桥接时生效。
+     * 会追加 click 处理器，不会覆盖已有的 on('click', ...) 配置。
+     *
+     * @param string $url 要在宿主弹窗中加载的 URL。
+     * @param string|null $title 弹窗标题；为空时使用当前动作的显示文案。
+     * @param string $width 弹窗宽度，默认 1000px。
+     * @param string $height iframe 高度，默认 70vh。
+     * @param array<string, mixed> $query 要追加到 URL 的查询参数。普通值会作为静态参数；
+     *   需要读取 Vue 运行时数据时使用 `JsExpression::make()`，可访问 action 上下文中的
+     *   `form` / `model` / `row` / `forms` / `getFormState()` / `getState()` / `vm` 等变量。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Action::make('查看工单')->openHostUrlDialog('/admin/ip-work-order/lists', '工单列表')`
+     * - `Action::make('查看工单')->openHostUrlDialog('/admin/ip-work-order/lists', '工单列表', '1000px', '70vh', [
+     *       'search[s][user_phone]' => JsExpression::make('form?.user_phone'),
+     *       'message' => JsExpression::make("getFormState('form', 'message', '')"),
+     *   ])`
+     */
+    public function openHostUrlDialog(
+        string $url,
+        ?string $title = null,
+        string $width = '1000px',
+        string $height = '70vh',
+        array $query = []
+    ): static {
+        $url = trim($url);
+        if ($url === '') {
+            throw new InvalidArgumentException('Host dialog URL cannot be empty.');
+        }
+
+        $title = trim((string) $title);
+        if ($title === '') {
+            $title = $this->label;
+        }
+
+        $arguments = JsValueEncoder::encode([$url, $title, $width, $height, $query]);
+
+        return $this->on(
+            'click',
+            "({ openHostUrlDialog, form, model, row, forms, query, page, vm, getFormModel, getState, getFormState }) => openHostUrlDialog(...{$arguments})"
+        );
+    }
+
+    /**
      * 在保留原动作位置的同时，将当前动作镜像到指定弹窗的 footer。
      *
      * 镜像会复制当前 Action 的完整配置，但仍复用目标 dialog 引用；
@@ -551,8 +598,11 @@ class Action implements
      * - vm: 当前 Vue 实例
      * - reloadTable() / reloadList() / reloadPage() / closeDialog() / openDialog(): 常用运行时辅助方法
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
-     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostTab(): iframe 子页面常用宿主桥接方法
+     * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostUrlDialog() / openHostTab(): iframe 子页面常用宿主桥接方法
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
+     * - openHostUrlDialog(url, title, width, height, query) 仅在 Dialog::iframe() 宿主桥接子页面中可用，
+     *   用于让父级页面直接打开指定 URL 的通用 iframe 弹窗；query 可传静态值，
+     *   或通过 JsExpression 使用 form / model / row / getFormState() 等 Vue 上下文变量
      *
      * @param string $event 事件名，目前仅支持 click。
      * @param string|JsExpression|StructuredEventInterface $handler 事件处理逻辑。

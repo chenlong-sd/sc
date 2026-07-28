@@ -110,6 +110,11 @@ final class ElementPlusAdminTheme implements ThemeInterface
     private function renderPage(Page $page, RenderContext $context): AbstractHtmlElement
     {
         $this->runtimeRegistry($context)->mergePageState($page->getState());
+        if ($page->getMethods() !== []) {
+            $this->runtimeRegistry($context)->mergeSimpleConfig([
+                'methods' => $page->getMethods(),
+            ]);
+        }
         $renderedSections = $this->renderSections($page->getSections(), $context);
         $managedDialogs = $this->collectPageManagedDialogs($page, $page->getSections());
         $this->validatePageActionTargets($page, $context, $page->getSections(), $managedDialogs);

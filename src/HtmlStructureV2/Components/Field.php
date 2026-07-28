@@ -10,6 +10,7 @@ use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\NamedEventHandler;
 
 abstract class Field implements FormNode, ConditionalFormNode
 {
@@ -22,6 +23,7 @@ abstract class Field implements FormNode, ConditionalFormNode
     protected bool $visible = true;
     protected bool $disabled = false;
     protected bool $readonly = false;
+    protected bool $noSubmit = false;
     protected array $suffixActions = [];
     protected string|AbstractHtmlElement|null $suffixContent = null;
     protected ?JsExpression $visibleWhen = null;
@@ -30,7 +32,7 @@ abstract class Field implements FormNode, ConditionalFormNode
     protected ?string $labelWidth = null;
     protected ?array $searchConfig = null;
     protected bool $searchEnabled = true;
-    /** @var array<string, array<int, JsExpression>> */
+    /** @var array<string, array<int, JsExpression|NamedEventHandler>> */
     protected array $eventHandlers = [];
 
     public function __construct(
@@ -206,13 +208,31 @@ abstract class Field implements FormNode, ConditionalFormNode
      * 旧写法 `attr("@change", '...')` / `prop("@change", '...')` 仍会原样绑定到底层组件；
      * 新代码建议优先使用 on()，以获得 model/form 上下文和同名事件合并能力。
      *
+     * 若 handler 只传一个简单方法名，例如 `ownerTypeChange`，
+     * 运行时会优先解析当前表单 `method()/methods()` 中的同名方法；
+     * 找不到时再回退到页面方法或全局同名函数。
+     *
+     * 函数形式的 handler 可直接使用以下运行时上下文：
+     * - `model`：当前字段所属的 model；`form`：当前表单根 model。
+     * - `Forms::state()` 定义的状态位于 `pageState.forms.{formKey}`，应使用
+     *   `getFormState('{formKey}', 'path', fallback)` 读取，以及
+     *   `setFormState('{formKey}', 'path', value)` 更新；不要使用 `this.state`。
+     * - `axios`：默认后台布局提供的 HTTP 客户端，可直接调用
+     *   `axios.get(...)`、`axios.post(...)` 等方法。
+     * - `blur` 等原生事件的第一个参数是事件对象。需要当前字段值时，请从
+     *   `form.{fieldName}` 或 `model.{fieldName}` 读取。
+     *
      * @param string $event 事件名，可写 change / blur，也可写 @change / @update:model-value。
      * @param string|JsExpression $handler 前端事件处理函数或方法引用。
      * @return static 当前字段实例。
      *
      * 示例：
      * - `Fields::text('title', '标题')->on('change', "(value) => console.log(value, model.category_id, form.id)")`
+     * - `Fields::text('user_phone')->on('blur', "(event) => setFormState('form', 'project', [])")`
+     * - `Fields::text('user_phone')->on('blur', "(event) => console.log(form.user_phone, getFormState('form', 'project', []))")`
+     * - `Fields::text('user_phone')->on('blur', "(event) => axios.get('/api/projects', { params: { phone: form.user_phone } })")`
      * - `Fields::radio('result', '确认结果')->on('change', "(value) => console.log(value, dialogRow?.id)")`
+     * - `Fields::select('owner_type', '业主类型')->on('change', 'ownerTypeChange')`
      */
     public function on(string $event, string|JsExpression $handler): static
     {
@@ -222,9 +242,7 @@ abstract class Field implements FormNode, ConditionalFormNode
         }
 
         $this->eventHandlers[$event] ??= [];
-        $this->eventHandlers[$event][] = $handler instanceof JsExpression
-            ? $handler
-            : JsExpression::make($handler);
+        $this->eventHandlers[$event][] = $this->normalizeEventHandler($handler);
 
         return $this;
     }
@@ -420,6 +438,26 @@ abstract class Field implements FormNode, ConditionalFormNode
     }
 
     /**
+     * 控制当前字段是否参与“提交态 payload”。
+     * 开启后字段仍会参与渲染、表单 schema、默认值、校验和运行时 model；
+     * 只是通过 `submitForm()` / `payloadFromForm()` / `__SC_V2_PAGE__.submit()` /
+     * `cloneFormModel()` 等提交态读取时会被剔除。列表筛选表单构建 query 时也会跳过该字段。
+     * 若仍需读取完整响应式数据，请使用 `getFormModel()`。
+     *
+     * @param bool $noSubmit 是否在提交态 payload 中排除，默认值为 true。
+     * @return static 当前字段实例。
+     *
+     * 示例：
+     * - `Fields::text('preview_name', '预览名')->noSubmit()`
+     */
+    public function noSubmit(bool $noSubmit = true): static
+    {
+        $this->noSubmit = $noSubmit;
+
+        return $this;
+    }
+
+    /**
      * 在字段右侧追加操作按钮，适合“选择/查看/跳转”类辅助动作。
      * 动作 props 中的 v-if / v-show / :xxx 表达式可使用 `model` 指代当前表单模型；
      * 点击时如需读取/修改表单数据，请使用 Action::on('click', ...) 获取 action context。
@@ -438,13 +476,27 @@ abstract class Field implements FormNode, ConditionalFormNode
     }
 
     /**
-     * 在字段右侧追加说明内容，可传纯文本或轻量 HTML 元素。
+     * 在字段右侧追加说明内容，可传纯文本、Vue 模板字符串或轻量 HTML 元素。
+     *
+     * 字符串会原样作为 Vue 模板渲染，可使用页面公开的 JS 变量。表单模型变量如下：
+     * - 独立表单：`Forms::make('form')` 对应 `formModel`；一般规则为 `{formKey}Model`。
+     * - 筛选表单：`filterModel`。
+     * - 托管弹窗表单：`dialogForms['{dialogKey}']`。
+     *
+     * `Forms::state()` 定义的表单专属 state 位于 `pageState.forms.{formKey}`。
+     * 推荐使用 `getFormState('{formKey}', 'path', fallback)` 读取，避免 form key 含 `-` 等字符时访问失败。
+     * 例如 `Forms::make('form')->state('userPhone', '13800138000')` 可通过
+     * `{{ getFormState('form', 'userPhone', '') }}` 读取；该 state 不会随表单提交。
+     *
+     * 此处不会注入条件表达式中的 `model` 别名。读取可能尚未初始化的值时，使用可选链和空值回退。
      *
      * @param string|AbstractHtmlElement|null $content 右侧补充内容。
      * @return static 当前字段实例。
      *
      * 示例：
      * - `Fields::text('code', '编码')->suffixContent('自动生成')`
+     * - `Fields::text('user_id', '用户')->suffixContent("{{ formModel?.user_phone ?? '' }}")`
+     * - `Fields::text('user_id', '用户')->suffixContent("{{ getFormState('form', 'userPhone', '') }}")`
      */
     public function suffixContent(string|AbstractHtmlElement|null $content): static
     {
@@ -501,7 +553,7 @@ abstract class Field implements FormNode, ConditionalFormNode
      * - `optionLoaded`：当前字段选项是否至少完成过一次加载/写入。
      *   主要对远端或动态选项字段有意义，其它字段通常为 `false`。
      * - `field`：当前字段的静态元信息快照。
-     *   当前至少包含 `name`、`path`、`label`、`type`、`visible`、`disabled`、`readonly`、`props`。
+     *   当前至少包含 `name`、`path`、`label`、`type`、`visible`、`disabled`、`readonly`、`noSubmit`、`props`。
      * - `props`：`field.props` 的快捷别名，表示当前字段最终声明的组件属性。
      *   适合直接判断 `props.multiple`、`props.clearable` 这类配置。
      * 在 `Forms::table()` 的条件表达式里读取当前行时，优先使用 `model.xxx`；
@@ -643,6 +695,17 @@ abstract class Field implements FormNode, ConditionalFormNode
         return $this->getEventHandlers($event) !== [];
     }
 
+    private function normalizeEventHandler(string|JsExpression $handler): JsExpression|NamedEventHandler
+    {
+        if ($handler instanceof JsExpression) {
+            return $handler;
+        }
+
+        return NamedEventHandler::looksLikeReference($handler)
+            ? NamedEventHandler::make($handler)
+            : JsExpression::make($handler);
+    }
+
     public function getSpan(): int
     {
         return $this->span;
@@ -661,6 +724,11 @@ abstract class Field implements FormNode, ConditionalFormNode
     public function isReadonly(): bool
     {
         return $this->readonly;
+    }
+
+    public function isNoSubmit(): bool
+    {
+        return $this->noSubmit;
     }
 
     public function isVisible(): bool

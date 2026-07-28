@@ -463,6 +463,7 @@ Fields::editor('content', '正文')
 - `Forms::table()` 的叶子列节点现在支持 `columnWidth()` / `columnMinWidth()` / `columnAlign()` / `columnFixed()` / `columnProps()`；可直接写在 `Fields::*()`、`Forms::custom()`、嵌套 `Forms::arrayGroup()` / `Forms::table()` 上。
 - `Fields::*()` 原本已有 `prop()` / `props()`；现在也补了统一别名 `attr()` / `attrs()` / `className()` / `style()`，仍然直接作用到字段实际渲染的组件根节点，不作用于外层 form-item。
 - `Fields::*()` 现在支持 `on()` / `events()` 绑定底层字段组件事件；handler 按 Element Plus 原生事件参数调用，例如 `->on('change', '(value) => console.log(value)')`。如果字段内部也绑定同名事件（例如 `linkageUpdate()` 的 `change`），会和自定义事件串行执行。
+- `Forms::state()` / `Pages::state()` 之外，现在也支持 `Forms::method()` / `Pages::method()` 注册可复用前端方法；字段事件可直接写 `->on('change', 'methodName')` 调用，命名方法统一接收一个 `ctx` 对象。
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `attr()` / `attrs()` / `className()` / `style()`；属性会挂到各自的主要渲染根节点上。
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `visible()` / `disabled()` / `visibleWhen()` / `disabledWhen()` / `readonlyWhen()`；`visible(false)` 会跳过整棵子树，动态禁用/只读会向下作用到内部字段。
 - `Forms::tabs()` / `Forms::collapse()` 属于纯结构节点，主要补“分标签布局 / 折叠分组”这类高级表单布局能力；它们继续复用表单树 walker，不单独引入 managed runtime。
@@ -950,6 +951,7 @@ V2 子页面默认可直接使用：
 - `"__SC_V2_PAGE__.resetForm(scope = null)"`: 恢复到当前表单最近一次初始化快照
 
 如果页面里只有一个可提交表单，`scope` 可以省略；否则应显式传表单 key。这个能力依赖宿主页直接访问 `iframe.contentWindow`，通常要求子页面与宿主页同源。
+其中 `submit()` / `cloneFormModel()` 返回的是“提交态数据”，会自动剔除链式声明了 `->noSubmit()` 的字段；`getFormModel()` 仍能读取完整 model。
 
 区别是：
 
@@ -1649,6 +1651,37 @@ Actions::custom('取消')->onClick('vm.closeHostDialog()');
 
 字段也支持 `Fields::*()->on()`，但它绑定的是底层 Element Plus 字段组件事件，不走结构化 `ctx` 协议；handler 接收该组件原生事件参数。事件函数体里可直接读取 `model` 和 `form`：`model` 是当前字段所在的数据对象（在 `object()` / 表格行内会变成子对象或行对象），`form` 是当前表单根模型。字段渲染在弹窗 body 内时还可读取 `dialogRow`，它只表示来源表格行上下文，不属于表单 `model`，不会随表单提交。旧的 `attr('@change', ...)` / `prop('@change', ...)` 仍可用，并会和 `on()` 及内部联动事件合并执行。
 
+如果一段逻辑要被多个事件复用，推荐先定义成表单或页面方法，再在事件里直接写方法名：
+
+```php
+Pages::make('项目编辑')
+    ->method('afterLoad', '(ctx) => console.log(ctx.vm, ctx.query)')
+    ->addSection(
+        Forms::make('project-form')
+            ->method('ownerTypeChange', '(ctx) => {
+                ctx.form.owner_name = ""
+                console.log(ctx.value, ctx.fieldName, ctx.scope)
+            }')
+            ->addFields(
+                Fields::select('owner_type', '归属类型')
+                    ->on('change', 'ownerTypeChange')
+            )
+    );
+```
+
+命名方法统一只接收一个 `ctx` 对象。字段事件里常用字段有：
+
+- `ctx.value`: 当前事件第一个参数，`change` 通常就是当前值
+- `ctx.event`: 当前事件第一个参数，`blur` 等场景通常是原始事件对象
+- `ctx.args`: 原始事件参数数组
+- `ctx.model`: 当前字段所在的数据对象
+- `ctx.form`: 当前表单根模型
+- `ctx.scope` / `ctx.formScope`: 当前表单 scope
+- `ctx.fieldName`: 当前触发字段名
+- `ctx.vm`: 当前页面 Vue 实例
+
+字段事件解析命名方法时，会按“当前表单方法 -> 当前页面方法 -> 全局同名函数”的顺序查找。
+
 ```php
 use Sc\Util\HtmlStructureV2\Dsl\Events;
 use Sc\Util\HtmlStructureV2\Dsl\Fields;
@@ -2121,11 +2154,13 @@ JS);
 
 - 通用字段状态：`disabled()` / `disabledWhen()` / `readonly()` / `readonlyWhen()`
 - `readonly()` 会优先输出组件自身的 `readonly`；不支持 readonly 的组件会自动退化为 `disabled`
+- `noSubmit()` 会保留字段渲染、schema、默认值、校验和运行时 model，但在 `submitForm()` / `payloadFromForm()` / `__SC_V2_PAGE__.submit()` / `cloneFormModel()` 返回的提交态 payload，以及列表筛选 query 构建时自动剔除
 - 当前直接走 `readonly` 的字段类型：`text` / `password` / `textarea` / `date` / `datetime` / `date_range`
 - 其余如 `select` / `radio` / `checkbox` / `cascader` / `upload` / `switch` / `picker` / `editor` 等会自动退化为 `disabled`
 - `Form::readonly()` 会把整表单切为只读，并自动关闭 array/table 的新增、删除、排序入口；筛选表单默认提交/重置按钮也会隐藏
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` 也支持 `readonly()`，只影响各自子树
 - 所有字段都支持 `visible($condition)` 做 PHP 层显示控制；条件不成立时字段会从渲染和表单 schema 中移除
+- `Fields::hidden()` 默认仍参与提交；如果只是想保留字段声明与本地展示/联动逻辑，但不希望进入提交 payload，可继续链式 `->noSubmit()`
 - `Fields::toggle()`、`Fields::hidden()` 只保留最小通用能力
 - `Fields::text()`、`Fields::textarea()`、`Fields::password()`、`Fields::icon()` 才暴露文本校验快捷方法
 - `Fields::select()`、`Fields::radio()`、`Fields::checkbox()`、`Fields::cascader()` 才暴露 `options()`、`remoteOptions()`、`linkageUpdate()`

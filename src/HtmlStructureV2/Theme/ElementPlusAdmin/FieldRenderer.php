@@ -19,6 +19,7 @@ use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\NamedEventHandler;
 use Sc\Util\HtmlStructureV2\Support\StaticResource;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\AppliesRenderableAttributes;
@@ -529,6 +530,7 @@ final class FieldRenderer
                 array_merge($propHandlers, $fieldHandlers),
                 $modelName,
                 $formScope,
+                $field->name(),
                 $fieldHandlers === [] && count($propHandlers) === 1
             );
         }
@@ -539,8 +541,12 @@ final class FieldRenderer
         return str_starts_with(trim($attr), '@');
     }
 
-    private function normalizeFieldEventHandlerExpression(mixed $handler): ?string
+    private function normalizeFieldEventHandlerExpression(mixed $handler): string|NamedEventHandler|null
     {
+        if ($handler instanceof NamedEventHandler) {
+            return $handler;
+        }
+
         if ($handler instanceof JsExpression) {
             $handler = $handler->expression();
         } elseif ($handler instanceof \Stringable) {
@@ -551,11 +557,17 @@ final class FieldRenderer
 
         $handler = trim((string)$handler);
 
-        return $handler === '' ? null : $handler;
+        if ($handler === '') {
+            return null;
+        }
+
+        return NamedEventHandler::looksLikeReference($handler)
+            ? NamedEventHandler::make($handler)
+            : $handler;
     }
 
     /**
-     * @param array<int, string> $handlers
+     * @param array<int, string|NamedEventHandler> $handlers
      */
     private function appendComponentEventHandlers(
         AbstractHtmlElement $component,
@@ -563,6 +575,7 @@ final class FieldRenderer
         array $handlers,
         string $modelName,
         ?string $formScope = null,
+        ?string $fieldName = null,
         bool $preserveRawSingleHandler = false
     ): void
     {
@@ -578,7 +591,12 @@ final class FieldRenderer
         }
 
         foreach ($handlers as $handler) {
-            $handler = trim($handler);
+            if ($handler instanceof NamedEventHandler) {
+                $expressions[] = $handler;
+                continue;
+            }
+
+            $handler = trim((string)$handler);
             if ($handler !== '') {
                 $expressions[] = $handler;
             }
@@ -588,23 +606,39 @@ final class FieldRenderer
             return;
         }
 
-        if ($preserveRawSingleHandler && count($expressions) === 1 && $existing === null) {
+        if (
+            $preserveRawSingleHandler
+            && count($expressions) === 1
+            && $existing === null
+            && is_string($expressions[0])
+        ) {
             $component->setAttr($eventAttr, $expressions[0]);
 
             return;
         }
 
-        $component->setAttr($eventAttr, $this->composeComponentEventHandlers($expressions, $modelName, $formScope));
+        $component->setAttr($eventAttr, $this->composeComponentEventHandlers($expressions, $modelName, $formScope, $fieldName));
     }
 
     /**
-     * @param array<int, string> $handlers
+     * @param array<int, string|NamedEventHandler> $handlers
      */
-    private function composeComponentEventHandlers(array $handlers, string $modelName, ?string $formScope = null): string
+    private function composeComponentEventHandlers(
+        array $handlers,
+        string $modelName,
+        ?string $formScope = null,
+        ?string $fieldName = null
+    ): string
     {
         $handlers = array_values(array_filter(
             $handlers,
-            static fn(string $handler): bool => trim($handler) !== ''
+            static function (string|NamedEventHandler $handler): bool {
+                if ($handler instanceof NamedEventHandler) {
+                    return trim($handler->name()) !== '';
+                }
+
+                return trim($handler) !== '';
+            }
         ));
 
         if ($handlers === []) {
@@ -615,8 +649,20 @@ final class FieldRenderer
         $modelExpression = trim($modelName) === '' ? '{}' : trim($modelName);
         $formExpression = $this->fieldEventFormModelExpression($modelName, $formScope);
         foreach ($handlers as $index => $handler) {
+            if ($handler instanceof NamedEventHandler) {
+                $calls[] = $this->composeNamedComponentEventHandlerCall(
+                    $handler,
+                    $index,
+                    $modelExpression,
+                    $formExpression,
+                    $formScope,
+                    $fieldName
+                );
+                continue;
+            }
+
             $calls[] = sprintf(
-                '(() => { const __scHandler%s = ((model, form) => (%s))(%s, %s); if (typeof __scHandler%s === "function") { return __scHandler%s(...args); } })();',
+                '__scResult = (() => { const __scHandler%s = ((model, form) => (%s))(%s, %s); if (typeof __scHandler%s === "function") { return __scHandler%s(...args); } return undefined; })();',
                 $index,
                 $handler,
                 $modelExpression,
@@ -627,8 +673,35 @@ final class FieldRenderer
         }
 
         return sprintf(
-            '(...args) => { const $event = args[0]; %s }',
+            '(...args) => { const $event = args[0]; let __scResult; %s return __scResult; }',
             implode(' ', $calls)
+        );
+    }
+
+    private function composeNamedComponentEventHandlerCall(
+        NamedEventHandler $handler,
+        int $index,
+        string $modelExpression,
+        string $formExpression,
+        ?string $formScope = null,
+        ?string $fieldName = null
+    ): string {
+        $scopeExpression = $formScope === null || trim($formScope) === ''
+            ? 'null'
+            : $this->jsValue($formScope);
+        $fieldNameExpression = $fieldName === null || trim($fieldName) === ''
+            ? 'null'
+            : $this->jsValue($fieldName);
+        $methodNameExpression = $this->jsValue($handler->name());
+
+        return sprintf(
+            '__scResult = (() => { const __scVm%1$d = typeof $root !== "undefined" ? $root : null; const __scScope%1$d = %2$s; const __scMethod%1$d = %3$s; const __scCtx%1$d = { value: args[0], event: args[0], args, model: %4$s, form: %5$s, scope: __scScope%1$d, formScope: __scScope%1$d, fieldName: %6$s, vm: __scVm%1$d, methodName: __scMethod%1$d }; let __scHandler%1$d = null; if (__scVm%1$d && typeof __scVm%1$d.resolveNamedEventHandler === "function") { __scHandler%1$d = __scVm%1$d.resolveNamedEventHandler(__scScope%1$d, __scMethod%1$d); } else { if (__scVm%1$d && typeof __scVm%1$d.getFormMethod === "function" && typeof __scScope%1$d === "string" && __scScope%1$d !== "") { __scHandler%1$d = __scVm%1$d.getFormMethod(__scScope%1$d, __scMethod%1$d); } if (typeof __scHandler%1$d !== "function" && __scVm%1$d && typeof __scVm%1$d.getPageMethod === "function") { __scHandler%1$d = __scVm%1$d.getPageMethod(__scMethod%1$d); } } if (typeof __scHandler%1$d === "function") { return __scHandler%1$d.call(__scVm%1$d, __scCtx%1$d); } return undefined; })();',
+            $index,
+            $scopeExpression,
+            $methodNameExpression,
+            $modelExpression,
+            $formExpression,
+            $fieldNameExpression
         );
     }
 

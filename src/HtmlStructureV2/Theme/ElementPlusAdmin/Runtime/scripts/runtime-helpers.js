@@ -314,6 +314,30 @@
 
             current[segments[segments.length - 1]] = value;
           };
+          const unsetByPath = (source, path) => {
+            if ((!isObject(source) && !Array.isArray(source)) || !path) return;
+
+            const segments = String(path).split('.').filter(Boolean);
+            if (segments.length === 0) return;
+
+            let current = source;
+            for (let index = 0; index < segments.length - 1; index += 1) {
+              if (!isObject(current) && !Array.isArray(current)) {
+                return;
+              }
+
+              current = current[segments[index]];
+              if (current === undefined || current === null) {
+                return;
+              }
+            }
+
+            if (!isObject(current) && !Array.isArray(current)) {
+              return;
+            }
+
+            delete current[segments[segments.length - 1]];
+          };
           const normalizeEditorHtmlValue = (value) => {
             if (isObject(value)) {
               if (Object.prototype.hasOwnProperty.call(value, 'html')) {
@@ -326,7 +350,30 @@
 
             return value == null ? '' : String(value);
           };
-          const normalizeEditorSubmitModel = (model = {}, editors = [], arrayGroups = []) => {
+          const pruneNoSubmitFields = (source, fieldMetas = {}) => {
+            const walkFieldMetas = (node) => {
+              if (!isObject(node)) {
+                return;
+              }
+
+              const path = typeof node.path === 'string' ? node.path.trim() : '';
+              if (path !== '') {
+                if (node.noSubmit === true) {
+                  unsetByPath(source, path);
+                }
+                return;
+              }
+
+              Object.keys(node).forEach((key) => {
+                walkFieldMetas(node[key]);
+              });
+            };
+
+            walkFieldMetas(fieldMetas);
+
+            return source;
+          };
+          const normalizeEditorSubmitModel = (model = {}, editors = [], arrayGroups = [], fieldMetas = {}) => {
             const output = isObject(model) ? clone(model) : {};
 
             (Array.isArray(editors) ? editors : []).forEach((editorCfg) => {
@@ -354,12 +401,17 @@
 
               setByPath(output, path, rows.map((row) => {
                 return isObject(row)
-                  ? normalizeEditorSubmitModel(row, groupCfg?.rowEditors || [], groupCfg?.rowArrayGroups || [])
+                  ? normalizeEditorSubmitModel(
+                    row,
+                    groupCfg?.rowEditors || [],
+                    groupCfg?.rowArrayGroups || [],
+                    groupCfg?.rowFieldMetas || {}
+                  )
                   : row;
               }));
             });
 
-            return output;
+            return pruneNoSubmitFields(output, fieldMetas);
           };
           const findArrayGroupConfig = (arrayGroups = [], path = '') => {
             const target = typeof path === 'string' ? path.trim() : '';
@@ -1153,7 +1205,125 @@
           const isStructuredEventHandler = (handler) => {
             return isObject(handler) && typeof handler.type === 'string' && handler.type !== '';
           };
+          const isNamedEventHandlerReference = (handler) => {
+            return isObject(handler) && typeof handler.__scV2NamedHandler === 'string' && handler.__scV2NamedHandler.trim() !== '';
+          };
+          const resolveNamedHandlerName = (handler) => {
+            if (typeof handler === 'string') {
+              const normalized = handler.trim();
+              return normalized !== '' ? normalized : null;
+            }
+
+            if (!isNamedEventHandlerReference(handler)) {
+              return null;
+            }
+
+            const normalized = String(handler.__scV2NamedHandler || '').trim();
+            return normalized !== '' ? normalized : null;
+          };
+          const resolveRuntimeVm = (context = null) => {
+            if (context && typeof context === 'object' && context.vm) {
+              return context.vm;
+            }
+
+            return globalThis.__SC_V2_PAGE__?.vm ?? null;
+          };
+          const resolveRuntimeFormScope = (context = null, explicitScope = null) => {
+            const candidates = [
+              explicitScope,
+              context?.formScope,
+              context?.scope,
+            ];
+
+            for (const candidate of candidates) {
+              const normalized = typeof candidate === 'string' ? candidate.trim() : '';
+              if (normalized !== '') {
+                return normalized;
+              }
+            }
+
+            return null;
+          };
+          const resolveRuntimePageMethod = (vm, name) => {
+            if (!vm || typeof vm.getPageMethod !== 'function') {
+              return null;
+            }
+
+            const handler = vm.getPageMethod(name);
+            return typeof handler === 'function' ? handler : null;
+          };
+          const resolveRuntimeFormMethod = (vm, scope, name) => {
+            if (!vm || typeof vm.getFormMethod !== 'function') {
+              return null;
+            }
+
+            const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
+            if (normalizedScope === '') {
+              return null;
+            }
+
+            const handler = vm.getFormMethod(normalizedScope, name);
+            return typeof handler === 'function' ? handler : null;
+          };
+          const resolveRuntimeNamedHandler = (vm, scope, name) => {
+            return resolveRuntimeFormMethod(vm, scope, name) || resolveRuntimePageMethod(vm, name) || null;
+          };
+          const buildNamedHandlerContext = (vm, name, context = {}, scope = null) => {
+            const defaults = {
+              vm,
+              methodName: name,
+            };
+            const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
+            if (normalizedScope !== '') {
+              defaults.scope = normalizedScope;
+              defaults.formScope = normalizedScope;
+            }
+
+            if (isObject(context)) {
+              return Object.assign(defaults, context);
+            }
+
+            return Object.assign(defaults, {
+              value: context,
+              event: context,
+              args: context === undefined ? [] : [context],
+            });
+          };
+          const callNamedHandler = (handler, context = {}, explicitScope = null) => {
+            const name = resolveNamedHandlerName(handler);
+            if (name === null) {
+              return Promise.resolve(undefined);
+            }
+
+            const vm = resolveRuntimeVm(context);
+            const scope = resolveRuntimeFormScope(context, explicitScope);
+            const nextContext = buildNamedHandlerContext(vm, name, context, scope);
+            const resolvedHandler = resolveRuntimeNamedHandler(vm, scope, name);
+
+            if (typeof resolvedHandler === 'function') {
+              try {
+                return Promise.resolve(resolvedHandler.call(vm, nextContext));
+              } catch (error) {
+                return Promise.reject(error);
+              }
+            }
+
+            const globalHandler = globalThis?.[name];
+            if (typeof globalHandler !== 'function') {
+              return Promise.resolve(undefined);
+            }
+
+            try {
+              return Promise.resolve(globalHandler(nextContext));
+            } catch (error) {
+              return Promise.reject(error);
+            }
+          };
           const callHook = (hook, context) => {
+            if (isNamedEventHandlerReference(hook)) {
+              return callNamedHandler(hook, context);
+            }
+
             if (typeof hook !== 'function') {
               return Promise.resolve(undefined);
             }
@@ -1499,7 +1669,11 @@
           };
           const callHooks = (hooks, context) => {
             const queue = Array.isArray(hooks)
-              ? hooks.filter((hook) => typeof hook === 'function' || isStructuredEventHandler(hook))
+              ? hooks.filter((hook) => {
+                  return typeof hook === 'function'
+                    || isStructuredEventHandler(hook)
+                    || isNamedEventHandlerReference(hook);
+                })
               : [];
 
             return queue.reduce(
@@ -2607,6 +2781,7 @@
             toDialogScope,
             buildDialogState,
             buildDialogTitleState,
+            buildNamedHandlerContext,
             buildArrayGroupConfigMap,
             buildFlagState,
             buildPickerState,
@@ -2617,6 +2792,7 @@
             buildTableStates,
             buildUploadFileState,
             buildUrlWithQuery,
+            callNamedHandler,
             callHook,
             callHooks,
             clone,
@@ -2643,6 +2819,7 @@
             isEventCanceled,
             isColumnFalsy,
             isColumnTruthy,
+            isNamedEventHandlerReference,
             isObject,
             isRowArray,
             isSameValue,
@@ -2670,11 +2847,17 @@
             resolveColumnDisplayValue,
             resolveColumnMappingLabel,
             resolveColumnTagMeta,
+            resolveNamedHandlerName,
             resolveDynamicParams,
             resolvePageMode,
             resolveLinkageTemplate,
             resolvePickerDisplayTemplate,
             resolveMessage,
+            resolveRuntimeFormMethod,
+            resolveRuntimeFormScope,
+            resolveRuntimeNamedHandler,
+            resolveRuntimePageMethod,
+            resolveRuntimeVm,
             resolveTitleTemplate,
             resolveUploadValue,
             setConfigState,

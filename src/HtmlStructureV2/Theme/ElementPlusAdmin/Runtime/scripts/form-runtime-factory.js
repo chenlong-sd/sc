@@ -63,9 +63,12 @@
 
           const names = Object.assign({
             getFormRef: 'getManagedFormRef',
+            getFormRules: 'getManagedFormRules',
             validateForm: 'validateManagedForm',
             clearFormValidate: 'clearManagedFormValidate',
             getFormModel: 'getManagedFormModel',
+            getFormMethod: 'getManagedFormMethod',
+            callFormMethod: 'callManagedFormMethod',
             cloneSubmitModel: 'cloneManagedFormSubmitModel',
             setFormModel: 'setManagedFormModel',
             initializeFormModel: 'initializeManagedFormModel',
@@ -126,6 +129,14 @@
             handleUploadProgress: 'handleManagedUploadProgress',
             handleUploadPreview: 'handleManagedUploadPreview'
           }, methodNames);
+          const resolvedRuleStoreKey = '__scV2ResolvedFormRules';
+          const ensureResolvedRuleStore = (vm) => {
+            if (!isObject(vm[resolvedRuleStoreKey])) {
+              vm[resolvedRuleStoreKey] = {};
+            }
+
+            return vm[resolvedRuleStoreKey];
+          };
           const uploadNoticeStoreKey = '__scV2UploadNoticeStore';
           const getUploadNoticeStore = (vm) => {
             if (!isObject(vm[uploadNoticeStoreKey])) {
@@ -200,6 +211,50 @@
               vm
             }, overrides);
           };
+          const normalizeMethodName = (name) => {
+            const normalized = typeof name === 'string' ? name.trim() : '';
+            return normalized !== '' ? normalized : null;
+          };
+          const buildFormMethodContext = (vm, scope, name, context = {}) => {
+            const normalizedScope = typeof scope === 'string' && scope.trim() !== ''
+              ? scope.trim()
+              : null;
+            const model = getFormModel(vm, normalizedScope) || {};
+
+            if (isObject(context)) {
+              return Object.assign({
+                scope: normalizedScope,
+                formScope: normalizedScope,
+                model,
+                form: model,
+                vm,
+                methodName: name
+              }, context);
+            }
+
+            return {
+              value: context,
+              event: context,
+              args: context === undefined ? [] : [context],
+              scope: normalizedScope,
+              formScope: normalizedScope,
+              model,
+              form: model,
+              vm,
+              methodName: name
+            };
+          };
+          const resolveConfiguredFormMethod = (vm, scope, name) => {
+            const normalizedName = normalizeMethodName(name);
+            if (normalizedName === null) {
+              return null;
+            }
+
+            const formCfg = (typeof getFormConfig === 'function' ? getFormConfig(scope, vm) : null) || {};
+            const handler = formCfg?.methods?.[normalizedName] || null;
+
+            return typeof handler === 'function' ? handler : null;
+          };
           const emitFormEvent = (vm, scope, eventName, overrides = {}) => {
             return emitConfiguredEvent(
               { events: getFormEvents(scope, vm) || {} },
@@ -237,7 +292,8 @@
             return normalizeEditorSubmitModel(
               getFormModel(vm, scope) || {},
               formCfg?.editors || [],
-              formCfg?.arrayGroups || []
+              formCfg?.arrayGroups || [],
+              formCfg?.fieldMetas || {}
             );
           };
           const resolveUploadFileUrl = (uploadFile) => {
@@ -1019,6 +1075,26 @@
               const formRef = this.$refs[refName];
               return Array.isArray(formRef) ? formRef[0] : formRef;
             },
+            [names.getFormRules](scope){
+              const store = ensureResolvedRuleStore(this);
+              const cacheKey = typeof scope === 'string' && scope !== '' ? scope : '__default__';
+
+              if (!Object.prototype.hasOwnProperty.call(store, cacheKey)) {
+                store[cacheKey] = getFormRules(this, scope);
+              }
+
+              const rules = store[cacheKey];
+
+              if (rules && typeof rules === 'object' && Object.prototype.hasOwnProperty.call(rules, 'value')) {
+                return rules.value;
+              }
+
+              if (typeof rules === 'function') {
+                return rules();
+              }
+
+              return rules || null;
+            },
             [names.validateForm](scope){
               const formRef = this[names.getFormRef](scope);
               if (!formRef || typeof formRef.validate !== 'function') {
@@ -1047,6 +1123,17 @@
             },
             [names.getFormModel](scope){
               return getFormModel(this, scope) || {};
+            },
+            [names.getFormMethod](scope, name){
+              return resolveConfiguredFormMethod(this, scope, name);
+            },
+            [names.callFormMethod](scope, name, context = {}){
+              const handler = this[names.getFormMethod](scope, name);
+              if (typeof handler !== 'function') {
+                return undefined;
+              }
+
+              return handler.call(this, buildFormMethodContext(this, scope, name, context));
             },
             [names.cloneSubmitModel](scope){
               return cloneFormSubmitModel(this, scope);

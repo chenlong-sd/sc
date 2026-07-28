@@ -174,11 +174,7 @@
               this.__dialogMessageBridgeHandler = (event) => this.handleDialogHostMessage(event);
               window.addEventListener('message', this.__dialogMessageBridgeHandler);
             },
-            resolveDialogKeyFromMessage(event, payload = {}){
-              if (typeof payload?.dialogKey === 'string' && payload.dialogKey !== '') {
-                return payload.dialogKey;
-              }
-
+            resolveDialogKeyFromMessage(event){
               const source = event?.source;
               if (!source || typeof source !== 'object') {
                 return '';
@@ -426,7 +422,8 @@
                   this.dialogForms?.[dialogKey] || {}
                 ),
                 formCfg?.editors || [],
-                formCfg?.arrayGroups || []
+                formCfg?.arrayGroups || [],
+                formCfg?.fieldMetas || {}
               );
             },
             invokeDialogComponentMethod(dialogKey, methodName, context){
@@ -452,7 +449,7 @@
                 return;
               }
 
-              const dialogKey = this.resolveDialogKeyFromMessage(event, payload);
+              const dialogKey = this.resolveDialogKeyFromMessage(event);
               if (!dialogKey || !cfg.dialogs?.[dialogKey]?.iframe?.host) {
                 return;
               }
@@ -473,6 +470,9 @@
                   break;
                 case 'openDialog':
                   this.openDialog(payload.target, payload.row || null, payload.tableKey || context.tableKey || null);
+                  break;
+                case 'openUrlDialog':
+                  globalThis.__SC_V2_HOST_URL_DIALOG__?.open(payload.dialog);
                   break;
                 case 'setTitle':
                   this.setDialogTitle(dialogKey, payload.title || '');

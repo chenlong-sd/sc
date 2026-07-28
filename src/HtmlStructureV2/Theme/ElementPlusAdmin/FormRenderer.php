@@ -80,7 +80,19 @@ final class FormRenderer
             $attrs['ref'] = $renderOptions->ref;
         }
         if ($renderOptions->rules !== null) {
-            $attrs[':rules'] = $renderOptions->rules;
+            $rulesExpression = $renderOptions->rules;
+
+            if ($renderOptions->formScope !== null && $renderOptions->formScope !== '') {
+                $scopeLiteral = $this->jsValue($renderOptions->formScope);
+                $rulesExpression = sprintf(
+                    '(typeof getFormRules === "function" ? (getFormRules(%s) || %s) : %s)',
+                    $scopeLiteral,
+                    $renderOptions->rules,
+                    $renderOptions->rules
+                );
+            }
+
+            $attrs[':rules'] = $rulesExpression;
         }
 
         $hasFooterActions = !$renderOptions->isFilterMode() && $form->getFooterActions() !== [];

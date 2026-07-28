@@ -333,6 +333,7 @@ final class Fields
     /**
      * 创建隐藏字段，适合传递 id 等不展示值。
      * 隐藏字段仍然参与表单默认值、提交和校验数据结构，只是不渲染输入控件。
+     * 若只想保留字段声明与本地展示/联动逻辑，但不进入提交 payload，可继续链式 `->noSubmit()`。
      *
      * @param string $name 字段名。
      * @return BasicField 隐藏字段实例。

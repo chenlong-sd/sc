@@ -1207,6 +1207,19 @@
 
                   return notifyHost(payload);
                 },
+                openHostUrlDialog: (url, title = '', width = '1000px', height = '70vh', query = {}) => {
+                  if (typeof this.openHostUrlDialog === 'function') {
+                    return this.openHostUrlDialog(url, title, width, height, query);
+                  }
+                  if (typeof url !== 'string' || url.trim() === '') {
+                    return false;
+                  }
+
+                  return notifyHost({
+                    action: 'openUrlDialog',
+                    dialog: { url, title, width, height, query },
+                  });
+                },
                 openHostTab: (target, title = '', index = null) => {
                   if (typeof this.openHostTab === 'function') {
                     return this.openHostTab(target, title, index);
@@ -1267,6 +1280,20 @@
                   }
 
                   return notifyHost(payload);
+                },
+                getState: (path = null, fallback = null) => {
+                  if (typeof this.getState === 'function') {
+                    return this.getState(path, fallback);
+                  }
+
+                  return fallback;
+                },
+                getFormState: (scope = null, path = null, fallback = null) => {
+                  if (typeof this.getFormState === 'function') {
+                    return this.getFormState(scope, path, fallback);
+                  }
+
+                  return fallback;
                 },
               }, sourceDialogContext || {}, baseContext);
               const resolveImplicitFormScope = () => {
@@ -1421,7 +1448,8 @@
                 return normalizeEditorSubmitModel(
                   getRuntimeFormModel(resolvedScope),
                   formConfig?.editors || [],
-                  formConfig?.arrayGroups || []
+                  formConfig?.arrayGroups || [],
+                  formConfig?.fieldMetas || {}
                 );
               };
               context.setFormModel = (arg1 = null, arg2 = undefined) => {
@@ -1486,6 +1514,9 @@
 
               const implicitScope = resolveImplicitFormScope();
               if (implicitScope) {
+                context.formScope = implicitScope;
+                context.form = getRuntimeFormModel(implicitScope);
+                context.model = context.form;
                 context.page.formScope = implicitScope;
                 syncContextMode(
                   resolveRuntimePageMode((cfg?.forms?.[implicitScope] || {})?.modeQueryKey || null),

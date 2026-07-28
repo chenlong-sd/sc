@@ -17,6 +17,7 @@ final class RuntimeBundleCatalog
             'request-action-factory.js',
             'form-runtime-factory.js',
             'managed-dialog-factory.js',
+            'host-url-dialog-runtime.js',
         ];
     }
 

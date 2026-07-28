@@ -21,6 +21,7 @@
             registerElementPlusIcons,
             registerScV2Components,
             resolveMessage,
+            resolveRuntimeNamedHandler,
             resolvePageMode,
             setByPath,
             startVideoUploadPreviewObserver,
@@ -74,6 +75,48 @@
           const normalizeFormScope = (scope) => {
             const normalized = typeof scope === 'string' ? scope.trim() : '';
             return normalized !== '' ? normalized : null;
+          };
+          const normalizeMethodName = (name) => {
+            const normalized = typeof name === 'string' ? name.trim() : '';
+            return normalized !== '' ? normalized : null;
+          };
+          const pageMethods = cfg.methods || {};
+          const getConfiguredPageMethod = (name) => {
+            const normalizedName = normalizeMethodName(name);
+            if (normalizedName === null) {
+              return null;
+            }
+
+            const handler = pageMethods?.[normalizedName] || null;
+            return typeof handler === 'function' ? handler : null;
+          };
+          const buildMethodContext = (vm, name, context = {}, scope = null) => {
+            const defaults = {
+              vm,
+              methodName: name,
+            };
+            const normalizedScope = normalizeFormScope(scope);
+            if (normalizedScope !== null) {
+              defaults.scope = normalizedScope;
+              defaults.formScope = normalizedScope;
+            }
+
+            if (context && typeof context === 'object' && !Array.isArray(context)) {
+              return Object.assign(defaults, context);
+            }
+
+            return Object.assign(defaults, {
+              value: context,
+              event: context,
+              args: context === undefined ? [] : [context],
+            });
+          };
+          const resolvePublicFormMethodArgs = (arg1, arg2 = undefined, arg3 = undefined) => {
+            if (typeof arg2 === 'string') {
+              return { scope: arg1, name: arg2, context: arg3 };
+            }
+
+            return { scope: null, name: arg1, context: arg2 };
           };
           const resolvePublicFormScope = (scope = null) => {
             const explicitScope = normalizeFormScope(scope);
@@ -196,6 +239,64 @@
 
               return false;
             };
+            const getPageMethod = (name) => {
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return null;
+              }
+
+              if (typeof vm.getPageMethod === 'function') {
+                return vm.getPageMethod(normalizedName);
+              }
+
+              return getConfiguredPageMethod(normalizedName);
+            };
+            const callPageMethod = (name, context = {}) => {
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return undefined;
+              }
+
+              if (typeof vm.callPageMethod === 'function') {
+                return vm.callPageMethod(normalizedName, context);
+              }
+
+              const handler = getPageMethod(normalizedName);
+              return typeof handler === 'function'
+                ? handler.call(vm, buildMethodContext(vm, normalizedName, context))
+                : undefined;
+            };
+            const getFormMethod = (arg1, arg2 = undefined) => {
+              const { scope, name } = resolvePublicFormMethodArgs(arg1, arg2);
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return null;
+              }
+
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.getFormMethod === 'function') {
+                return vm.getFormMethod(resolvedScope, normalizedName);
+              }
+
+              return null;
+            };
+            const callFormMethod = (arg1, arg2 = undefined, arg3 = undefined) => {
+              const { scope, name, context } = resolvePublicFormMethodArgs(arg1, arg2, arg3);
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return undefined;
+              }
+
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.callFormMethod === 'function') {
+                return vm.callFormMethod(resolvedScope, normalizedName, context);
+              }
+
+              const handler = getFormMethod(resolvedScope, normalizedName);
+              return typeof handler === 'function'
+                ? handler.call(vm, buildMethodContext(vm, normalizedName, context, resolvedScope))
+                : undefined;
+            };
 
             return {
               vm,
@@ -206,6 +307,10 @@
               setState,
               getFormState,
               setFormState,
+              getPageMethod,
+              callPageMethod,
+              getFormMethod,
+              callFormMethod,
               getFieldOptions,
               getFieldConfig,
               getFieldOptionLoading,
@@ -216,6 +321,7 @@
               closeHostDialog: (...args) => vm.closeHostDialog(...args),
               reloadHostTable: (...args) => vm.reloadHostTable(...args),
               openHostDialog: (...args) => vm.openHostDialog(...args),
+              openHostUrlDialog: (...args) => vm.openHostUrlDialog(...args),
               openHostTab: (...args) => vm.openHostTab(...args),
             };
           };
@@ -551,6 +657,16 @@
 
                   return this.notifyDialogHost(payload);
                 },
+                openHostUrlDialog(url, title = '', width = '1000px', height = '70vh', query = {}){
+                  if (typeof url !== 'string' || url.trim() === '') {
+                    return false;
+                  }
+
+                  return this.notifyDialogHost({
+                    action: 'openUrlDialog',
+                    dialog: { url, title, width, height, query },
+                  });
+                },
                 openHostTab(target, title = '', index = null){
                   return openHostTabBridge(target, title, index);
                 },
@@ -707,11 +823,37 @@
                 extractPayload,
                 resolveFiltersForTable,
                 resolveMessage
-              })
+              }),
+              {
+                resolveNamedEventHandler(scope, name){
+                  const handler = resolveRuntimeNamedHandler(this, scope, name);
+                  if (typeof handler === 'function') {
+                    return handler;
+                  }
+
+                  const globalHandler = globalThis?.[name];
+                  return typeof globalHandler === 'function' ? globalHandler : null;
+                },
+                getPageMethod(name){
+                  return getConfiguredPageMethod(name);
+                },
+                callPageMethod(name, context = {}){
+                  const normalizedName = normalizeMethodName(name);
+                  const handler = this.getPageMethod(normalizedName);
+                  if (normalizedName === null || typeof handler !== 'function') {
+                    return undefined;
+                  }
+
+                  return handler.call(this, buildMethodContext(this, normalizedName, context));
+                }
+              }
             )
           });
           registerElementPlusIcons(app);
           registerScV2Components(app);
+          if (typeof globalThis.axios === 'function') {
+            app.config.globalProperties.axios = globalThis.axios;
+          }
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
           globalThis.__SC_V2_PAGE__ = Object.assign(

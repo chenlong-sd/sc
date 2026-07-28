@@ -4,10 +4,11 @@ namespace Sc\Util\HtmlStructureV2\Components\Concerns;
 
 use Sc\Util\HtmlStructureV2\Contracts\StructuredEventInterface;
 use Sc\Util\HtmlStructureV2\Support\JsExpression;
+use Sc\Util\HtmlStructureV2\Support\NamedEventHandler;
 
 trait HasEvents
 {
-    /** @var array<string, array<int, JsExpression|StructuredEventInterface>> */
+    /** @var array<string, array<int, JsExpression|NamedEventHandler|StructuredEventInterface>> */
     protected array $events = [];
 
     /**
@@ -18,6 +19,10 @@ trait HasEvents
      * handler 若为 JS 表达式，运行时统一只接收一个 context 对象，
      * 推荐写法：`(context) => {}` 或 `({ vm, row, model }) => {}`；
      * 不支持 `function (a, b, c) {}` 这类按位置参数取值的写法。
+     *
+     * 若 handler 只传一个简单方法名，例如 `afterSave`，
+     * 会优先按“当前表单方法 / 当前页面方法 / 全局同名函数”解析并调用；
+     * 命名方法统一接收一个 `context` 参数。
      *
      * 不同组件会注入不同上下文，具体字段以各组件 on() 注释为准。
      * 常见动作场景可读取 row / model / formScope / tableKey / listKey / filters /
@@ -40,9 +45,7 @@ trait HasEvents
         }
 
         $this->events[$event] ??= [];
-        $this->events[$event][] = is_string($handler)
-            ? JsExpression::make($handler)
-            : $handler;
+        $this->events[$event][] = $this->normalizeEventHandler($handler);
 
         return $this;
     }
@@ -102,7 +105,7 @@ trait HasEvents
         return $this->events[$event] ?? [];
     }
 
-    public function getFirstEventHandler(string $event): JsExpression|StructuredEventInterface|null
+    public function getFirstEventHandler(string $event): JsExpression|NamedEventHandler|StructuredEventInterface|null
     {
         $handlers = $this->getEventHandlers($event);
 
@@ -116,5 +119,17 @@ trait HasEvents
         }
 
         return ($this->events[$event] ?? []) !== [];
+    }
+
+    private function normalizeEventHandler(
+        string|JsExpression|StructuredEventInterface $handler
+    ): JsExpression|NamedEventHandler|StructuredEventInterface {
+        if (!is_string($handler)) {
+            return $handler;
+        }
+
+        return NamedEventHandler::looksLikeReference($handler)
+            ? NamedEventHandler::make($handler)
+            : JsExpression::make($handler);
     }
 }

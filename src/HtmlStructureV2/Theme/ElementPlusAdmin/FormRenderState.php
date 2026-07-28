@@ -108,6 +108,7 @@ final class FormRenderState
             'initializeOptionsOnMount' => $this->initializeOptionsOnMount,
             'initializeUploadsOnMount' => $this->initializeUploadsOnMount,
             'events' => $form->getEventHandlers(),
+            'methods' => $form->getMethods(),
             'remoteOptions' => $schema->remoteOptions(),
             'remoteOptionPaths' => $schema->remoteOptionPaths(),
             'selectOptions' => $schema->selectOptions(),

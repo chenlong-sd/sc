@@ -52,55 +52,55 @@
       }
 
       processedRules[field] = fieldRules.map(rule => {
-        // 如果规则没有条件，直接返回
-        if (!rule.__when__) {
+        const baseContext = normalizeConditionalContext(field, getModel, context);
+        const useCustomRequiredValidation = shouldUseCustomRequiredValidation(rule, baseContext);
+
+        // 如果规则没有条件，也不需要自定义 required 空值判断，直接返回
+        if (!rule.__when__ && !useCustomRequiredValidation) {
           return rule;
         }
 
-        const condition = rule.__when__;
+        const condition = rule.__when__ || null;
         const { __when__, ...ruleWithoutCondition } = rule;
-
-        // 创建条件验证器
-        const baseContext = normalizeConditionalContext(field, getModel, context);
 
         return {
           validator: (ruleObj, value, callback) => {
             try {
-              // 评估条件表达式 - 在验证时获取最新的 model
               const currentContext = normalizeConditionalContext(field, getModel, context);
-              const currentModel = currentContext.model;
-              const checkCondition = new Function(
-                'model',
-                'ctx',
-                `
-                  const form = ctx.form;
-                  const state = ctx.state;
-                  const pageState = ctx.pageState;
-                  const scope = ctx.scope;
-                  const fieldName = ctx.fieldName;
-                  const vm = ctx.vm;
-                  const options = ctx.options;
-                  const fieldConfig = ctx.fieldConfig;
-                  const optionLoading = ctx.optionLoading;
-                  const optionLoaded = ctx.optionLoaded;
-                  const field = ctx.field;
-                  const props = ctx.props;
-                  return (${condition});
-                `
-              );
-              const shouldValidate = checkCondition(currentModel, currentContext);
 
-              // 如果条件不满足，跳过验证
-              if (!shouldValidate) {
-                callback();
-                return;
+              if (condition) {
+                const currentModel = currentContext.model;
+                const checkCondition = new Function(
+                  'model',
+                  'ctx',
+                  `
+                    const form = ctx.form;
+                    const state = ctx.state;
+                    const pageState = ctx.pageState;
+                    const scope = ctx.scope;
+                    const fieldName = ctx.fieldName;
+                    const vm = ctx.vm;
+                    const dialogRow = ctx.dialogRow;
+                    const options = ctx.options;
+                    const fieldConfig = ctx.fieldConfig;
+                    const optionLoading = ctx.optionLoading;
+                    const optionLoaded = ctx.optionLoaded;
+                    const field = ctx.field;
+                    const props = ctx.props;
+                    return (${condition});
+                  `
+                );
+                const shouldValidate = checkCondition(currentModel, currentContext);
+
+                if (!shouldValidate) {
+                  callback();
+                  return;
+                }
               }
 
-              // 条件满足，执行原始验证逻辑
-              validateWithOriginalRule(ruleWithoutCondition, value, callback);
+              validateWithOriginalRule(ruleWithoutCondition, value, callback, currentContext);
             } catch (error) {
               console.error('条件验证表达式错误:', error, '条件:', condition);
-              // 出错时跳过验证
               callback();
             }
           },
@@ -111,6 +111,10 @@
     }
 
     return processedRules;
+  }
+
+  function shouldUseCustomRequiredValidation(rule, context = null) {
+    return !!rule?.required && resolveConfiguredEmptyValues(context).length > 0;
   }
 
   function normalizeConditionalContext(field, getModel, context) {
@@ -134,6 +138,7 @@
       scope: resolved.scope ?? null,
       fieldName: resolved.fieldName ?? field,
       vm: resolved.vm ?? null,
+      dialogRow: resolved.dialogRow ?? null,
       options: Array.isArray(resolved.options) ? resolved.options : [],
       fieldConfig: resolved.fieldConfig && typeof resolved.fieldConfig === 'object' ? resolved.fieldConfig : {},
       optionLoading: resolved.optionLoading === true,
@@ -143,25 +148,110 @@
     };
   }
 
+  function resolveConfiguredEmptyValues(context = null) {
+    const props = context?.props && typeof context.props === 'object' ? context.props : {};
+    const fieldConfig = context?.fieldConfig && typeof context.fieldConfig === 'object' ? context.fieldConfig : {};
+    const candidates = [
+      props['empty-values'],
+      props.emptyValues,
+      fieldConfig['empty-values'],
+      fieldConfig.emptyValues,
+    ];
+
+    return candidates.reduce((values, candidate) => {
+      return values.concat(parseConfiguredEmptyValues(candidate));
+    }, []);
+  }
+
+  function parseConfiguredEmptyValues(value) {
+    if (Array.isArray(value)) {
+      return value;
+    }
+
+    if (value === null || value === undefined || value === '') {
+      return [];
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed === '') {
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      } catch (_) {
+      }
+
+      try {
+        const evaluated = new Function(`return (${trimmed});`)();
+        return Array.isArray(evaluated) ? evaluated : [evaluated];
+      } catch (_) {
+      }
+
+      return [trimmed];
+    }
+
+    return [value];
+  }
+
+  function isScalarComparableValue(value) {
+    const valueType = typeof value;
+    return valueType === 'string'
+      || valueType === 'number'
+      || valueType === 'boolean'
+      || valueType === 'bigint';
+  }
+
+  function isConfiguredEmptyValue(expected, actual) {
+    if (expected === actual) {
+      return true;
+    }
+
+    if ((expected === null || expected === undefined) && (actual === null || actual === undefined)) {
+      return true;
+    }
+
+    if (typeof expected === 'number' && typeof actual === 'number' && Number.isNaN(expected) && Number.isNaN(actual)) {
+      return true;
+    }
+
+    if (isScalarComparableValue(expected) && isScalarComparableValue(actual)) {
+      return String(expected) === String(actual);
+    }
+
+    return false;
+  }
+
+  function isFieldValueEmpty(value, context = null) {
+    if (value === null || value === undefined || value === '' ||
+        (Array.isArray(value) && value.length === 0)) {
+      return true;
+    }
+
+    const emptyValues = resolveConfiguredEmptyValues(context);
+    if (emptyValues.length === 0) {
+      return false;
+    }
+
+    return emptyValues.some((emptyValue) => isConfiguredEmptyValue(emptyValue, value));
+  }
+
   /**
    * 使用原始规则执行验证
    * @param {Object} rule - 原始验证规则
    * @param {*} value - 字段值
    * @param {Function} callback - 回调函数
    */
-  function validateWithOriginalRule(rule, value, callback) {
-    // 处理 required 规则
+  function validateWithOriginalRule(rule, value, callback, context = null) {
     if (rule.required) {
-      if (value === null || value === undefined || value === '' ||
-          (Array.isArray(value) && value.length === 0)) {
+      if (isFieldValueEmpty(value, context)) {
         callback(new Error(rule.message || '该字段为必填项'));
         return;
       }
-      callback();
-      return;
     }
 
-    // 处理 type 规则
     if (rule.type) {
       if (rule.type === 'email' && value) {
         const emailReg = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -174,7 +264,6 @@
       return;
     }
 
-    // 处理 pattern 规则
     if (rule.pattern) {
       if (value && !rule.pattern.test(value)) {
         callback(new Error(rule.message || '格式不正确'));
@@ -184,7 +273,6 @@
       return;
     }
 
-    // 处理 min/max 长度规则
     if (rule.min !== undefined || rule.max !== undefined) {
       const len = value ? value.length : 0;
       if (rule.min !== undefined && rule.max !== undefined) {
@@ -207,13 +295,11 @@
       return;
     }
 
-    // 处理自定义 validator
     if (typeof rule.validator === 'function') {
       rule.validator(rule, value, callback);
       return;
     }
 
-    // 默认通过验证
     callback();
   }
 

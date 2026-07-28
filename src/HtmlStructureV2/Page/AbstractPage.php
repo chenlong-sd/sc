@@ -13,6 +13,7 @@ use Sc\Util\HtmlStructureV2\RenderContext;
 use Sc\Util\HtmlStructureV2\Support\Conditionable;
 use Sc\Util\HtmlStructureV2\Support\Document;
 use Sc\Util\HtmlStructureV2\Support\FormPath;
+use Sc\Util\HtmlStructureV2\Support\JsExpression;
 use Sc\Util\HtmlStructureV2\Support\RendersWithTheme;
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdminTheme;
 
@@ -32,6 +33,8 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     private array $sections = [];
     private array $dialogs = [];
     private array $state = [];
+    /** @var array<string, JsExpression> */
+    private array $methods = [];
     private ?string $background = null;
     private ?ThemeInterface $renderTheme = null;
 
@@ -220,6 +223,58 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     }
 
     /**
+     * 注册当前页面可复用的前端方法。
+     * 页面动作、表单事件或字段事件在找不到同名表单方法时，会继续回退到页面方法。
+     *
+     * 命名方法统一只接收一个 `ctx` 对象，常见字段会按触发来源自动注入，例如：
+     * - `ctx.vm`: 当前页面 Vue 实例
+     * - `ctx.scope` / `ctx.formScope`: 当前表单 scope（若事件来自某个表单）
+     * - `ctx.model` / `ctx.form`: 当前表单模型
+     * - `ctx.value` / `ctx.event` / `ctx.args`: 字段原生事件参数
+     * - `ctx.row` / `ctx.tableKey` / `ctx.listKey` / `ctx.selection`: 动作或列表上下文
+     *
+     * @param string $name 方法名。
+     * @param string|JsExpression $handler 前端函数表达式，推荐写成 `(ctx) => { ... }`。
+     * @return static 当前页面实例。
+     */
+    public function method(string $name, string|JsExpression $handler): static
+    {
+        $name = trim($name);
+        if ($name === '') {
+            return $this;
+        }
+
+        $this->methods[$name] = $handler instanceof JsExpression
+            ? $handler
+            : JsExpression::make($handler);
+
+        return $this;
+    }
+
+    /**
+     * 批量注册当前页面可复用的前端方法。
+     *
+     * @param array<string, string|JsExpression> $methods 方法集合。
+     * @return static 当前页面实例。
+     */
+    public function methods(array $methods): static
+    {
+        foreach ($methods as $name => $handler) {
+            if (!is_string($name) || trim($name) === '') {
+                continue;
+            }
+
+            if (!is_string($handler) && !$handler instanceof JsExpression) {
+                continue;
+            }
+
+            $this->method($name, $handler);
+        }
+
+        return $this;
+    }
+
+    /**
      * 显式挂载页面级托管弹窗。
      *
      * @param Dialog ...$dialogs 页面级弹窗。
@@ -271,6 +326,11 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     public function getState(): array
     {
         return $this->state;
+    }
+
+    public function getMethods(): array
+    {
+        return $this->methods;
     }
 
     public function getDialogs(): array

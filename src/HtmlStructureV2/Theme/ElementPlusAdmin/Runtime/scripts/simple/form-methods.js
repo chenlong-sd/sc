@@ -1,6 +1,6 @@
         globalThis.__SC_V2_CREATE_SIMPLE_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
-          const { getConfigState, getByPath } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const { getConfigState, getByPath, resolveDialogKeyFromScope } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
           const getFormConfig = (scope) => cfg?.forms?.[scope] || null;
           const buildConditionalFieldContexts = (vm, scope) => {
@@ -45,6 +45,12 @@
                 const localModel = parentPath === '' || typeof getByPath !== 'function'
                   ? model
                   : (getByPath(model, parentPath) || model);
+                const dialogKey = typeof resolveDialogKeyFromScope === 'function'
+                  ? resolveDialogKeyFromScope(scope)
+                  : null;
+                const dialogRow = dialogKey && vm?.dialogRows && typeof vm.dialogRows === 'object'
+                  ? (vm.dialogRows[dialogKey] || null)
+                  : null;
 
                 return {
                   model: localModel,
@@ -54,6 +60,7 @@
                   scope,
                   fieldName,
                   vm,
+                  dialogRow,
                   options: getFieldOptions(fieldName),
                   fieldConfig: getFieldConfig(fieldName),
                   optionLoading: getFieldOptionLoading(fieldName),
@@ -92,9 +99,12 @@
             tokenStoreKey: '__simpleRemoteRequestTokens',
             methodNames: {
               getFormRef: 'getSimpleFormRef',
+              getFormRules: 'getFormRules',
               validateForm: 'validateSimpleForm',
               clearFormValidate: 'clearSimpleFormValidate',
               getFormModel: 'getSimpleFormModel',
+              getFormMethod: 'getFormMethod',
+              callFormMethod: 'callFormMethod',
               cloneSubmitModel: 'cloneSimpleFormSubmitModel',
               setFormModel: 'setSimpleFormModel',
               initializeFormModel: 'initializeSimpleFormModel',

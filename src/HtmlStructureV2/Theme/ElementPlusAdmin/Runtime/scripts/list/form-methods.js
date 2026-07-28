@@ -1,6 +1,6 @@
         globalThis.__SC_V2_CREATE_LIST_FORM_METHODS__ = ({ cfg }) => {
           const createManagedFormMethods = globalThis.__SC_V2_CREATE_MANAGED_FORM_METHODS__;
-          const { getConfigState } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const { getConfigState, resolveDialogKeyFromScope } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const conditionalValidation = globalThis.__SC_V2_CONDITIONAL_VALIDATION__;
           const getScopedFormConfig = (scope) => cfg?.forms?.[scope] || null;
           const buildConditionalFieldContexts = (vm, scope) => {
@@ -46,6 +46,12 @@
                 const localModel = parentPath === '' || typeof getByPath !== 'function'
                   ? model
                   : (getByPath(model, parentPath) || model);
+                const dialogKey = typeof resolveDialogKeyFromScope === 'function'
+                  ? resolveDialogKeyFromScope(scope)
+                  : null;
+                const dialogRow = dialogKey && vm?.dialogRows && typeof vm.dialogRows === 'object'
+                  ? (vm.dialogRows[dialogKey] || null)
+                  : null;
 
                 return {
                   model: localModel,
@@ -55,6 +61,7 @@
                   scope,
                   fieldName,
                   vm,
+                  dialogRow,
                   options: getFieldOptions(fieldName),
                   fieldConfig: getFieldConfig(fieldName),
                   optionLoading: getFieldOptionLoading(fieldName),
@@ -94,9 +101,12 @@
             dependencyLockStoreKey: '__dependencyResetLocks',
             methodNames: {
               getFormRef: 'getFormRef',
+              getFormRules: 'getFormRules',
               validateForm: 'validateForm',
               clearFormValidate: 'clearFormValidate',
               getFormModel: 'getFormModel',
+              getFormMethod: 'getFormMethod',
+              callFormMethod: 'callFormMethod',
               cloneSubmitModel: 'cloneFormSubmitModel',
               setFormModel: 'setFormModel',
               initializeFormModel: 'initializeFormModel',

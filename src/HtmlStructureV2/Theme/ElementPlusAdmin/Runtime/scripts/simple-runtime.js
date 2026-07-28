@@ -23,6 +23,7 @@
             registerScV2Components,
             resolveContextValue,
             resolveMessage,
+            resolveRuntimeNamedHandler,
             resolvePageMode,
             setByPath,
             setConfigState,
@@ -39,11 +40,53 @@
             const normalized = typeof scope === 'string' ? scope.trim() : '';
             return normalized !== '' ? normalized : null;
           };
+          const normalizeMethodName = (name) => {
+            const normalized = typeof name === 'string' ? name.trim() : '';
+            return normalized !== '' ? normalized : null;
+          };
           const normalizeModeQueryKey = (queryKey) => {
             const normalized = typeof queryKey === 'string' ? queryKey.trim() : '';
             return normalized !== '' ? normalized : defaultModeQueryKey;
           };
           const getFormConfig = (scope) => forms?.[scope] || {};
+          const pageMethods = cfg.methods || {};
+          const getConfiguredPageMethod = (name) => {
+            const normalizedName = normalizeMethodName(name);
+            if (normalizedName === null) {
+              return null;
+            }
+
+            const handler = pageMethods?.[normalizedName] || null;
+            return typeof handler === 'function' ? handler : null;
+          };
+          const buildMethodContext = (vm, name, context = {}, scope = null) => {
+            const defaults = {
+              vm,
+              methodName: name,
+            };
+            const normalizedScope = normalizeFormScope(scope);
+            if (normalizedScope !== null) {
+              defaults.scope = normalizedScope;
+              defaults.formScope = normalizedScope;
+            }
+
+            if (isObject(context)) {
+              return Object.assign(defaults, context);
+            }
+
+            return Object.assign(defaults, {
+              value: context,
+              event: context,
+              args: context === undefined ? [] : [context],
+            });
+          };
+          const resolvePublicFormMethodArgs = (arg1, arg2 = undefined, arg3 = undefined) => {
+            if (typeof arg2 === 'string') {
+              return { scope: arg1, name: arg2, context: arg3 };
+            }
+
+            return { scope: null, name: arg1, context: arg2 };
+          };
           const resolvePublicFormReadonly = (scope = null) => {
             const resolvedScope = resolvePublicFormScope(scope);
             return getFormConfig(resolvedScope)?.readonly === true;
@@ -154,7 +197,8 @@
               return normalizeEditorSubmitModel(
                 getFormModel(resolvedScope),
                 formCfg?.editors || [],
-                formCfg?.arrayGroups || []
+                formCfg?.arrayGroups || [],
+                formCfg?.fieldMetas || {}
               );
             };
             const setFormModel = (arg1 = null, arg2 = undefined) => {
@@ -268,6 +312,64 @@
 
               return false;
             };
+            const getPageMethod = (name) => {
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return null;
+              }
+
+              if (typeof vm.getPageMethod === 'function') {
+                return vm.getPageMethod(normalizedName);
+              }
+
+              return getConfiguredPageMethod(normalizedName);
+            };
+            const callPageMethod = (name, context = {}) => {
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return undefined;
+              }
+
+              if (typeof vm.callPageMethod === 'function') {
+                return vm.callPageMethod(normalizedName, context);
+              }
+
+              const handler = getPageMethod(normalizedName);
+              return typeof handler === 'function'
+                ? handler.call(vm, buildMethodContext(vm, normalizedName, context))
+                : undefined;
+            };
+            const getFormMethod = (arg1, arg2 = undefined) => {
+              const { scope, name } = resolvePublicFormMethodArgs(arg1, arg2);
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return null;
+              }
+
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.getFormMethod === 'function') {
+                return vm.getFormMethod(resolvedScope, normalizedName);
+              }
+
+              return null;
+            };
+            const callFormMethod = (arg1, arg2 = undefined, arg3 = undefined) => {
+              const { scope, name, context } = resolvePublicFormMethodArgs(arg1, arg2, arg3);
+              const normalizedName = normalizeMethodName(name);
+              if (normalizedName === null) {
+                return undefined;
+              }
+
+              const resolvedScope = resolvePublicFormScope(scope);
+              if (typeof vm.callFormMethod === 'function') {
+                return vm.callFormMethod(resolvedScope, normalizedName, context);
+              }
+
+              const handler = getFormMethod(resolvedScope, normalizedName);
+              return typeof handler === 'function'
+                ? handler.call(vm, buildMethodContext(vm, normalizedName, context, resolvedScope))
+                : undefined;
+            };
             const validateForm = (scope = null) => {
               const resolvedScope = resolvePublicFormScope(scope);
               return Promise.resolve(vm.validateForm(resolvedScope)).then((valid) => valid !== false);
@@ -300,6 +402,10 @@
               setState,
               getFormState,
               setFormState,
+              getPageMethod,
+              callPageMethod,
+              getFormMethod,
+              callFormMethod,
               resolvePageMode: (queryKey = null) => vm.resolvePageMode(queryKey),
               resolveFormScope: (scope = null) => resolvePublicFormScope(scope),
               resolveFormMode: (scope = null) => vm.resolveFormMode(resolvePublicFormScope(scope)),
@@ -329,6 +435,7 @@
               closeHostDialog: (...args) => vm.closeHostDialog(...args),
               reloadHostTable: (...args) => vm.reloadHostTable(...args),
               openHostDialog: (...args) => vm.openHostDialog(...args),
+              openHostUrlDialog: (...args) => vm.openHostUrlDialog(...args),
               openHostTab: (...args) => vm.openHostTab(...args),
               setHostDialogTitle: (...args) => vm.setHostDialogTitle(...args),
               setHostDialogFullscreen: (...args) => vm.setHostDialogFullscreen(...args),
@@ -446,6 +553,27 @@
               }),
               createSimpleFormMethods({ cfg }),
               {
+                resolveNamedEventHandler(scope, name){
+                  const handler = resolveRuntimeNamedHandler(this, scope, name);
+                  if (typeof handler === 'function') {
+                    return handler;
+                  }
+
+                  const globalHandler = globalThis?.[name];
+                  return typeof globalHandler === 'function' ? globalHandler : null;
+                },
+                getPageMethod(name){
+                  return getConfiguredPageMethod(name);
+                },
+                callPageMethod(name, context = {}){
+                  const normalizedName = normalizeMethodName(name);
+                  const handler = this.getPageMethod(normalizedName);
+                  if (normalizedName === null || typeof handler !== 'function') {
+                    return undefined;
+                  }
+
+                  return handler.call(this, buildMethodContext(this, normalizedName, context));
+                },
                 getState(path = null, fallback = null){
                   if (!isObject(this.pageState)) {
                     this.pageState = {};
@@ -610,6 +738,7 @@
                     closeHostDialog: (...args) => this.closeHostDialog(...args),
                     reloadHostTable: (...args) => this.reloadHostTable(...args),
                     openHostDialog: (...args) => this.openHostDialog(...args),
+                    openHostUrlDialog: (...args) => this.openHostUrlDialog(...args),
                     openHostTab: (...args) => this.openHostTab(...args),
                     setHostDialogTitle: (...args) => this.setHostDialogTitle(...args),
                     setHostDialogFullscreen: (...args) => this.setHostDialogFullscreen(...args),
@@ -846,6 +975,16 @@
 
                   return this.notifyDialogHost(payload);
                 },
+                openHostUrlDialog(url, title = '', width = '1000px', height = '70vh', query = {}){
+                  if (typeof url !== 'string' || url.trim() === '') {
+                    return false;
+                  }
+
+                  return this.notifyDialogHost({
+                    action: 'openUrlDialog',
+                    dialog: { url, title, width, height, query },
+                  });
+                },
                 openHostTab(target, title = '', index = null){
                   return openHostTabBridge(target, title, index);
                 },
@@ -957,6 +1096,9 @@
           });
           registerElementPlusIcons(app);
           registerScV2Components(app);
+          if (typeof globalThis.axios === 'function') {
+            app.config.globalProperties.axios = globalThis.axios;
+          }
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
           startVideoUploadPreviewObserver();

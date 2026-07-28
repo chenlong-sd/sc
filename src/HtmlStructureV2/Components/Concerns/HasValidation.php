@@ -151,12 +151,19 @@ trait HasValidation
 
     public function isConditionalRequired(): bool
     {
-        return $this->conditionalRequired;
+        return $this->required && $this->getRequiredCondition() !== null;
     }
 
     public function getRequiredCondition(): ?string
     {
-        return $this->requiredCondition;
+        if (!$this->required) {
+            return null;
+        }
+
+        return $this->mergeValidationConditions(
+            $this->requiredCondition,
+            $this->getVisibleValidationCondition()
+        );
     }
 
     public function hasRules(): bool
@@ -169,7 +176,16 @@ trait HasValidation
         $rules = $this->rules;
 
         if ($this->requiredRule !== null) {
-            array_unshift($rules, $this->requiredRule);
+            $requiredRule = $this->requiredRule;
+            $condition = $this->getRequiredCondition();
+
+            if ($condition === null) {
+                unset($requiredRule['__when__']);
+            } else {
+                $requiredRule['__when__'] = $condition;
+            }
+
+            array_unshift($rules, $requiredRule);
         }
 
         return $rules;
@@ -202,6 +218,46 @@ trait HasValidation
         $rule['__when__'] = $condition;
 
         return $rule;
+    }
+
+    protected function normalizeValidationCondition(string|JsExpression|null $condition): ?string
+    {
+        if ($condition === null) {
+            return null;
+        }
+
+        $raw = trim($condition instanceof JsExpression ? $condition->expression() : $condition);
+
+        return $raw === '' ? null : $raw;
+    }
+
+    protected function getVisibleValidationCondition(): ?string
+    {
+        if (!method_exists($this, 'getVisibleWhen')) {
+            return null;
+        }
+
+        return $this->normalizeValidationCondition($this->getVisibleWhen());
+    }
+
+    protected function mergeValidationConditions(?string $left, ?string $right): ?string
+    {
+        $normalizedLeft = $this->normalizeValidationCondition($left);
+        $normalizedRight = $this->normalizeValidationCondition($right);
+
+        if ($normalizedLeft === null) {
+            return $normalizedRight;
+        }
+
+        if ($normalizedRight === null) {
+            return $normalizedLeft;
+        }
+
+        if ($normalizedLeft === $normalizedRight) {
+            return $normalizedLeft;
+        }
+
+        return sprintf('(%s) && (%s)', $normalizedLeft, $normalizedRight);
     }
 
     protected function validationPromptPrefix(): string

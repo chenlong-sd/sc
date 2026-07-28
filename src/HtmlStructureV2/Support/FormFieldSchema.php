@@ -42,6 +42,7 @@ final class FormFieldSchema
             'visible' => $this->field->isVisible(),
             'disabled' => $this->field->isDisabled(),
             'readonly' => $this->field->isReadonly(),
+            'noSubmit' => $this->field->isNoSubmit(),
             'props' => $this->field->getProps(),
         ];
     }
