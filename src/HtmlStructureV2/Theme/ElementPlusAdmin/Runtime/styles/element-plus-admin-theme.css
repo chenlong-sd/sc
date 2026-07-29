@@ -444,6 +444,25 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   flex-wrap: wrap;
 }
 
+.sc-v2-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  column-gap: 0;
+  row-gap: 12px;
+  min-height: 32px;
+  flex-wrap: wrap;
+}
+
+.sc-v2-table-pagination__deferred {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sc-v2-table-pagination > .el-pagination:not(.sc-v2-table-pagination__jump) {
+  margin-left: auto;
+}
+
 .sc-v2-status-toggles {
   display: flex;
   flex-wrap: wrap;
@@ -770,6 +789,14 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   .sc-v2-toolbar__actions,
   .sc-v2-toolbar__tools {
     width: 100%;
+  }
+
+  .sc-v2-table-pagination {
+    align-items: flex-start;
+  }
+
+  .sc-v2-table-pagination__jump {
+    margin-left: auto;
   }
 
   .sc-v2-table-settings-modal {

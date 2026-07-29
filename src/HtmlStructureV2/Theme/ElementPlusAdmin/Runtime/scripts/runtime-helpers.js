@@ -2584,6 +2584,12 @@
               allRows: clone(initialRows),
               selection: [],
               total: initialRows.length,
+              totalDeferred: false,
+              totalLoading: false,
+              hasMore: false,
+              totalQuerySignature: null,
+              activeTotalQuerySignature: null,
+              totalRequestToken: 0,
               page: 1,
               pageSize: tableConfig?.pagination?.pageSize || 20,
               sort: {

@@ -54,6 +54,21 @@ final class TableRenderBindings
         return sprintf('(%s?.total || 0)', $this->stateExpression());
     }
 
+    public function paginationTotalExpression(): string
+    {
+        return sprintf('getTablePaginationTotal(%s)', $this->tableKeyLiteral());
+    }
+
+    public function totalDeferredExpression(): string
+    {
+        return sprintf('(%s?.totalDeferred === true)', $this->stateExpression());
+    }
+
+    public function totalLoadingExpression(): string
+    {
+        return sprintf('(%s?.totalLoading === true)', $this->stateExpression());
+    }
+
     public function pageExpression(): string
     {
         return sprintf('(%s?.page || 1)', $this->stateExpression());
@@ -71,7 +86,12 @@ final class TableRenderBindings
 
     public function reloadExpression(): string
     {
-        return sprintf('loadTableData(%s)', $this->tableKeyLiteral());
+        return sprintf('reloadTable(%s)', $this->tableKeyLiteral());
+    }
+
+    public function loadTotalExpression(): string
+    {
+        return sprintf('loadTableTotal(%s)', $this->tableKeyLiteral());
     }
 
     public function exportExpression(): string

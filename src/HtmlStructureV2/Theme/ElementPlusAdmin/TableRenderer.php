@@ -446,16 +446,47 @@ final class TableRenderer
 
     public function renderPagination(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
-        return El::double('div')->setAttr('style', 'display:flex;justify-content:flex-end')
+        $totalDeferred = $bindings->totalDeferredExpression();
+
+        return El::double('div')->addClass('sc-v2-table-pagination')
             ->append(
                 El::double('el-pagination')->setAttrs([
                     'background' => '',
-                    'layout' => 'total, sizes, prev, pager, next, jumper',
+                    ':layout' => sprintf(
+                        '%s ? %s : %s',
+                        $totalDeferred,
+                        $this->jsValue('slot, sizes, prev, pager, next'),
+                        $this->jsValue('total, sizes, prev, pager, next, jumper')
+                    ),
                     ':current-page' => $bindings->pageExpression(),
                     ':page-size' => $bindings->pageSizeExpression(),
                     ':page-sizes' => $this->jsValue($table->getPageSizes()),
-                    ':total' => $bindings->totalExpression(),
+                    ':total' => $bindings->paginationTotalExpression(),
                     '@update:page-size' => $bindings->pageSizeChangeExpression(),
+                    '@update:current-page' => $bindings->pageChangeExpression(),
+                ])->append(
+                    El::double('span')
+                        ->addClass('el-pagination__total')
+                        ->addClass('sc-v2-table-pagination__deferred')
+                        ->setAttrs([
+                            'v-if' => $totalDeferred,
+                        ])->append(
+                            El::double('el-button')->setAttrs([
+                                'link' => '',
+                                'type' => 'primary',
+                                'icon' => 'DataAnalysis',
+                                ':loading' => $bindings->totalLoadingExpression(),
+                                '@click' => $bindings->loadTotalExpression(),
+                            ])->append('获取总数')
+                        )
+                ),
+                El::double('el-pagination')->addClass('sc-v2-table-pagination__jump')->setAttrs([
+                    'v-if' => $totalDeferred,
+                    'background' => '',
+                    'layout' => 'jumper',
+                    ':current-page' => $bindings->pageExpression(),
+                    ':page-size' => $bindings->pageSizeExpression(),
+                    ':total' => 'Number.MAX_SAFE_INTEGER',
                     '@update:current-page' => $bindings->pageChangeExpression(),
                 ])
             );

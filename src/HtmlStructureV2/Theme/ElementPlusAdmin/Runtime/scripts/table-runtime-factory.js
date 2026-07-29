@@ -65,6 +65,86 @@
 
               return null;
             };
+          const resolveTotalDeferred = (payload, depth = 0) => {
+            if (depth > 4 || payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+              return null;
+            }
+
+            const directKeys = ['total_deferred', 'totalDeferred'];
+            for (const key of directKeys) {
+              if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+                continue;
+              }
+
+              const value = payload[key];
+              if (typeof value === 'boolean') return value;
+              if (value === 1 || value === '1' || value === 'true') return true;
+              if (value === 0 || value === '0' || value === 'false') return false;
+            }
+
+            const nestedKeys = ['data', 'result', 'payload'];
+            for (const key of nestedKeys) {
+              if (payload[key] !== undefined) {
+                const deferred = resolveTotalDeferred(payload[key], depth + 1);
+                if (typeof deferred === 'boolean') return deferred;
+              }
+            }
+
+            return null;
+          };
+          const resolveHasMore = (payload, depth = 0) => {
+            if (depth > 4 || payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+              return null;
+            }
+
+            const directKeys = ['has_more', 'hasMore'];
+            for (const key of directKeys) {
+              if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+                continue;
+              }
+
+              const value = payload[key];
+              if (typeof value === 'boolean') return value;
+              if (value === 1 || value === '1' || value === 'true') return true;
+              if (value === 0 || value === '0' || value === 'false') return false;
+            }
+
+            const nestedKeys = ['data', 'result', 'payload'];
+            for (const key of nestedKeys) {
+              if (payload[key] !== undefined) {
+                const hasMore = resolveHasMore(payload[key], depth + 1);
+                if (typeof hasMore === 'boolean') return hasMore;
+              }
+            }
+
+            return null;
+          };
+          const normalizeTotalQueryValue = (value) => {
+            if (Array.isArray(value)) {
+              return value.map((item) => normalizeTotalQueryValue(item));
+            }
+
+            if (isObject(value)) {
+              return Object.keys(value)
+                .sort()
+                .reduce((result, key) => {
+                  result[key] = normalizeTotalQueryValue(value[key]);
+                  return result;
+                }, {});
+            }
+
+            return value;
+          };
+          const resolveTotalQuerySignature = (request = null) => {
+            const query = Object.assign({}, isObject(request?.query) ? request.query : {});
+            ['page', 'pageSize', 'onlyTotal', 'order'].forEach((key) => delete query[key]);
+
+            try {
+              return JSON.stringify(normalizeTotalQueryValue(query));
+            } catch (error) {
+              return '';
+            }
+          };
           const applyRemoteTablePayloadHandle = (handler, context = {}) => {
             const fallbackPayload = context?.payload ?? null;
             if (typeof handler !== 'function') {
@@ -1604,6 +1684,27 @@
             getTableRows(tableKey = null){
               return this.getTableState(tableKey)?.rows || [];
             },
+            getTablePaginationTotal(tableKey = null){
+              const state = this.getTableState(tableKey);
+              if (!state) {
+                return 0;
+              }
+
+              if (state.totalDeferred !== true) {
+                const total = Number(state.total);
+                return Number.isFinite(total) && total > 0 ? total : 0;
+              }
+
+              const page = Math.max(1, Number(state.page || 1));
+              const pageSize = Math.max(1, Number(state.pageSize || 20));
+              const rowCount = Array.isArray(state.rows) ? state.rows.length : 0;
+
+              if (state.hasMore === true) {
+                return (page * pageSize) + 1;
+              }
+
+              return ((page - 1) * pageSize) + Math.max(rowCount, 1);
+            },
             getTableSelection(tableKey = null){
               return this.getTableState(tableKey)?.selection || [];
             },
@@ -2354,6 +2455,10 @@
 
                   state.loading = true;
                   const request = buildRemoteTableRequest(this, resolvedKey, tableCfg, state);
+                  const totalQuerySignature = resolveTotalQuerySignature(request);
+                  state.activeTotalQuerySignature = totalQuerySignature;
+                  state.totalRequestToken = Number(state.totalRequestToken || 0) + 1;
+                  state.totalLoading = false;
 
                   return makeRequest(request)
                     .then((response) => {
@@ -2370,16 +2475,34 @@
                       }).then((payload) => {
                         const rows = pickRows(payload);
                         const resolvedTotal = resolveTotal(payload) ?? resolveTotal(rawPayload);
+                        const totalDeferred = resolveTotalDeferred(payload) ?? resolveTotalDeferred(rawPayload);
+                        const resolvedHasMore = resolveHasMore(payload) ?? resolveHasMore(rawPayload);
+                        const hasNumericTotal = typeof resolvedTotal === 'number' && Number.isFinite(resolvedTotal);
                         const nextTotal = (
                           Number(state?.page || 1) > 1
-                          && (!Number.isFinite(Number(resolvedTotal)) || Number(resolvedTotal) <= 0)
+                          && (!hasNumericTotal || resolvedTotal <= 0)
                           && Number(state?.total || 0) > 0
                         )
                           ? Number(state.total)
-                          : (Number.isFinite(Number(resolvedTotal)) ? Number(resolvedTotal) : rows.length);
+                          : (hasNumericTotal ? resolvedTotal : rows.length);
                         state.rows = rows;
                         state.allRows = clone(rows);
-                        state.total = nextTotal;
+                        if (totalDeferred === true) {
+                          const hasKnownTotal = state.totalQuerySignature === totalQuerySignature
+                            && typeof state.total === 'number'
+                            && Number.isFinite(state.total);
+                          state.total = hasKnownTotal ? state.total : null;
+                          state.totalDeferred = !hasKnownTotal;
+                        } else {
+                          state.total = nextTotal;
+                          state.totalDeferred = false;
+                          state.totalQuerySignature = totalQuerySignature;
+                        }
+                        state.hasMore = typeof resolvedHasMore === 'boolean'
+                          ? resolvedHasMore
+                          : (totalDeferred === true
+                            ? rows.length >= Number(state.pageSize || 20)
+                            : (Number(state.page || 1) * Number(state.pageSize || 20)) < Number(nextTotal || 0));
                         state.selection = normalizeActiveTableSelection(state, tableCfg);
                         syncGlobalTableSelection(this, resolvedKey);
                         if (typeof this.syncDialogRowsFromTable === 'function') {
@@ -2405,6 +2528,82 @@
                     .finally(() => {
                       state.loading = false;
                     });
+                });
+            },
+            loadTableTotal(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const tableCfg = this.getTableConfig(resolvedKey);
+              const state = this.getTableState(resolvedKey);
+              if (!resolvedKey || !tableCfg || !state) {
+                return Promise.resolve(null);
+              }
+
+              if (state.totalDeferred !== true) {
+                return Promise.resolve(state.total);
+              }
+
+              if (tableCfg.dataSource?.type !== 'remote' || !tableCfg.dataSource?.url) {
+                const rows = Array.isArray(state.allRows) ? state.allRows : [];
+                state.total = rows.length;
+                state.totalDeferred = false;
+
+                return Promise.resolve(state.total);
+              }
+
+              const request = buildRemoteTableRequest(this, resolvedKey, tableCfg, state, {
+                includePagination: false,
+                extraQuery: { onlyTotal: 1 },
+              });
+              const totalQuerySignature = resolveTotalQuerySignature(request);
+              const requestToken = Number(state.totalRequestToken || 0) + 1;
+              state.totalRequestToken = requestToken;
+              state.totalLoading = true;
+
+              return makeRequest(request)
+                .then((response) => {
+                  const rawPayload = ensureSuccess(extractPayload(response), '总数获取失败');
+
+                  return applyRemoteTablePayloadHandle(tableCfg?.remoteDataHandle, {
+                    response,
+                    payload: rawPayload,
+                    tableKey: resolvedKey,
+                    tableConfig: tableCfg,
+                    state,
+                    request,
+                    totalOnly: true,
+                    vm: this,
+                  }).then((payload) => {
+                    const resolvedTotal = resolveTotal(payload) ?? resolveTotal(rawPayload);
+                    if (typeof resolvedTotal !== 'number' || !Number.isFinite(resolvedTotal)) {
+                      throw new Error('接口未返回有效总数');
+                    }
+
+                    if (
+                      Number(state.totalRequestToken) !== requestToken
+                      || state.activeTotalQuerySignature !== totalQuerySignature
+                    ) {
+                      return resolvedTotal;
+                    }
+
+                    state.total = resolvedTotal;
+                    state.totalDeferred = false;
+                    state.totalQuerySignature = totalQuerySignature;
+
+                    return state.total;
+                  });
+                })
+                .catch((error) => {
+                  if (Number(state.totalRequestToken) === requestToken) {
+                    const message = error?.message || resolveMessage(error?.response?.data, '总数获取失败');
+                    ElementPlus.ElMessage.error(message);
+                  }
+
+                  return null;
+                })
+                .finally(() => {
+                  if (Number(state.totalRequestToken) === requestToken) {
+                    state.totalLoading = false;
+                  }
                 });
             },
             exportTableData(tableKey = null){
@@ -2548,7 +2747,19 @@
 
               return state.rows;
             },
+            invalidateTableTotal(tableKey = null){
+              const state = this.getTableState(tableKey);
+              if (!state) {
+                return null;
+              }
+
+              state.totalQuerySignature = null;
+
+              return state;
+            },
             reloadTable(tableKey = null){
+              this.invalidateTableTotal(tableKey);
+
               return this.loadTableData(tableKey);
             },
             handleTablePageChange(tableKey, page){
@@ -2594,7 +2805,7 @@
                 at: now,
               };
               state.page = nextPage;
-              emitTableEvent(this, tableKey, tableCfg, state, 'pageChange', { page: nextPage })
+              return emitTableEvent(this, tableKey, tableCfg, state, 'pageChange', { page: nextPage })
                 .then(() => this.loadTableData(tableKey))
                 .finally(() => {
                   const lock = isObject(state.__paginationEventLock) ? state.__paginationEventLock : null;
@@ -2774,7 +2985,7 @@
                     ids,
                     response,
                     payload
-                  }).then(() => this.loadTableData(resolvedKey));
+                  }).then(() => this.reloadTable(resolvedKey));
                 })
                 .catch((error) => {
                   if (error === 'cancel' || error === 'close') {
@@ -2839,7 +3050,7 @@
                     }
                     ElementPlus.ElMessage.success(resolveMessage(payload, '恢复成功'));
 
-                    return this.loadTableData(resolvedKey);
+                    return this.reloadTable(resolvedKey);
                   })
                   .catch((error) => {
                     if (error === 'cancel' || error === 'close') {

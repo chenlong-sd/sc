@@ -71,7 +71,7 @@ final class ActionRenderTarget
     public function reloadExpression(): string
     {
         if ($this->tableKey !== null) {
-            return sprintf('loadTableData(%s)', $this->jsString($this->tableKey));
+            return sprintf('reloadTable(%s)', $this->jsString($this->tableKey));
         }
 
         if ($this->listKey !== null) {
