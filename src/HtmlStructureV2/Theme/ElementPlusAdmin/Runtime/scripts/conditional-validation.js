@@ -64,6 +64,9 @@
         const { __when__, ...ruleWithoutCondition } = rule;
 
         return {
+          // 保留 required 键，让 el-form-item 的 :required 走“同步”分支，
+          // 避免 Element Plus 找不到必填规则时另外补一条无 message 的英文必填规则（失焦时报 "%s is required"）
+          required: !!rule.required,
           validator: (ruleObj, value, callback) => {
             try {
               const currentContext = normalizeConditionalContext(field, getModel, context);
