@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeNoSubmit;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -22,6 +23,7 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
     use HasReadonly;
     use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
+    use HasFormNodeNoSubmit;
     private string $type = '';
     private string $tabPosition = 'top';
     private bool $stretch = false;
@@ -116,7 +118,9 @@ final class TabsNode implements FormNode, FormNodeContainer, FormNodePathScopedC
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context->mergeReadonly($this->isReadonly());
+        return $context
+            ->mergeReadonly($this->isReadonly())
+            ->mergeNoSubmit($this->isNoSubmit());
     }
 
     public function getType(): string

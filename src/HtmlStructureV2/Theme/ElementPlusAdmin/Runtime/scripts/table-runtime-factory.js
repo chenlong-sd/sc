@@ -2277,6 +2277,31 @@
 
               return state.maxHeight;
             },
+            toggleTableMoreSearch(tableKey = null){
+              const resolvedKey = this.resolveTableKey(tableKey);
+              const state = this.getTableState(resolvedKey);
+              if (!state) {
+                return null;
+              }
+
+              state.moreSearchOpen = !state.moreSearchOpen;
+
+              // “更多搜索”面板展开/收起会改变表格距视口顶部的距离，
+              // 动态 max-height 需在 DOM 更新后按新位置重算，
+              // 使窗口足够高时整页高度保持不变，避免出现纵向滚动条。
+              const settle = () => {
+                this.initializeTableMaxHeight(resolvedKey);
+                this.refreshTableLayout(resolvedKey);
+              };
+
+              if (typeof this.$nextTick === 'function') {
+                this.$nextTick(settle);
+              } else {
+                settle();
+              }
+
+              return state.moreSearchOpen;
+            },
             saveTableSettings(tableKey = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const state = this.getTableState(resolvedKey);

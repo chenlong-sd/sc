@@ -886,6 +886,14 @@ final class FormRenderer
             return null;
         }
 
+        if (
+            $section->title() !== ''
+            && ($section->descriptionText() === null || $section->descriptionText() === '')
+            && $section->getHeaderActions() === []
+        ) {
+            return El::double('div')->addClass('sc-v2-section__header')->append($section->title());
+        }
+
         $header = El::double('div')->addClass('sc-v2-form-section__header');
         $heading = El::double('div')->addClass('sc-v2-form-section__heading');
         $headingBody = El::double('div')->addClass('sc-v2-form-section__heading-body');

@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeNoSubmit;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -22,6 +23,7 @@ final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScope
     use HasReadonly;
     use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
+    use HasFormNodeNoSubmit;
 
     public function __construct()
     {
@@ -65,6 +67,8 @@ final class InlineNode implements FormNode, FormNodeContainer, FormNodePathScope
 
     public function childPathContext(FormNodePathContext $context): FormNodePathContext
     {
-        return $context->mergeReadonly($this->isReadonly());
+        return $context
+            ->mergeReadonly($this->isReadonly())
+            ->mergeNoSubmit($this->isNoSubmit());
     }
 }

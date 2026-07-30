@@ -12,6 +12,7 @@ final class FormNodePathContext
         private readonly string $modelPrefix = '',
         private readonly array $labelSegments = [],
         private readonly bool $readonly = false,
+        private readonly bool $noSubmit = false,
     ) {
     }
 
@@ -35,6 +36,11 @@ final class FormNodePathContext
         return $this->readonly;
     }
 
+    public function isNoSubmit(): bool
+    {
+        return $this->noSubmit;
+    }
+
     public function fieldPath(string $name): string
     {
         return FormPath::resolve($this->fieldPrefix, $name);
@@ -49,6 +55,7 @@ final class FormNodePathContext
             modelPrefix: $prefix,
             labelSegments: $this->labelSegments,
             readonly: $this->readonly,
+            noSubmit: $this->noSubmit,
         );
     }
 
@@ -67,6 +74,7 @@ final class FormNodePathContext
             modelPrefix: $this->modelPrefix,
             labelSegments: $segments,
             readonly: $this->readonly,
+            noSubmit: $this->noSubmit,
         );
     }
 
@@ -77,6 +85,18 @@ final class FormNodePathContext
             modelPrefix: $this->modelPrefix,
             labelSegments: $this->labelSegments,
             readonly: $this->readonly || $readonly,
+            noSubmit: $this->noSubmit,
+        );
+    }
+
+    public function mergeNoSubmit(bool $noSubmit = true): self
+    {
+        return new self(
+            fieldPrefix: $this->fieldPrefix,
+            modelPrefix: $this->modelPrefix,
+            labelSegments: $this->labelSegments,
+            readonly: $this->readonly,
+            noSubmit: $this->noSubmit || $noSubmit,
         );
     }
 

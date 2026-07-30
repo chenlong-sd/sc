@@ -203,7 +203,13 @@ body {
   margin-bottom: 0;
 }
 
-.sc-v2-form-section,
+.sc-v2-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .sc-v2-form-array,
 .sc-v2-form-table,
 .sc-v2-table-block,
@@ -216,7 +222,7 @@ body {
 
 .sc-v2-form-section-block--plain .sc-v2-form-section,
 .sc-v2-form-section-block--plain {
-  gap: 10px;
+  gap: 12px;
 }
 
 .sc-v2-form-section__header,
@@ -233,6 +239,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.sc-v2-form-section__heading-body h3,
+.sc-v2-form-section__heading-body p {
+  margin: 0;
+}
+
+.sc-v2-form-section__heading-body h3 {
+  font: inherit;
+  color: inherit;
+}
+
+.sc-v2-form-section__heading-body p {
+  line-height: 1.7;
+  color: var(--sc-v2-text-secondary);
 }
 
 .sc-v2-form-section__body,

@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeNoSubmit;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -22,6 +23,7 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     use HasReadonly;
     use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
+    use HasFormNodeNoSubmit;
 
     public function __construct(
         private readonly string $title
@@ -74,6 +76,7 @@ final class CollapseItemNode implements FormNode, FormNodeContainer, FormNodePat
     {
         return $context
             ->withLabelSegment($this->title)
-            ->mergeReadonly($this->isReadonly());
+            ->mergeReadonly($this->isReadonly())
+            ->mergeNoSubmit($this->isNoSubmit());
     }
 }

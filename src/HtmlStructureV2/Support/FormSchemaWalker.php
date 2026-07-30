@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructureV2\Components\Fields\PickerField;
 use Sc\Util\HtmlStructureV2\Components\Fields\UploadField;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\CustomNode;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\FormArrayGroup;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\FormObjectGroup;
 use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
 
@@ -40,7 +41,7 @@ final class FormSchemaWalker
     /**
      * @param FormNode[] $nodes
      */
-    public function build(array $nodes): FormSchema
+    public function build(array $nodes, ?FormNodePathContext $context = null): FormSchema
     {
         $this->reset();
         $this->formNodePathWalker->walk(
@@ -58,10 +59,17 @@ final class FormSchemaWalker
                     return;
                 }
 
+                if ($node instanceof FormObjectGroup) {
+                    $this->collectObjectGroup($node, $context);
+
+                    return;
+                }
+
                 if ($node instanceof CustomNode) {
                     return;
                 }
-            }
+            },
+            $context ?? FormNodePathContext::root()
         );
 
         return new FormSchema(
@@ -105,7 +113,7 @@ final class FormSchemaWalker
     private function collectField(Field $field, FormNodePathContext $context): void
     {
         $path = $context->fieldPath($field->name());
-        $this->fields[] = new FormFieldSchema($field, $path);
+        $this->fields[] = new FormFieldSchema($field, $path, $field->isNoSubmit() || $context->isNoSubmit());
         FormPath::set($this->fieldMetas, $path, end($this->fields)->runtimeMeta());
         FormPath::set($this->defaults, $path, $field->getDefault());
 
@@ -183,10 +191,41 @@ final class FormSchemaWalker
     private function collectArrayGroup(FormArrayGroup $group, FormNodePathContext $context): void
     {
         $path = $context->fieldPath($group->name());
-        $rowSchema = (new self($this->formNodePathWalker))->build($group->getChildren());
+        $this->collectNamedNodeNoSubmitMeta($path, $context->isNoSubmit() || $group->isNoSubmit());
+        $rowSchema = (new self($this->formNodePathWalker))->build(
+            $group->getChildren(),
+            FormNodePathContext::root()
+                ->mergeReadonly($context->isReadonly() || $group->isReadonly())
+                ->mergeNoSubmit($context->isNoSubmit() || $group->isNoSubmit())
+        );
         FormPath::set($this->defaults, $path, $group->buildInitialRows($rowSchema->defaults()));
         FormPath::set($this->pickerDefaults, $path, $group->buildInitialRows($rowSchema->pickerDefaults()));
         $this->arrayGroups[] = new FormArrayGroupSchema($path, $group, $rowSchema);
+    }
+
+    private function collectObjectGroup(FormObjectGroup $group, FormNodePathContext $context): void
+    {
+        $this->collectNamedNodeNoSubmitMeta(
+            $context->fieldPath($group->name()),
+            $context->isNoSubmit() || $group->isNoSubmit()
+        );
+    }
+
+    private function collectNamedNodeNoSubmitMeta(string $path, bool $noSubmit): void
+    {
+        if (!$noSubmit || $path === '') {
+            return;
+        }
+
+        $meta = FormPath::get($this->fieldMetas, $path, []);
+        if (!is_array($meta)) {
+            $meta = [];
+        }
+
+        $meta['path'] = $path;
+        $meta['noSubmit'] = true;
+
+        FormPath::set($this->fieldMetas, $path, $meta);
     }
 
     private function normalizeRemoteOptions(OptionField $field, string $prefix): array

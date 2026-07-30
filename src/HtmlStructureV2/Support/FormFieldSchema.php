@@ -9,6 +9,7 @@ final class FormFieldSchema
     public function __construct(
         private readonly Field $field,
         private readonly string $path,
+        private readonly bool $noSubmit = false,
     ) {
     }
 
@@ -42,8 +43,13 @@ final class FormFieldSchema
             'visible' => $this->field->isVisible(),
             'disabled' => $this->field->isDisabled(),
             'readonly' => $this->field->isReadonly(),
-            'noSubmit' => $this->field->isNoSubmit(),
+            'noSubmit' => $this->isNoSubmit(),
             'props' => $this->field->getProps(),
         ];
+    }
+
+    public function isNoSubmit(): bool
+    {
+        return $this->noSubmit;
     }
 }

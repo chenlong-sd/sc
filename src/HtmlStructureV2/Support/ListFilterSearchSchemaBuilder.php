@@ -26,7 +26,7 @@ final class ListFilterSearchSchemaBuilder
 
             $field = $fieldSchema->field();
             $resolvedPaths[$path] = true;
-            if ($field->isNoSubmit()) {
+            if ($fieldSchema->isNoSubmit()) {
                 $disabledPaths[$path] = true;
                 continue;
             }

@@ -9,6 +9,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeNoSubmit;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -23,6 +24,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer, ConditionalFormNode
     use HasReadonly;
     use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
+    use HasFormNodeNoSubmit;
     private array $defaultRows = [];
     private ?string $title = null;
     private string $addButtonText = '新增一组';

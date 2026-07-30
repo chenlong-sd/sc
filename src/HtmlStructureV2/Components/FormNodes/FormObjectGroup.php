@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Concerns\HasSpan;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeConditions;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeChildren;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeLabelWidth;
+use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasFormNodeNoSubmit;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\Concerns\HasReadonly;
 use Sc\Util\HtmlStructureV2\Contracts\ConditionalFormNode;
 use Sc\Util\HtmlStructureV2\Contracts\FormNode;
@@ -21,6 +22,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
     use HasReadonly;
     use HasFormNodeConditions;
     use HasFormNodeLabelWidth;
+    use HasFormNodeNoSubmit;
 
     public function __construct(
         private readonly string $name
@@ -76,6 +78,7 @@ final class FormObjectGroup implements FormNode, FormNodeContainer, FormNodePath
     {
         return $context
             ->nestedObject($this->name())
-            ->mergeReadonly($this->isReadonly());
+            ->mergeReadonly($this->isReadonly())
+            ->mergeNoSubmit($this->isNoSubmit());
     }
 }

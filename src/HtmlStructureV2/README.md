@@ -466,6 +466,7 @@ Fields::editor('content', '正文')
 - `Forms::state()` / `Pages::state()` 之外，现在也支持 `Forms::method()` / `Pages::method()` 注册可复用前端方法；字段事件可直接写 `->on('change', 'methodName')` 调用，命名方法统一接收一个 `ctx` 对象。
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `attr()` / `attrs()` / `className()` / `style()`；属性会挂到各自的主要渲染根节点上。
 - `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` / `Forms::custom()` 现在统一支持 `visible()` / `disabled()` / `visibleWhen()` / `disabledWhen()` / `readonlyWhen()`；`visible(false)` 会跳过整棵子树，动态禁用/只读会向下作用到内部字段。
+- `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` 现在也支持 `noSubmit()`；会对子树生效，命名子树会整体从提交态 payload 中剔除。
 - `Forms::tabs()` / `Forms::collapse()` 属于纯结构节点，主要补“分标签布局 / 折叠分组”这类高级表单布局能力；它们继续复用表单树 walker，不单独引入 managed runtime。
 - `Forms::section()` / `Forms::tab()` / `Forms::collapseItem()` 用 `->addContent(...)` 追加面板内容。
 - `Forms::inline()` / `Forms::grid()` 用 `->addItems(...)` 追加布局项。
@@ -2155,6 +2156,7 @@ JS);
 - 通用字段状态：`disabled()` / `disabledWhen()` / `readonly()` / `readonlyWhen()`
 - `readonly()` 会优先输出组件自身的 `readonly`；不支持 readonly 的组件会自动退化为 `disabled`
 - `noSubmit()` 会保留字段渲染、schema、默认值、校验和运行时 model，但在 `submitForm()` / `payloadFromForm()` / `__SC_V2_PAGE__.submit()` / `cloneFormModel()` 返回的提交态 payload，以及列表筛选 query 构建时自动剔除
+- `Forms::section()` / `Forms::inline()` / `Forms::grid()` / `Forms::tabs()` / `Forms::tab()` / `Forms::collapse()` / `Forms::collapseItem()` / `Forms::object()` / `Forms::arrayGroup()` / `Forms::table()` 也支持 `noSubmit()`，会对子树生效；其中 `object()` / `arrayGroup()` / `table()` 这类带路径节点会整棵子树从提交态 payload 中剔除
 - 当前直接走 `readonly` 的字段类型：`text` / `password` / `textarea` / `date` / `datetime` / `date_range`
 - 其余如 `select` / `radio` / `checkbox` / `cascader` / `upload` / `switch` / `picker` / `editor` 等会自动退化为 `disabled`
 - `Form::readonly()` 会把整表单切为只读，并自动关闭 array/table 的新增、删除、排序入口；筛选表单默认提交/重置按钮也会隐藏
