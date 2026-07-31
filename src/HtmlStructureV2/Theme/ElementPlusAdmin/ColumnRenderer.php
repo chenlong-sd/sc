@@ -138,6 +138,15 @@ final class ColumnRenderer
         $display = $column->getDisplay() ?? [];
         $template = El::double('template')->setAttr('#default', 'scope');
 
+        return $this->renderDisplayIntoTemplate($template, $column, $display, $bindings);
+    }
+
+    private function renderDisplayIntoTemplate(
+        AbstractHtmlElement $template,
+        Column $column,
+        array $display,
+        ?TableRenderBindings $bindings = null
+    ): AbstractHtmlElement {
         return match ($display['type'] ?? '') {
             'mapping' => $this->renderMappingColumnTemplate($template, $column, $display),
             'tag' => $this->renderTagColumnTemplate($template, $column, $display),
@@ -148,13 +157,20 @@ final class ColumnRenderer
             'switch' => $this->renderSwitchColumnTemplate($template, $column, $display, $bindings),
             'datetime' => $this->renderDatetimeColumnTemplate($template, $column, $display),
             'open_page' => $this->renderOpenPageColumnTemplate($template, $column, $display, $bindings),
-            default => $this->renderPlainColumnTemplate($column),
+            'dynamic' => $this->renderDynamicColumnTemplate($template, $column, $display, $bindings),
+            default => $this->renderPlainColumnIntoTemplate($template, $column),
         };
     }
 
     private function renderPlainColumnTemplate(Column $column): AbstractHtmlElement
     {
         $template = El::double('template')->setAttr('#default', 'scope');
+
+        return $this->renderPlainColumnIntoTemplate($template, $column);
+    }
+
+    private function renderPlainColumnIntoTemplate(AbstractHtmlElement $template, Column $column): AbstractHtmlElement
+    {
         $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
         $displayExpression = $this->runtimeMethodCall('resolveColumnDisplayValue', $valueExpression);
 
@@ -166,6 +182,48 @@ final class ColumnRenderer
                 ->append('{{ displayValue }}'),
             $this->placeholderSpan($column, 'v-else')
         ));
+
+        return $template;
+    }
+
+    private function renderDynamicColumnTemplate(
+        AbstractHtmlElement $template,
+        Column $column,
+        array $display,
+        ?TableRenderBindings $bindings = null
+    ): AbstractHtmlElement {
+        $branchIndex = 0;
+        foreach ($display['branches'] ?? [] as $branch) {
+            if (!is_array($branch) || !is_array($branch['display'] ?? null)) {
+                continue;
+            }
+
+            $condition = trim((string)($branch['condition'] ?? ''));
+            if ($condition === '') {
+                continue;
+            }
+
+            $wrapper = El::double('template')->setAttr(
+                $branchIndex === 0 ? 'v-if' : 'v-else-if',
+                $condition
+            );
+            $this->renderDisplayIntoTemplate($wrapper, $column, $branch['display'], $bindings);
+            $template->append($wrapper);
+            ++$branchIndex;
+        }
+
+        $fallback = El::double('template');
+        if ($branchIndex > 0) {
+            $fallback->setAttr('v-else', '');
+        }
+
+        $default = $display['default'] ?? null;
+        if (is_array($default)) {
+            $this->renderDisplayIntoTemplate($fallback, $column, $default, $bindings);
+        } else {
+            $this->renderPlainColumnIntoTemplate($fallback, $column);
+        }
+        $template->append($fallback);
 
         return $template;
     }

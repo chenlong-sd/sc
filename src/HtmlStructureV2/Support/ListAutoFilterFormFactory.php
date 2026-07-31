@@ -113,14 +113,23 @@ final class ListAutoFilterFormFactory
             return null;
         }
 
-        $options = match ($display['type'] ?? '') {
-            'mapping', 'tag', 'switch' => $this->normalizeDisplayOptions($display['options'] ?? []),
-            'boolean', 'boolean_tag' => [
-                ['value' => 1, 'label' => (string)($display['truthyLabel'] ?? '是')],
-                ['value' => 0, 'label' => (string)($display['falsyLabel'] ?? '否')],
-            ],
-            default => [],
-        };
+        $options = [];
+        foreach ($this->displayCandidates($display) as $candidate) {
+            $candidateOptions = match ($candidate['type'] ?? '') {
+                'mapping', 'tag', 'switch' => $this->normalizeDisplayOptions($candidate['options'] ?? []),
+                'boolean', 'boolean_tag' => [
+                    ['value' => 1, 'label' => (string)($candidate['truthyLabel'] ?? '是')],
+                    ['value' => 0, 'label' => (string)($candidate['falsyLabel'] ?? '否')],
+                ],
+                default => [],
+            };
+
+            foreach ($candidateOptions as $option) {
+                $key = serialize($option['value'] ?? null);
+                $options[$key] ??= $option;
+            }
+        }
+        $options = array_values($options);
 
         if ($options === []) {
             return null;
@@ -200,13 +209,18 @@ final class ListAutoFilterFormFactory
             return true;
         }
 
-        if (($display['type'] ?? '') !== 'datetime') {
-            return false;
+        foreach ($this->displayCandidates($display) as $candidateDisplay) {
+            if (($candidateDisplay['type'] ?? '') !== 'datetime') {
+                continue;
+            }
+
+            $format = (string)($candidateDisplay['format'] ?? '');
+            if (preg_match('/H|h|mm|ss/', $format) === 1) {
+                return true;
+            }
         }
 
-        $format = (string)($display['format'] ?? '');
-
-        return preg_match('/H|h|mm|ss/', $format) === 1;
+        return false;
     }
 
     private function looksLikeDate(string $name, ?array $display, ?string $searchField = null): bool
@@ -217,6 +231,37 @@ final class ListAutoFilterFormFactory
             return true;
         }
 
-        return ($display['type'] ?? '') === 'datetime';
+        foreach ($this->displayCandidates($display) as $candidateDisplay) {
+            if (($candidateDisplay['type'] ?? '') === 'datetime') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function displayCandidates(?array $display): array
+    {
+        if ($display === null) {
+            return [];
+        }
+        if (($display['type'] ?? '') !== 'dynamic') {
+            return [$display];
+        }
+
+        $candidates = [];
+        foreach ($display['branches'] ?? [] as $branch) {
+            if (is_array($branch) && is_array($branch['display'] ?? null)) {
+                $candidates[] = $branch['display'];
+            }
+        }
+        if (is_array($display['default'] ?? null)) {
+            $candidates[] = $display['default'];
+        }
+
+        return $candidates;
     }
 }

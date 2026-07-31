@@ -487,10 +487,24 @@
               matched ? output : stripExportHtml(normalizedTemplate)
             );
           };
-          const resolveExportDisplayValue = (value, column = {}) => {
+          const resolveExportDisplayValue = (value, column = {}, row = {}) => {
             const display = isObject(column?.display) ? column.display : {};
 
             switch (display.type) {
+              case 'dynamic': {
+                const matchedBranch = (Array.isArray(display.branches) ? display.branches : [])
+                  .find((branch) => isObject(branch)
+                    && isObject(branch.display)
+                    && Boolean(evaluateExportExpression(branch.condition || '', row || {})));
+                const selectedDisplay = matchedBranch?.display || (isObject(display.default) ? display.default : null);
+                if (!selectedDisplay) {
+                  return stringifyExportValue(resolveColumnDisplayValue(value));
+                }
+
+                return resolveExportDisplayValue(value, Object.assign({}, column, {
+                  display: selectedDisplay,
+                }), row);
+              }
               case 'mapping':
                 return stringifyExportValue(
                   resolveColumnMappingLabel(value, Array.isArray(display.options) ? display.options : [], display.separator || ', ')
@@ -546,7 +560,8 @@
 
             return resolveExportDisplayValue(
               getByPath(row || {}, column?.key || ''),
-              column
+              column,
+              row || {}
             );
           };
           const resolveTableExportColumns = (vm, tableKey, tableCfg = {}) => {

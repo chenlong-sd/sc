@@ -2183,8 +2183,25 @@ JS);
 - `Column::displayImages()` 多图预览
 - `Column::displayBoolean()` 布尔文案
 - `Column::displayBooleanTag()` 布尔标签
+- `Column::displaySwitch()` 可提交更新的开关
 - `Column::displayDate()`、`Column::displayDatetime()` 日期格式化
+- `Column::displayDynamic()` 根据当前行条件选择不同的 `display*()` 展示方式
 - `Column::displayPlaceholder()` 空值占位
+
+`displayDynamic()` 的条件是可访问 `scope.row` 的 Vue 表达式，按声明顺序匹配第一个成立的分支。
+默认回调可省略；省略后，未命中的行按普通文本展示。
+
+```injectablephp
+Tables::column('精选', 'hot_value')->displayDynamic(
+    [
+        'scope.row.can_toggle_hot' => fn (Column $column) => $column->displaySwitch(
+            Booleans::formOptions(),
+            $switchToggleUrl
+        ),
+    ],
+    fn (Column $column) => $column->displayTag(Booleans::tagsMapping())
+);
+```
 
 ## 附录：远程筛选协议
 

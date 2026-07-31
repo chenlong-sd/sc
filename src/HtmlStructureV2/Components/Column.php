@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Components;
 
+use InvalidArgumentException;
 use JetBrains\PhpStorm\ExpectedValues;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
@@ -26,6 +27,7 @@ final class Column
     private const DISPLAY_TYPE_SWITCH = 'switch';
     private const DISPLAY_TYPE_DATETIME = 'datetime';
     private const DISPLAY_TYPE_OPEN_PAGE = 'open_page';
+    private const DISPLAY_TYPE_DYNAMIC = 'dynamic';
 
     private int|string|null $width = null;
     private int|string|null $minWidth = null;
@@ -389,6 +391,51 @@ final class Column
     public function displayFormat(Renderable|AbstractHtmlElement|string|\Stringable $format): self
     {
         $this->format = $format;
+
+        return $this;
+    }
+
+    /**
+     * 根据当前行数据动态选择展示方式。
+     * 条件是可访问 `scope.row` 的 Vue 表达式；分支回调接收临时列，并复用现有 display*() API。
+     * 分支按声明顺序匹配，首个成立的分支生效；未传 default 时回退为普通文本展示。
+     *
+     * @param array<string, callable(self): mixed> $branches 条件表达式到展示配置回调的映射。
+     * @param callable(self): mixed|null $default 默认展示配置回调。
+     * @return self 当前列实例。
+     *
+     * 示例：
+     * - `->displayDynamic(['scope.row.can_edit' => fn (Column $column) => $column->displaySwitch(...)], fn (Column $column) => $column->displayTag(...))`
+     */
+    public function displayDynamic(array $branches, ?callable $default = null): self
+    {
+        $resolvedBranches = [];
+        foreach ($branches as $condition => $configure) {
+            if (!is_string($condition) || trim($condition) === '') {
+                throw new InvalidArgumentException('Dynamic display conditions must be non-empty Vue expressions.');
+            }
+            if (!is_callable($configure)) {
+                throw new InvalidArgumentException(sprintf(
+                    'Dynamic display branch "%s" must be configured with a callable.',
+                    $condition
+                ));
+            }
+
+            $resolvedBranches[] = [
+                'condition' => trim($condition),
+                'display' => $this->resolveDynamicDisplay($configure),
+            ];
+        }
+
+        if ($resolvedBranches === [] && $default === null) {
+            throw new InvalidArgumentException('Dynamic display requires at least one branch or a default display.');
+        }
+
+        $this->display = [
+            'type' => self::DISPLAY_TYPE_DYNAMIC,
+            'branches' => $resolvedBranches,
+            'default' => $default !== null ? $this->resolveDynamicDisplay($default) : null,
+        ];
 
         return $this;
     }
@@ -1016,6 +1063,25 @@ final class Column
         }
 
         return $normalized;
+    }
+
+    private function resolveDynamicDisplay(callable $configure): array
+    {
+        $branch = new self($this->label, $this->prop);
+        $configured = $configure($branch);
+        if ($configured instanceof self) {
+            $branch = $configured;
+        }
+
+        $display = $branch->getDisplay();
+        if ($display === null) {
+            throw new InvalidArgumentException('Dynamic display branches must call one of the display*() methods.');
+        }
+        if (($display['type'] ?? null) === self::DISPLAY_TYPE_DYNAMIC) {
+            throw new InvalidArgumentException('Nested dynamic displays are not supported.');
+        }
+
+        return $display;
     }
 
     private function normalizeBooleanAttr(mixed $value): bool
