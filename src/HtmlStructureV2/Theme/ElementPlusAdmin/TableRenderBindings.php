@@ -173,12 +173,12 @@ final class TableRenderBindings
 
     /**
      * 切换表头搜索“更多”面板展开态（写）。
+     * 展开/收起会改变表格距视口顶部的距离，运行时在 DOM 更新后重算动态 max-height，
+     * 让表格高度自适应，避免整页出现纵向滚动条。
      */
     public function toggleMoreSearchExpression(): string
     {
-        $state = $this->stateExpression();
-
-        return sprintf('%s && (%s.moreSearchOpen = !%s.moreSearchOpen)', $state, $state, $state);
+        return sprintf('toggleTableMoreSearch(%s)', $this->tableKeyLiteral());
     }
 
     public function recoverSelectionExpression(): string

@@ -1524,6 +1524,8 @@
           const SETTINGS_VIRTUAL_ROW_HEIGHT = 50;
           const SETTINGS_VIRTUAL_OVERSCAN = 6;
           const SETTINGS_VIRTUAL_THRESHOLD = 40;
+          // 贴合可用空间重算高度时的下限，保证表头加少量数据行仍可见。
+          const TABLE_FIT_MIN_HEIGHT = 180;
           const SETTINGS_VIRTUAL_DEFAULT_VIEWPORT = {
             display: 420,
             export: 470,
@@ -2239,7 +2241,7 @@
 
               return Promise.resolve(this.refreshTableDragSort(resolvedKey));
             },
-            initializeTableMaxHeight(tableKey = null){
+            initializeTableMaxHeight(tableKey = null, options = null){
               const resolvedKey = this.resolveTableKey(tableKey);
               const tableCfg = this.getTableConfig(resolvedKey);
               const state = this.getTableState(resolvedKey);
@@ -2269,7 +2271,11 @@
                 : 0;
 
               let nextHeight = windowHeight - top + configured;
-              if (nextHeight < windowHeight / 2) {
+              if (options?.fitAvailable === true) {
+                // 贴合可用空间：表格上方内容高度变化后重算，只按剩余视口空间收缩，
+                // 不回退到整屏高度，避免把整页撑高产生纵向滚动。
+                nextHeight = Math.max(nextHeight, TABLE_FIT_MIN_HEIGHT);
+              } else if (nextHeight < windowHeight / 2) {
                 nextHeight = windowHeight;
               }
 
@@ -2290,7 +2296,7 @@
               // 动态 max-height 需在 DOM 更新后按新位置重算，
               // 使窗口足够高时整页高度保持不变，避免出现纵向滚动条。
               const settle = () => {
-                this.initializeTableMaxHeight(resolvedKey);
+                this.initializeTableMaxHeight(resolvedKey, { fitAvailable: true });
                 this.refreshTableLayout(resolvedKey);
               };
 
