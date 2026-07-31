@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\FictitiousLabel;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Form;
 use Sc\Util\HtmlStructureV2\Components\FormNodes\CollapseItemNode;
@@ -960,10 +961,34 @@ final class FormRenderer
     ): void {
         foreach ($children as $child) {
             $rendered = $this->renderNode($child, $context);
-            if ($rendered->toHtml()) {
-                $container->append($rendered);
+            if ($this->isEmptyRenderedNode($rendered)) {
+                continue;
+            }
+
+            $container->append($rendered);
+        }
+    }
+
+    /**
+     * 判断渲染结果是否不会输出任何内容。
+     *
+     * 只有「不含可见子节点的虚拟标签」才会渲染成空串：真实标签至少会输出 `<tag></tag>`。
+     * 因此这里按结构判断，不要退回到 `toHtml()`——那会把整棵子树序列化一遍再丢掉，
+     * 而每一层容器都会对自己的每个子节点做一次，嵌套越深重复序列化越严重。
+     */
+    private function isEmptyRenderedNode(AbstractHtmlElement $node): bool
+    {
+        if (!$node instanceof FictitiousLabel) {
+            return false;
+        }
+
+        foreach ($node->getChildren() as $child) {
+            if (!$child instanceof AbstractHtmlElement || !$this->isEmptyRenderedNode($child)) {
+                return false;
             }
         }
+
+        return true;
     }
 
     private function contextForConditionalNode(FormNodeRenderContext $context, FormNode $node): FormNodeRenderContext

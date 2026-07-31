@@ -4,6 +4,17 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 
 use Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin\Concerns\BuildsJsExpressions;
 
+/**
+ * 表单渲染期的运行时上下文（各类 state 变量名与运行时方法名）。
+ *
+ * 这里的 `*Handler()` / `*Expression()` 统一接收「已经编码好的字段路径 JS 表达式」，
+ * 而不是裸字段名：静态字段用 `jsLiteral('a.b')`，数组行内的动态路径直接传
+ * `joinFormArrayFieldPath(...)` 之类的表达式即可，无需再为两种形态各留一个方法。
+ *
+ * 例外是 optionExpression() / remoteLoadingExpression() / uploadFileListExpression()：
+ * 它们的静态与动态形态生成的是两套不同的取值代码（属性访问器 vs `getFormPathStateValue()`），
+ * 所以仍保留 `*ByPathExpression()` 变体。
+ */
 final class FormRenderOptions
 {
     use BuildsJsExpressions;
@@ -131,34 +142,29 @@ final class FormRenderOptions
         return $this->optionExpressionByPathExpression($fieldPathExpression);
     }
 
+    /**
+     * 静态字段名版本：直接生成 `state?.a?.b` 这样的属性访问器。
+     * 与 optionExpressionByPathExpression() 不是同一套实现，不能合并。
+     */
     public function optionExpression(string $fieldName): string
     {
         return $this->pathStateExpression($this->remoteOptionsState, $fieldName, '[]');
     }
 
+    /**
+     * 动态路径版本：路径要到运行时才知道，只能走 `getFormPathStateValue()` 取值。
+     */
     public function optionExpressionByPathExpression(string $fieldPathExpression): string
     {
         return $this->dynamicPathStateExpression($this->remoteOptionsState, $fieldPathExpression, '[]');
     }
 
-    public function fieldOptionsExpression(string $fieldName): string
+    public function fieldOptionsExpression(string $fieldPathExpression): string
     {
-        return sprintf(
-            'getFieldOptions(%s, %s)',
-            $this->jsLiteral($this->remoteScope),
-            $this->jsLiteral($fieldName)
-        );
+        return $this->scopedCall('getFieldOptions', $this->remoteScope, $fieldPathExpression);
     }
 
-    public function fieldOptionsExpressionByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            'getFieldOptions(%s, %s)',
-            $this->jsLiteral($this->remoteScope),
-            $fieldPathExpression
-        );
-    }
-
+    /** @see optionExpression() 为什么这一对不能合并 */
     public function remoteLoadingExpression(string $fieldName): string
     {
         return $this->pathStateExpression($this->remoteLoadingState, $fieldName, 'false');
@@ -169,13 +175,163 @@ final class FormRenderOptions
         return $this->dynamicPathStateExpression($this->remoteLoadingState, $fieldPathExpression, 'false');
     }
 
-    public function remoteVisibleChangeHandler(string $fieldName): string
+    public function remoteVisibleChangeHandler(string $fieldPathExpression): string
     {
         return sprintf(
-            "(visible) => visible && %s('%s', '%s')",
-            $this->remoteLoadMethod,
+            '(visible) => visible && %s',
+            $this->scopedCall($this->remoteLoadMethod, $this->remoteScope, $fieldPathExpression)
+        );
+    }
+
+    public function remoteSearchHandler(string $fieldPathExpression): string
+    {
+        return sprintf(
+            '(query) => %s',
+            $this->scopedCall($this->remoteLoadMethod, $this->remoteScope, $fieldPathExpression, 'true', 'query')
+        );
+    }
+
+    public function linkageChangeHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler($this->linkageMethod, $this->remoteScope, $fieldPathExpression, 'value');
+    }
+
+    public function fieldValueUpdateHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->fieldValueUpdateMethod,
             $this->remoteScope,
-            $fieldName
+            $fieldPathExpression,
+            'value'
+        );
+    }
+
+    /** @see optionExpression() 为什么这一对不能合并 */
+    public function uploadFileListExpression(string $fieldName): string
+    {
+        return $this->pathStateExpression($this->uploadFilesState, $fieldName, '[]');
+    }
+
+    public function uploadFileListExpressionByPathExpression(string $fieldPathExpression): string
+    {
+        return $this->dynamicPathStateExpression($this->uploadFilesState, $fieldPathExpression, '[]');
+    }
+
+    public function uploadFileListUpdateHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadFileListUpdateMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'uploadFiles'
+        );
+    }
+
+    public function uploadSuccessHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadSuccessMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'response',
+            'uploadFile',
+            'uploadFiles'
+        );
+    }
+
+    public function uploadBeforeHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadBeforeMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'uploadRawFile'
+        );
+    }
+
+    public function uploadErrorHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadErrorMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'error',
+            'uploadFile',
+            'uploadFiles'
+        );
+    }
+
+    public function uploadRemoveHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadRemoveMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'uploadFile',
+            'uploadFiles'
+        );
+    }
+
+    public function uploadExceedHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadExceedMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'files',
+            'uploadFiles'
+        );
+    }
+
+    public function uploadProgressHandler(string $fieldPathExpression): string
+    {
+        return $this->scopedFieldHandler(
+            $this->uploadProgressMethod,
+            $this->uploadScope,
+            $fieldPathExpression,
+            'uploadEvent',
+            'uploadFile',
+            'uploadFiles'
+        );
+    }
+
+    public function pickerItemsExpression(string $fieldPathExpression): string
+    {
+        return $this->scopedCall($this->pickerItemsMethod, $this->pickerScope, $fieldPathExpression);
+    }
+
+    public function pickerOpenExpression(string $fieldPathExpression, ?string $dialogKey = null): string
+    {
+        return $this->scopedCall(
+            $this->pickerOpenMethod,
+            $this->pickerScope,
+            $fieldPathExpression,
+            $dialogKey === null ? 'null' : $this->jsLiteral($dialogKey)
+        );
+    }
+
+    public function pickerRemoveExpression(string $fieldPathExpression, string $valueExpression): string
+    {
+        return $this->scopedCall(
+            $this->pickerRemoveMethod,
+            $this->pickerScope,
+            $fieldPathExpression,
+            $valueExpression
+        );
+    }
+
+    public function pickerClearExpression(string $fieldPathExpression): string
+    {
+        return $this->scopedCall($this->pickerClearMethod, $this->pickerScope, $fieldPathExpression);
+    }
+
+    public function pickerDisplayExpression(string $fieldPathExpression, string $itemExpression = 'item'): string
+    {
+        return $this->scopedCall(
+            $this->pickerDisplayMethod,
+            $this->pickerScope,
+            $fieldPathExpression,
+            $itemExpression
         );
     }
 
@@ -211,332 +367,6 @@ final class FormRenderOptions
             pickerClearMethod: $this->pickerClearMethod,
             pickerDisplayMethod: $this->pickerDisplayMethod,
             linkageMethod: $this->linkageMethod,
-        );
-    }
-
-    public function remoteVisibleChangeHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(visible) => visible && %s('%s', %s)",
-            $this->remoteLoadMethod,
-            $this->remoteScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function remoteSearchHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(query) => %s('%s', '%s', true, query)",
-            $this->remoteLoadMethod,
-            $this->remoteScope,
-            $fieldName
-        );
-    }
-
-    public function remoteSearchHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(query) => %s('%s', %s, true, query)",
-            $this->remoteLoadMethod,
-            $this->remoteScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function linkageChangeHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(value) => %s('%s', '%s', value)",
-            $this->linkageMethod,
-            $this->remoteScope,
-            $fieldName
-        );
-    }
-
-    public function linkageChangeHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(value) => %s('%s', %s, value)",
-            $this->linkageMethod,
-            $this->remoteScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function fieldValueUpdateHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(value) => %s('%s', '%s', value)",
-            $this->fieldValueUpdateMethod,
-            $this->remoteScope,
-            $fieldName
-        );
-    }
-
-    public function fieldValueUpdateHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(value) => %s('%s', %s, value)",
-            $this->fieldValueUpdateMethod,
-            $this->remoteScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadFileListExpression(string $fieldName): string
-    {
-        return $this->pathStateExpression($this->uploadFilesState, $fieldName, '[]');
-    }
-
-    public function uploadFileListExpressionByPathExpression(string $fieldPathExpression): string
-    {
-        return $this->dynamicPathStateExpression($this->uploadFilesState, $fieldPathExpression, '[]');
-    }
-
-    public function uploadFileListUpdateHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(uploadFiles) => %s('%s', '%s', uploadFiles)",
-            $this->uploadFileListUpdateMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadFileListUpdateHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(uploadFiles) => %s('%s', %s, uploadFiles)",
-            $this->uploadFileListUpdateMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadSuccessHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(response, uploadFile, uploadFiles) => %s('%s', '%s', response, uploadFile, uploadFiles)",
-            $this->uploadSuccessMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadSuccessHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(response, uploadFile, uploadFiles) => %s('%s', %s, response, uploadFile, uploadFiles)",
-            $this->uploadSuccessMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadBeforeHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(uploadRawFile) => %s('%s', '%s', uploadRawFile)",
-            $this->uploadBeforeMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadBeforeHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(uploadRawFile) => %s('%s', %s, uploadRawFile)",
-            $this->uploadBeforeMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadErrorHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(error, uploadFile, uploadFiles) => %s('%s', '%s', error, uploadFile, uploadFiles)",
-            $this->uploadErrorMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadErrorHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(error, uploadFile, uploadFiles) => %s('%s', %s, error, uploadFile, uploadFiles)",
-            $this->uploadErrorMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadRemoveHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(uploadFile, uploadFiles) => %s('%s', '%s', uploadFile, uploadFiles)",
-            $this->uploadRemoveMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadRemoveHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(uploadFile, uploadFiles) => %s('%s', %s, uploadFile, uploadFiles)",
-            $this->uploadRemoveMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadExceedHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(files, uploadFiles) => %s('%s', '%s', files, uploadFiles)",
-            $this->uploadExceedMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadExceedHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(files, uploadFiles) => %s('%s', %s, files, uploadFiles)",
-            $this->uploadExceedMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function uploadProgressHandler(string $fieldName): string
-    {
-        return sprintf(
-            "(uploadEvent, uploadFile, uploadFiles) => %s('%s', '%s', uploadEvent, uploadFile, uploadFiles)",
-            $this->uploadProgressMethod,
-            $this->uploadScope,
-            $fieldName
-        );
-    }
-
-    public function uploadProgressHandlerByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "(uploadEvent, uploadFile, uploadFiles) => %s('%s', %s, uploadEvent, uploadFile, uploadFiles)",
-            $this->uploadProgressMethod,
-            $this->uploadScope,
-            $fieldPathExpression
-        );
-    }
-
-    public function pickerItemsExpression(string $fieldName): string
-    {
-        return sprintf(
-            "%s(%s, %s)",
-            $this->pickerItemsMethod,
-            $this->jsLiteral($this->pickerScope),
-            $this->jsLiteral($fieldName)
-        );
-    }
-
-    public function pickerItemsExpressionByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "%s(%s, %s)",
-            $this->pickerItemsMethod,
-            $this->jsLiteral($this->pickerScope),
-            $fieldPathExpression
-        );
-    }
-
-    public function pickerOpenExpression(string $fieldName, ?string $dialogKey = null): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerOpenMethod,
-            $this->jsLiteral($this->pickerScope),
-            $this->jsLiteral($fieldName),
-            $dialogKey === null ? 'null' : $this->jsLiteral($dialogKey)
-        );
-    }
-
-    public function pickerOpenExpressionByPathExpression(string $fieldPathExpression, ?string $dialogKey = null): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerOpenMethod,
-            $this->jsLiteral($this->pickerScope),
-            $fieldPathExpression,
-            $dialogKey === null ? 'null' : $this->jsLiteral($dialogKey)
-        );
-    }
-
-    public function pickerRemoveExpression(string $fieldName, string $valueExpression): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerRemoveMethod,
-            $this->jsLiteral($this->pickerScope),
-            $this->jsLiteral($fieldName),
-            $valueExpression
-        );
-    }
-
-    public function pickerRemoveExpressionByPathExpression(string $fieldPathExpression, string $valueExpression): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerRemoveMethod,
-            $this->jsLiteral($this->pickerScope),
-            $fieldPathExpression,
-            $valueExpression
-        );
-    }
-
-    public function pickerClearExpression(string $fieldName): string
-    {
-        return sprintf(
-            "%s(%s, %s)",
-            $this->pickerClearMethod,
-            $this->jsLiteral($this->pickerScope),
-            $this->jsLiteral($fieldName)
-        );
-    }
-
-    public function pickerClearExpressionByPathExpression(string $fieldPathExpression): string
-    {
-        return sprintf(
-            "%s(%s, %s)",
-            $this->pickerClearMethod,
-            $this->jsLiteral($this->pickerScope),
-            $fieldPathExpression
-        );
-    }
-
-    public function pickerDisplayExpression(string $fieldName, string $itemExpression = 'item'): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerDisplayMethod,
-            $this->jsLiteral($this->pickerScope),
-            $this->jsLiteral($fieldName),
-            $itemExpression
-        );
-    }
-
-    public function pickerDisplayExpressionByPathExpression(string $fieldPathExpression, string $itemExpression = 'item'): string
-    {
-        return sprintf(
-            "%s(%s, %s, %s)",
-            $this->pickerDisplayMethod,
-            $this->jsLiteral($this->pickerScope),
-            $fieldPathExpression,
-            $itemExpression
         );
     }
 
@@ -581,5 +411,38 @@ final class FormRenderOptions
         }
 
         return sprintf('getFormPathStateValue(%s, %s, %s)', $root, $pathExpression, $fallback);
+    }
+
+    /**
+     * 组装 `method('scope', <字段路径表达式>, ...额外参数)` 形式的运行时调用。
+     */
+    private function scopedCall(
+        string $method,
+        ?string $scope,
+        string $fieldPathExpression,
+        string ...$extraArguments
+    ): string {
+        return sprintf(
+            '%s(%s)',
+            $method,
+            implode(', ', [$this->jsLiteral($scope), $fieldPathExpression, ...$extraArguments])
+        );
+    }
+
+    /**
+     * 组装 `(p1, p2) => method('scope', <字段路径表达式>, p1, p2)` 形式的事件处理器：
+     * 箭头函数形参会原样透传给运行时方法。
+     */
+    private function scopedFieldHandler(
+        string $method,
+        ?string $scope,
+        string $fieldPathExpression,
+        string ...$parameters
+    ): string {
+        return sprintf(
+            '(%s) => %s',
+            implode(', ', $parameters),
+            $this->scopedCall($method, $scope, $fieldPathExpression, ...$parameters)
+        );
     }
 }

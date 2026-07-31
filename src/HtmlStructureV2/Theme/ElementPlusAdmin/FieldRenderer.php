@@ -217,18 +217,15 @@ final class FieldRenderer
             $this->applyFieldProps($component, $field);
             $this->applyFieldEventHandlers($component, $field, $modelName, $options->formScope);
         } else {
-            $usesExplicitModelBinding = $propExpression !== null;
             $component = $this->buildFieldComponent(
                 $field,
                 $modelAccessor,
                 $inline,
                 $placeholderField,
                 $uploadField,
-                $usesExplicitModelBinding
-                    ? ($propExpression === null
-                        ? $options->fieldValueUpdateHandler($fieldPath)
-                        : $options->fieldValueUpdateHandlerByPathExpression($propExpression))
-                    : null
+                $propExpression === null
+                    ? null
+                    : $options->fieldValueUpdateHandler($propExpression)
             );
 
             $this->applyFieldProps($component, $field);
@@ -878,27 +875,24 @@ final class FieldRenderer
         ?OptionField $optionField,
         bool $hasRemoteOptions,
         FormRenderOptions $options,
-        ?string $fieldPathExpression = null,
+        ?string $propExpression = null,
         string $modelName = ''
     ): void {
         if ($optionField === null) {
             return;
         }
 
+        $pathExpression = $propExpression ?? $this->jsLiteral($fieldPath);
+
         if ($this->supportsOptionLinkage($field) && $optionField->hasLinkageUpdates() && $options->hasLinkageContext()) {
-            $component->setAttr(
-                '@change',
-                $fieldPathExpression === null
-                    ? $options->linkageChangeHandler($fieldPath)
-                    : $options->linkageChangeHandlerByPathExpression($fieldPathExpression)
-            );
+            $component->setAttr('@change', $options->linkageChangeHandler($pathExpression));
         }
 
         $optionsExpression = $this->resolveOptionItemsExpression(
             $optionField,
             $fieldPath,
             $options,
-            $fieldPathExpression,
+            $propExpression,
             $modelName
         );
 
@@ -907,25 +901,15 @@ final class FieldRenderer
                 $component->setAttr('filterable');
                 $component->setAttr(
                     ':loading',
-                    $fieldPathExpression === null
+                    $propExpression === null
                         ? $options->remoteLoadingExpression($fieldPath)
-                        : $options->remoteLoadingExpressionByPathExpression($fieldPathExpression)
+                        : $options->remoteLoadingExpressionByPathExpression($propExpression)
                 );
-                $component->setAttr(
-                    '@visible-change',
-                    $fieldPathExpression === null
-                        ? $options->remoteVisibleChangeHandler($fieldPath)
-                        : $options->remoteVisibleChangeHandlerByPathExpression($fieldPathExpression)
-                );
+                $component->setAttr('@visible-change', $options->remoteVisibleChangeHandler($pathExpression));
 
                 if ($optionField->hasRemoteSearch()) {
                     $component->setAttr(':remote', 'true');
-                    $component->setAttr(
-                        ':remote-method',
-                        $fieldPathExpression === null
-                            ? $options->remoteSearchHandler($fieldPath)
-                            : $options->remoteSearchHandlerByPathExpression($fieldPathExpression)
-                    );
+                    $component->setAttr(':remote-method', $options->remoteSearchHandler($pathExpression));
                 }
             }
 
@@ -952,7 +936,7 @@ final class FieldRenderer
             );
 
             if ($optionField instanceof CascaderField && $optionField->shouldCloseAfterSelection()) {
-                $this->applyCascaderCloseAfterSelection($component, $fieldPath, $fieldPathExpression);
+                $this->applyCascaderCloseAfterSelection($component, $fieldPath, $propExpression);
             }
         }
     }
@@ -966,19 +950,17 @@ final class FieldRenderer
         OptionField $field,
         string $fieldPath,
         FormRenderOptions $options,
-        ?string $fieldPathExpression,
+        ?string $propExpression,
         string $modelName
     ): ?string {
         if ($options->hasFieldOptionsContext()) {
-            return $fieldPathExpression === null
-                ? $options->fieldOptionsExpression($fieldPath)
-                : $options->fieldOptionsExpressionByPathExpression($fieldPathExpression);
+            return $options->fieldOptionsExpression($propExpression ?? $this->jsLiteral($fieldPath));
         }
 
         if ($field->hasRemoteOptions() && $options->hasOptionStateContext()) {
-            return $fieldPathExpression === null
+            return $propExpression === null
                 ? $options->optionExpression($fieldPath)
-                : $options->optionExpressionByPathExpression($fieldPathExpression);
+                : $options->optionExpressionByPathExpression($propExpression);
         }
 
         if ($field->getOptionsExpression() !== null) {
@@ -1001,9 +983,9 @@ final class FieldRenderer
         }
 
         if ($options->hasOptionStateContext()) {
-            return $fieldPathExpression === null
+            return $propExpression === null
                 ? $options->optionExpression($fieldPath)
-                : $options->optionExpressionByPathExpression($fieldPathExpression);
+                : $options->optionExpressionByPathExpression($propExpression);
         }
 
         return null;
@@ -1092,7 +1074,7 @@ final class FieldRenderer
         PickerField $field,
         string $fieldPath,
         FormRenderOptions $options,
-        ?string $fieldPathExpression = null,
+        ?string $propExpression = null,
         ?string $disabledWhen = null,
         ?string $readonlyWhen = null,
         bool $formReadonly = false
@@ -1112,23 +1094,14 @@ final class FieldRenderer
             ));
         }
 
-        $itemsExpression = $fieldPathExpression === null
-            ? $options->pickerItemsExpression($fieldPath)
-            : $options->pickerItemsExpressionByPathExpression($fieldPathExpression);
+        $pathExpression = $propExpression ?? $this->jsLiteral($fieldPath);
+        $itemsExpression = $options->pickerItemsExpression($pathExpression);
         $hasItemsExpression = sprintf('(%s).length > 0', $itemsExpression);
         $countExpression = sprintf('(%s).length', $itemsExpression);
-        $openExpression = $fieldPathExpression === null
-            ? $options->pickerOpenExpression($fieldPath, $dialogKey)
-            : $options->pickerOpenExpressionByPathExpression($fieldPathExpression, $dialogKey);
-        $removeExpression = $fieldPathExpression === null
-            ? $options->pickerRemoveExpression($fieldPath, 'pickerItem.__pickerValue')
-            : $options->pickerRemoveExpressionByPathExpression($fieldPathExpression, 'pickerItem.__pickerValue');
-        $clearExpression = $fieldPathExpression === null
-            ? $options->pickerClearExpression($fieldPath)
-            : $options->pickerClearExpressionByPathExpression($fieldPathExpression);
-        $displayExpression = $fieldPathExpression === null
-            ? $options->pickerDisplayExpression($fieldPath, 'pickerItem')
-            : $options->pickerDisplayExpressionByPathExpression($fieldPathExpression, 'pickerItem');
+        $openExpression = $options->pickerOpenExpression($pathExpression, $dialogKey);
+        $removeExpression = $options->pickerRemoveExpression($pathExpression, 'pickerItem.__pickerValue');
+        $clearExpression = $options->pickerClearExpression($pathExpression);
+        $displayExpression = $options->pickerDisplayExpression($pathExpression, 'pickerItem');
         $disabledExpression = $this->resolveBooleanStateExpression(
             $field->isDisabled() || $formReadonly || $field->isReadonly(),
             $disabledWhen,
@@ -1207,7 +1180,7 @@ final class FieldRenderer
         Field $field,
         ?UploadField $uploadField,
         FormRenderOptions $options,
-        ?string $fieldPathExpression = null
+        ?string $propExpression = null
     ): void {
         if ($field->type() !== FieldType::UPLOAD || $uploadField === null) {
             return;
@@ -1217,63 +1190,35 @@ final class FieldRenderer
         $kind = $upload['kind'] ?? 'file';
         $listType = (string)($upload['listType'] ?? 'text');
         $showProgress = ($upload['showProgress'] ?? false) && $kind !== 'image';
+        $pathExpression = $propExpression ?? $this->jsLiteral($fieldPath);
         $fileListExpression = null;
+        $updateHandler = null;
 
         $component->addClass('sc-v2-upload-field');
 
         if ($options->hasUploadContext()) {
-            $fileListExpression = $fieldPathExpression === null
+            $fileListExpression = $propExpression === null
                 ? $options->uploadFileListExpression($fieldPath)
-                : $options->uploadFileListExpressionByPathExpression($fieldPathExpression);
-            $component->setAttr(
-                ':file-list',
-                $fileListExpression
-            );
-            $component->setAttr(
-                '@update:file-list',
-                $fieldPathExpression === null
-                    ? $options->uploadFileListUpdateHandler($fieldPath)
-                    : $options->uploadFileListUpdateHandlerByPathExpression($fieldPathExpression)
-            );
-            $component->setAttr(
-                ':before-upload',
-                $fieldPathExpression === null
-                    ? $options->uploadBeforeHandler($fieldPath)
-                    : $options->uploadBeforeHandlerByPathExpression($fieldPathExpression)
-            );
-            $component->setAttr(
-                ':on-success',
-                $fieldPathExpression === null
-                    ? $options->uploadSuccessHandler($fieldPath)
-                    : $options->uploadSuccessHandlerByPathExpression($fieldPathExpression)
-            );
-            $component->setAttr(
-                ':on-error',
-                $fieldPathExpression === null
-                    ? $options->uploadErrorHandler($fieldPath)
-                    : $options->uploadErrorHandlerByPathExpression($fieldPathExpression)
-            );
-            $component->setAttr(
-                ':on-remove',
-                $fieldPathExpression === null
-                    ? $options->uploadRemoveHandler($fieldPath)
-                    : $options->uploadRemoveHandlerByPathExpression($fieldPathExpression)
-            );
-            $component->setAttr(
-                ':on-exceed',
-                $fieldPathExpression === null
-                    ? $options->uploadExceedHandler($fieldPath)
-                    : $options->uploadExceedHandlerByPathExpression($fieldPathExpression)
-            );
+                : $options->uploadFileListExpressionByPathExpression($propExpression);
+            $updateHandler = $options->uploadFileListUpdateHandler($pathExpression);
+
+            $attrs = [
+                ':file-list' => $fileListExpression,
+                '@update:file-list' => $updateHandler,
+                ':before-upload' => $options->uploadBeforeHandler($pathExpression),
+                ':on-success' => $options->uploadSuccessHandler($pathExpression),
+                ':on-error' => $options->uploadErrorHandler($pathExpression),
+                ':on-remove' => $options->uploadRemoveHandler($pathExpression),
+                ':on-exceed' => $options->uploadExceedHandler($pathExpression),
+            ];
+
             if ($showProgress) {
-                $component->setAttr(
-                    ':on-progress',
-                    $fieldPathExpression === null
-                        ? $options->uploadProgressHandler($fieldPath)
-                        : $options->uploadProgressHandlerByPathExpression($fieldPathExpression)
-                );
+                $attrs[':on-progress'] = $options->uploadProgressHandler($pathExpression);
             }
-            $component->setAttr(':on-preview', $options->uploadPreviewMethod);
+
+            $attrs[':on-preview'] = $options->uploadPreviewMethod;
+
+            $component->setAttrs($attrs);
         }
 
         if ($showProgress) {
@@ -1284,9 +1229,6 @@ final class FieldRenderer
             $deleteHandler = null;
             if ($fileListExpression !== null) {
                 $component->addClass('sc-v2-upload-kind-file--custom-remove');
-                $updateHandler = $fieldPathExpression === null
-                    ? $options->uploadFileListUpdateHandler($fieldPath)
-                    : $options->uploadFileListUpdateHandlerByPathExpression($fieldPathExpression);
                 $deleteHandler = sprintf(
                     "(event) => { event.preventDefault(); event.stopPropagation(); (%s)(((%s) || []).filter((item) => ((item.uid || item.url || item.name || '') !== (file.uid || file.url || file.name || '')))); }",
                     $updateHandler,

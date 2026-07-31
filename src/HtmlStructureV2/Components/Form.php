@@ -44,6 +44,8 @@ final class Form implements Renderable, EventAware
 
     /** @var FormNode[] */
     private array $children = [];
+    /** 由 children 推导出的表单 schema 缓存；children 变化时置空。 */
+    private ?FormSchema $schemaCache = null;
     private bool $inline = false;
     private bool $showLabels = true;
     private bool $readonly = false;
@@ -113,6 +115,7 @@ final class Form implements Renderable, EventAware
     public function addFields(Field ...$fields): self
     {
         $this->children = array_merge($this->children, $fields);
+        $this->schemaCache = null;
 
         return $this;
     }
@@ -129,6 +132,7 @@ final class Form implements Renderable, EventAware
     public function addContent(FormNode ...$nodes): self
     {
         $this->children = array_merge($this->children, $nodes);
+        $this->schemaCache = null;
 
         return $this;
     }
@@ -641,9 +645,16 @@ final class Form implements Renderable, EventAware
         return $this->key;
     }
 
+    /**
+     * 按当前节点树推导表单 schema。
+     *
+     * 结果只取决于 `children`，所以按 children 记忆化：一次渲染里 schema 会被
+     * 运行时 state、运行时 config、fields()、defaults()/rules() 等多处反复读取，
+     * 不缓存的话每次都要重新遍历整棵节点树。缓存在 addFields()/addContent() 中失效。
+     */
     public function schema(): FormSchema
     {
-        return (new FormSchemaWalker())->build($this->children);
+        return $this->schemaCache ??= (new FormSchemaWalker())->build($this->children);
     }
 
     public function fields(): array
