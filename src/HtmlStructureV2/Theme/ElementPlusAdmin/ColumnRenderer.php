@@ -230,7 +230,8 @@ final class ColumnRenderer
 
     private function renderMappingColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $options = $this->jsValue(array_values($display['options'] ?? []));
         $separator = $this->jsLiteral($display['separator'] ?? ', ');
         $labelExpression = $this->runtimeMethodCall('resolveColumnMappingLabel', $valueExpression, $options, $separator);
@@ -249,7 +250,8 @@ final class ColumnRenderer
 
     private function renderTagColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $options = $this->jsValue(array_values($display['options'] ?? []));
         $metaExpression = $this->runtimeMethodCall(
             'resolveColumnTagMeta',
@@ -277,7 +279,8 @@ final class ColumnRenderer
 
     private function renderImageColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $style = sprintf(
             'width:%dpx;height:%dpx;border-radius:6px',
             (int)($display['width'] ?? 60),
@@ -302,7 +305,8 @@ final class ColumnRenderer
 
     private function renderImagesColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $srcExpression = $this->jsReadableAccessor('item', (string)($display['srcPath'] ?? 'url'));
         $previewExpression = ($display['srcPath'] ?? 'url') === ''
             ? $valueExpression
@@ -342,7 +346,8 @@ final class ColumnRenderer
 
     private function renderBooleanColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $truthyCheck = $this->runtimeMethodCall('isColumnTruthy', $valueExpression);
         $falsyCheck = $this->runtimeMethodCall('isColumnFalsy', $valueExpression);
 
@@ -361,7 +366,8 @@ final class ColumnRenderer
 
     private function renderBooleanTagColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $truthyCheck = $this->runtimeMethodCall('isColumnTruthy', $valueExpression);
         $falsyCheck = $this->runtimeMethodCall('isColumnFalsy', $valueExpression);
 
@@ -390,10 +396,12 @@ final class ColumnRenderer
             return $this->renderMappingColumnTemplate($template, $column, [
                 'options' => $display['options'] ?? [],
                 'separator' => ', ',
+                'valuePath' => $display['valuePath'] ?? null,
             ]);
         }
 
-        $modelExpression = $this->jsModelAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $modelExpression = $this->jsModelAccessor('scope.row', $valuePath);
         $switchConfigExpression = $this->jsValue([
             'requestUrl' => $display['requestUrl'] ?? '',
             'activeValue' => $display['activeValue'] ?? 1,
@@ -408,7 +416,7 @@ final class ColumnRenderer
                 'inactive-text' => (string)($display['inactiveText'] ?? '关'),
                 ':active-value' => $this->jsLiteral($display['activeValue'] ?? 1),
                 ':inactive-value' => $this->jsLiteral($display['inactiveValue'] ?? 0),
-                '@change' => $bindings->switchChangeExpression($column->prop(), $switchConfigExpression),
+                '@change' => $bindings->switchChangeExpression($valuePath, $switchConfigExpression),
             ])
         );
 
@@ -417,7 +425,8 @@ final class ColumnRenderer
 
     private function renderDatetimeColumnTemplate(AbstractHtmlElement $template, Column $column, array $display): AbstractHtmlElement
     {
-        $valueExpression = $this->jsReadableAccessor('scope.row', $column->prop());
+        $valuePath = $display['valuePath'] ?? $column->prop();
+        $valueExpression = $this->jsReadableAccessor('scope.row', $valuePath);
         $displayExpression = $this->runtimeMethodCall(
             'formatColumnDatetime',
             $valueExpression,

@@ -450,17 +450,20 @@ final class Column
      *
      * @param array $options 映射选项。
      * @param string $separator 多值拼接分隔符，默认值为 `, `。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('状态', 'status')->displayMapping([1 => '启用', 0 => '停用'])`
+     * - `Tables::column('状态', 'status')->displayMapping([1 => '启用', 0 => '停用'], ', ', 'audit_status')`
      */
-    public function displayMapping(array $options, string $separator = ', '): self
+    public function displayMapping(array $options, string $separator = ', ', ?string $valuePath = null): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_MAPPING,
             'options' => $this->normalizeDisplayOptions($options),
             'separator' => $separator,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -473,17 +476,20 @@ final class Column
      *
      * @param array|ColumnTags $options 标签配置。
      * @param string $defaultType 默认标签类型，默认值为 info。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('状态', 'status')->displayTag([1 => ['label' => '启用', 'type' => 'success']])`
+     * - `Tables::column('状态', 'status')->displayTag(ProcessControl::tagsMapping(), 'info', 'audit_status')`
      */
-    public function displayTag(array|ColumnTags $options, string $defaultType = 'info'): self
+    public function displayTag(array|ColumnTags $options, string $defaultType = 'info', ?string $valuePath = null): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_TAG,
             'options' => $this->normalizeTagDisplayOptions($options, $defaultType),
             'defaultType' => $defaultType,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -496,21 +502,25 @@ final class Column
      * @param int $width 图片宽度，默认值为 60。
      * @param int $height 图片高度，默认值为 60。
      * @param string $fit 图片适配方式，默认值为 cover。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('封面', 'cover')->displayImage(80, 80)`
+     * - `Tables::column('封面', 'cover')->displayImage(80, 80, 'cover', 'image_url')`
      */
     public function displayImage(
         int $width = 60,
         int $height = 60,
-        string $fit = 'cover'
+        string $fit = 'cover',
+        ?string $valuePath = null
     ): self {
         $this->display = [
             'type' => self::DISPLAY_TYPE_IMAGE,
             'width' => $width,
             'height' => $height,
             'fit' => $fit,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -522,17 +532,20 @@ final class Column
      *
      * @param string $truthyLabel 真值文案，默认值为 是。
      * @param string $falsyLabel 假值文案，默认值为 否。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('启用', 'status')->displayBoolean('启用', '停用')`
+     * - `Tables::column('启用', 'status')->displayBoolean('启用', '停用', 'is_enabled')`
      */
-    public function displayBoolean(string $truthyLabel = '是', string $falsyLabel = '否'): self
+    public function displayBoolean(string $truthyLabel = '是', string $falsyLabel = '否', ?string $valuePath = null): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_BOOLEAN,
             'truthyLabel' => $truthyLabel,
             'falsyLabel' => $falsyLabel,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -546,16 +559,19 @@ final class Column
      * @param string $falsyLabel 假值文案，默认值为 否。
      * @param string $truthyType 真值标签类型，默认值为 success。
      * @param string $falsyType 假值标签类型，默认值为 info。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('启用', 'status')->displayBooleanTag('启用', '停用')`
+     * - `Tables::column('启用', 'status')->displayBooleanTag('启用', '停用', 'success', 'info', 'is_enabled')`
      */
     public function displayBooleanTag(
         string $truthyLabel = '是',
         string $falsyLabel = '否',
         string $truthyType = 'success',
-        string $falsyType = 'info'
+        string $falsyType = 'info',
+        ?string $valuePath = null
     ): self {
         $this->display = [
             'type' => self::DISPLAY_TYPE_BOOLEAN_TAG,
@@ -563,6 +579,7 @@ final class Column
             'falsyLabel' => $falsyLabel,
             'truthyType' => $truthyType,
             'falsyType' => $falsyType,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -576,12 +593,14 @@ final class Column
      * @param array $options 开关选项。
      * @param string $requestUrl 更新请求地址。
      * @param mixed $openValue 开启值；传 null 时自动取第一项。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('状态', 'status')->displaySwitch([1 => '启用', 0 => '停用'], '/admin/qa-info/status')`
+     * - `Tables::column('状态', 'status')->displaySwitch([1 => '启用', 0 => '停用'], '/admin/qa-info/status', null, 'is_enabled')`
      */
-    public function displaySwitch(array $options, string $requestUrl, mixed $openValue = null): self
+    public function displaySwitch(array $options, string $requestUrl, mixed $openValue = null, ?string $valuePath = null): self
     {
         $resolvedOptions = $this->normalizeSwitchOptions($options, $openValue);
         $activeOption = $resolvedOptions[0] ?? ['value' => 1, 'label' => '开'];
@@ -595,6 +614,7 @@ final class Column
             'inactiveValue' => $inactiveOption['value'] ?? 0,
             'activeText' => (string)($activeOption['label'] ?? '开'),
             'inactiveText' => (string)($inactiveOption['label'] ?? '关'),
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -605,16 +625,19 @@ final class Column
      * 支持秒/毫秒时间戳以及常见日期字符串；无法识别时会回退显示原值。
      *
      * @param string $format 日期格式，默认值为 YYYY-MM-DD。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('创建日期', 'create_time')->displayDate()`
+     * - `Tables::column('创建日期', 'create_time')->displayDate('YYYY-MM-DD', 'created_at')`
      */
-    public function displayDate(string $format = 'YYYY-MM-DD'): self
+    public function displayDate(string $format = 'YYYY-MM-DD', ?string $valuePath = null): self
     {
         $this->display = [
             'type' => self::DISPLAY_TYPE_DATETIME,
             'format' => $format,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
@@ -624,14 +647,16 @@ final class Column
      * 把值按日期时间格式展示。
      *
      * @param string $format 日期时间格式，默认值为 YYYY-MM-DD HH:mm:ss。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('创建时间', 'create_time')->displayDatetime()`
+     * - `Tables::column('创建时间', 'create_time')->displayDatetime('YYYY-MM-DD HH:mm:ss', 'created_at')`
      */
-    public function displayDatetime(string $format = 'YYYY-MM-DD HH:mm:ss'): self
+    public function displayDatetime(string $format = 'YYYY-MM-DD HH:mm:ss', ?string $valuePath = null): self
     {
-        return $this->displayDate($format);
+        return $this->displayDate($format, $valuePath);
     }
 
     /**
@@ -643,17 +668,20 @@ final class Column
      * @param int $width 图片宽度，默认值为 60。
      * @param int $height 图片高度，默认值为 60。
      * @param string $fit 图片适配方式，默认值为 cover。
+     * @param string|null $valuePath 自定义展示字段路径，默认使用列的 prop。
      * @return self 当前列实例。
      *
      * 示例：
      * - `Tables::column('图片', 'images')->displayImages(3, 'url')`
+     * - `Tables::column('图片', 'images')->displayImages(3, 'url', 60, 60, 'cover', 'image_list')`
      */
     public function displayImages(
         int $previewNumber = 3,
         string $srcPath = 'url',
         int $width = 60,
         int $height = 60,
-        string $fit = 'cover'
+        string $fit = 'cover',
+        ?string $valuePath = null
     ): self {
         $this->display = [
             'type' => self::DISPLAY_TYPE_IMAGES,
@@ -662,6 +690,7 @@ final class Column
             'width' => $width,
             'height' => $height,
             'fit' => $fit,
+            'valuePath' => $valuePath,
         ];
 
         return $this;
