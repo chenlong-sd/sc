@@ -11,6 +11,8 @@ use Sc\Util\HtmlStructureV2\Dsl\Forms;
 
 final class ListAutoFilterFormFactory
 {
+    private const DYNAMIC_SEARCH_VALUE_KEY = '__scDynamicSearch';
+
     public function build(string $listKey, Table $table): ?Form
     {
         $fields = [];
@@ -78,7 +80,13 @@ final class ListAutoFilterFormFactory
             ? (string)$searchConfig['field']
             : $name;
 
-        $optionField = $this->buildOptionField($name, $label, $searchType, $display);
+        $optionField = $this->buildOptionField(
+            $name,
+            $label,
+            $searchType,
+            $searchField,
+            $display
+        );
         if ($optionField !== null) {
             return $optionField;
         }
@@ -107,6 +115,7 @@ final class ListAutoFilterFormFactory
         string $name,
         string $label,
         string $searchType,
+        string $searchField,
         ?array $display
     ): ?Field {
         if ($display === null) {
@@ -114,6 +123,8 @@ final class ListAutoFilterFormFactory
         }
 
         $options = [];
+        $usesDynamicSearchValues = false;
+        $isDynamicDisplay = ($display['type'] ?? '') === 'dynamic';
         foreach ($this->displayCandidates($display) as $candidate) {
             $candidateOptions = match ($candidate['type'] ?? '') {
                 'mapping', 'tag', 'switch' => $this->normalizeDisplayOptions($candidate['options'] ?? []),
@@ -124,7 +135,43 @@ final class ListAutoFilterFormFactory
                 default => [],
             };
 
+            if ($isDynamicDisplay) {
+                $candidateSearch = is_array($candidate['_search'] ?? null)
+                    ? $candidate['_search']
+                    : [];
+                $candidateValuePath = is_string($candidate['valuePath'] ?? null)
+                    && trim((string)$candidate['valuePath']) !== ''
+                    ? trim((string)$candidate['valuePath'])
+                    : $name;
+                $candidateSearchField = is_string($candidateSearch['field'] ?? null)
+                    && trim((string)$candidateSearch['field']) !== ''
+                    ? trim((string)$candidateSearch['field'])
+                    : ($candidateValuePath !== $name ? $candidateValuePath : $searchField);
+                $candidateSearchType = is_string($candidateSearch['type'] ?? null)
+                    && trim((string)$candidateSearch['type']) !== ''
+                    ? strtoupper(trim((string)$candidateSearch['type']))
+                    : $searchType;
+                $usesCandidateSearch = $candidateSearchField !== $searchField
+                    || $candidateSearchType !== $searchType
+                    || $candidateValuePath !== $name;
+            } else {
+                $candidateValuePath = $name;
+                $candidateSearchField = $searchField;
+                $candidateSearchType = $searchType;
+                $usesCandidateSearch = false;
+            }
+
             foreach ($candidateOptions as $option) {
+                if ($usesCandidateSearch) {
+                    $option = $this->withDynamicSearchValue(
+                        $option,
+                        $candidateSearchField,
+                        $candidateSearchType,
+                        $candidateValuePath
+                    );
+                    $usesDynamicSearchValues = true;
+                }
+
                 $key = serialize($option['value'] ?? null);
                 $options[$key] ??= $option;
             }
@@ -138,6 +185,9 @@ final class ListAutoFilterFormFactory
         $field = Fields::select($name)
             ->placeholder($label)
             ->options($options);
+        if ($usesDynamicSearchValues) {
+            $field->prop('value-key', self::DYNAMIC_SEARCH_VALUE_KEY . '.key');
+        }
         if ($searchType !== 'IN') {
             return $field;
         }
@@ -201,6 +251,31 @@ final class ListAutoFilterFormFactory
         return $normalized;
     }
 
+    /**
+     * @param array{value: mixed, label: string} $option
+     * @return array{value: array<string, array<string, mixed>>, label: string, key: string}
+     */
+    private function withDynamicSearchValue(
+        array $option,
+        string $field,
+        string $type,
+        string $rowPath
+    ): array {
+        $meta = [
+            'value' => $option['value'] ?? null,
+            'field' => $field,
+            'type' => $type,
+            'rowPath' => $rowPath,
+        ];
+        $meta['key'] = hash('sha256', serialize($meta));
+
+        return [
+            'value' => [self::DYNAMIC_SEARCH_VALUE_KEY => $meta],
+            'label' => (string)($option['label'] ?? ''),
+            'key' => self::DYNAMIC_SEARCH_VALUE_KEY . ':' . $meta['key'],
+        ];
+    }
+
     private function looksLikeDatetime(string $name, ?array $display, ?string $searchField = null): bool
     {
         $candidate = strtolower($searchField ?: $name);
@@ -255,11 +330,19 @@ final class ListAutoFilterFormFactory
         $candidates = [];
         foreach ($display['branches'] ?? [] as $branch) {
             if (is_array($branch) && is_array($branch['display'] ?? null)) {
-                $candidates[] = $branch['display'];
+                $candidate = $branch['display'];
+                if (is_array($branch['search'] ?? null)) {
+                    $candidate['_search'] = $branch['search'];
+                }
+                $candidates[] = $candidate;
             }
         }
         if (is_array($display['default'] ?? null)) {
-            $candidates[] = $display['default'];
+            $candidate = $display['default'];
+            if (is_array($display['defaultSearch'] ?? null)) {
+                $candidate['_search'] = $display['defaultSearch'];
+            }
+            $candidates[] = $candidate;
         }
 
         return $candidates;

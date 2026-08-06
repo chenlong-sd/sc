@@ -1391,7 +1391,7 @@ final class FieldRenderer
         $option = $this->buildChoiceOptionElement($optionTag);
         $option->setAttrs([
             'v-for' => sprintf('(item, index) in %s', $itemsExpression),
-            ':key' => 'item.value ?? index',
+            ':key' => 'item.key ?? item.value ?? index',
             ':disabled' => 'item.disabled === true',
         ]);
 

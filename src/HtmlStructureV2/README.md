@@ -2190,6 +2190,10 @@ JS);
 
 `displayDynamic()` 的条件是可访问 `scope.row` 的 Vue 表达式，按声明顺序匹配第一个成立的分支。
 默认回调可省略；省略后，未命中的行按普通文本展示。
+当动态分支通过 `valuePath` 展示其它字段且列开启了 `searchable()` 时，
+自动筛选会保留选项所属的分支字段，不再统一提交到列的默认 `prop`。
+若前端 `valuePath` 与后端真实查询字段不同，应在该分支回调内继续链式调用
+`->searchable(field: 'table.field')`；默认分支仍沿用外层列的搜索配置。
 
 ```injectablephp
 Tables::column('精选', 'hot_value')->displayDynamic(
@@ -2201,6 +2205,17 @@ Tables::column('精选', 'hot_value')->displayDynamic(
     ],
     fn (Column $column) => $column->displayTag(Booleans::tagsMapping())
 );
+```
+
+```injectablephp
+Tables::column('状态', 'status')->displayDynamic(
+    [
+        'scope.row.audit' => fn (Column $column) => $column
+            ->displayTag(AuditStage::tagsMapping(), valuePath: 'audit.current_stage')
+            ->searchable(field: 'audit.current_stage'),
+    ],
+    fn (Column $column) => $column->displayTag(ProcessNode::tagsMapping())
+)->searchable();
 ```
 
 ## 附录：远程筛选协议

@@ -398,6 +398,8 @@ final class Column
     /**
      * 根据当前行数据动态选择展示方式。
      * 条件是可访问 `scope.row` 的 Vue 表达式；分支回调接收临时列，并复用现有 display*() API。
+     * 分支展示值来自其它字段时，可在回调内继续调用 searchable(field: ...)
+     * 显式声明该分支对应的后端查询字段。
      * 分支按声明顺序匹配，首个成立的分支生效；未传 default 时回退为普通文本展示。
      *
      * @param array<string, callable(self): mixed> $branches 条件表达式到展示配置回调的映射。
@@ -421,21 +423,31 @@ final class Column
                 ));
             }
 
-            $resolvedBranches[] = [
+            $resolved = $this->resolveDynamicDisplay($configure);
+            $resolvedBranch = [
                 'condition' => trim($condition),
-                'display' => $this->resolveDynamicDisplay($configure),
+                'display' => $resolved['display'],
             ];
+            if ($resolved['search'] !== null) {
+                $resolvedBranch['search'] = $resolved['search'];
+            }
+            $resolvedBranches[] = $resolvedBranch;
         }
 
         if ($resolvedBranches === [] && $default === null) {
             throw new InvalidArgumentException('Dynamic display requires at least one branch or a default display.');
         }
 
+        $resolvedDefault = $default !== null ? $this->resolveDynamicDisplay($default) : null;
+
         $this->display = [
             'type' => self::DISPLAY_TYPE_DYNAMIC,
             'branches' => $resolvedBranches,
-            'default' => $default !== null ? $this->resolveDynamicDisplay($default) : null,
+            'default' => $resolvedDefault['display'] ?? null,
         ];
+        if (($resolvedDefault['search'] ?? null) !== null) {
+            $this->display['defaultSearch'] = $resolvedDefault['search'];
+        }
 
         return $this;
     }
@@ -1094,6 +1106,9 @@ final class Column
         return $normalized;
     }
 
+    /**
+     * @return array{display: array<string, mixed>, search: array<string, mixed>|null}
+     */
     private function resolveDynamicDisplay(callable $configure): array
     {
         $branch = new self($this->label, $this->prop);
@@ -1110,7 +1125,10 @@ final class Column
             throw new InvalidArgumentException('Nested dynamic displays are not supported.');
         }
 
-        return $display;
+        return [
+            'display' => $display,
+            'search' => $branch->getSearchConfig(),
+        ];
     }
 
     private function normalizeBooleanAttr(mixed $value): bool

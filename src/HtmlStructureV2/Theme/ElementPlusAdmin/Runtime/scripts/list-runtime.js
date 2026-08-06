@@ -12,6 +12,7 @@
             initializeConfiguredForms,
             isEventCanceled,
             isBlank,
+            isObject,
             makeRequest,
             openHostTab: openHostTabBridge,
             postDialogHostMessage,
@@ -350,23 +351,44 @@
             if (type === 'BETWEEN' && Array.isArray(value)) return value;
             return value;
           };
+          const resolveSearchSelection = (value, meta, key) => {
+            const fallback = {
+              value,
+              field: typeof meta?.field === 'string' && meta.field !== '' ? meta.field : key,
+              type: String(meta?.type || '=').toUpperCase(),
+              rowPath: key,
+            };
+            const dynamic = isObject(value) && isObject(value.__scDynamicSearch)
+              ? value.__scDynamicSearch
+              : null;
+            if (!dynamic) return fallback;
+
+            return {
+              value: dynamic.value,
+              field: typeof dynamic.field === 'string' && dynamic.field !== ''
+                ? dynamic.field
+                : fallback.field,
+              type: typeof dynamic.type === 'string' && dynamic.type !== ''
+                ? dynamic.type.toUpperCase()
+                : fallback.type,
+              rowPath: typeof dynamic.rowPath === 'string' && dynamic.rowPath !== ''
+                ? dynamic.rowPath
+                : key,
+            };
+          };
           const buildSearchQuery = (model, schema) => {
             const search = {};
             const searchType = {};
 
             Object.keys(schema || {}).forEach((key) => {
-              const value = getByPath(model, key);
-              if (isBlank(value)) return;
-
+              const selectedValue = getByPath(model, key);
               const meta = schema[key] || {};
-              const type = String(meta.type || '=').toUpperCase();
-              const targetKey = typeof meta.field === 'string' && meta.field !== ''
-                ? meta.field
-                : key;
+              const resolved = resolveSearchSelection(selectedValue, meta, key);
+              if (isBlank(resolved.value)) return;
 
-              search[targetKey] = normalizeSearchValue(value, type);
-              if (type !== '=') {
-                searchType[targetKey] = type.toLowerCase();
+              search[resolved.field] = normalizeSearchValue(resolved.value, resolved.type);
+              if (resolved.type !== '=') {
+                searchType[resolved.field] = resolved.type.toLowerCase();
               }
             });
 
@@ -398,12 +420,14 @@
           const applyLocalSearch = (rows, model, schema) => {
             return rows.filter((row) => {
               return Object.keys(schema || {}).every((key) => {
-                const value = getByPath(model, key);
+                const selectedValue = getByPath(model, key);
+                const meta = schema[key] || {};
+                const resolved = resolveSearchSelection(selectedValue, meta, key);
+                const value = resolved.value;
                 if (isBlank(value)) return true;
 
-                const meta = schema[key] || {};
-                const type = String(meta.type || '=').toUpperCase();
-                const rowValue = getByPath(row, key);
+                const type = resolved.type;
+                const rowValue = getByPath(row, resolved.rowPath);
                 if (type === 'LIKE') {
                   return String(rowValue ?? '').includes(String(value));
                 }
