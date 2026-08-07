@@ -27,7 +27,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      */
     public function minValue(int|float $min): static
     {
-        return $this->prop('min', $min);
+        return $this->prop(':min', $min);
     }
 
     /**
@@ -41,7 +41,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      */
     public function maxValue(int|float $max): static
     {
-        return $this->prop('max', $max);
+        return $this->prop(':max', $max);
     }
 
     /**
@@ -55,7 +55,7 @@ final class NumberField extends Field implements ValidatableFieldInterface
      */
     public function step(int|float $step): static
     {
-        return $this->prop('step', $step);
+        return $this->prop(':step', $step);
     }
 
     /**
@@ -69,6 +69,6 @@ final class NumberField extends Field implements ValidatableFieldInterface
      */
     public function precision(int $precision): static
     {
-        return $this->prop('precision', $precision);
+        return $this->prop(':precision', $precision);
     }
 }
