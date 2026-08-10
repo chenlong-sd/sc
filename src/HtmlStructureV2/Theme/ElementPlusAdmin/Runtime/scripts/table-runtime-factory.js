@@ -490,6 +490,19 @@
           const resolveExportDisplayValue = (value, column = {}, row = {}) => {
             const display = isObject(column?.display) ? column.display : {};
 
+            // Dynamic branches may point at a different field via display.valuePath
+            // (e.g. status column showing audit.current_stage). Resolve that before
+            // mapping/tag lookups, otherwise non-default branches export as blank.
+            const resolveDisplaySourceValue = (sourceValue, sourceDisplay = display) => {
+              const valuePath = typeof sourceDisplay?.valuePath === 'string'
+                ? sourceDisplay.valuePath.trim()
+                : '';
+
+              return valuePath !== ''
+                ? getByPath(row || {}, valuePath)
+                : sourceValue;
+            };
+
             switch (display.type) {
               case 'dynamic': {
                 const matchedBranch = (Array.isArray(display.branches) ? display.branches : [])
@@ -505,40 +518,55 @@
                   display: selectedDisplay,
                 }), row);
               }
-              case 'mapping':
+              case 'mapping': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+
                 return stringifyExportValue(
-                  resolveColumnMappingLabel(value, Array.isArray(display.options) ? display.options : [], display.separator || ', ')
+                  resolveColumnMappingLabel(resolvedValue, Array.isArray(display.options) ? display.options : [], display.separator || ', ')
                 );
-              case 'tag':
+              }
+              case 'tag': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+
                 return stringifyExportValue(
-                  resolveColumnTagMeta(value, Array.isArray(display.options) ? display.options : [], display.defaultType || 'info')?.label ?? ''
+                  resolveColumnTagMeta(resolvedValue, Array.isArray(display.options) ? display.options : [], display.defaultType || 'info')?.label ?? ''
                 );
+              }
               case 'boolean':
-              case 'boolean_tag':
-                if (isColumnTruthy(value)) {
+              case 'boolean_tag': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+                if (isColumnTruthy(resolvedValue)) {
                   return String(display.truthyLabel ?? '是');
                 }
-                if (isColumnFalsy(value)) {
+                if (isColumnFalsy(resolvedValue)) {
                   return String(display.falsyLabel ?? '否');
                 }
 
                 return '';
-              case 'switch':
+              }
+              case 'switch': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+
                 return stringifyExportValue(
-                  resolveColumnMappingLabel(value, Array.isArray(display.options) ? display.options : [], ', ')
+                  resolveColumnMappingLabel(resolvedValue, Array.isArray(display.options) ? display.options : [], ', ')
                 );
-              case 'datetime':
+              }
+              case 'datetime': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+
                 return stringifyExportValue(
-                  formatColumnDatetime(value, String(display.format || 'YYYY-MM-DD HH:mm:ss'))
+                  formatColumnDatetime(resolvedValue, String(display.format || 'YYYY-MM-DD HH:mm:ss'))
                 );
+              }
               case 'image':
-                return stringifyExportValue(value);
-              case 'images':
-                if (!Array.isArray(value)) {
+                return stringifyExportValue(resolveDisplaySourceValue(value, display));
+              case 'images': {
+                const resolvedValue = resolveDisplaySourceValue(value, display);
+                if (!Array.isArray(resolvedValue)) {
                   return '';
                 }
 
-                return value
+                return resolvedValue
                   .map((item) => {
                     const srcPath = typeof display.srcPath === 'string' ? display.srcPath : 'url';
                     return srcPath === ''
@@ -547,10 +575,11 @@
                   })
                   .filter((item) => item !== '')
                   .join(', ');
+              }
               case 'open_page':
-                return stringifyExportValue(resolveColumnDisplayValue(value));
+                return stringifyExportValue(resolveColumnDisplayValue(resolveDisplaySourceValue(value, display)));
               default:
-                return stringifyExportValue(resolveColumnDisplayValue(value));
+                return stringifyExportValue(resolveColumnDisplayValue(resolveDisplaySourceValue(value, display)));
             }
           };
           const resolveExportCellValue = (row, column = {}) => {

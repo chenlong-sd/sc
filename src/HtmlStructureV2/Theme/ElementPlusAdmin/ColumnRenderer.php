@@ -212,12 +212,20 @@ final class ColumnRenderer
             ++$branchIndex;
         }
 
-        $fallback = El::double('template');
-        if ($branchIndex > 0) {
-            $fallback->setAttr('v-else', '');
+        $default = $display['default'] ?? null;
+
+        // No conditional branches: render default directly.
+        // A bare <template> without Vue directives becomes a native HTML template
+        // and browsers will not display its content.
+        if ($branchIndex === 0) {
+            if (is_array($default)) {
+                return $this->renderDisplayIntoTemplate($template, $column, $default, $bindings);
+            }
+
+            return $this->renderPlainColumnIntoTemplate($template, $column);
         }
 
-        $default = $display['default'] ?? null;
+        $fallback = El::double('template')->setAttr('v-else', '');
         if (is_array($default)) {
             $this->renderDisplayIntoTemplate($fallback, $column, $default, $bindings);
         } else {

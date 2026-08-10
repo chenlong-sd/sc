@@ -2550,16 +2550,28 @@
             const columns = Array.isArray(settingsConfig?.columns)
               ? settingsConfig.columns
                 .filter((item) => isObject(item) && typeof item.key === 'string' && item.key !== '')
-                .map((item) => ({
-                  key: String(item.key),
-                  label: typeof item.label === 'string' && item.label !== '' ? item.label : String(item.key),
-                  show: item.show !== false,
-                  width: item.width ?? null,
-                  fixed: typeof item.fixed === 'string' && item.fixed !== '' ? item.fixed : null,
-                  align: typeof item.align === 'string' && item.align !== '' ? item.align : null,
-                  export: item.export !== false,
-                  exportSort: Number.isFinite(Number(item.exportSort)) ? Number(item.exportSort) : null,
-                }))
+                .map((item) => {
+                  // Number(null) === 0, so null/empty must be handled before numeric coercion.
+                  // Otherwise every settings column becomes exportSort=0 and onlyExportExcel
+                  // columns (absent from settings) fall back to raw index and sink to the end.
+                  const rawExportSort = item.exportSort;
+                  let exportSort = null;
+                  if (rawExportSort !== '' && rawExportSort !== null && rawExportSort !== undefined) {
+                    const normalizedExportSort = Number(rawExportSort);
+                    exportSort = Number.isFinite(normalizedExportSort) ? normalizedExportSort : null;
+                  }
+
+                  return {
+                    key: String(item.key),
+                    label: typeof item.label === 'string' && item.label !== '' ? item.label : String(item.key),
+                    show: item.show !== false,
+                    width: item.width ?? null,
+                    fixed: typeof item.fixed === 'string' && item.fixed !== '' ? item.fixed : null,
+                    align: typeof item.align === 'string' && item.align !== '' ? item.align : null,
+                    export: item.export !== false,
+                    exportSort,
+                  };
+                })
               : [];
 
             return {
