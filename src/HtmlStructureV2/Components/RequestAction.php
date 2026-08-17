@@ -364,7 +364,8 @@ final class RequestAction extends Action
      * 下载模板时，每个字段会在表头上方自动生成说明行：
      * - 有 `options` 的字段会显示"可选值: ..."
      * - 有 `description` 的字段会显示自定义说明文字
-     * - `ImportColumnResolver` 从表单推导时，会自动附带"必填"等校验说明
+     * - `ImportColumnResolver` 从表单推导时，会自动附带"必填"/"条件必填"等校验说明；
+     *   同时会带上 `required` 与 `required_when`（后者来自 `validateRequired(when:)` 以及 `visibleWhen()` 合并后的条件）
      *
      * @param array $columns 导入字段配置。
      * @return static 当前请求动作实例。
@@ -391,6 +392,7 @@ final class RequestAction extends Action
      * - `switch` 会优先尝试读取 active/inactive 配置生成导入选项
      * - 会跳过 hidden / password / editor / upload / picker / icon / checkbox / cascader 等不适合直接导入的字段
      * - 静态 disabled 字段默认跳过
+     * - `validateRequired()` 会标记为始终必填；若同时配置了 `visibleWhen()` 或 `validateRequired(when:)`，则标记为条件必填并带上 `required_when`
      *
      * - `overrides` 可对同名字段做整体覆盖，适合补 `ai_data` 或修正标题。
      *

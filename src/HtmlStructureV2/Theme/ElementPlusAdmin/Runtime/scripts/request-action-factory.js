@@ -486,6 +486,10 @@
             }
             if (customDescription !== "") {
               parts.push(customDescription);
+            } else if (column.required === true) {
+              parts.push("必填");
+            } else if (typeof column.required_when === "string" && column.required_when.trim() !== "") {
+              parts.push("条件必填");
             }
             return parts.join("; ");
           };

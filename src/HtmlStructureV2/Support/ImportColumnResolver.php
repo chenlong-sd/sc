@@ -7,6 +7,7 @@ use Sc\Util\HtmlStructureV2\Components\Dialog;
 use Sc\Util\HtmlStructureV2\Components\Field;
 use Sc\Util\HtmlStructureV2\Components\Fields\OptionField;
 use Sc\Util\HtmlStructureV2\Components\Form;
+use Sc\Util\HtmlStructureV2\Contracts\Fields\ValidatableFieldInterface;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\Enums\FieldType;
 use Sc\Util\HtmlStructureV2\Page\AbstractPage;
@@ -146,41 +147,46 @@ final class ImportColumnResolver
 
         $title = $field->hasLabel() ? $field->label() : $field->name();
         $description = $this->generateFieldDescription($field);
+        $requiredWhen = $this->resolveRequiredWhen($field);
+
+        $column = [
+            'title' => $title,
+            'description' => $description,
+            'required' => $this->isUnconditionallyRequired($field),
+        ];
+        if ($requiredWhen !== null) {
+            $column['required_when'] = $requiredWhen;
+        }
 
         if ($field instanceof OptionField && $field->getOptions() !== []) {
-            return [
-                'title' => $title,
-                'options' => $this->normalizeOptions($field->getOptions()),
-                'description' => $description,
-            ];
+            $column['options'] = $this->normalizeOptions($field->getOptions());
+
+            return $column;
         }
 
         if ($field->type() === FieldType::SWITCH) {
             $switchOptions = $this->resolveSwitchOptions($field);
             if ($switchOptions !== null) {
-                return [
-                    'title' => $title,
-                    'options' => $switchOptions,
-                    'description' => $description,
-                ];
+                $column['options'] = $switchOptions;
+
+                return $column;
             }
         }
 
-        return [
-            'title' => $title,
-            'description' => $description,
-        ];
+        return $column;
     }
 
     private function generateFieldDescription(Field $field): string
     {
         $parts = [];
 
-        if ($field->isRequired()) {
+        if ($this->isUnconditionallyRequired($field)) {
             $parts[] = '必填';
+        } elseif ($this->isConditionallyRequired($field)) {
+            $parts[] = '条件必填';
         }
 
-        $rules = $field->getRules();
+        $rules = $field instanceof ValidatableFieldInterface ? $field->getRules() : [];
         foreach ($rules as $rule) {
             if (is_array($rule)) {
                 if (isset($rule['min'])) {
@@ -196,6 +202,30 @@ final class ImportColumnResolver
         }
 
         return implode('，', $parts);
+    }
+
+    private function isUnconditionallyRequired(Field $field): bool
+    {
+        return $field instanceof ValidatableFieldInterface
+            && $field->isRequired()
+            && !$field->isConditionalRequired();
+    }
+
+    private function isConditionallyRequired(Field $field): bool
+    {
+        return $field instanceof ValidatableFieldInterface
+            && $field->isConditionalRequired();
+    }
+
+    private function resolveRequiredWhen(Field $field): ?string
+    {
+        if (!$field instanceof ValidatableFieldInterface) {
+            return null;
+        }
+
+        $condition = trim((string) $field->getRequiredCondition());
+
+        return $condition !== '' ? $condition : null;
     }
 
     private function isImportableField(Field $field): bool
@@ -230,10 +260,20 @@ final class ImportColumnResolver
                 continue;
             }
 
-            $normalized[] = [
+            $normalizedOption = [
                 'value' => $option['value'],
                 'label' => $option['label'],
             ];
+            foreach ($option as $key => $value) {
+                if (!is_string($key) || $key === '' || $key === 'value' || $key === 'label') {
+                    continue;
+                }
+                if (is_scalar($value) || $value === null) {
+                    $normalizedOption[$key] = $value;
+                }
+            }
+
+            $normalized[] = $normalizedOption;
         }
 
         return $normalized;
