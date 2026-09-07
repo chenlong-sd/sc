@@ -188,14 +188,22 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 设置页面级前端运行时 state。
-     * 数据会挂到 Vue 的 pageState 上，可被 optionsState()/computedOptions() 和 __SC_V2_PAGE__ API 读取或更新。
      *
-     * @param string $path state 路径。
+     * 数据挂在 Vue 的 pageState 上，并非顶层变量：
+     * - 模板里以 `pageState.<path>` 读取，如 `{{ pageState.map.address }}`；写成 `{{ map.address }}` 解析不到；
+     * - 运行时读写一律用 getState()/setState()——实例方法 `vm.getState(path, fallback)` /
+     *   `vm.setState(path, value)`，或全局 `__SC_V2_PAGE__.getState()/setState()`；
+     *   页面方法（method()）内可直接用 ctx 门面：`ctx.setState(path, value)` / `ctx.getState(path)`（见 method() 说明）；
+     * - 表单 options 可通过 optionsState()/computedOptions() 引用。
+     *
+     * @param string $path state 路径，支持点号嵌套，如 "map.address"。
      * @param mixed $value state 值。
      * @return static 当前页面实例。
      *
      * 示例：
      * - `Pages::make('文章')->state('statusOptions', [...])`
+     * - `->state('map', ['address' => '', 'lang' => ''])`，模板引用 `{{ pageState.map.address }}`；
+     *   页面方法内 `ctx.setState('map', ['address' => ..., 'lang' => ...])` 更新，未注册路径 dev 下会 console.warn。
      */
     public function state(string $path, mixed $value): static
     {
@@ -211,6 +219,8 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 批量合并页面级前端运行时 state。
+     * 用法同 state()：数据挂在 `pageState` 下，模板引用 `pageState.<path>`，
+     * 运行时用 `ctx.setState()/getState()` 或 `__SC_V2_PAGE__.setState()/getState()` 读写。
      *
      * @param array $state state 数据。
      * @return static 当前页面实例。
@@ -224,14 +234,42 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 注册当前页面可复用的前端方法。
-     * 页面动作、表单事件或字段事件在找不到同名表单方法时，会继续回退到页面方法。
+     *
+     * 页面方法只存于运行时配置，不会注入为 Vue 组件实例方法，必须通过 `callPageMethod()` 调用：
+     * - 模板事件绑定：`'@click' => "callPageMethod('openMap', 1231)"`（渲染为 `@click="callPageMethod('openMap', 1231)"`）
+     * - 组件动作回调：`'({ row, vm }) => vm.callPageMethod("openMap", { row })'`
+     * - 页面方法内部再调用另一方法：`ctx.callPageMethod("openMapRefresh", ...)`
+     *
+     * 模板事件里直接写方法名（如 `'@click' => "openMap(1231)"`）会被 Vue 编译为 `_ctx.openMap(1231)`，
+     * 实例上不存在 openMap 属性，点击即抛 `openMap is not a function`——这是最常见的误用。
+     *
+     * 事件绑定必须用 `@click`（v-on）；`':click'`（v-bind）是属性绑定，表达式会在**每次渲染时求值**——
+     * 若方法体里有 `ctx.setState()` / `ctx.openDialog()` 等响应式变更，会触发重渲染再求值，
+     * 页面直接卡死（页面打开即默认渲染触发）。误用 `:click` 的页面方法请一律改成 `'@click'`。
+     *
+     * 页面动作、表单事件或字段事件在找不到同名表单方法时，会继续回退到页面方法（dev 下 console.warn 提醒）。
+     *
+     * 方法体（`(ctx) => {...}` 箭头函数）的 `this` 在页面加载时按外层作用域固定为 window，
+     * 箭头函数无法被 .call()/bind() 重绑——因此方法内不要写 `this.xxx`，也无需先取 vm，
+     * 运行时已为 ctx 挂好门面方法（均绑定到页面 Vue 实例，且不可被 ctx 覆盖）：
+     * `ctx.setState(path, value)`、`ctx.getState(path, fallback)`、`ctx.callPageMethod(name, ctx)`、
+     * `ctx.callFormMethod(scope, name, ctx)`、`ctx.getFormMethod(scope, name)`、
+     * `ctx.openDialog('key')`（仅 simple 页面运行时存在；list 页面无该能力时 ctx.openDialog 保持未定义）。
+     * `ctx.vm` 仍保留，用作兜底（`ctx.vm` 乃至 `window.__SC_V2_PAGE__?.vm`）。
      *
      * 命名方法统一只接收一个 `ctx` 对象，常见字段会按触发来源自动注入，例如：
      * - `ctx.vm`: 当前页面 Vue 实例
      * - `ctx.scope` / `ctx.formScope`: 当前表单 scope（若事件来自某个表单）
      * - `ctx.model` / `ctx.form`: 当前表单模型
-     * - `ctx.value` / `ctx.event` / `ctx.args`: 字段原生事件参数
+     * - `ctx.value` / `ctx.event` / `ctx.args`: 字段原生事件参数（callPageMethod 传普通值时注入；传对象则并入 ctx）
      * - `ctx.row` / `ctx.tableKey` / `ctx.listKey` / `ctx.selection`: 动作或列表上下文
+     *
+     * 调用时传普通值，ctx 形如 `{ vm, methodName, value, event, args }`；
+     * 传对象时会并入默认值：`callPageMethod('openMap', { row })` 中 `ctx.row` 即为该 row。
+     *
+     * 示例：
+     * - `->method('openMap', <<<'JS' (ctx) => { ctx.setState('map', {address: ctx.value}); ctx.openDialog('mapd'); } JS)`
+     * - 模板事件：`'@click' => "callPageMethod('openMap', 1231)"`，方法内 `ctx.value` 即为 1231
      *
      * @param string $name 方法名。
      * @param string|JsExpression $handler 前端函数表达式，推荐写成 `(ctx) => { ... }`。
@@ -253,6 +291,7 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 批量注册当前页面可复用的前端方法。
+     * 调用方式与 method() 完全相同——模板/回调里一律通过 `callPageMethod('name', ...)` 调用。
      *
      * @param array<string, string|JsExpression> $methods 方法集合。
      * @return static 当前页面实例。
@@ -276,6 +315,10 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 显式挂载页面级托管弹窗。
+     *
+     * 手动打开弹窗必须走帧运行时接口（裸变量赋值无效）：
+     * - 页面方法内：`ctx.openDialog('key')`（simple 运行时；list 页面对应 `ctx.vm.openHostDialog(...)`）
+     * - 组件动作：`Actions::make(...)->dialog(...)` 或动作回调里 `vm.openDialog(...)`
      *
      * @param Dialog ...$dialogs 页面级弹窗。
      * @return static 当前页面实例。

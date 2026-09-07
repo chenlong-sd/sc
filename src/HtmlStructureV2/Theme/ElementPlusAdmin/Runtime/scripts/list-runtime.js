@@ -24,6 +24,7 @@
             resolveMessage,
             resolveRuntimeNamedHandler,
             resolvePageMode,
+            buildHandlerContext,
             setByPath,
             startVideoUploadPreviewObserver,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
@@ -82,6 +83,7 @@
             return normalized !== '' ? normalized : null;
           };
           const pageMethods = cfg.methods || {};
+          const knownPageStateKeys = new Set(Object.keys((state && state.pageState) || {}));
           const getConfiguredPageMethod = (name) => {
             const normalizedName = normalizeMethodName(name);
             if (normalizedName === null) {
@@ -91,27 +93,7 @@
             const handler = pageMethods?.[normalizedName] || null;
             return typeof handler === 'function' ? handler : null;
           };
-          const buildMethodContext = (vm, name, context = {}, scope = null) => {
-            const defaults = {
-              vm,
-              methodName: name,
-            };
-            const normalizedScope = normalizeFormScope(scope);
-            if (normalizedScope !== null) {
-              defaults.scope = normalizedScope;
-              defaults.formScope = normalizedScope;
-            }
-
-            if (context && typeof context === 'object' && !Array.isArray(context)) {
-              return Object.assign(defaults, context);
-            }
-
-            return Object.assign(defaults, {
-              value: context,
-              event: context,
-              args: context === undefined ? [] : [context],
-            });
-          };
+          const buildMethodContext = buildHandlerContext;
           const resolvePublicFormMethodArgs = (arg1, arg2 = undefined, arg3 = undefined) => {
             if (typeof arg2 === 'string') {
               return { scope: arg1, name: arg2, context: arg3 };
@@ -617,6 +599,10 @@
                 setState(path, value){
                   if (!this.pageState || typeof this.pageState !== 'object' || Array.isArray(this.pageState)) {
                     this.pageState = {};
+                  }
+                  const topLevel = String(path ?? '').split('.')[0];
+                  if (topLevel !== '' && !knownPageStateKeys.has(topLevel)) {
+                    console.warn(`[sc-v2] setState("${path}") 指向未注册的 state 顶层路径 "${topLevel}"：页面 state 需经 ->state() 注册，表单 state 位于 pageState.forms.<scope>.* 下。`);
                   }
                   setByPath(this.pageState, path, value);
 

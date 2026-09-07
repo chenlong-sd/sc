@@ -466,6 +466,10 @@ final class Form implements Renderable, EventAware
      * - `ctx.fieldName`: 当前触发字段名
      * - `ctx.vm`: 当前页面 Vue 实例
      *
+     * 方法体内同样可用 ctx 门面（运行时统一注入，均绑定到页面 Vue 实例）：
+     * `ctx.setState` / `ctx.getState` / `ctx.callPageMethod` / `ctx.callFormMethod` / `ctx.openDialog`；
+     * 不要写 `this.xxx`（箭头函数 `this` 固定为 window，见 AbstractPage::method 说明）。
+     *
      * 被表单 `->on()` 这类上下文事件调用时，方法同样只接收一个 `ctx` 对象，
      * 具体会附带当前事件上下文中的 `payload` / `response` / `error` / `fieldName` 等字段。
      *
@@ -489,6 +493,8 @@ final class Form implements Renderable, EventAware
 
     /**
      * 批量注册当前表单可复用的前端方法。
+     * 调用方式与 method() 相同：字段事件里直接写方法名（`->on('change', 'name')`）即可；
+     * 方法内使用 ctx 门面（`ctx.setState` / `ctx.callFormMethod` 等），不要写 `this.xxx`。
      *
      * @param array<string, string|JsExpression> $methods 方法集合，键为方法名，值为函数表达式。
      * @return self 当前表单实例。

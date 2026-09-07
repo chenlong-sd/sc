@@ -1266,29 +1266,68 @@
             return typeof handler === 'function' ? handler : null;
           };
           const resolveRuntimeNamedHandler = (vm, scope, name) => {
-            return resolveRuntimeFormMethod(vm, scope, name) || resolveRuntimePageMethod(vm, name) || null;
+            const formHandler = resolveRuntimeFormMethod(vm, scope, name);
+            if (formHandler) {
+              return formHandler;
+            }
+
+            const pageHandler = resolveRuntimePageMethod(vm, name);
+            if (pageHandler) {
+              const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
+              if (normalizedScope !== '') {
+                console.warn(`[sc-v2] 表单 ${normalizedScope} 未定义方法 "${name}"，已回退到页面同名方法；如需明确调用表单方法，请使用 callFormMethod("${normalizedScope}", "${name}", ...)。`);
+              }
+            }
+
+            return pageHandler;
           };
-          const buildNamedHandlerContext = (vm, name, context = {}, scope = null) => {
-            const defaults = {
+          const attachHandlerFacade = (ctx, vm) => {
+            if (!ctx || !vm || typeof vm !== 'object') {
+              return ctx;
+            }
+
+            const bindIfAvailable = (target, methodName) => {
+              const method = vm[methodName];
+              if (typeof method === 'function') {
+                target[methodName] = method.bind(vm);
+              }
+
+              return target;
+            };
+
+            bindIfAvailable(ctx, 'setState');
+            bindIfAvailable(ctx, 'getState');
+            bindIfAvailable(ctx, 'callPageMethod');
+            bindIfAvailable(ctx, 'getPageMethod');
+            bindIfAvailable(ctx, 'callFormMethod');
+            bindIfAvailable(ctx, 'getFormMethod');
+            bindIfAvailable(ctx, 'openDialog');
+
+            return ctx;
+          };
+          const buildHandlerContext = (vm, name, context = {}, scope = null, extra = {}) => {
+            const defaults = Object.assign({
               vm,
               methodName: name,
-            };
+            }, extra);
             const normalizedScope = typeof scope === 'string' ? scope.trim() : '';
             if (normalizedScope !== '') {
               defaults.scope = normalizedScope;
               defaults.formScope = normalizedScope;
             }
 
-            if (isObject(context)) {
-              return Object.assign(defaults, context);
-            }
+            const ctx = isObject(context)
+              ? Object.assign(defaults, context)
+              : Object.assign(defaults, {
+                  value: context,
+                  event: context,
+                  args: context === undefined ? [] : [context],
+                });
 
-            return Object.assign(defaults, {
-              value: context,
-              event: context,
-              args: context === undefined ? [] : [context],
-            });
+            // 门面方法在最后附加，调用方传入的 ctx 无法覆盖；且仅在 vm 具备该能力时注入。
+            return attachHandlerFacade(ctx, vm);
           };
+          const buildNamedHandlerContext = buildHandlerContext;
           const callNamedHandler = (handler, context = {}, explicitScope = null) => {
             const name = resolveNamedHandlerName(handler);
             if (name === null) {
@@ -2132,12 +2171,31 @@
               return '';
             }
 
-            const replaced = String(template).replace(/\{([^{}]+)\}/g, (_, path) => {
-              const resolved = getByPath(context?.row || {}, String(path).trim());
-              return resolved === null || resolved === undefined ? '' : String(resolved);
-            });
+            let replaced = String(template);
+            // 双花括号 {{ path }}：按完整运行时路径解析，支持 {{ pageState.xxx }}（页面 state）与 {{ row.xxx }}
+            if (replaced.includes('{{')) {
+              replaced = replaced.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (_, path) => {
+                const raw = String(path).trim();
+                const searchRow = raw.startsWith('row.');
+                const searchPageState = raw.startsWith('pageState.');
+                const pathKey = searchRow
+                  ? raw.slice(4)
+                  : (searchPageState ? raw.slice(10) : raw);
+                const source = searchRow
+                  ? (context?.row ?? {})
+                  : (context?.vm?.pageState ?? {});
+                const resolved = getByPath(source, pathKey);
+                return resolved === null || resolved === undefined ? '' : String(resolved);
+              });
+            }
 
-            const value = resolveContextValue(replaced, context);
+            const value = resolveContextValue(
+              replaced.replace(/\{([^{}]+)\}/g, (_, path) => {
+                const resolved = getByPath(context?.row || {}, String(path).trim());
+                return resolved === null || resolved === undefined ? '' : String(resolved);
+              }),
+              context
+            );
             return value === null || value === undefined ? '' : String(value);
           };
           const buildUrlWithQuery = (url, query, context) => {
@@ -2797,8 +2855,10 @@
             isDialogScope,
             resolveDialogKeyFromScope,
             toDialogScope,
+            attachHandlerFacade,
             buildDialogState,
             buildDialogTitleState,
+            buildHandlerContext,
             buildNamedHandlerContext,
             buildArrayGroupConfigMap,
             buildFlagState,

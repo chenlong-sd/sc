@@ -1,6 +1,7 @@
         globalThis.__SC_V2_BOOT_SIMPLE__ = (state, cfg) => {
           const {
             buildFormsContext,
+            buildHandlerContext,
             buildManagedDialogRuntimeState,
             buildTableStates,
             clone,
@@ -50,6 +51,7 @@
           };
           const getFormConfig = (scope) => forms?.[scope] || {};
           const pageMethods = cfg.methods || {};
+          const knownPageStateKeys = new Set(Object.keys((state && state.pageState) || {}));
           const getConfiguredPageMethod = (name) => {
             const normalizedName = normalizeMethodName(name);
             if (normalizedName === null) {
@@ -59,27 +61,7 @@
             const handler = pageMethods?.[normalizedName] || null;
             return typeof handler === 'function' ? handler : null;
           };
-          const buildMethodContext = (vm, name, context = {}, scope = null) => {
-            const defaults = {
-              vm,
-              methodName: name,
-            };
-            const normalizedScope = normalizeFormScope(scope);
-            if (normalizedScope !== null) {
-              defaults.scope = normalizedScope;
-              defaults.formScope = normalizedScope;
-            }
-
-            if (isObject(context)) {
-              return Object.assign(defaults, context);
-            }
-
-            return Object.assign(defaults, {
-              value: context,
-              event: context,
-              args: context === undefined ? [] : [context],
-            });
-          };
+          const buildMethodContext = buildHandlerContext;
           const resolvePublicFormMethodArgs = (arg1, arg2 = undefined, arg3 = undefined) => {
             if (typeof arg2 === 'string') {
               return { scope: arg1, name: arg2, context: arg3 };
@@ -117,7 +99,7 @@
                 return explicitScope;
               }
 
-              throw new Error(`Unknown public form scope [${explicitScope}] requested by "__SC_V2_PAGE__.submit()".`);
+              throw new Error(`Unknown public form scope [${explicitScope}]: 该 scope 未在页面/弹窗表单配置中注册（content 弹窗等无表单场景请勿调用表单 scope API，如 submit/cloneFormModel/setFormModel）。`);
             }
 
             const pageScopes = knownFormScopes().filter((formScope) => !String(formScope || '').startsWith(dialogFormScopePrefix));
@@ -589,6 +571,10 @@
                   if (!isObject(this.pageState)) {
                     this.pageState = {};
                   }
+                  const topLevel = String(path ?? '').split('.')[0];
+                  if (topLevel !== '' && !knownPageStateKeys.has(topLevel)) {
+                    console.warn(`[sc-v2] setState("${path}") 指向未注册的 state 顶层路径 "${topLevel}"：页面 state 需经 ->state() 注册，表单 state 位于 pageState.forms.<scope>.* 下。`);
+                  }
                   setByPath(this.pageState, path, value);
 
                   return value;
@@ -674,14 +660,24 @@
 
                   return this.__simpleFormInitials;
                 },
+                // 表单初始快照按 scope 存键,允许未注册 scope(如无表单的 content 弹窗 dialog:xxx)
+                // 原样使用;空 scope 仍走 resolvePublicFormScope 的自动解析。
+                resolveSimpleFormInitialScope(scope){
+                  const normalized = typeof scope === 'string' ? scope.trim() : '';
+                  if (normalized === '') {
+                    return resolvePublicFormScope(normalized);
+                  }
+
+                  return normalized;
+                },
                 buildSimpleFormInitialSnapshot(scope){
-                  const resolvedScope = resolvePublicFormScope(scope);
+                  const resolvedScope = this.resolveSimpleFormInitialScope(scope);
                   const formCfg = getFormConfig(resolvedScope) || {};
 
                   return clone(formCfg.initialData || formCfg.defaults || {});
                 },
                 setSimpleFormInitialSnapshot(scope, values = undefined){
-                  const resolvedScope = resolvePublicFormScope(scope);
+                  const resolvedScope = this.resolveSimpleFormInitialScope(scope);
                   const store = this.ensureSimpleFormInitialStore();
                   store[resolvedScope] = values === undefined
                     ? clone(this.getFormModel(resolvedScope) || this.buildSimpleFormInitialSnapshot(resolvedScope))
@@ -690,7 +686,7 @@
                   return clone(store[resolvedScope]);
                 },
                 getSimpleFormInitialSnapshot(scope){
-                  const resolvedScope = resolvePublicFormScope(scope);
+                  const resolvedScope = this.resolveSimpleFormInitialScope(scope);
                   const store = this.ensureSimpleFormInitialStore();
                   if (store[resolvedScope] === undefined) {
                     store[resolvedScope] = this.buildSimpleFormInitialSnapshot(resolvedScope);

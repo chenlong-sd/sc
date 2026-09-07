@@ -1030,7 +1030,9 @@ final class Dialog implements Renderable, EventAware
 
     private static function normalizeStaticTitle(string $title): string
     {
-        $staticTitle = preg_replace('/\{[^{}]+\}/', '', $title);
+        // 双花括号 {{ ... }} 是整段动态占位,先整段摘除,避免残留出 "{}" 之类的静态值
+        $staticTitle = preg_replace('/\{\{[^{}]+\}\}/', '', $title);
+        $staticTitle = preg_replace('/\{[^{}]+\}/', '', (string)$staticTitle);
         $staticTitle = preg_replace('/@[A-Za-z0-9_.$:-]+/', '', (string)$staticTitle);
         $staticTitle = str_replace(['【】', '[]', '()'], '', (string)$staticTitle);
         $staticTitle = preg_replace('/\s+/', ' ', (string)$staticTitle);

@@ -25,11 +25,24 @@ final class JsonExpressionEncoder
             $flags |= JSON_PRETTY_PRINT;
         }
         $json = json_encode($normalized, $flags);
+        if ($json === false) {
+            return 'null';
+        }
 
-        return preg_replace_callback(
-            '/"' . self::PLACEHOLDER . '(\d+)' . self::PLACEHOLDER . '"/',
+        // 第一步只替换真正的表达式标记：前面不允许有反斜杠，
+        // 避免把被转义的、恰好含标记模式的普通字符串当成表达式（见 normalize 的字符串分支）。
+        $json = preg_replace_callback(
+            '/"(?<!\\\\)' . self::PLACEHOLDER . '(\d+)' . self::PLACEHOLDER . '"/',
             fn(array $match) => $expressions[(int)$match[1]] ?? 'null',
-            $json ?: 'null'
+            $json
+        );
+
+        // 第二步还原被转义的普通字符串：normalize 给标记模式插入的 `\` 经 json_encode 后落成 `\\`（连续两个反斜杠），
+        // 去掉它们使原文原样回到配置里。
+        return preg_replace(
+            '/\\\\\\\\' . self::PLACEHOLDER . '(\d+)' . self::PLACEHOLDER . '/',
+            self::PLACEHOLDER . '$1' . self::PLACEHOLDER,
+            $json
         );
     }
 
@@ -61,6 +74,16 @@ final class JsonExpressionEncoder
 
         if ($data instanceof \Stringable) {
             return (string)$data;
+        }
+
+        // 字符串值若恰好包含标记模式，先转义（前插 `\`），避免编码后与表达式标记混淆；
+        // encodeInternal 第二步会还原。
+        if (is_string($data)) {
+            return (string) preg_replace(
+                '/' . self::PLACEHOLDER . '\d+' . self::PLACEHOLDER . '/',
+                '\\\\$0',
+                $data
+            );
         }
 
         return $data;

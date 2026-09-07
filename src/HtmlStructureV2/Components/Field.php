@@ -210,7 +210,8 @@ abstract class Field implements FormNode, ConditionalFormNode
      *
      * 若 handler 只传一个简单方法名，例如 `ownerTypeChange`，
      * 运行时会优先解析当前表单 `method()/methods()` 中的同名方法；
-     * 找不到时再回退到页面方法或全局同名函数。
+     * 找不到时再回退到页面方法或全局同名函数（回退到页面方法时 dev 下 console.warn 提示；
+     * 想明确指定目标可传 `callFormMethod('{formKey}', 'name', ...)` 或 `callPageMethod('name', ...)`）。
      *
      * 函数形式的 handler 可直接使用以下运行时上下文：
      * - `model`：当前字段所属的 model；`form`：当前表单根 model。

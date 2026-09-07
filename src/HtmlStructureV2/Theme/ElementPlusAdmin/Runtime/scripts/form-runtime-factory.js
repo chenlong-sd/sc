@@ -58,6 +58,7 @@
             resolveUploadValue,
             setConfigState,
             setByPath,
+            buildHandlerContext,
             syncUploadModelValue
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
 
@@ -221,28 +222,7 @@
               : null;
             const model = getFormModel(vm, normalizedScope) || {};
 
-            if (isObject(context)) {
-              return Object.assign({
-                scope: normalizedScope,
-                formScope: normalizedScope,
-                model,
-                form: model,
-                vm,
-                methodName: name
-              }, context);
-            }
-
-            return {
-              value: context,
-              event: context,
-              args: context === undefined ? [] : [context],
-              scope: normalizedScope,
-              formScope: normalizedScope,
-              model,
-              form: model,
-              vm,
-              methodName: name
-            };
+            return buildHandlerContext(vm, name, context, normalizedScope, { model, form: model });
           };
           const resolveConfiguredFormMethod = (vm, scope, name) => {
             const normalizedName = normalizeMethodName(name);
