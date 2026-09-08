@@ -62,6 +62,30 @@
             return typeof handler === 'function' ? handler : null;
           };
           const buildMethodContext = buildHandlerContext;
+          // 页面方法绑定到 Vue 实例，模板可直接裸调 openMap(...)，等价 callPageMethod('openMap', ...)。
+          // 与已有实例方法同名时内建优先：跳过绑定并告警，方法仍可通过 callPageMethod 调用。
+          const mergePageMethods = (composed) => {
+            Object.keys(pageMethods || {}).forEach((name) => {
+              if (Object.prototype.hasOwnProperty.call(composed, name)) {
+                console.warn(
+                  `[sc-v2] 页面方法 "${name}" 与运行时内建方法同名，已禁用模板裸调(内建优先)；请改用 callPageMethod('${name}', ...) 调用，或重命名页面方法。`
+                );
+                return;
+              }
+
+              composed[name] = function (context = {}) {
+                const normalizedName = normalizeMethodName(name);
+                const handler = getConfiguredPageMethod(normalizedName);
+                if (normalizedName === null || typeof handler !== 'function') {
+                  return undefined;
+                }
+
+                return handler.call(this, buildMethodContext(this, normalizedName, context));
+              };
+            });
+
+            return composed;
+          };
           const resolvePublicFormMethodArgs = (arg1, arg2 = undefined, arg3 = undefined) => {
             if (typeof arg2 === 'string') {
               return { scope: arg1, name: arg2, context: arg3 };
@@ -518,7 +542,7 @@
               this.initializePageForms();
               this.initializeTables();
             },
-            methods: Object.assign(
+            methods: mergePageMethods(Object.assign(
               {},
               createColumnDisplayMethods(),
               createRequestActionMethods({
@@ -1088,7 +1112,7 @@
                 pickRows,
                 resolveMessage
               })
-            )
+            ))
           });
           registerElementPlusIcons(app);
           registerScV2Components(app);

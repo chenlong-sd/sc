@@ -106,6 +106,12 @@ final class Document implements DocumentRenderable
             );
         }
 
+        foreach ($this->assets->scriptsAsync() as $src) {
+            $this->body()->append(
+                El::double('script')->setAttrs(['src' => $src, 'async' => true])
+            );
+        }
+
         foreach ($this->assets->inlineScripts() as $script) {
             $this->body()->append(
                 El::double('script')->text($script)

@@ -28,6 +28,26 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         'transparent' => 'transparent',
     ];
 
+    /**
+     * 禁止注册为页面方法的方法名（与运行时内建实例方法同名）。
+     *
+     * 页面方法会被运行时绑定到 Vue 实例以支持模板裸调 openMap(...)；与内建方法同名会
+     * 破坏页面协议，在此构建期直接抛错。运行时绑定层另有"内建优先 + 告警"兜底，
+     * 此处为作者体验更早的强校验。
+     */
+    private const RESERVED_METHOD_NAMES = [
+        'callPageMethod', 'getPageMethod', 'callFormMethod', 'getFormMethod',
+        'getState', 'setState', 'getFormState', 'setFormState', 'getPageQuery',
+        'resolvePageMode', 'resolveFormMode', 'resolveNamedEventHandler', 'isFormReadonly',
+        'validateForm', 'validateSimpleForm', 'clearFormValidate', 'clearSimpleFormValidate',
+        'resetForm', 'getFormModel', 'cloneFormModel', 'setFormModel',
+        'initializeFormModel', 'loadFormData',
+        'openDialog', 'closeDialog', 'notifyDialogHost', 'closeHostDialog',
+        'reloadHostTable', 'openHostDialog', 'openHostUrlDialog', 'openHostTab',
+        'setHostDialogTitle', 'setHostDialogFullscreen', 'toggleHostDialogFullscreen',
+        'refreshHostDialogIframe', 'syncHostDialogSubmitState',
+    ];
+
     private array $headerActions = [];
     private array $headerContent = [];
     private array $sections = [];
@@ -35,6 +55,12 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     private array $state = [];
     /** @var array<string, JsExpression> */
     private array $methods = [];
+    /** @var string[] 运行时之后注入的 <script src> 外部脚本（不阻塞页面启动） */
+    private array $externalScripts = [];
+    /** @var string[] 运行时之前注入的 <script src> 外部脚本（阻塞启动，挂载前必须可用） */
+    private array $externalScriptsBeforeRuntime = [];
+    /** @var string[] 页面加载时注入的 <link rel="stylesheet"> 外部样式 */
+    private array $externalStyles = [];
     private ?string $background = null;
     private ?ThemeInterface $renderTheme = null;
 
@@ -270,16 +296,27 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
      * 示例：
      * - `->method('openMap', <<<'JS' (ctx) => { ctx.setState('map', {address: ctx.value}); ctx.openDialog('mapd'); } JS)`
      * - 模板事件：`'@click' => "callPageMethod('openMap', 1231)"`，方法内 `ctx.value` 即为 1231
+     * - 模板也可直接裸调：`'@click' => "openMap(1231)"`——运行时把页面方法绑定到 Vue 实例，
+     *   与 callPageMethod 走同一套 ctx 构造。方法名需为合法 JS 标识符，且不得与内建方法同名
+     *   （同名在注册期抛 InvalidArgumentException）。
      *
      * @param string $name 方法名。
      * @param string|JsExpression $handler 前端函数表达式，推荐写成 `(ctx) => { ... }`。
      * @return static 当前页面实例。
+     * @throws InvalidArgumentException 方法名与运行时内建方法同名。
      */
     public function method(string $name, string|JsExpression $handler): static
     {
         $name = trim($name);
         if ($name === '') {
             return $this;
+        }
+
+        if (in_array($name, self::RESERVED_METHOD_NAMES, true)) {
+            throw new InvalidArgumentException(sprintf(
+                '页面方法名 "%s" 与运行时内建方法同名，禁止注册；请换一个名字，或继续通过 callPageMethod("%s", ...) 调用协议方法。',
+                $name, $name
+            ));
         }
 
         $this->methods[$name] = $handler instanceof JsExpression
@@ -291,7 +328,8 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
 
     /**
      * 批量注册当前页面可复用的前端方法。
-     * 调用方式与 method() 完全相同——模板/回调里一律通过 `callPageMethod('name', ...)` 调用。
+     * 调用方式与 method() 完全相同——模板/回调里可通过 `callPageMethod('name', ...)` 调用，
+     * 也可模板裸调 `name(...)`（运行时已绑定到 Vue 实例，等价于 callPageMethod）。
      *
      * @param array<string, string|JsExpression> $methods 方法集合。
      * @return static 当前页面实例。
@@ -311,6 +349,87 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         }
 
         return $this;
+    }
+
+    /**
+     * 在页面加载时直接注入一个外部脚本(等价 V1 的 Html::js()->load())。
+     *
+     * 脚本以 <script src="..."> 形式放在页面 body 中，可用全局(如 window.AMap)直接在页面方法里使用；
+     * 空 URL 忽略，重复 URL 去重（跨位置同样去重）。
+     *
+     * 默认($beforeRuntime = false)挂到 sc-v2 运行时之后并以 async 规范注入：不阻塞页面启动/挂载，
+     * SDK 后台就绪，适合"用户点击时才用得到"的资源(地图 SDK、二维码库等)——函数体内用前先判空。
+     * 传 true 放在运行时之前（普通同步脚本，会阻塞页面启动直到执行完），保证 Vue 挂载/运行时加载时
+     * 全局必定可用，适合"页面初始化或运行时立即依赖它"的场景——代价是页面加载变慢，谨慎使用。
+     *
+     * 注意：两种位置都是 eager 加载——只要打开页面就会请求，哪怕对应功能未被触发；
+     * 需要按需加载的场景请继续走页面方法内动态注入 <script> 的方式。
+     *
+     * @param string $url 外部脚本 URL。
+     * @param bool $beforeRuntime true 时在 sc-v2 运行时之前加载（阻塞启动）。
+     * @return static 当前页面实例。
+     */
+    public function loadScript(string $url, bool $beforeRuntime = false): static
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return $this;
+        }
+        if (in_array($url, $this->externalScripts, true) || in_array($url, $this->externalScriptsBeforeRuntime, true)) {
+            return $this;
+        }
+
+        $beforeRuntime
+            ? $this->externalScriptsBeforeRuntime[] = $url
+            : $this->externalScripts[] = $url;
+
+        return $this;
+    }
+
+    /**
+     * 在页面加载时直接注入一个外部样式表。
+     *
+     * 样式以 <link rel="stylesheet" href="..."> 形式放在页面 head 中；空 URL 忽略，重复 URL 去重。
+     *
+     * @param string $href 外部样式 URL。
+     * @return static 当前页面实例。
+     */
+    public function loadStyle(string $href): static
+    {
+        $href = trim($href);
+        $href !== '' && !in_array($href, $this->externalStyles, true) && $this->externalStyles[] = $href;
+
+        return $this;
+    }
+
+    /**
+     * 页面级外部脚本 URL 列表（运行时之后加载）。
+     *
+     * @return string[]
+     */
+    public function getExternalScripts(): array
+    {
+        return $this->externalScripts;
+    }
+
+    /**
+     * 页面级运行时之前加载的外部脚本 URL 列表。
+     *
+     * @return string[]
+     */
+    public function getExternalScriptsBeforeRuntime(): array
+    {
+        return $this->externalScriptsBeforeRuntime;
+    }
+
+    /**
+     * 页面级外部样式 URL 列表。
+     *
+     * @return string[]
+     */
+    public function getExternalStyles(): array
+    {
+        return $this->externalStyles;
     }
 
     /**

@@ -6,6 +6,7 @@ final class AssetBag
 {
     private array $stylesheets = [];
     private array $scripts = [];
+    private array $scriptsAsync = [];
     private array $inlineStyles = [];
     private array $inlineScripts = [];
 
@@ -16,7 +17,23 @@ final class AssetBag
 
     public function addScript(string $src): void
     {
-        in_array($src, $this->scripts, true) || $this->scripts[] = $src;
+        if (in_array($src, $this->scripts, true) || in_array($src, $this->scriptsAsync, true)) {
+            return;
+        }
+
+        $this->scripts[] = $src;
+    }
+
+    /**
+     * 以 async 方式注入脚本：不阻塞文档解析与后续脚本执行。
+     */
+    public function addScriptAsync(string $src): void
+    {
+        if (in_array($src, $this->scripts, true) || in_array($src, $this->scriptsAsync, true)) {
+            return;
+        }
+
+        $this->scriptsAsync[] = $src;
     }
 
     public function addInlineStyle(string $css): void
@@ -37,6 +54,11 @@ final class AssetBag
     public function scripts(): array
     {
         return $this->scripts;
+    }
+
+    public function scriptsAsync(): array
+    {
+        return $this->scriptsAsync;
     }
 
     public function inlineStyles(): array

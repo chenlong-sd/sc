@@ -54,6 +54,24 @@ return Pages::make('用户管理')
 
 如果放在现有 `.sc.php` 模板里交给 `ScEngine` 渲染，V2 直接返回页面对象即可，不要再混用旧版 `Html::create()` / `Html::html()`。
 
+### 页面外部资源加载
+
+需要引入第三方前端资源（地图 SDK、二维码库、自定义样式等）时，直接用页面级 `loadScript()` / `loadStyle()`，等价旧版 `Html::js()->load()`，但走 V2 自己的文档资源通道：
+
+```php
+$amapKey = Helper::getConfig('plugins.IssueCompany.map.gd_key', '');
+
+Pages::make('工单详情')
+    ->loadScript('https://webapi.amap.com/maps?v=2.0&key=' . $amapKey)  // 默认:async 注入,不阻塞页面启动
+    ->loadStyle('https://cdn.example.com/theme.css')                     // 注入 <link rel="stylesheet"> 到页面 head
+    ->addSection(...);
+```
+
+- 空 URL 忽略，重复 URL 自动去重（跨位置同样去重）。
+- **默认位置（`loadScript($url)`）**：在 sc-v2 运行时之后以 `async` 注入——不阻塞页面挂载，SDK 后台就绪；函数体内使用时注意判空（如 `if (!window.AMap)`）。
+- **`loadScript($url, true)`**：放在运行时**之前**，同步阻塞加载——保证 Vue 挂载/运行时执行时全局必定可用，适合"页面初始化就必须依赖它"的场景（代价是页面加载变慢，谨慎使用）。
+- 脚本除了这种注入方式外都是 **eager 加载**：打开页面即请求，哪怕对应功能未被使用；需要按需加载的场景，请继续用页面方法内动态注入 `<script>` 的方式（或者配合状态开关控制）。
+
 ## 按场景选择组件
 
 最常见的入口如下：
@@ -1680,6 +1698,33 @@ Pages::make('项目编辑')
 - `ctx.scope` / `ctx.formScope`: 当前表单 scope
 - `ctx.fieldName`: 当前触发字段名
 - `ctx.vm`: 当前页面 Vue 实例
+
+字段事件解析命名方法时，会按“当前表单方法 -> 当前页面方法 -> 全局同名函数”的顺序查找。
+
+### 页面方法模板裸调
+
+页面方法会被运行时绑定到 Vue 实例，因此模板里可以直接裸调，等价于 `callPageMethod('name', ...)`（同一套 ctx 构造与绑定），不需要再写调用壳：
+
+```php
+Pages::make('工单详情')
+    ->method('openMap', '(ctx) => {
+        // 参数 ctx = { vm, methodName }  + 调用时传入的字段(ctx.address/longitude/latitude) + 运行时门面方法
+        ctx.setState("map", { address: ctx.address, longitude: ctx.longitude, latitude: ctx.latitude });
+        ctx.openDialog("mapd");
+    }')
+    ->addSection(
+        // @click 直接写方法名：callPageMethod('openMap', {...}) 可保留，二者等价
+        h('el-button', '查看地图', ['@click' => "openMap({ address: '某路', longitude: 104.06, latitude: 30.57 })"])
+    );
+```
+
+注意：
+
+- **参数是 ctx 上下文对象，不是纯数据**：`callPageMethod('openMap', {...})` 传入的对象会被并入 ctx（同时不覆盖运行时门面方法），所以函数体里既可以读你自己传的字段（`ctx.address`），也能直接调 `ctx.setState(...)` / `ctx.openDialog(...)`；参数名任取（`ctx`/`data`/`m`），拿到的是同一个对象。不要把整个 ctx 存进 state/form（里面含 `vm` 和函数），按上例先重组纯数据对象。
+- 传对象会并入 ctx（`ctx.address` 直接可用）；传**非对象值**（数字/字符串/布尔/null，数组也不算对象）时，值放在 `ctx.value`（同时 `ctx.event` 同值、`ctx.args` 为单元素数组）——与 `callPageMethod('name', value)` 完全一致；功能体里统一用 `ctx.value ?? ctx` 兼容两种形态。裸调一次只带一个参数，多个值请包装成对象传入。
+- 裸调只适用于**页面方法**（`Pages::method()`）；`Forms::method()` 带表单 scope，仍走 `->on('change', 'methodName')` 或 `callFormMethod('scope', 'name', ...)`。
+- 方法名需是合法 JS 标识符；与运行时内建方法（`setState`/`openDialog`/`callPageMethod` 等）同名会在**注册期直接抛错**（`InvalidArgumentException`），不需要等到浏览器控制台。
+- 箭头函数内不能用 `this`（保持原有约定）；需要 `this` 时请写成普通函数 `function (ctx) { this.setState(...) }`，此时 `this` 是页面 Vue 实例。
 
 字段事件解析命名方法时，会按“当前表单方法 -> 当前页面方法 -> 全局同名函数”的顺序查找。
 

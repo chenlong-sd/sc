@@ -122,7 +122,20 @@ final class ElementPlusAdminTheme implements ThemeInterface
         $body = $this->pageFrameRenderer()->render($page, $renderedSections, null, null, $context);
 
         $this->appendManagedDialogs($body, $context, $managedDialogs);
+
+        // 页面外部脚本可按需落在 sc-v2 运行时之前（阻塞启动，挂载前全局必须可用）
+        foreach ($page->getExternalScriptsBeforeRuntime() as $src) {
+            $context->document()->assets()->addScript($src);
+        }
         $this->appendPageRuntime($context);
+
+        // 页面外部脚本默认放在运行时之后，并以 async 注入：不阻塞页面启动/挂载，SDK 就绪后由页面方法使用
+        foreach ($page->getExternalScripts() as $src) {
+            $context->document()->assets()->addScriptAsync($src);
+        }
+        foreach ($page->getExternalStyles() as $href) {
+            $context->document()->assets()->addStylesheet($href);
+        }
 
         return $body;
     }
