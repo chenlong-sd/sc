@@ -397,6 +397,95 @@ class Action implements
     }
 
     /**
+     * 让当前动作在主框架新开一个 tab，点击后 tab 栏新增一个 iframe tab 并切过去。
+     * 目标 route 已在 tab 列表中时不会重复开，而是直接切过去。
+     * 宿主没有提供 tab 桥时会降级成 `window.open(url, '_blank')`，并打一条 `[sc-v2]` 告警。
+     *
+     * 只作用于主框架 tab，不改当前 iframe 自己的地址；
+     * 需要在当前 iframe 内跳转请用 `openCurrentPage()`，需要甩出浏览器新标签页请用 `openNewPage()`。
+     *
+     * 会追加 click 处理器，不会覆盖已有的 `on('click', ...)` 配置；也不改按钮类型和图标，
+     * 需要默认样式请自行链式 `->type('default')`。
+     *
+     * @param string $route 目标路由。
+     * @param string|null $title tab 标题；传 null 时使用默认标题“新页面”。
+     * @param string|null $index tab 唯一标识；传 null 时运行时按 route 推导，同一 route 会命中同一个 tab。
+     * @param array|string|JsExpression $query 查询参数，支持 `@row.id` 这类动态表达式。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Action::make('查看工单')->openTab('/admin/ip-work-order/lists', '工单列表')`
+     * - `Action::edit()->on('click', Events::openTab('/admin/qa-info/lists'))`
+     */
+    public function openTab(
+        string $route,
+        ?string $title = null,
+        ?string $index = null,
+        array|string|JsExpression $query = []
+    ): static {
+        return $this->on('click', Events::openTab($route, $title, $index, $query));
+    }
+
+    /**
+     * 让当前动作在浏览器新标签页打开目标 URL，点击后走 `window.open(url, '_blank')`，会甩出主框架。
+     *
+     * 会追加 click 处理器，不会覆盖已有的 `on('click', ...)` 配置。
+     *
+     * @param string $url 目标 URL。
+     * @param array|string|JsExpression $query 查询参数，支持 `@row.id` 这类动态表达式。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Action::make('新窗口查看')->openNewPage('/admin/qa-info/lists')`
+     */
+    public function openNewPage(string $url, array|string|JsExpression $query = []): static
+    {
+        return $this->on('click', Events::openUrl($url, $query)->newTab());
+    }
+
+    /**
+     * 让当前动作在当前 iframe 内跳转，点击后当前文档直接跳到目标 URL。
+     * 页面跑在主框架 tab 或 iframe 弹窗里时，只有该 iframe 自己会跳，主框架外层不受影响。
+     *
+     * 会追加 click 处理器，不会覆盖已有的 `on('click', ...)` 配置。
+     *
+     * @param string $url 目标 URL。
+     * @param array|string|JsExpression $query 查询参数，支持 `@row.id` 这类动态表达式。
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Action::make('进入详情')->openCurrentPage('/admin/qa-info/detail', ['id' => '@row.id'])`
+     */
+    public function openCurrentPage(string $url, array|string|JsExpression $query = []): static
+    {
+        return $this->on('click', Events::openUrl($url, $query));
+    }
+
+    /**
+     * 让当前动作回退本帧上一页，点击后执行一次 `history.back()`。
+     * 不关宿主弹窗、不跳 URL。因为 iframe 的 history 是顶层联合历史，无条件 back() 可能把
+     * 主框架外壳或别的 tab 导航走，所以**只在本帧自己导航过之后才真正回退**（本帧经
+     * `Events::openUrl()` 默认 `_self` 导航过即置位），其余情况静默跳过。
+     * 典型可用场景：A 页用 `openCurrentPage()` 跳到 B 页，B 页点返回回到 A。
+     * 从菜单直接打开的页面、弹窗子页都退不了；这些场景要“回列表”请改用
+     * `Events::returnTo($url)`（或 DSL 层的 `Actions::back($url)`）。
+     *
+     * 跳过时事件返回 `false`，而 `false` 会取消同一事件链上的宿主动作，
+     * 因此不要把这个事件再 `on()` 到别的事件链上。
+     *
+     * 会追加 click 处理器，不会覆盖已有的 `on('click', ...)` 配置；也不改按钮类型和图标。
+     *
+     * @return static 当前动作实例。
+     *
+     * 示例：
+     * - `Action::make('返回')->type('default')->icon('Back')->historyBack()`
+     */
+    public function historyBack(): static
+    {
+        return $this->on('click', Events::historyBack());
+    }
+
+    /**
      * 获取已绑定的 Dialog 对象。
      */
     public function getDialog(): ?Dialog

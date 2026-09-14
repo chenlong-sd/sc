@@ -181,16 +181,28 @@ final class Actions
 
     /**
      * 创建一个独立页面常用的“取消/返回”动作。
-     * 默认按钮类型为 default，点击后执行 `Events::returnTo($url)`；
-     * 若当前页面是启用 `iframeHost()` 的 V2 iframe 子页，则会优先关闭宿主弹窗；
-     * 否则跳转到指定 URL；若 URL 为空，则静默跳过。
+     * 默认按钮类型为 default，点击后执行 `Events::returnTo($url)`——
+     * 运行时会**按当前页面所处上下文自动分级识别**该用哪种返回方式，命中即返回：
      *
-     * @param string|JsExpression|null $url 返回目标 URL；可为空，表示仅在可关闭宿主弹窗时生效。
+     * 1. 当前是 iframe 弹窗子页（`Dialog::iframe()`）→ 关掉宿主弹窗
+     * 2. 显式传了 `$url`                          → 在当前 iframe 内跳到该 URL
+     * 3. 本帧自己导航过（经 `Events::openUrl()` 默认 `_self` 或本动作第 2 级）→ `history.back()`
+     * 4. 当前在主框架 tab 里                       → 关掉自己这个 tab，回到上一个 tab
+     * 5. 都不适用                                → 静默跳过
+     *
+     * 所以同一个 `Actions::back()` 在弹窗表单、tab 表单、跳转后的详情页里都能正确“返回”，
+     * 大多数场景不需要再手写 URL。显式传 `$url` 时，第 2 级优先于自动识别（显式压过隐式）。
+     *
+     * 注意第 3 级只在本帧确实自己导航过时才生效：iframe 的 `history` 是顶层联合历史，
+     * 无条件 `history.back()` 可能把主框架外壳或别的 tab 导航走，详见 `Events::historyBack()`。
+     *
+     * @param string|JsExpression|null $url 返回目标 URL；可为空，交给运行时自动识别。
      * @param string $label 按钮显示文案，默认值为“取消”。
      * @return Action 返回/取消动作实例。
      *
      * 示例：
-     * - `Actions::back('/admin/qa-info/lists', '返回列表')`
+     * - `Actions::back()`                                   // 弹窗/tab 里自动识别
+     * - `Actions::back('/admin/qa-info/lists', '返回列表')`   // 显式指定目标
      */
     public static function back(string|JsExpression|null $url = null, string $label = '取消'): Action
     {

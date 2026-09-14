@@ -1389,6 +1389,7 @@
               const features = resolveContextValue(handler.features ?? null, context);
 
               if (target === '_self') {
+                markInFrameNavigation();
                 window.location.href = url;
                 return url;
               }
@@ -1501,6 +1502,38 @@
               return false;
             }
 
+            if (type === 'openTab') {
+              const url = buildUrlWithQuery(
+                handler.route ?? handler.url ?? '',
+                handler.query || {},
+                context
+              );
+              if (!url) {
+                throw new Error('Structured event [openTab] requires a resolvable route.');
+              }
+
+              const target = { route: url };
+              const title = resolveContextValue(handler.title ?? null, context);
+              const index = resolveContextValue(handler.index ?? null, context);
+              if (typeof title === 'string' && title !== '') {
+                target.title = title;
+              }
+              if (typeof index === 'string' && index !== '') {
+                target.index = index;
+              }
+
+              return openHostTab(target);
+            }
+
+            if (type === 'historyBack') {
+              // 只在"本帧确实自己导航过"时才回退，理由见 markInFrameNavigation 注释。
+              if (!hasInFrameNavigation()) {
+                return false;
+              }
+
+              return backInFrame();
+            }
+
             if (type === 'returnTo') {
               const url = resolveContextValue(handler.url ?? '', context);
               const shouldReloadHostTable = handler.reloadHostTable === true;
@@ -1510,6 +1543,12 @@
                 context.reloadHostTable(typeof tableKey === 'string' && tableKey !== '' ? tableKey : null);
               }
 
+              // 返回策略按"显式压过隐式"分级自动识别，命中即返回：
+              //   1. 当前是 iframe 弹窗子页   → 关掉宿主弹窗           （作者显式上下文）
+              //   2. 显式传了 url            → 当前 iframe 内跳过去     （作者显式指定）
+              //   3. 本帧自己导航过           → history.back()          （自动，有帧内标记守卫）
+              //   4. 当前在主框架 tab 里       → 关掉自己这个 tab        （自动，会回到上一个 tab）
+              //   5. 都不适用                → 静默
               const closed = typeof context?.closeHostDialog === 'function'
                 ? context.closeHostDialog()
                 : false;
@@ -1518,8 +1557,21 @@
               }
 
               if (typeof url === 'string' && url !== '') {
+                markInFrameNavigation();
                 window.location.href = url;
                 return url;
+              }
+
+              if (hasInFrameNavigation()) {
+                return backInFrame();
+              }
+
+              if (closeHostTabSelf()) {
+                return true;
+              }
+
+              if (closeScriptOpenedWindow()) {
+                return true;
               }
 
               return null;
@@ -1986,6 +2038,115 @@
 
             return `sc-tab-${Math.abs(hash)}`;
           };
+          // iframe 里的 history 是"顶层联合历史(joint session history)"，不是本帧自己的：
+          //   - window.history.length 数的是顶层浏览上下文的条目总数，不是本帧的，拿它判断
+          //     "本帧能不能后退"永远为真（外壳登录跳转、开过的 tab 都会撑大它）；
+          //   - history.back() 也是按联合历史回退的，回退到的那一条可能属于主框架外壳或别的 tab，
+          //     于是"返回"可能把整个外壳导航走（所有已开 tab 丢失）或把另一个 tab 跳了。
+          // 所以不能靠 history.length 判断，改成自己发信号：只有本帧通过 openUrl(_self) 自己导航过，
+          // 才认为联合历史里紧邻的上一条属于本帧，此时 back() 才是安全的。
+          // window.name 是帧级别的、且同帧跨文档存活，适合做这个标记；本仓库其它地方没有用过它。
+          const inFrameNavFlag = '__scV2InFrameNav__';
+          const markInFrameNavigation = () => {
+            if (typeof window === 'undefined') {
+              return false;
+            }
+
+            try {
+              if (window.name.indexOf(inFrameNavFlag) !== -1) {
+                return true;
+              }
+
+              window.name += inFrameNavFlag;
+
+              return true;
+            } catch (error) {
+              return false;
+            }
+          };
+          const hasInFrameNavigation = () => {
+            if (typeof window === 'undefined') {
+              return false;
+            }
+
+            try {
+              return window.name.indexOf(inFrameNavFlag) !== -1;
+            } catch (error) {
+              return false;
+            }
+          };
+          const consumeInFrameNavigation = () => {
+            if (!hasInFrameNavigation()) {
+              return false;
+            }
+
+            try {
+              // 回退前先清掉标记：退回去的那一页不该再被认为"可以继续后退"。
+              window.name = window.name.split(inFrameNavFlag).join('');
+
+              return true;
+            } catch (error) {
+              return false;
+            }
+          };
+          const backInFrame = () => {
+            const targetWindow = typeof window !== 'undefined' ? window : globalThis;
+            const history = targetWindow?.history;
+            if (!history || typeof history.back !== 'function') {
+              return false;
+            }
+
+            // 先探测再消费：拿不到 history 时不能把标记吃掉，否则后面的兜底层级会被误判。
+            consumeInFrameNavigation();
+            history.back();
+
+            return true;
+          };
+          const closeHostTabSelf = () => {
+            const bridge = resolveHostTabBridge();
+            if (!bridge || typeof bridge.closeSelf !== 'function') {
+              return false;
+            }
+
+            if (typeof window === 'undefined' || !window) {
+              return false;
+            }
+
+            // 传自己的 window（WindowProxy），不传 window.frameElement：
+            // 规范只保证 WindowProxy 跨 realm 是同一个对象，而 frameElement 返回的是父文档里的
+            // DOM 元素，跨 realm 取到的可能是包装对象，父页面拿它跟 $refs 里的元素 === 会比不中。
+            try {
+              return bridge.closeSelf(window) !== false;
+            } catch (error) {
+              return false;
+            }
+          };
+          const closeScriptOpenedWindow = () => {
+            if (typeof window === 'undefined' || !window) {
+              return false;
+            }
+
+            // 只对付"由脚本 window.open 打开"的独立窗口：这类窗口才允许自己 window.close()。
+            // 普通浏览到的页面 opener 为空，这里直接跳过；即使 opener 非空，
+            // 浏览器对非脚本打开的窗口也会静默拒绝 close()，不会误关用户的标签页。
+            let opener = null;
+            try {
+              opener = window.opener;
+            } catch (error) {
+              return false;
+            }
+            if (!opener) {
+              return false;
+            }
+
+            try {
+              window.close();
+
+              return true;
+            } catch (error) {
+              return false;
+            }
+          };
           const normalizeHostTabTarget = (target, title = '', index = null) => {
             const config = isObject(target)
               ? target
@@ -2099,6 +2260,14 @@
                 }
               } catch (error) {}
             }
+
+            // 没桥就只剩降级：本该开主框架 tab，结果甩出一个浏览器新窗口。
+            // 这个降级是静默的（调用方仍拿到 route 视作成功），所以至少留一条可排查的线索。
+            console.warn(
+              `[sc-v2] 未找到主框架 tab 宿主桥（__SC_V2_HOST_TAB_BRIDGE__ / VueApp.$refs['main-tabs']），`
+              + `openTab("${normalized.route}") 已降级为 window.open(_blank)。`
+              + '请确认主框架外壳已安装 tab 桥，且当前页面确实跑在主框架里。'
+            );
 
             const targetWindow = typeof window !== 'undefined'
               ? window

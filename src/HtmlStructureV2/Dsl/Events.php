@@ -37,6 +37,55 @@ final class Events
     }
 
     /**
+     * 创建一个"在主框架新开一个 tab"事件。
+     * 适合从任何支持 `on()` 的位置跳转到另一个页面，又不想把用户甩出主框架的场景。
+     * 目标 route 已在 tab 列表中时不会重复开，而是直接切过去；宿主没有 tab 桥时降级为 `window.open(_blank)`。
+     * 需要注意本事件只作用于主框架 tab，不改变当前 iframe 自己的地址。
+     *
+     * - `query` 支持动态表达式，运行时会从当前 handler context 中解析，可用字段同 `openUrl()`；
+     *   传字符串时会自动包装成 JsExpression。
+     *
+     * @param string|JsExpression $route 目标路由。
+     * @param string|null $title tab 标题；传 null 时使用默认标题"新页面"。
+     * @param string|null $index tab 唯一标识；传 null 时运行时按 route 推导，同一 route 会命中同一个 tab。
+     * @param array|string|JsExpression $query 查询参数。
+     * @return StructuredEvent 打开主框架 tab 事件。
+     *
+     * 示例：
+     * - `Events::openTab('/admin/qa-info/lists', '问答列表')`
+     * - `Events::openTab('/admin/qa-info/form', '编辑问答', null, ['id' => '@row.id'])`
+     */
+    public static function openTab(
+        string|JsExpression $route,
+        ?string $title = null,
+        ?string $index = null,
+        array|string|JsExpression $query = []
+    ): StructuredEvent {
+        return StructuredEvent::openTab($route, $title, $index, $query);
+    }
+
+    /**
+     * 创建一个"回退当前页面浏览器历史"事件，等价于在当前 iframe 内执行 `history.back()`。
+     * 只回退当前文档自己那一层历史，不关宿主弹窗、不跳 URL、也不动主框架外层。
+     * 新建的 iframe（尤其是弹窗子页）历史可能为空，此时运行时会静默跳过并返回 `false`。
+     *
+     * 注意 `false` 会取消同一事件链上的宿主动作（`isEventCanceled`），
+     * 因此不要把它和别的动作混挂在同一事件上——例如挂在 `Dialog` 的 `beforeClose` 上会让弹窗关不掉。
+     * 只想"退到上一页"时，单独用一个按钮即可。
+     *
+     * 需要"优先关掉宿主弹窗，否则跳到指定列表页"时请改用 `Events::returnTo($url)`。
+     *
+     * @return StructuredEvent 回退历史事件。
+     *
+     * 示例：
+     * - `Events::historyBack()`
+     */
+    public static function historyBack(): StructuredEvent
+    {
+        return StructuredEvent::historyBack();
+    }
+
+    /**
      * 创建一个打开弹窗事件，目标可传 Dialog 对象或 dialog key。
      *
      * - 默认优先使用事件对象自身的 `dialogKey`；
@@ -165,17 +214,26 @@ final class Events
     }
 
     /**
-     * 创建一个“优先关闭宿主弹窗，否则跳转到 URL”的事件。
-     * 适合 iframe 子表单页里的取消返回、保存成功返回。
-     * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
-     * 其它页面上下文会直接回退到 URL 跳转；若未传 URL，则会静默跳过。
+     * 创建一个“按当前上下文自动识别返回方式”的事件。
+     * 适合 iframe 子表单页里的取消返回、保存成功返回，也适合主框架 tab 里的独立表单页。
+     * 运行时会按下面顺序分级识别，命中即返回（显式压过隐式）：
+     *
+     * 1. 当前是 iframe 弹窗子页（`iframeHost()`）→ 关掉宿主弹窗
+     * 2. 显式传了 `$url`                       → 在当前 iframe 内跳到该 URL
+     * 3. 本帧自己导航过                          → `history.back()`
+     * 4. 当前在主框架 tab 里                     → 关掉自己这个 tab，回到上一个 tab
+     * 5. 都不适用                               → 静默跳过
+     *
+     * 第 3 级只在本帧确实自己导航过时才生效——iframe 的 `history` 是顶层联合历史，
+     * 无条件 `history.back()` 可能把主框架外壳或别的 tab 导航走，详见 `historyBack()`。
      * 返回的事件对象还可继续链式调用 `hostTable()`。
      *
-     * @param string|JsExpression|null $url 回退跳转 URL；传 null 时仅尝试关闭宿主弹窗。
+     * @param string|JsExpression|null $url 回退跳转 URL；传 null 时交给运行时自动识别后续分级。
      * @return StructuredEvent 返回事件。
      *
      * 示例：
-     * - `Events::returnTo('/admin/qa-info/lists')`
+     * - `Events::returnTo()`                            // 自动识别
+     * - `Events::returnTo('/admin/qa-info/lists')`        // 显式指定目标
      */
     public static function returnTo(string|JsExpression|null $url = null): StructuredEvent
     {

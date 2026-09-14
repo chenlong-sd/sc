@@ -197,6 +197,32 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     }
 
     /**
+     * 在页面头部追加一个“返回”按钮，点击后执行一次 `history.back()`。
+     * 等价于 `actions(Action::make($label)->type('default')->icon('Back')->historyBack())`，
+     * 只是省掉手写动作。
+     *
+     * 不关宿主弹窗、不跳 URL。因为 iframe 的 history 是顶层联合历史，无条件 back() 可能把
+     * 主框架外壳或别的 tab 导航走，所以**只在本帧自己导航过之后才真正回退**（本帧经
+     * `Events::openUrl()` 默认 `_self` 导航过即置位），其余情况静默跳过。
+     * 典型可用场景：A 页用 `openCurrentPage()` 跳到 B 页，B 页点返回回到 A。
+     * 从菜单直接打开的页面、弹窗子页都退不了；这些场景要“回列表”请改用
+     * `actions(Actions::back('/admin/xxx/lists'))`，那走的是 `Events::returnTo()`。
+     *
+     * @param string $label 按钮显示文案，默认值为“返回”。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * - `Pages::make('工单详情')->historyBack()`
+     * - `Pages::make('工单详情')->historyBack('返回上页')`
+     */
+    public function historyBack(string $label = '返回'): static
+    {
+        return $this->actions(
+            Action::make($label)->type('default')->icon('Back')->historyBack()
+        );
+    }
+
+    /**
      * 向页面主体追加一个或多个区块。
      *
      * @param Renderable ...$sections 页面主体区块。

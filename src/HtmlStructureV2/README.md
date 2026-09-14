@@ -1026,6 +1026,32 @@ Actions::delete()
 
 如果不显式传 `dialogKey`，宿主会按消息来源窗口自动反查所属 iframe 弹窗。
 
+#### 主框架 tab 桥
+
+上面这套 `postMessage` 宿主桥只覆盖「V2 页面开 V2 iframe 弹窗」。**主框架（Blade 外壳）的 tab 栏是另一套机制**，走全局变量：
+
+```js
+// 主框架外壳发布（storage/view/Admin/Index/main-tabs.blade.php 里随 MainTabs 组件 mounted 安装）
+window.__SC_V2_HOST_TAB_BRIDGE__ = {
+    open(target),          // target: { route, title?, index? }；成功返回 true，route 为空返回 false
+    close(index),          // 按 index 关闭 tab；index 为空返回 false
+    closeSelf(callerWindow), // 关掉 callerWindow 所属的那个 tab（子页传自己的 window 上来定位）
+};
+```
+
+`closeSelf` 是给 `Events::returnTo()` 第 4 级用的：子页不知道自己属于哪个 tab，所以由它把自己的
+`window` 传上来，宿主逐个 tab 比对 `iframe.contentWindow` 后关闭（`WindowProxy` 跨 realm 同一性有规范保证）。
+
+iframe 子页面**不需要手写**这个调用——直接用 `Events::openTab()` / `ctx.openHostTab()` 即可，运行时 `resolveHostTabBridge()` 会依次探测 `globalThis` → `window` → `window.parent` → `window.top` 找这个桥。
+
+查找顺序里的兜底链路：
+
+1. `__SC_V2_HOST_TAB_BRIDGE__`（正式桥，推荐）
+2. `VueApp.$refs['main-tabs']`（历史遗留，仍然兼容）
+3. `window.open(url, '_blank')`（都没有就甩出浏览器新窗口）
+
+因此如果发现「点了打开 tab 却弹出浏览器新窗口」，就是前两者都没命中——检查主框架外壳是否装了桥、以及页面是否真的跑在主框架里。
+
 ### 表单页 / 页面弹窗
 
 ```php
@@ -1238,6 +1264,7 @@ echo $page->toHtml();
 - `create/edit/submit/close`：弹窗动作，推荐先创建动作再用 `->dialog(...)` 绑定目标
 - `request`：结构化异步请求动作，优先使用
 - `import`：前端解析 Excel 后再提交的导入动作，适合后台批量导入场景
+- `->openTab()/->openNewPage()/->openCurrentPage()/->historyBack()`：挂在任意 Action 之后的跳转/返回链式方法，见 `### 页面跳转与返回`
 - `custom`：原生 JS 兜底，只在确实无法抽象时使用
 
 ### 弹窗动作推荐写法
@@ -1628,6 +1655,21 @@ Actions::custom('取消')->onClick(Events::returnTo());
 - `Events::returnTo()` 只有在当前页面确实由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先关闭宿主弹窗
 - 普通页面或普通 tab iframe 页面会直接回退到 `url` 跳转；若 `url` 为空，则静默跳过，不会把“存在 parent window”误判成宿主弹窗
 
+让宿主页面打开一个通用 iframe 弹窗，除了上面的结构化事件，也可以在动作上直接挂：
+
+```php
+// 不需要预先在父页面注册 Dialog，仅当本页由 Dialog::iframe() 打开且启用了宿主桥接时生效
+Action::make('查看工单')->openHostUrlDialog('/admin/ip-work-order/lists', '工单列表');
+
+// query 里支持动态表达式，可读取 form / model / row / getFormState() 等当前上下文
+Action::make('查看工单')->openHostUrlDialog('/admin/ip-work-order/lists', '工单列表', '1000px', '70vh', [
+    'search[s][user_phone]' => JsExpression::make('form?.user_phone'),
+    'message' => JsExpression::make("getFormState('form', 'message', '')"),
+]);
+```
+
+`openHostUrlDialog()` 会**追加** click 处理器，不会覆盖已有的 `on('click', ...)` 配置。
+
 如果确实要写 JS，动作上下文里也能直接调用宿主桥方法，不需要再手写
 `window.parent.postMessage(...)`：
 
@@ -1765,6 +1807,7 @@ Fields::select('status', '状态')
 当前内置的结构化事件包括：
 
 - `Events::openUrl()`
+- `Events::openTab()`
 - `Events::openDialog()`
 - `Events::closeDialog()`
 - `Events::reloadTable()`
@@ -1773,9 +1816,12 @@ Fields::select('status', '状态')
 - `Events::closeHostDialog()`
 - `Events::reloadHostTable()`
 - `Events::returnTo()`
+- `Events::historyBack()`
 - `Events::setFormModel()->form('formKey')`
 - `Events::initializeFormModel()->form('formKey')`
+- `Events::resetForm()`
 - `Events::message()`
+- `Events::hostMessage()`
 - `Events::request()`
 
 轻组件上的 DOM 事件也走同一套事件对象协议；如果它们渲染在 `Forms::custom()` 里，还会额外注入 `ctx.model`，便于直接用 `@model.source_id` 这类 token 取当前表单片段数据。
@@ -1787,6 +1833,76 @@ Fields::select('status', '状态')
 - `List`: `filterSubmit` / `filterReset` / `reload`
 - `Dialog`: `beforeOpen` / `afterOpen` / `beforeClose` / `afterClose` / `submitSuccess` / `submitFail`
 - `RequestAction`: `click` / `before` / `success` / `fail` / `finally`
+
+### 页面跳转与返回
+
+V2 页面通常跑在主框架 tab 的 iframe 里，也可能跑在 iframe 弹窗里。"跳走"有三种落点，另有"返回上一页"，各自语义不同，别混用：
+
+| 想去哪 | 结构化事件（协议层） | Action 链式方法（推荐） |
+| --- | --- | --- |
+| 主框架新开一个 tab（不离开主框架） | `Events::openTab($route, $title)` | `->openTab($route, $title)` |
+| 浏览器新标签页（甩出主框架） | `Events::openUrl($url)->newTab()` | `->openNewPage($url)` |
+| 当前 iframe 内跳转 | `Events::openUrl($url)` | `->openCurrentPage($url)` |
+| 回退本帧上一页（仅限本帧自己导航过） | `Events::historyBack()` | `->historyBack()` |
+
+用法和 `openHostUrlDialog()` 一致，挂在**任意** Action 之后，只追加 click 处理器，不覆盖已有的 `on('click', ...)`：
+
+```php
+Pages::make('工单详情')
+    ->historyBack()                                   // 页面头部出现「返回」按钮
+    ->actions(
+        Actions::make('查看工单列表')->openTab('/admin/ip-work-order/lists', '工单列表'),
+        Actions::make('新窗口打开')->openNewPage('/admin/ip-work-order/lists'),
+        Actions::make('进入编辑')->openCurrentPage('/admin/ip-work-order/form', ['id' => '@row.id']),
+        Actions::make('返回')->type('default')->icon('Back')->historyBack(),
+    )
+    ->addSection($descriptions);
+```
+
+这四个方法都**不改按钮类型和图标**（避免链式顺序一变行为就变），需要默认样式自己链 `->type('default')->icon('Back')`。
+`Page::historyBack()` 是唯一例外，它替你把 `type('default')` + `icon('Back')` 配好。
+
+几个容易踩的点：
+
+- `Events::openTab()` 只作用于**主框架 tab**，不改当前 iframe 自己的地址；同一 `route` 重复打开不会重复开 tab，而是直接切过去。不传 `$title` 时默认标题是「新页面」，不传 `$index` 时运行时按 route 推导 `sc-tab-<hash>`。
+- `Events::openTab()` 依赖主框架外壳发布的 tab 桥（见 `### iframe 宿主桥`）。**桥不存在时运行时会降级成 `window.open(url, '_blank')`**——本该开 tab 却甩出了浏览器新窗口，先查桥有没有装。
+- `Events::historyBack()` 等价于在当前文档里执行一次 `history.back()`，**不关宿主弹窗、不跳 URL**。
+- 接上条，`historyBack()` **只在本帧确实自己导航过之后才生效**，其余情况静默跳过、点了没反应。原因：iframe 里的 `history` 是**顶层联合历史(joint session history)**——`history.length` 数的是整个顶层浏览上下文的条目（外壳登录跳转、开过的 tab 都会撑大它），`history.back()` 也是按联合历史回退，退到的那一条**可能属于主框架外壳或别的 tab**。无条件调用有可能把整个外壳导航走、所有已开 tab 丢失。所以运行时只在"本帧经 `Events::openUrl()`（默认 `_self`）自己导航过"时才真正回退，用帧内标记判定，不看 `history.length`。
+- 因此 `historyBack()` 的典型可用场景是"A 页用 `openCurrentPage()` 跳到 B 页，B 页点返回回到 A"。**从菜单直接打开的页面、弹窗子页、新建 iframe 都退不了**——这些场景要"回列表"请用 `Actions::back($url)` / `Events::returnTo($url)`。
+- 接上条：**跳过时 `historyBack()` 返回 `false`**，而事件链里任何一个 `false` 都会取消宿主动作（`isEventCanceled`）。所以它**不能**和别的动作混挂在同一事件上——比如挂在 `Dialog` 的 `beforeClose` 上会让弹窗关不掉。只想"退到上一页"就单独用一个按钮。
+- `Events::historyBack()` 与 `Events::returnTo()` 是两回事：`returnTo()` 优先关闭宿主 iframe 弹窗，关不掉才跳到给定 URL，是"带目标的返回"。表单页取消/保存后回列表应该继续用 `returnTo()`（或 `Actions::back($url)`）；只有在"就是想让用户退回上一页"时才用 `historyBack()`。
+- `Actions::back()` 走的是 `returnTo()`，**不是** `historyBack()`，名字相近但语义不同，不要互换。
+
+#### `Actions::back()` 的自动识别
+
+`Actions::back()` 会**按当前页面所处上下文自己判断该怎么返回**，命中即返回，顺序是「显式压过隐式」：
+
+| 级 | 条件 | 行为 |
+| --- | --- | --- |
+| 1 | 当前是 iframe 弹窗子页（`Dialog::iframe()`） | 关掉宿主弹窗 |
+| 2 | 显式传了 `$url` | 在当前 iframe 内跳到该 URL |
+| 3 | 本帧自己导航过 | `history.back()` |
+| 4 | 当前在主框架 tab 里 | 关掉自己这个 tab，回到上一个 tab |
+| 5 | 当前是脚本 `window.open` 打开的独立窗口 | `window.close()` 关掉自己 |
+| 6 | 都不适用 | 静默跳过 |
+
+所以同一个 `Actions::back()` 在弹窗表单、tab 表单、跳转后的详情页里都能正确"返回"，**大多数场景不用再手写 URL**：
+
+```php
+// 弹窗子页 → 关弹窗；tab 里 → 关 tab；跳转过来的 → 退回上一页。一份代码三种上下文都对
+Forms::make('form')->footerActions(Actions::save(), Actions::back());
+
+// 想钉死目标时才传 URL，此时第 2 级优先于自动识别
+Forms::make('form')->footerActions(Actions::save(), Actions::back('/admin/qa-info/lists', '返回列表'));
+```
+
+几点要注意：
+
+- **第 3 级只在本帧确实自己导航过时才生效**。iframe 的 `history` 是顶层联合历史，无条件 `history.back()` 可能把主框架外壳或别的 tab 导航走（见上面的 `historyBack()` 说明）。第 1、2 级跳转时会自动置位这个标记，所以「列表 → 详情 → 返回」这条链是通的。
+- **第 4、5 级会真正关掉用户的 tab/窗口**，是破坏性兜底，因此排在所有非破坏性方式之后。菜单直接打开的独立表单页点「取消」走第 4 级；`Actions::openNewPage()` 开出去的新标签页点「取消」走第 5 级。
+- 第 4 级依赖主框架外壳的 `closeSelf`：子页把自己的 `window` 传上来，宿主逐 tab 比对 `iframe.contentWindow`。**比的是 `WindowProxy`**（规范保证同一个浏览上下文的 WindowProxy 跨 realm 是同一个对象，`===` 可靠）；不要改成比 `window.frameElement`——那返回的是父文档里的 DOM 元素，跨 realm 取到的可能是包装对象，在父页面里 `===` 会比不中。
+- 第 5 级只对「由脚本 `window.open` 打开」的窗口生效：这类窗口才允许自己 `window.close()`。普通浏览打开的页面 `opener` 为空直接跳过，即使 `opener` 非空，浏览器对非脚本打开的窗口也会静默拒绝 `close()`，不会误关用户的标签页。
+- 桥没装或没实现 `closeSelf` 时，第 4 级退化成静默，不会报错。
 
 ### 复杂联动怎么处理
 

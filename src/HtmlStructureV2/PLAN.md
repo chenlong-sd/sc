@@ -40,6 +40,53 @@ So the next phase should focus on missing feature bodies, not on re-creating old
 
 ## Recently Completed
 
+### Done. Page navigation and back capability
+
+Pages that live inside main-framework tab iframes previously had no declarative way to jump or go back:
+`openHostTab()` existed in the runtime but was reachable only from raw JS strings, the `__SC_V2_HOST_TAB_BRIDGE__`
+it depends on had **no producer anywhere in the repo**, and `Actions::back()` was (and remains) the `returnTo()`
+semantics rather than a plain history back.
+
+Confirmed landing points:
+
+- `Events::openTab($route, $title, $index, $query)` now exists as the public "open a main-framework tab" event; it
+  reuses `buildUrlWithQuery()` / `openHostTab()`, so an already-open route is activated instead of duplicated
+- `Events::historyBack()` now exists as the public "go back one entry in this document" event, deliberately distinct
+  from `returnTo()`. It does **not** guard on `history.length`: an iframe's `history` is the top-level *joint* session
+  history, so `length` never reflects this frame's own entries and `back()` can traverse into the shell or another tab.
+  The runtime instead sets a frame-local `window.name` marker whenever it navigates the frame itself
+  (`openUrl()` with the default `_self`) and only calls `back()` when that marker is present
+- `Action::make(...)->openTab()` / `openNewPage()` / `openCurrentPage()` / `historyBack()` now exist as chainable
+  instance methods, matching the existing `openHostUrlDialog()` convention rather than adding a parallel set of
+  static factories; all four only append a `click` handler (they do not clobber `onClick()` or restyle the button)
+  and carry only `events.click`, so no executor change was needed in `ActionButtonRenderer`
+- `Page::historyBack()` appends the back button to the existing `headerActions`, reusing `PageFrameRenderer`
+- The main-framework shell now publishes `window.__SC_V2_HOST_TAB_BRIDGE__ = { open(target), close(index) }` from
+  the `MainTabs` component's `mounted()`, reusing the component's own `add()` / `remove()` rather than reimplementing
+  dedupe/activate/close logic
+- `Actions::back()` / `Events::returnTo()` are unchanged **in signature and at every existing call site** — 6 plugin pages
+  plus the CRUD generator template keep working untouched. What changed is the runtime resolution behind them: `returnTo`
+  is now a five-tier chain that picks the return strategy from the current context, explicit beating implicit —
+  (1) iframe-dialog child → close host dialog, (2) explicit `$url` → navigate in-frame, (3) this frame navigated itself →
+  `history.back()` (reusing the same frame-local marker guard as `historyBack()`), (4) inside a main-framework tab →
+  close that tab, (5) otherwise silent. Tiers 1–3 are non-destructive and ordered before tier 4, which is the only
+  destructive fallback
+- The shell bridge gained `closeSelf(callerWindow)`: a child page cannot know which tab it belongs to, so it passes its
+  own `window` up and the host matches it against `iframe.contentWindow` to close the right tab. Identity is compared on
+  the **`WindowProxy`**, which the spec guarantees is one object across realms; an earlier `window.frameElement` version
+  compared a DOM element from the parent document and was not reliable across realms. A bridge without `closeSelf`
+  degrades that tier to silent rather than throwing
+- `returnTo` gained a fifth tier for `Actions::openNewPage()` targets: a page opened by script `window.open` lives in a
+  standalone browser tab with no host bridge, so it closes itself via `window.close()` — gated on a non-empty
+  `window.opener`, which is both the only case browsers permit and the only case that can arise here
+
+Outcome:
+
+- Opening a tab, opening a browser tab, jumping inside the current iframe, and going back are now four explicitly
+  named, separately documented capabilities instead of one overloaded `back()`
+- The `__SC_V2_HOST_TAB_BRIDGE__` protocol finally has a producer, so "open tab" no longer silently degrades to
+  `window.open(_blank)` in real pages
+
 ### Done. V2-native media display for detail pages (single/multi image, single/multi video, attachments)
 
 V1 exposed `Image / Images / Video / Videos` for detail-side media rendering. V2 previously only had

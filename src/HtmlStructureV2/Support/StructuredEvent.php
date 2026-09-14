@@ -52,6 +52,40 @@ final class StructuredEvent implements StructuredEventInterface
     }
 
     /**
+     * 创建一个“在主框架新开一个 tab”的结构化事件。
+     * 运行时会先按 `query` 拼好 URL，再交给宿主 tab 桥打开；宿主未提供桥时降级为 `window.open(url, '_blank')`。
+     * 当前页面本身就跑在主框架 tab 的 iframe 里时，效果是在菜单右侧新增一个 iframe tab 并激活它；
+     * 目标 `route` 已在 tab 列表中时不会重复开，而是直接切过去。
+     * - `query` 支持动态表达式，运行时会从当前 handler context 中解析（可用字段同 `openUrl()`）；
+     *   传字符串时会自动包装成 JsExpression。
+     * - 不传 `title` 时 tab 标题为“新页面”；不传 `index` 时运行时会按 route 生成稳定的 `sc-tab-<hash>`，
+     *   因此同一 route 重复打开会命中同一个 tab。
+     *
+     * @param string|JsExpression $route 目标路由。
+     * @param string|null $title tab 标题；传 null 时使用默认标题。
+     * @param string|null $index tab 唯一标识；传 null 时运行时按 route 推导。
+     * @param array|string|JsExpression $query 查询参数。
+     * @return self 打开主框架 tab 事件实例。
+     *
+     * 示例：
+     * - `StructuredEvent::openTab('/admin/qa-info/lists', '问答列表')`
+     * - `StructuredEvent::openTab('/admin/qa-info/form', '编辑问答', null, ['id' => '@row.id'])`
+     */
+    public static function openTab(
+        string|JsExpression $route,
+        ?string $title = null,
+        ?string $index = null,
+        array|string|JsExpression $query = []
+    ): self {
+        return new self('openTab', [
+            'route' => $route,
+            'title' => self::optionalString($title),
+            'index' => self::optionalString($index),
+            'query' => self::normalizeExpressionConfig($query),
+        ]);
+    }
+
+    /**
      * 创建一个打开弹窗的结构化事件。
      * 若当前 handler context 中存在 `row` / `tableKey`，运行时会默认一并传给弹窗。
      *
@@ -174,16 +208,26 @@ final class StructuredEvent implements StructuredEventInterface
     }
 
     /**
-     * 创建一个“优先关闭宿主弹窗，否则跳转到指定 URL”的结构化事件。
-     * 适合 iframe 子表单页里的取消返回、保存成功返回等常见场景。
-     * 仅当当前页面由启用 `iframeHost()` 的 V2 iframe 弹窗打开时，才会优先尝试关闭宿主；
-     * 其它页面上下文会直接回退到 URL 跳转；若未传 URL，则会静默跳过。
+     * 创建一个“按当前上下文自动识别返回方式”的结构化事件。
+     * 适合 iframe 子表单页里的取消返回、保存成功返回，也适合主框架 tab 里的独立表单页。
+     * 运行时按下面顺序分级识别，命中即返回（显式压过隐式）：
+     *
+     * 1. 当前是 iframe 弹窗子页（`iframeHost()`）→ 关掉宿主弹窗
+     * 2. 显式传了 `$url`                       → 在当前 iframe 内跳到该 URL
+     * 3. 本帧自己导航过                          → `history.back()`
+     * 4. 当前在主框架 tab 里                     → 关掉自己这个 tab，回到上一个 tab
+     * 5. 都不适用                               → 静默跳过
+     *
+     * 第 3 级只在本帧确实自己导航过时才生效——iframe 的 `history` 是顶层联合历史，
+     * 无条件 `history.back()` 可能把主框架外壳或别的 tab 导航走，详见 `historyBack()`。
+     * 第 4 级会真正关掉用户的 tab，属于破坏性兜底，因此排在所有非破坏性方式之后。
      * 可继续链式调用 `hostTable()`，让关闭前先请求宿主刷新表格。
      *
-     * @param string|JsExpression|null $url 回退跳转 URL；传 null 时仅尝试关闭宿主弹窗。
+     * @param string|JsExpression|null $url 回退跳转 URL；传 null 时交给运行时自动识别后续分级。
      * @return self 返回事件实例。
      *
      * 示例：
+     * - `StructuredEvent::returnTo()`
      * - `StructuredEvent::returnTo('/admin/qa-info/lists')`
      */
     public static function returnTo(string|JsExpression|null $url = null): self
@@ -192,6 +236,30 @@ final class StructuredEvent implements StructuredEventInterface
             'url' => $url,
             'reloadHostTable' => false,
         ]);
+    }
+
+    /**
+     * 创建一个”回退当前页面浏览器历史”的结构化事件，等价于在当前文档里执行一次 `history.back()`。
+     * 不跳 URL、不关宿主弹窗；需要明确回到某个列表页时请继续用 `returnTo()`。
+     *
+     * 重要：iframe 里的 history 是**顶层联合历史(joint session history)**，不是本帧自己的。
+     * `window.history.length` 数的是整个顶层浏览上下文的条目（外壳登录跳转、开过的 tab 都会撑大它），
+     * `history.back()` 也是按联合历史回退——退到的那一条可能属于主框架外壳或别的 tab。
+     * 无条件调用有可能把整个外壳导航走（所有已开 tab 丢失）。因此运行时**只在有证据表明
+     * “本帧确实自己导航过”时才真正回退**：本帧经 `openUrl()`（默认 `_self`）自己导航过才会置位，
+     * 其余情况（新建 iframe、菜单直接打开的页面、弹窗子页）一律静默跳过并返回 `false`。
+     *
+     * 注意 `false` 会取消同一事件链上的宿主动作（`isEventCanceled`），
+     * 所以不要把它和别的动作混挂在同一事件上——例如挂在 `Dialog` 的 `beforeClose` 上会让弹窗关不掉。
+     *
+     * @return self 回退历史事件实例。
+     *
+     * 示例：
+     * - `StructuredEvent::historyBack()`
+     */
+    public static function historyBack(): self
+    {
+        return new self('historyBack');
     }
 
     /**
@@ -619,6 +687,16 @@ final class StructuredEvent implements StructuredEventInterface
         }
 
         return $this;
+    }
+
+    /**
+     * 把可选的字符串参数归一化：空白串统一收敛成 null，交给 jsonSerialize() 过滤掉。
+     */
+    private static function optionalString(?string $value): ?string
+    {
+        $value = is_string($value) ? trim($value) : null;
+
+        return $value !== '' ? $value : null;
     }
 
     private static function normalizeExpressionConfig(array|string|JsExpression $value): array|JsExpression
