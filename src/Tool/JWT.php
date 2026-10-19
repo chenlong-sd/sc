@@ -8,6 +8,7 @@ namespace Sc\Util\Tool;
 
 use JetBrains\PhpStorm\ExpectedValues;
 use RuntimeException;
+use stdClass;
 
 class JWT
 {
@@ -38,6 +39,9 @@ class JWT
     /** @var array refreshToken数据 */
     private array $refresh = [];
 
+    /** @var bool RefreshToken是否显式指定了独立受众 */
+    private bool $refreshAudienceExplicit = false;
+
     /** @var array 自定义携带数据 */
     private array $data = [];
 
@@ -45,7 +49,7 @@ class JWT
     private array $config = [
         'SECRET' => self::DEFAULT_SECRET,
         'REFRESH' => self::DEFAULT_REFRESH,
-        'AUDIENCE' => '', // 受众标识（如服务域名）
+        'AUDIENCE' => '', // string|string[]，空字符串或空数组表示不限受众
     ];
 
     /**
@@ -78,6 +82,7 @@ class JWT
             'REFRESH' => ($config['REFRESH'] ?? self::DEFAULT_REFRESH),
             'AUDIENCE' => ($config['AUDIENCE'] ?? ''),
         ];
+        self::normalizeAudiences($this->config['AUDIENCE']);
     }
 
     /**
@@ -138,20 +143,30 @@ class JWT
         $data = [
             'exp' => time() + $expireSeconds,
             'jti' => $this->generateSecureRandomString(32), // 32位安全随机标识
-            'aud' => $this->getConfig('AUDIENCE')
+            'aud' => $this->payload['aud'] ?? $this->getConfig('AUDIENCE')
         ];
 
         $data = array_merge($data, $fill_data);
-        $payload = self::base64UrlEncode($data);
-        $sign = hash_hmac($this->alg, $payload, $this->getConfig('REFRESH'));
-
-        $this->refresh = [
-            'refresh_token' => $payload . '.' . self::base64UrlEncode($sign),
-            'refresh_token_exp' => $data['exp']
-        ];
+        self::normalizeAudiences($data['aud']);
+        $this->refresh = $this->signRefreshPayload($data);
+        $this->refreshAudienceExplicit = array_key_exists('aud', $fill_data);
 
         $this->payload['rsh'] = $data['jti'];
         return $this;
+    }
+
+    /**
+     * 签名RefreshToken载荷，保留既有标识和过期时间。
+     */
+    private function signRefreshPayload(array $data): array
+    {
+        $payload = self::base64UrlEncode($data);
+        $sign = hash_hmac($this->alg, $payload, $this->getConfig('REFRESH'));
+
+        return [
+            'refresh_token' => $payload . '.' . self::base64UrlEncode($sign),
+            'refresh_token_exp' => $data['exp']
+        ];
     }
 
     /**
@@ -178,8 +193,8 @@ class JWT
         }
 
         // 解析RefreshToken载荷
-        $refreshData = json_decode(self::base64UrlDecode($refreshPayload), true);
-        if (json_last_error() !== JSON_ERROR_NONE || empty($refreshData['jti']) || empty($refreshData['exp'])) {
+        $refreshData = self::decodePayload($refreshPayload, 'RefreshToken');
+        if (empty($refreshData['jti']) || empty($refreshData['exp'])) {
             throw new RuntimeException('RefreshToken数据无效', self::ERROR_CODE);
         }
 
@@ -190,9 +205,7 @@ class JWT
         if ($refreshData['jti'] !== $originalPayload['rsh']) {
             throw new RuntimeException('RefreshToken与Token不匹配', self::ERROR_CODE);
         }
-        if (!empty($refreshData['aud']) && $refreshData['aud'] !== $this->getConfig('AUDIENCE')) {
-            throw new RuntimeException('RefreshToken受众不匹配', self::ILLEGAL_AUD_CODE);
-        }
+        $this->validateAudience($refreshData, 'RefreshToken');
 
         // 校验RefreshToken签名
         $calculatedSign = hash_hmac($this->alg, $refreshPayload, $this->getConfig('REFRESH'));
@@ -214,7 +227,11 @@ class JWT
     private function resetPayload(): self
     {
         $this->payload = [];
-        $this->setIat()->setNbf()->setExp()->setIss()->setAud()->setJti();
+        $this->setIat()->setNbf()->setExp()->setIss()->setJti();
+        // 保留原受众及其类型；原Token未声明受众时不补入配置值。
+        if (array_key_exists('aud', $this->data)) {
+            $this->payload['aud'] = $this->data['aud'];
+        }
         if (isset($this->data['jti']) && isset($this->data['jtiv'])) {
             $this->payload['jti'] = $this->data['jti'];
             $this->payload['jtiv'] = $this->data['jtiv'] + 1;
@@ -257,6 +274,52 @@ class JWT
     }
 
     /**
+     * 在验证前读取受众，不需要密钥，不校验签名、算法或时效。
+     * 返回值未经验证，仅可用于选择服务端预设的验证配置，不能作为认证或授权依据。
+     * @param string $token Token字符串
+     * @return list<string> 受众列表；未声明受众或受众为空时返回空数组
+     * @throws RuntimeException Token结构、载荷或受众类型无效
+     */
+    public static function peekAudiences(string $token): array
+    {
+        [, $payload] = self::splitToken($token);
+        $payloadData = self::decodePayload($payload);
+
+        return self::normalizeAudiences($payloadData['aud'] ?? []);
+    }
+
+    /**
+     * 解析Token的三个非空Base64Url分段，不验证内容真实性。
+     * @return array{string, string, string}
+     */
+    private static function splitToken(string $token): array
+    {
+        if (!preg_match('/\A[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\z/', $token)) {
+            throw new RuntimeException('Token格式无效', self::ERROR_CODE);
+        }
+
+        return explode('.', $token);
+    }
+
+    /**
+     * 解析JSON对象载荷，并在关联数组转换前检查受众类型。
+     */
+    private static function decodePayload(string $payload, string $tokenType = 'Token'): array
+    {
+        $json = self::base64UrlDecode($payload);
+        $payloadData = json_decode($json);
+        if (json_last_error() !== JSON_ERROR_NONE || !$payloadData instanceof stdClass) {
+            throw new RuntimeException($tokenType . '载荷无效', self::ERROR_CODE);
+        }
+        if (property_exists($payloadData, 'aud')) {
+            self::normalizeAudiences($payloadData->aud);
+        }
+
+        // 保持自定义嵌套数据原有的关联数组返回格式。
+        return json_decode($json, true);
+    }
+
+    /**
      * 核心验证逻辑
      * @param string $token Token字符串
      * @param bool $timeVerify 是否校验时效
@@ -266,12 +329,7 @@ class JWT
     private function verify(string $token, bool $timeVerify = true): array
     {
         // 解析Token结构
-        $parts = explode('.', $token);
-        if (count($parts) !== 3) {
-            throw new RuntimeException('Token格式无效', self::ERROR_CODE);
-        }
-
-        list($header, $payload, $sign) = $parts;
+        list($header, $payload, $sign) = self::splitToken($token);
 
         // 解析并验证Header
         $headerData = json_decode(self::base64UrlDecode($header), true);
@@ -286,10 +344,7 @@ class JWT
         $this->alg = $headerData['alg'];
 
         // 解析并验证Payload
-        $payloadData = json_decode(self::base64UrlDecode($payload), true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new RuntimeException('Token载荷无效', self::ERROR_CODE);
-        }
+        $payloadData = self::decodePayload($payload);
 
         // 时效校验
         if ($timeVerify) {
@@ -334,16 +389,41 @@ class JWT
     }
 
     /**
-     * 受众校验（aud）
+     * 受众校验（aud），不限受众或与允许列表存在交集时通过。
      * @param array $payload 载荷数据
+     * @param string $tokenType Token类型（用于错误提示）
      * @throws RuntimeException
      */
-    private function validateAudience(array $payload): void
+    private function validateAudience(array $payload, string $tokenType = 'Token'): void
     {
-        $audience = $this->getConfig('AUDIENCE');
-        if (!empty($audience) && (!isset($payload['aud']) || $payload['aud'] !== $audience)) {
-            throw new RuntimeException('Token受众不匹配', self::ILLEGAL_AUD_CODE);
+        $allowed = self::normalizeAudiences($this->getConfig('AUDIENCE'));
+        $audiences = self::normalizeAudiences($payload['aud'] ?? []);
+        if ($allowed === [] || array_intersect($allowed, $audiences) !== []) {
+            return;
         }
+
+        throw new RuntimeException($tokenType . '受众不匹配', self::ILLEGAL_AUD_CODE);
+    }
+
+    /**
+     * 将单个受众或受众列表统一为字符串列表，兼容原有空字符串受众。
+     * @return list<string>
+     */
+    private static function normalizeAudiences(mixed $audiences): array
+    {
+        if (is_string($audiences)) {
+            return $audiences === '' ? [] : [$audiences];
+        }
+        if (!is_array($audiences) || !array_is_list($audiences)) {
+            throw new RuntimeException('受众必须为字符串或字符串列表', self::ILLEGAL_AUD_CODE);
+        }
+        foreach ($audiences as $audience) {
+            if (!is_string($audience) || $audience === '') {
+                throw new RuntimeException('受众列表必须包含非空字符串', self::ILLEGAL_AUD_CODE);
+            }
+        }
+
+        return $audiences;
     }
 
     /**
@@ -474,12 +554,22 @@ class JWT
 
     /**
      * 设置受众（aud）
-     * @param string $aud 受众标识（如客户端域名）
+     * @param string|string[] $aud 单个受众或受众列表；空字符串使用配置值
      * @return self
      */
-    public function setAud(string $aud = ''): self
+    public function setAud(string|array $aud = ''): self
     {
-        $this->payload['aud'] = $aud ?: $this->getConfig('AUDIENCE');
+        $aud = $aud === '' ? $this->getConfig('AUDIENCE') : $aud;
+        self::normalizeAudiences($aud);
+        // 默认RefreshToken受众跟随Token设置，兼容先调用getRefresh()的链式写法。
+        if (!$this->refreshAudienceExplicit && isset($this->refresh['refresh_token'])) {
+            [$refreshPayload] = explode('.', $this->refresh['refresh_token']);
+            // 此载荷由本实例生成，保留自定义数据中JSON对象和数组的区别。
+            $refreshData = (array) json_decode(self::base64UrlDecode($refreshPayload), false, 512, JSON_THROW_ON_ERROR);
+            $refreshData['aud'] = $aud;
+            $this->refresh = $this->signRefreshPayload($refreshData);
+        }
+        $this->payload['aud'] = $aud;
         return $this;
     }
 
@@ -508,6 +598,7 @@ class JWT
     {
         $this->payload = [];
         $this->refresh = [];
+        $this->refreshAudienceExplicit = false;
         $this->data = [];
         $this->config = [];
     }
