@@ -30,6 +30,7 @@
             resolveColumnTagMeta,
             setByPath,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
+          const DEFAULT_DEFERRED_TOTAL_PAGES = 20;
 
           const compareTableValues = typeof compareValues === 'function'
             ? compareValues
@@ -1746,7 +1747,8 @@
               const rowCount = Array.isArray(state.rows) ? state.rows.length : 0;
 
               if (state.hasMore === true) {
-                return (page * pageSize) + 1;
+                // 统计总数前无法得知总页数，默认至少放出 20 页供翻页
+                return Math.max((page * pageSize) + 1, DEFAULT_DEFERRED_TOTAL_PAGES * pageSize);
               }
 
               return ((page - 1) * pageSize) + Math.max(rowCount, 1);
