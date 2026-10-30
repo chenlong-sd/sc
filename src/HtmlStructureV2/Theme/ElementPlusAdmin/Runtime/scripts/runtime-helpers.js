@@ -2824,6 +2824,7 @@
               selection: [],
               total: initialRows.length,
               totalDeferred: false,
+              totalOnDemand: false,
               totalLoading: false,
               hasMore: false,
               totalQuerySignature: null,

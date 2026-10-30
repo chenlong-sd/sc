@@ -56,13 +56,13 @@ class QRCode
     }
 
     /**
-     * access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用getAccessToken 或者 authorizer_access_token
-     * path    string    是    扫码进入的小程序页面路径，最大长度 1024 个字符，不能为空，scancode_time为系统保留参数，不允许配置；对于小游戏，可以只传入 query 部分，来实现传参效果，如：传入 "?foo=bar"，即可在 wx.getLaunchOptionsSync 接口中的 query 参数获取到 {foo:"bar"}。
-     * width    number    否    二维码的宽度，单位 px。默认值为430，最小 280px，最大 1280px
-     * auto_color    boolean    否    默认值false；自动配置线条颜色，如果颜色依然是黑色，则说明不建议配置主色调
-     * line_color    object    否    默认值{"r":0,"g":0,"b":0} ；auto_color 为 false 时生效，使用 rgb 设置颜色 例如 {"r":"xxx","g":"xxx","b":"xxx"} 十进制表示
-     * is_hyaline    boolean    否    默认值false；是否需要透明底色，为 true 时，生成透明底色的小程序码
-     * env_version    string    否    要打开的小程序版本。正式版为 "release"，体验版为 "trial"，开发版为 "develop"。默认是正式版。
+     * - access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用getAccessToken 或者 authorizer_access_token
+     * - path    string    是    扫码进入的小程序页面路径，最大长度 1024 个字符，不能为空，scancode_time为系统保留参数，不允许配置；对于小游戏，可以只传入 query 部分，来实现传参效果，如：传入 "?foo=bar"，即可在 wx.getLaunchOptionsSync 接口中的 query 参数获取到 {foo:"bar"}。
+     * - width    number    否    二维码的宽度，单位 px。默认值为430，最小 280px，最大 1280px
+     * - auto_color    boolean    否    默认值false；自动配置线条颜色，如果颜色依然是黑色，则说明不建议配置主色调
+     * - line_color    object    否    默认值{"r":0,"g":0,"b":0} ；auto_color 为 false 时生效，使用 rgb 设置颜色 例如 {"r":"xxx","g":"xxx","b":"xxx"} 十进制表示
+     * - is_hyaline    boolean    否    默认值false；是否需要透明底色，为 true 时，生成透明底色的小程序码
+     * - env_version    string    否    要打开的小程序版本。正式版为 "release"，体验版为 "trial"，开发版为 "develop"。默认是正式版。
      *
      * @param array $param
      *
@@ -78,21 +78,21 @@ class QRCode
 
     /**
      * 获取链接
-     * access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用getAccessToken 或者 authorizer_access_token
-     * path    string    否    通过 URL Link 进入的小程序页面路径，必须是已经发布的小程序存在的页面，不可携带 query 。path 为空时会跳转小程序主页
-     * query    string    否    通过 URL Link 进入小程序时的query，最大1024个字符，只支持数字，大小写英文以及部分特殊字符：!#$&'()*+,/:;=?@-._~%
-     * is_expire    boolean    否    默认值false。生成的 URL Link 类型，到期失效：true，30天有效：false。
-     * expire_type    number    否    默认值0.小程序 URL Link 失效类型，失效时间：0，失效间隔天数：1
-     * expire_time    number    否    到期失效的 URL Link 的失效时间，为 Unix 时间戳。生成的到期失效 URL Link 在该时间前有效。最长有效期为30天。expire_type 为 0 必填
-     * expire_interval    number    否    到期失效的URL Link的失效间隔天数。生成的到期失效URL Link在该间隔时间到达前有效。最长间隔天数为30天。expire_type 为 1 必填
-     * cloud_base    object    否    云开发静态网站自定义 H5 配置参数，可配置中转的云开发 H5 页面。不填默认用官方 H5 页面
-     * 属性    类型    必填    说明
-     * env    string    是    云开发环境
-     * domain    string    否    静态网站自定义域名，不填则使用默认域名
-     * path    string    否    云开发静态网站 H5 页面路径，不可携带 query
-     * query    string    否    云开发静态网站 H5 页面 query 参数，最大 1024 个字符，只支持数字，大小写英文以及部分特殊字符：`!#$&'()*+,/:;=?@-._~%``
-     * resource_appid    string    否    第三方批量代云开发时必填，表示创建该 env 的 appid （小程序/第三方平台）
-     * env_version    string    否    默认值"release"。要打开的小程序版本。正式版为 "release"，体验版为"trial"，开发版为"develop"，仅在微信外打开时生效
+     * - access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用getAccessToken 或者 authorizer_access_token
+     * - path    string    否    通过 URL Link 进入的小程序页面路径，必须是已经发布的小程序存在的页面，不可携带 query 。path 为空时会跳转小程序主页
+     * - query    string    否    通过 URL Link 进入小程序时的query，最大1024个字符，只支持数字，大小写英文以及部分特殊字符：!#$&'()*+,/:;=?@-._~%
+     * - is_expire    boolean    否    默认值false。生成的 URL Link 类型，到期失效：true，30天有效：false。
+     * - expire_type    number    否    默认值0.小程序 URL Link 失效类型，失效时间：0，失效间隔天数：1
+     * - expire_time    number    否    到期失效的 URL Link 的失效时间，为 Unix 时间戳。生成的到期失效 URL Link 在该时间前有效。最长有效期为30天。expire_type 为 0 必填
+     * - expire_interval    number    否    到期失效的URL Link的失效间隔天数。生成的到期失效URL Link在该间隔时间到达前有效。最长间隔天数为30天。expire_type 为 1 必填
+     * - cloud_base    object    否    云开发静态网站自定义 H5 配置参数，可配置中转的云开发 H5 页面。不填默认用官方 H5 页面
+     * - 属性    类型    必填    说明
+     * - env    string    是    云开发环境
+     * - domain    string    否    静态网站自定义域名，不填则使用默认域名
+     * - path    string    否    云开发静态网站 H5 页面路径，不可携带 query
+     * - query    string    否    云开发静态网站 H5 页面 query 参数，最大 1024 个字符，只支持数字，大小写英文以及部分特殊字符：`!#$&'()*+,/:;=?@-._~%``
+     * - resource_appid    string    否    第三方批量代云开发时必填，表示创建该 env 的 appid （小程序/第三方平台）
+     * - env_version    string    否    默认值"release"。要打开的小程序版本。正式版为 "release"，体验版为"trial"，开发版为"develop"，仅在微信外打开时生效
      *
      * @param array $param
      *
@@ -109,10 +109,10 @@ class QRCode
     /**
      * 获取短链
      *
-     * access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用access_token或者authorizer_access_token
-     * page_url    string    是    通过 Short Link 进入的小程序页面路径，必须是已经发布的小程序存在的页面，可携带 query，最大1024个字符
-     * page_title    string    否    页面标题，不能包含违法信息，超过20字符会用... 截断代替
-     * is_permanent    boolean    否    默认值false。生成的 Short Link 类型，短期有效：false，永久有效：true
+     * - access_token    string    是    接口调用凭证，该参数为 URL 参数，非 Body 参数。使用access_token或者authorizer_access_token
+     * - page_url    string    是    通过 Short Link 进入的小程序页面路径，必须是已经发布的小程序存在的页面，可携带 query，最大1024个字符
+     * - page_title    string    否    页面标题，不能包含违法信息，超过20字符会用... 截断代替
+     * - is_permanent    boolean    否    默认值false。生成的 Short Link 类型，短期有效：false，永久有效：true
      *
      * @param array $param
      *

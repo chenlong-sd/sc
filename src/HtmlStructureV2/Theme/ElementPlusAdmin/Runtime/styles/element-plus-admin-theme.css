@@ -475,7 +475,8 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   flex-wrap: wrap;
 }
 
-.sc-v2-table-pagination__deferred {
+.sc-v2-table-pagination__deferred,
+.sc-v2-table-pagination__refresh {
   display: inline-flex;
   align-items: center;
 }

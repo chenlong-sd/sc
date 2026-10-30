@@ -2564,6 +2564,7 @@
                           : (hasNumericTotal ? resolvedTotal : rows.length);
                         state.rows = rows;
                         state.allRows = clone(rows);
+                        state.totalOnDemand = totalDeferred === true;
                         if (totalDeferred === true) {
                           const hasKnownTotal = state.totalQuerySignature === totalQuerySignature
                             && typeof state.total === 'number'
@@ -2607,7 +2608,7 @@
                     });
                 });
             },
-            loadTableTotal(tableKey = null){
+            loadTableTotal(tableKey = null, force = false){
               const resolvedKey = this.resolveTableKey(tableKey);
               const tableCfg = this.getTableConfig(resolvedKey);
               const state = this.getTableState(resolvedKey);
@@ -2615,7 +2616,8 @@
                 return Promise.resolve(null);
               }
 
-              if (state.totalDeferred !== true) {
+              // force 用于已获取总数后的“更新总数”，仅按需统计的表格允许重新计数
+              if (state.totalDeferred !== true && (force !== true || state.totalOnDemand !== true)) {
                 return Promise.resolve(state.total);
               }
 

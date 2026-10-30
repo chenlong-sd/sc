@@ -447,15 +447,18 @@ final class TableRenderer
     public function renderPagination(Table $table, TableRenderBindings $bindings): AbstractHtmlElement
     {
         $totalDeferred = $bindings->totalDeferredExpression();
+        $totalOnDemand = $bindings->totalOnDemandExpression();
 
         return El::double('div')->addClass('sc-v2-table-pagination')
             ->append(
                 El::double('el-pagination')->setAttrs([
                     'background' => '',
                     ':layout' => sprintf(
-                        '%s ? %s : %s',
+                        '%s ? %s : (%s ? %s : %s)',
                         $totalDeferred,
                         $this->jsValue('slot, sizes, prev, pager, next'),
+                        $totalOnDemand,
+                        $this->jsValue('total, slot, sizes, prev, pager, next, jumper'),
                         $this->jsValue('total, sizes, prev, pager, next, jumper')
                     ),
                     ':current-page' => $bindings->pageExpression(),
@@ -478,6 +481,20 @@ final class TableRenderer
                                 ':loading' => $bindings->totalLoadingExpression(),
                                 '@click' => $bindings->loadTotalExpression(),
                             ])->append('获取总数')
+                        ),
+                    El::double('span')
+                        ->addClass('el-pagination__total')
+                        ->addClass('sc-v2-table-pagination__refresh')
+                        ->setAttrs([
+                            'v-if' => sprintf('(!%s && %s)', $totalDeferred, $totalOnDemand),
+                        ])->append(
+                            El::double('el-button')->setAttrs([
+                                'link' => '',
+                                'type' => 'primary',
+                                'icon' => 'Refresh',
+                                ':loading' => $bindings->totalLoadingExpression(),
+                                '@click' => $bindings->refreshTotalExpression(),
+                            ])->append('更新')
                         )
                 ),
                 El::double('el-pagination')->addClass('sc-v2-table-pagination__jump')->setAttrs([

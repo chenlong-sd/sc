@@ -64,6 +64,11 @@ final class TableRenderBindings
         return sprintf('(%s?.totalDeferred === true)', $this->stateExpression());
     }
 
+    public function totalOnDemandExpression(): string
+    {
+        return sprintf('(%s?.totalOnDemand === true)', $this->stateExpression());
+    }
+
     public function totalLoadingExpression(): string
     {
         return sprintf('(%s?.totalLoading === true)', $this->stateExpression());
@@ -92,6 +97,11 @@ final class TableRenderBindings
     public function loadTotalExpression(): string
     {
         return sprintf('loadTableTotal(%s)', $this->tableKeyLiteral());
+    }
+
+    public function refreshTotalExpression(): string
+    {
+        return sprintf('loadTableTotal(%s, true)', $this->tableKeyLiteral());
     }
 
     public function exportExpression(): string
