@@ -32,6 +32,7 @@ final class TableRenderer
         'row-key',
         ':tree-props',
         ':max-height',
+        'scrollbar-always-on',
     ];
     private const DRAG_SORT_HANDLE_CLASS = 'sc-v2-table-drag-handle';
     private const SETTINGS_DRAG_HANDLE_CLASS = 'sc-v2-table-settings-drag-handle';
@@ -256,6 +257,7 @@ final class TableRenderer
             ':border' => $table->useSettings() ? $bindings->borderExpression($table->useBorder()) : ($table->useBorder() ? 'true' : 'false'),
             'empty-text' => $table->getEmptyText(),
             'style' => 'width: 100%',
+            'scrollbar-always-on' => '',
             '@selection-change' => $bindings->selectionChangeExpression(),
             '@sort-change' => $bindings->sortChangeExpression(),
         ]);

@@ -482,6 +482,7 @@ final class FormRenderer
             'row-key' => '__sc_v2_row_key',
             'empty-text' => $table->getEmptyText(),
             'class' => 'sc-v2-form-table__table',
+            'scrollbar-always-on' => '',
             'data-sc-form-table' => '1',
             'data-sc-form-table-sortable' => !$tableContext->formReadonly && $table->isReorderable() ? '1' : '0',
             ':data-sc-form-scope' => $scopeLiteral,
