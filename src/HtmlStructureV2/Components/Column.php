@@ -865,7 +865,7 @@ final class Column
      * 示例：
      * - `Tables::column('标题', 'title')->exportExcel(true, 10)`
      */
-    public function exportExcel(bool $allow = true, float $sort = null): self
+    public function exportExcel(bool $allow = true, ?float $sort = null): self
     {
         $this->exportExcel = [
             'sort' => $sort,
@@ -886,7 +886,7 @@ final class Column
      * 示例：
      * - `Tables::column('内部备注', 'remark')->notShow(true, true)`
      */
-    public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): self
+    public function notShow(bool $confirm = true, bool $excelExport = false, ?float $excelSort = null): self
     {
         if ($confirm) {
             $this->hidden = true;
@@ -904,7 +904,7 @@ final class Column
      * 示例：
      * - `Tables::column('导出专用字段', 'export_only')->onlyExportExcel()`
      */
-    public function onlyExportExcel(float $excelSort = null): self
+    public function onlyExportExcel(?float $excelSort = null): self
     {
         return $this->notShow(true, true, $excelSort);
     }

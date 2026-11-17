@@ -183,7 +183,7 @@ class ClassFileConstruction
         return $this;
     }
 
-    public function addUses(string $useClass, string $alias = null): bool
+    public function addUses(string $useClass, ?string $alias = null): bool
     {
         $useClass = trim($useClass);
 
@@ -255,7 +255,7 @@ class ClassFileConstruction
         return in_array($classTraits, $this->traits);
     }
 
-    public function addTraitsAlise(array|string $classTraitsAlise, string $classTraitsAliseName = null): ClassFileConstruction
+    public function addTraitsAlise(array|string $classTraitsAlise, ?string $classTraitsAliseName = null): ClassFileConstruction
     {
         if (is_string($classTraitsAlise)) {
             $classTraitsAlise = [$classTraitsAlise => $classTraitsAliseName];
@@ -502,7 +502,7 @@ class ClassFileConstruction
         return $this;
     }
 
-    public function getClassFileContent(int $startLine = null, int $endLine = null): array
+    public function getClassFileContent(?int $startLine = null, ?int $endLine = null): array
     {
         if ($startLine === null && $endLine === null) {
             return $this->classFileContent;

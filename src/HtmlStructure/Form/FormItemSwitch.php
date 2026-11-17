@@ -38,7 +38,7 @@ class FormItemSwitch extends AbstractFormItem implements FormItemInterface
     }
 
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemSwitchThemeInterface::class, $theme)->render($this);
     }

@@ -141,7 +141,7 @@ class Window
         return $this;
     }
 
-    public function toCode(string $theme = null)
+    public function toCode(?string $theme = null)
     {
         if ($theme === null && $this->url) {
             $theme = 'Layui';
@@ -226,7 +226,7 @@ class Window
     }
 
 
-    public function render(string $theme = null)
+    public function render(?string $theme = null)
     {
         return $this->toCode($theme);
     }

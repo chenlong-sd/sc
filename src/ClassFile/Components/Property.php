@@ -76,7 +76,7 @@ class Property
         return $this;
     }
 
-    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction = null): Property
+    public function setType(string|\ReflectionType|null $type, ?ClassFileConstruction $classFileConstruction = null): Property
     {
         if ($type instanceof \ReflectionType) {
             if ($type instanceof \ReflectionUnionType) {

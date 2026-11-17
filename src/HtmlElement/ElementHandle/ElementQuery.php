@@ -114,7 +114,7 @@ trait ElementQuery
      *
      * @return false|mixed|DoubleLabel|null
      */
-    public function pop(#[Language('JQuery-CSS')]string|callable $selector = null): mixed
+    public function pop(#[Language('JQuery-CSS')]string|callable|null $selector = null): mixed
     {
         if ($selector) {
             $element = $this->find($selector);
@@ -177,7 +177,7 @@ trait ElementQuery
      * @return array
      * @date 2023/5/5
      */
-    protected function queryElement(array $selectors, bool $isGetOne = true, array $queryElements = null, int $currentSelectorIndex = 0): array
+    protected function queryElement(array $selectors, bool $isGetOne = true, ?array $queryElements = null, int $currentSelectorIndex = 0): array
     {
         $queryElements = $queryElements ?: [$this];
 

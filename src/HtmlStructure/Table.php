@@ -197,7 +197,7 @@ class Table
      *
      * @return Table|$this|object
      */
-    public function when(bool $condition, callable $callback = null): mixed
+    public function when(bool $condition, ?callable $callback = null): mixed
     {
         if (!$this->virtual) {
             $this->virtual = new class
@@ -226,7 +226,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler = null, string $eventName = null): static
+    public function setHeaderEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler = null, ?string $eventName = null): static
     {
         $eventName = $eventName ?: ScTool::random('HeaderEvent')->get();
 
@@ -328,7 +328,7 @@ class Table
      *
      * @date 2023/6/1
      */
-    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler, string $eventName = null): static
+    public function setRowEvent(string|AbstractHtmlElement|array $eventLabel, #[Language('JavaScript')] mixed $handler, ?string $eventName = null): static
     {
         $eventName = $eventName ?: ScTool::random('RowEvent')->get();
 
@@ -412,7 +412,7 @@ class Table
      * @return AbstractHtmlElement
      * @date 2023/5/27
      */
-    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null): AbstractHtmlElement
+    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] ?string $theme = null): AbstractHtmlElement
     {
         foreach ($this->getColumns() as $column) {
             if ($search = $column->getSearch()){
@@ -430,7 +430,7 @@ class Table
      *
      * @return Table
      */
-    public function addStatusToggleButtons(string $searchField, array $mapping, string|DoubleLabel $label = null): static
+    public function addStatusToggleButtons(string $searchField, array $mapping, string|DoubleLabel|null $label = null): static
     {
         $this->statusToggleButtons[] = compact('searchField', 'mapping', 'label');
 

@@ -196,7 +196,7 @@ class FormItemEditor extends AbstractFormItem implements FormItemInterface
     }
 
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         try {
             return Theme::getRenderer(FormItemEditorThemeInterface::class, $theme)->render($this);

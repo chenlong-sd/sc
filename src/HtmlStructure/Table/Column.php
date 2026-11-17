@@ -148,7 +148,7 @@ class Column
     /**
      * @return $this
      */
-    public function enableSort(string $sortField = null): static
+    public function enableSort(?string $sortField = null): static
     {
         $this->sortField = $sortField ?: $this->getAttr('prop');
 
@@ -195,7 +195,7 @@ class Column
      *
      * @return $this
      */
-    public function addSearch(#[ExpectedValues(['=', 'like', 'in', 'between', 'like_right'])] string $type = '=', FormItemInterface|string $formItem = null): static
+    public function addSearch(#[ExpectedValues(['=', 'like', 'in', 'between', 'like_right'])] string $type = '=', FormItemInterface|string|null $formItem = null): static
     {
         if (!$formItem instanceof FormItemInterface) {
             $formItem = $this->autoMakeFormItem($formItem, $type);
@@ -249,7 +249,7 @@ class Column
      *
      * @return $this
      */
-    public function importExcel(bool $allow = true, float $sort = null): static
+    public function importExcel(bool $allow = true, ?float $sort = null): static
     {
         return $this->exportExcel($allow, $sort);
     }
@@ -262,7 +262,7 @@ class Column
      *
      * @return $this
      */
-    public function exportExcel(bool $allow = true, float $sort = null): static
+    public function exportExcel(bool $allow = true, ?float $sort = null): static
     {
         $this->exportExcel = [
             'allow' => $allow,
@@ -373,7 +373,7 @@ class Column
      *
      * @return $this
      */
-    public function notShow(bool $confirm = true, bool $excelExport = false, float $excelSort = null): static
+    public function notShow(bool $confirm = true, bool $excelExport = false, ?float $excelSort = null): static
     {
         if ($confirm) {
             $this->notShow = true;
@@ -388,12 +388,12 @@ class Column
      * @return $this
      * @deprecated 使用 onlyExportExcel()
      */
-    public function onlyImportExcel(float $excelSort = null): static
+    public function onlyImportExcel(?float $excelSort = null): static
     {
         return $this->onlyExportExcel($excelSort);
     }
 
-    public function onlyExportExcel(float $excelSort = null): static
+    public function onlyExportExcel(?float $excelSort = null): static
     {
         return $this->notShow(true, true, $excelSort);
     }
@@ -412,7 +412,7 @@ class Column
      * @return AbstractHtmlElement
      * @date 2023/5/27
      */
-    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null): AbstractHtmlElement
+    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] ?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(TableColumnThemeInterface::class, $theme)->render($this);
     }
@@ -569,7 +569,7 @@ class Column
      * @param array $params 跳转参数, 例：["id" => "@id"] @id 表示当前行id， 默认自带id和当前字段
      * @return $this
      */
-    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement $element = null, array $params = []): static
+    public function openPage(string $url, array $config = [], #[ExpectedValues(['dialog', 'tab'])] string $type = 'dialog', string|AbstractHtmlElement|null $element = null, array $params = []): static
     {
         $this->show = [
             'type'   => 'openPage',

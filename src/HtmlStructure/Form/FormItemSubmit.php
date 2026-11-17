@@ -47,7 +47,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         $this->successTipCode = JsService::message("成功");
     }
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemSubmitThemeInterface::class, $theme)->render($this);
     }
@@ -66,7 +66,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function submitUrl(string $createUrl, string $updateUrl = null): static
+    public function submitUrl(string $createUrl, ?string $updateUrl = null): static
     {
         $this->createUrl = $createUrl;
         $this->updateUrl = $updateUrl ?: $createUrl;
@@ -81,7 +81,7 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
      *
      * @return $this
      */
-    public function setSubmitUrl(string $createUrl, string $updateUrl = null): static
+    public function setSubmitUrl(string $createUrl, ?string $updateUrl = null): static
     {
         return $this->submitUrl($createUrl, $updateUrl);
     }
@@ -96,8 +96,8 @@ class FormItemSubmit extends AbstractFormItem implements FormItemInterface
      */
     public function successClose(
         #[ExpectedValues(['current', 'parent'])] ?string $page,
-        string $theme = null,
-        string $when = null
+        ?string $theme = null,
+        ?string $when = null
     ): static
     {
         if ($theme === null) {

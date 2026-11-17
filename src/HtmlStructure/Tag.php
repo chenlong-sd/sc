@@ -41,7 +41,7 @@ class Tag
         return $this->attrs;
     }
 
-    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null)
+    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] ?string $theme = null)
     {
         return Theme::getRenderer(TagThemeInterface::class, $theme)->render($this);
     }

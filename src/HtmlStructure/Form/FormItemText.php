@@ -32,7 +32,7 @@ class FormItemText extends AbstractFormItem implements FormItemInterface
 
     protected ?int $numberPrecision = null;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemTextThemeInterface::class, $theme)->render($this);
     }

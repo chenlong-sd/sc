@@ -51,7 +51,7 @@ class Config
      *
      * @return Config
      */
-    public static function init(#[ExpectedValues(['mch_id', 'key', 'v3_key', 'cert_path', 'serial_no', 'appid', 'secret', 'cacheEngine'])] array|string $attr, string $value = null): Config
+    public static function init(#[ExpectedValues(['mch_id', 'key', 'v3_key', 'cert_path', 'serial_no', 'appid', 'secret', 'cacheEngine'])] array|string $attr, ?string $value = null): Config
     {
         return (new self())->set($attr, $value);
     }
@@ -122,7 +122,7 @@ class Config
      *
      * @return Config
      */
-    public function set(#[ExpectedValues(['mch_id', 'cert_path', 'key', 'v3_key', 'serial_no', 'appid', 'secret', 'cacheEngine'])] array|string $attr, string $value = null): static
+    public function set(#[ExpectedValues(['mch_id', 'cert_path', 'key', 'v3_key', 'serial_no', 'appid', 'secret', 'cacheEngine'])] array|string $attr, ?string $value = null): static
     {
         if (is_string($attr)) {
             $attr = [$attr => $value];

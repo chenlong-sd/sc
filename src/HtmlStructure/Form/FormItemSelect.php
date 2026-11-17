@@ -33,7 +33,7 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
     protected bool $multiple = false;
     protected array $remoteSearch = [];
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemSelectThemeInterface::class, $theme)->render($this);
     }
@@ -75,7 +75,7 @@ class FormItemSelect extends AbstractFormItem implements FormItemInterface
      *
      * @return $this
      */
-    public function remoteSearch(string|Url $url, #[Language('JavaScript')]string|\Closure|JsFunc $searchFieldOrCode = null, string $haveDefaultSearchField = null, #[Language('JavaScript')] string $afterSearchHandle = null): static
+    public function remoteSearch(string|Url $url, #[Language('JavaScript')]string|\Closure|JsFunc|null $searchFieldOrCode = null, ?string $haveDefaultSearchField = null, #[Language('JavaScript')] ?string $afterSearchHandle = null): static
     {
         $code = $searchFieldOrCode instanceof \Closure ? $searchFieldOrCode() : $searchFieldOrCode;
 

@@ -267,7 +267,7 @@ class Js
         return $this->unitCodeBlock[$key] ?? '';
     }
 
-    public static function if(#[Language('JavaScript')] string $condition, #[Language('JavaScript')] string $then = null, #[Language('JavaScript')] string $else = null): JsIf
+    public static function if(#[Language('JavaScript')] string $condition, #[Language('JavaScript')] ?string $then = null, #[Language('JavaScript')] ?string $else = null): JsIf
     {
         $if = JsIf::when($condition);
         $then and $if->then($then);

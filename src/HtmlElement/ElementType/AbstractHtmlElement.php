@@ -78,7 +78,7 @@ abstract class AbstractHtmlElement
      * @return DoubleLabel|null
      * @date 2023/4/15
      */
-    public function getParent(#[Language('JQuery-CSS')] string $selector = null): ?DoubleLabel
+    public function getParent(#[Language('JQuery-CSS')] ?string $selector = null): ?DoubleLabel
     {
         if (!$selector || !$this->parent || $this->parent->find($selector)) {
             return $this->parent;

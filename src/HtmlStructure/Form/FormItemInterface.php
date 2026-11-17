@@ -9,6 +9,6 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 
 interface FormItemInterface
 {
-    public function render(string $theme = null): AbstractHtmlElement;
+    public function render(?string $theme = null): AbstractHtmlElement;
 
 }

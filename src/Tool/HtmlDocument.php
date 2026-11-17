@@ -414,7 +414,7 @@ class HtmlDocument
     /**
      * 获取属性值
      */
-    public function getAttr(string $attr, string $default = null): string|null
+    public function getAttr(string $attr, ?string $default = null): string|null
     {
         return $this->attr[$attr] ?? $default;
     }
@@ -492,7 +492,7 @@ class HtmlDocument
      * @return HtmlDocument[]
      * @date 2022/2/24
      */
-    public function getChildrenElement(#[Language('JQuery-CSS')] \Closure | string $filter = null): array
+    public function getChildrenElement(#[Language('JQuery-CSS')] \Closure | string|null $filter = null): array
     {
         return $filter ? array_values(array_filter($this->childrenElement, current($this->selectorResolve($filter)))) : $this->childrenElement;
     }
@@ -516,7 +516,7 @@ class HtmlDocument
      * @return null|HtmlDocument|HtmlDocument[]
      * @date 2022/3/1
      */
-    public function getElement(#[Language('JQuery-CSS')] \Closure | string $filter = null, bool $isAll = false): HtmlDocument|array|null
+    public function getElement(#[Language('JQuery-CSS')] \Closure | string|null $filter = null, bool $isAll = false): HtmlDocument|array|null
     {
         $element = [];
 
@@ -587,7 +587,7 @@ class HtmlDocument
      *
      * @return $this
      */
-    public function outputBefore(callable $processing, int $index = null): static
+    public function outputBefore(callable $processing, ?int $index = null): static
     {
         $index
             ? $this->processingBeforeOutput[$index] = $processing
@@ -738,7 +738,7 @@ class HtmlDocument
     /**
      * 代码解析.
      */
-    private static function codeResolve(string $code, string $parentTag = null): array
+    private static function codeResolve(string $code, ?string $parentTag = null): array
     {
         $collectsOfElement = [];
         while ($code !== '') {

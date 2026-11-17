@@ -104,7 +104,7 @@ class FormItemGroup extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         if ($this->callback) {
             $this->children = array_map(function ($v) {

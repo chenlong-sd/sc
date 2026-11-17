@@ -13,7 +13,7 @@ class DynamicKeyManager implements KeyManagerInterface {
     private string $keyPrefix;
     private int $defaultExpiry;
 
-    public function __construct(CacheInterface $cache = null, string $keyPrefix = 'sec:component:', int $defaultExpiry = 300) {
+    public function __construct(?CacheInterface $cache = null, string $keyPrefix = 'sec:component:', int $defaultExpiry = 300) {
         $this->cache = $cache;
         $this->keyPrefix = $keyPrefix;
         $this->defaultExpiry = $defaultExpiry;
@@ -24,7 +24,7 @@ class DynamicKeyManager implements KeyManagerInterface {
      * @throws \Exception
      * @throws InvalidArgumentException
      */
-    public function getPublicKey(string $keyId = null): bool|string
+    public function getPublicKey(?string $keyId = null): bool|string
     {
         $this->keyIdCheck($keyId);
 
@@ -37,7 +37,7 @@ class DynamicKeyManager implements KeyManagerInterface {
      * @throws \Exception
      * @throws InvalidArgumentException
      */
-    public function getPrivateKey(string $keyId = null, $passphrase = null): bool|string
+    public function getPrivateKey(?string $keyId = null, $passphrase = null): bool|string
     {
         $this->keyIdCheck($keyId);
 
@@ -113,7 +113,7 @@ class DynamicKeyManager implements KeyManagerInterface {
      * @throws \Exception
      * @throws InvalidArgumentException
      */
-    public function validateKeyPair(string $keyId = null): array
+    public function validateKeyPair(?string $keyId = null): array
     {
         $this->keyIdCheck($keyId);
 
@@ -138,7 +138,7 @@ class DynamicKeyManager implements KeyManagerInterface {
      * 删除密钥
      * @throws \Exception|InvalidArgumentException
      */
-    public function deleteKeyPair(string $keyId = null): bool
+    public function deleteKeyPair(?string $keyId = null): bool
     {
         $this->keyIdCheck($keyId);
 
@@ -151,7 +151,7 @@ class DynamicKeyManager implements KeyManagerInterface {
      * @throws \Exception
      * @throws InvalidArgumentException
      */
-    public function getKeyInfo(string $keyId = null): array
+    public function getKeyInfo(?string $keyId = null): array
     {
         $this->keyIdCheck($keyId);
 

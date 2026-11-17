@@ -27,7 +27,7 @@ class ZipArchive
      * @return void
      * @throws \Exception
      */
-    public function extract(string $destinationDir = null, bool $isUnlinkOriginalFile = false): void
+    public function extract(?string $destinationDir = null, bool $isUnlinkOriginalFile = false): void
     {
         $destinationDir = $destinationDir ?? dirname($this->originalFile);
         // 验证文件名后缀

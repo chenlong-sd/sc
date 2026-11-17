@@ -77,7 +77,7 @@ abstract class AbstractFormItemTheme
     }
 
 
-    public function addEvent(AbstractHtmlElement $element, array $events, string $prefix = '', FormItemInterface|FormItemAttrGetter $formItem = null): void
+    public function addEvent(AbstractHtmlElement $element, array $events, string $prefix = '', FormItemInterface|FormItemAttrGetter|null $formItem = null): void
     {
         $linkedUpdate = $formItem?->getLinkageUpdate();
 

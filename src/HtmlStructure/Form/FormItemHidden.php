@@ -23,7 +23,7 @@ class FormItemHidden extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue,FormOrigin, Attrs;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemHiddenThemeInterface::class, $theme)->render($this);
     }

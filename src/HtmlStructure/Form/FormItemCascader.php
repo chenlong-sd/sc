@@ -23,7 +23,7 @@ class FormItemCascader extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Placeholder, Options, LabelWidth, FormOrigin, Events, Attrs,Validate, LinkageUpdate;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemCascaderThemeInterface::class, $theme)->render($this);
     }

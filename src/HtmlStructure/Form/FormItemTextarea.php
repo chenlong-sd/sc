@@ -29,7 +29,7 @@ class FormItemTextarea extends AbstractFormItem implements FormItemInterface
 
     protected array $autocomplete;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemTextareaThemeInterface::class, $theme)->render($this);
     }
@@ -40,7 +40,7 @@ class FormItemTextarea extends AbstractFormItem implements FormItemInterface
      *
      * @return $this
      */
-    public function setAutoComplete(array|string $data, AbstractHtmlElement|string $template = null): static
+    public function setAutoComplete(array|string $data, AbstractHtmlElement|string|null $template = null): static
     {
         $this->autocomplete = compact('data', 'template');
 

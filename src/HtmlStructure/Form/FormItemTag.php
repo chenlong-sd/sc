@@ -30,7 +30,7 @@ class FormItemTag extends AbstractFormItem implements FormItemInterface
     use DefaultConstruct, DefaultValue, Options, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate, Slots;
 
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemTagThemeInterface::class, $theme)->render($this);
     }

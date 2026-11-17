@@ -18,7 +18,7 @@ class JsTheme
      *
      * @return Render|string
      */
-    public static function getTheme(mixed $interface, string $theme = null)
+    public static function getTheme(mixed $interface, ?string $theme = null)
     {
         $theme = $theme === null ? Html::theme() : $theme;
         $theme = in_array($theme, Theme::AVAILABLE_THEME) ? $theme : Theme::DEFAULT_THEME;

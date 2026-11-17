@@ -30,7 +30,7 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
      */
     private bool $readonly = false;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         foreach ($this->children as $item) {
             if ($item instanceof FormItemGroup){
@@ -59,7 +59,7 @@ class FormItemTable extends AbstractFormItem implements FormItemInterface
         return $this;
     }
 
-    public function getColumnAttrs(int $index = null): array
+    public function getColumnAttrs(?int $index = null): array
     {
         if ($index === null) {
             return $this->columnAttrs;

@@ -69,7 +69,7 @@ class Method
         return $this;
     }
 
-    public function setReturnType(string|\ReflectionType|null $returnType, ClassFileConstruction $classFileConstruction = null): Method
+    public function setReturnType(string|\ReflectionType|null $returnType, ?ClassFileConstruction $classFileConstruction = null): Method
     {
         if ($returnType instanceof \ReflectionType) {
             if ($returnType instanceof \ReflectionUnionType) {

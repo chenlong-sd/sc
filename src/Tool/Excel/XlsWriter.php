@@ -140,7 +140,7 @@ class XlsWriter extends Excel implements ExcelInterface
      *
      * @return static
      */
-    public function insertTexts(string $cell, string|array $data, string $format = null, $formatHandle = null): static
+    public function insertTexts(string $cell, string|array $data, ?string $format = null, $formatHandle = null): static
     {
         preg_match('/^([A-Z]+)(\d+)/', $cell, $match);
 
@@ -250,7 +250,7 @@ class XlsWriter extends Excel implements ExcelInterface
      * @param mixed|null $response
      * @return void
      */
-    public function download(string $filename = null, mixed $response = null): void
+    public function download(?string $filename = null, mixed $response = null): void
     {
         $filepath = $this->output();
         $filename = $filename ?: $this->filename;
@@ -296,7 +296,7 @@ class XlsWriter extends Excel implements ExcelInterface
         $this->output();
     }
 
-    public function getData(string $filepath = null, string $sheetName = null): array
+    public function getData(?string $filepath = null, ?string $sheetName = null): array
     {
         return $this->openFile($filepath ?: $this->filename)->openSheet($sheetName)->getSheetData();
     }

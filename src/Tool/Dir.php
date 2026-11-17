@@ -198,7 +198,7 @@ class Dir
      * @param callable|null $filter 过滤器，参数 文件名
      * @return array
      */
-    public function getFiles(callable $filter = null): array
+    public function getFiles(?callable $filter = null): array
     {
         $res = $this->getChildren();
         if ($filter) {

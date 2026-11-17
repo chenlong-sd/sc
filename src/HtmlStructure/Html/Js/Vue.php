@@ -71,7 +71,7 @@ class Vue
      * @param string|null $varName JS变量名
      * @param string|null $componentName 组件名称,如果是组件时候,请传入组件名称
      */
-    public function __construct(string $el = null, string $varName = null, string $componentName = null)
+    public function __construct(?string $el = null, ?string $varName = null, ?string $componentName = null)
     {
         Html::js()->load(StaticResource::VUE);
 

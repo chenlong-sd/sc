@@ -124,7 +124,7 @@ class Spreadsheet implements ExcelInterface
      *
      * @return static
      */
-    public function insertTexts(string $cell, array|string $data, string $format = null, $formatHandle = null): static
+    public function insertTexts(string $cell, array|string $data, ?string $format = null, $formatHandle = null): static
     {
         $data = is_array($data) ? array_values($data) : [$data];
         preg_match('/(\w+)(\d+)/', $cell, $matches);
@@ -217,7 +217,7 @@ class Spreadsheet implements ExcelInterface
      * @param mixed|null $response
      * @return void
      */
-    public function download(string $filename = null, mixed $response = null): void
+    public function download(?string $filename = null, mixed $response = null): void
     {
         $this->save();
         $filename = $filename ?: basename($this->filepath);
@@ -265,7 +265,7 @@ class Spreadsheet implements ExcelInterface
         $xlsx->save($this->filepath);
     }
 
-    public function getData(string $filepath = null, string $sheetName = null): array
+    public function getData(?string $filepath = null, ?string $sheetName = null): array
     {
         $this->spreadsheet = IOFactory::load($filepath ?: $this->filepath);
         return $sheetName

@@ -31,7 +31,7 @@ class FormItemUpload extends AbstractFormItem implements FormItemInterface
     protected bool $disableDownload = false;
     protected bool $progress = false;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemUploadThemeInterface::class)->render($this);
     }

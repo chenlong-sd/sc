@@ -44,7 +44,7 @@ class Response
         return $this->errcode;
     }
 
-    public function getData(string $key = null, mixed $default = null): mixed
+    public function getData(?string $key = null, mixed $default = null): mixed
     {
         if ($key === null) {
             return $this->data;

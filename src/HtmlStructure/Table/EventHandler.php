@@ -81,7 +81,7 @@ class EventHandler
      *
      * @return Layer
      */
-    public static function layer(string|Layer $title, string|\Stringable $url = null): Layer
+    public static function layer(string|Layer $title, string|\Stringable|null $url = null): Layer
     {
         return $title instanceof Layer ? $title : Layer::open([
             'title'   => $title,

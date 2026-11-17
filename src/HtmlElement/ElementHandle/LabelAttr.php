@@ -124,7 +124,7 @@ trait LabelAttr
      * @return mixed|string
      * @date 2023/4/13
      */
-    public function getAttr(string $attr, string|int $default = null): mixed
+    public function getAttr(string $attr, string|int|null $default = null): mixed
     {
         return $this->attrs[$attr] ?? $default;
     }
@@ -169,7 +169,7 @@ trait LabelAttr
      * @return $this
      * @date 2023/4/13
      */
-    public function removeAttr(string $attr = null): static
+    public function removeAttr(?string $attr = null): static
     {
         if ($attr === null) {
             $this->attrs = [];

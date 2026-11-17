@@ -19,5 +19,5 @@ use Sc\Util\HtmlStructure\Theme\Theme;
  */
 interface RenderInterface
 {
-    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] string $theme = null): AbstractHtmlElement;
+    public function render(#[ExpectedValues(Theme::AVAILABLE_THEME)] ?string $theme = null): AbstractHtmlElement;
 }

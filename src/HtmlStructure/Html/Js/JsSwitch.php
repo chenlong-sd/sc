@@ -17,7 +17,7 @@ class JsSwitch
 
     }
 
-    public function case(mixed $value, string|\Stringable $handleCode = null): static
+    public function case(mixed $value, string|\Stringable|null $handleCode = null): static
     {
         if (str_starts_with($value, '@')) {
             $value = Js::grammar($value);

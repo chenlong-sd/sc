@@ -29,7 +29,7 @@ class StaticKeyManager implements KeyManagerInterface {
      * 获取公钥
      * @throws \Exception
      */
-    public function getPublicKey(string $keyId = null): bool|string
+    public function getPublicKey(?string $keyId = null): bool|string
     {
         if ($keyId && $keyId !== $this->keyId) {
             throw new \Exception('静态密钥管理器不支持多密钥ID');
@@ -46,7 +46,7 @@ class StaticKeyManager implements KeyManagerInterface {
      * 获取私钥
      * @throws \Exception
      */
-    public function getPrivateKey(string $keyId = null, $passphrase = null): bool|string
+    public function getPrivateKey(?string $keyId = null, $passphrase = null): bool|string
     {
         if ($keyId && $keyId !== $this->keyId) {
             throw new \Exception('静态密钥管理器不支持多密钥ID');
@@ -73,7 +73,7 @@ class StaticKeyManager implements KeyManagerInterface {
      * 生成密钥对
      * @throws \Exception
      */
-    public function generateKeyPair(string $keyId = null, array $options = []): array
+    public function generateKeyPair(?string $keyId = null, array $options = []): array
     {
         if ($keyId && $keyId !== $this->keyId) {
             throw new \Exception('静态密钥管理器不支持多密钥ID');
@@ -139,7 +139,7 @@ class StaticKeyManager implements KeyManagerInterface {
     /**
      * 验证密钥有效性
      */
-    public function validateKeyPair(string $keyId = null): array
+    public function validateKeyPair(?string $keyId = null): array
     {
         if ($keyId && $keyId !== $this->keyId) {
             return ['valid' => false, 'reason' => '密钥ID不匹配'];
@@ -182,7 +182,7 @@ class StaticKeyManager implements KeyManagerInterface {
      * 删除密钥
      * @throws \Exception
      */
-    public function deleteKeyPair(string $keyId = null): bool
+    public function deleteKeyPair(?string $keyId = null): bool
     {
         if ($keyId && $keyId !== $this->keyId) {
             throw new \Exception('静态密钥管理器不支持多密钥ID');
@@ -204,7 +204,7 @@ class StaticKeyManager implements KeyManagerInterface {
     /**
      * 获取密钥信息
      */
-    public function getKeyInfo(string $keyId = null): array
+    public function getKeyInfo(?string $keyId = null): array
     {
         if ($keyId && $keyId !== $this->keyId) {
             throw new \Exception('静态密钥管理器不支持多密钥ID');

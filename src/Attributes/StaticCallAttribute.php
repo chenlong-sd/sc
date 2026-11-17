@@ -46,7 +46,7 @@ class StaticCallAttribute
      * @author chenlong<vip_chenlong@163.com>
      * @date 2022/2/20
      */
-    public function __construct(string $staticMagicMethod, string $classname, string $getInstanceMethod = null)
+    public function __construct(string $staticMagicMethod, string $classname, ?string $getInstanceMethod = null)
     {
         $this->staticMagicMethod = $staticMagicMethod;
         $this->classname         = $classname;

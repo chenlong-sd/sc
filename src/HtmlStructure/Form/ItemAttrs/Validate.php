@@ -25,7 +25,7 @@ trait Validate
      *
      * @return $this
      */
-    public function requiredVerify(string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function requiredVerify(?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null){
             $message = $this->getLabel() . "不能为空";
@@ -41,7 +41,7 @@ trait Validate
      *
      * @return $this
      */
-    public function requiredVerifyWhen(#[Language('JavaScript')]string $when, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function requiredVerifyWhen(#[Language('JavaScript')]string $when, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         return $this->customizeVerify(JsFunc::anonymous(['rule', 'value', 'callback'])->code(
             JsIf::when("!value && ($when)")->then(
@@ -60,7 +60,7 @@ trait Validate
      *
      * @return $this
      */
-    public function lengthRangeVerify(int $min, int $max, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function lengthRangeVerify(int $min, int $max, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null){
             $message = $this->getLabel() . sprintf("的长度必须再 %d - %d 之间", $min, $max);
@@ -78,7 +78,7 @@ trait Validate
      */
     public function typeVerify(#[ExpectedValues([
         'string', 'number', 'boolean', 'method', 'regexp', 'integer', 'float', 'array', 'object', 'enum', 'date', 'url', 'hex', 'email', 'any',])
-                               ] string $type, string $message = null, string|array $trigger = ['change', 'blur']): static
+                               ] string $type, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if (($type == 'integer') && $this instanceof FormItemText) {
             return $this->patternVerify('/^\-?\d+$/');
@@ -101,7 +101,7 @@ trait Validate
      *
      * @return $this
      */
-    public function phoneVerify(string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function phoneVerify(?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         return $this->patternVerify('/^1[3456789]\d{9}$/', $message, $trigger);
     }
@@ -113,7 +113,7 @@ trait Validate
      *
      * @return $this
      */
-    public function patternVerify(string $pattern, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function patternVerify(string $pattern, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
             $message = $this->getLabel() . "不合法";
@@ -132,7 +132,7 @@ trait Validate
      *
      * @return $this
      */
-    public function numberRangeVerify(float|int $min, float|int $max, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function numberRangeVerify(float|int $min, float|int $max, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
             $message = $this->getLabel() . "的大小必须在 $min - $max 之间";
@@ -156,7 +156,7 @@ trait Validate
      *
      * @return $this
      */
-    public function enumVerify(array $enums, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function enumVerify(array $enums, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
             $message = $this->getLabel() . sprintf("须在 %s 之中", implode(',', $enums));
@@ -172,7 +172,7 @@ trait Validate
      *
      * @return $this
      */
-    public function lengthVerify(int $length, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function lengthVerify(int $length, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
             $message = $this->getLabel() . sprintf("长度限制为 %d", $length);
@@ -186,7 +186,7 @@ trait Validate
      *
      * @return $this
      */
-    public function whitespaceVerify(string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function whitespaceVerify(?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($message === null) {
             $message = $this->getLabel() . '不能为空';
@@ -200,7 +200,7 @@ trait Validate
      *
      * @return $this
      */
-    public function customizeVerify(JsFunc|string $func, string $message = null, string|array $trigger = ['change', 'blur']): static
+    public function customizeVerify(JsFunc|string $func, ?string $message = null, string|array $trigger = ['change', 'blur']): static
     {
         if ($func instanceof JsFunc) {
             Html::js()->defFunc($this->name . "validator", $func->params, $func->code);

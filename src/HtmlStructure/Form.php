@@ -177,7 +177,7 @@ class Form
      * @return AbstractHtmlElement
      * @date 2023/6/3
      */
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         array_map(function (FormItemInterface|FormItemAttrGetter $formItem) {
             // 默认值重设

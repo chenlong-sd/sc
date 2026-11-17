@@ -92,7 +92,7 @@ class UnifiedEncryptionService {
      * RSA解密
      * @throws \Exception
      */
-    public function rsaDecrypt(string $encryptedData, string $keyId, string $privateKey = null, string $passphrase = null): string
+    public function rsaDecrypt(string $encryptedData, string $keyId, ?string $privateKey = null, ?string $passphrase = null): string
     {
         // 如果提供了私钥，直接使用
         if ($privateKey) {
@@ -131,7 +131,7 @@ class UnifiedEncryptionService {
      * @return array
      * @throws \Exception
      */
-    public function hybridEncrypt(string $data, string $keyId, string $publicKey = null): array
+    public function hybridEncrypt(string $data, string $keyId, ?string $publicKey = null): array
     {
         $aes = new AESEncryption();
 
@@ -165,7 +165,7 @@ class UnifiedEncryptionService {
      * @return string
      * @throws \Exception
      */
-    public function hybridDecrypt(string $encryptedData, string $encryptedKey, string $iv, string $keyId, string $privateKey = null, string $passphrase = null): string
+    public function hybridDecrypt(string $encryptedData, string $encryptedKey, string $iv, string $keyId, ?string $privateKey = null, ?string $passphrase = null): string
     {
         $aes = new AESEncryption();
 
@@ -187,7 +187,7 @@ class UnifiedEncryptionService {
      * @return string
      * @throws \Exception
      */
-    public function sign(string $data, string $keyId, string $privateKey = null, string $passphrase = null): string
+    public function sign(string $data, string $keyId, ?string $privateKey = null, ?string $passphrase = null): string
     {
         // 如果提供了私钥，直接使用
         if ($privateKey) {
@@ -222,7 +222,7 @@ class UnifiedEncryptionService {
      * @return bool
      * @throws \Exception
      */
-    public function verify(string $data, string $signature, string $keyId, string $publicKey = null): bool
+    public function verify(string $data, string $signature, string $keyId, ?string $publicKey = null): bool
     {
         // 如果提供了公钥，直接使用
         if ($publicKey) {

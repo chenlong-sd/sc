@@ -28,7 +28,7 @@ class FormItemDatetime extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Placeholder, LabelWidth, FormOrigin, Events, Attrs, Validate;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemDatetimeThemeInterface::class, $theme)->render($this);
     }

@@ -23,7 +23,7 @@ class FunctionParam
     {
     }
 
-    public function setType(string|\ReflectionType|null $type, ClassFileConstruction $classFileConstruction = null): self
+    public function setType(string|\ReflectionType|null $type, ?ClassFileConstruction $classFileConstruction = null): self
     {
         if ($type instanceof \ReflectionType) {
             if ($type instanceof \ReflectionUnionType) {

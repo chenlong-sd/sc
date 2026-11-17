@@ -23,7 +23,7 @@ class Random
         return $this->prefix . mt_rand($min, $max);
     }
 
-    public function getStr(int $length, string $chars = null): string
+    public function getStr(int $length, ?string $chars = null): string
     {
         if ($chars === null) {
             $chars = self::UPPERCASE . self::LOWERCASE . self::NUMBER . self::SYMBOL;

@@ -203,7 +203,7 @@ class Tree
      * @param array|null $nodes
      * @return Tree|null
      */
-    public function getNode(mixed $nodeValue, array $nodes = null): ?Tree
+    public function getNode(mixed $nodeValue, ?array $nodes = null): ?Tree
     {
         // 若未提供节点数组，从根数据开始
         if ($nodes === null) {

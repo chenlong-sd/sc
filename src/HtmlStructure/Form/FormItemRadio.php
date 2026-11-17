@@ -22,7 +22,7 @@ class FormItemRadio extends AbstractFormItem implements FormItemInterface
 {
     use DefaultConstruct, DefaultValue, Options, LabelWidth, FormOrigin, Events, Attrs, Validate, LinkageUpdate;
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemRadioThemeInterface::class, $theme)->render($this);
     }

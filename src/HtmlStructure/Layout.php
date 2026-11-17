@@ -23,7 +23,7 @@ class Layout
      *
      * @return Layout
      */
-    public static function create(array|int $attrs = null, int $width = null): Layout
+    public static function create(array|int|null $attrs = null, ?int $width = null): Layout
     {
         $layout = new self();
 
@@ -49,7 +49,7 @@ class Layout
      *
      * @return Layout
      */
-    public function addCol(int|array $span, AbstractHtmlElement|string|\Stringable $htmlElement = null): static
+    public function addCol(int|array $span, AbstractHtmlElement|string|\Stringable|null $htmlElement = null): static
     {
         $this->cols[] = [
             'base'    => $span,
@@ -82,7 +82,7 @@ class Layout
      *
      * @return AbstractHtmlElement
      */
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(LayoutThemeInterface::class, $theme)->render($this);
     }

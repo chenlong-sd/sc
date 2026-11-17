@@ -22,7 +22,7 @@ trait Col
      *
      * @return $this
      */
-    public function col(int $span, int $afterCol = null, int $offset = null): static
+    public function col(int $span, ?int $afterCol = null, ?int $offset = null): static
     {
         $this->col       = $span;
         $this->afterCol  = $afterCol;

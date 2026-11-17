@@ -31,7 +31,7 @@ class Attribute
         return sprintf($out, $attribute);
     }
 
-    public function addParam(mixed $value, string $name = null): Attribute
+    public function addParam(mixed $value, ?string $name = null): Attribute
     {
         $this->params[] = compact('name', 'value');
 

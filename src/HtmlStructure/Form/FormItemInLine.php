@@ -25,7 +25,7 @@ class FormItemInLine extends AbstractFormItem implements FormItemInterface
         $this->children = $children;
     }
 
-    public function render(string $theme = null): AbstractHtmlElement
+    public function render(?string $theme = null): AbstractHtmlElement
     {
         return Theme::getRenderer(FormItemInLineThemeInterface::class, $theme)->render($this);
     }

@@ -40,7 +40,7 @@ if (! function_exists('h')){
      * @param array $attrs
      * @return mixed|DoubleLabel|SingleLabel
      */
-    function h(string|array|AbstractHtmlElement $tag = '', string|\Stringable|array $content = null, array $attrs = [])
+    function h(string|array|AbstractHtmlElement $tag = '', string|\Stringable|array|null $content = null, array $attrs = [])
     {
         if (is_array($tag)) return El::fictitious()->append(...$tag);
 

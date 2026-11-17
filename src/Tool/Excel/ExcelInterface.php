@@ -68,7 +68,7 @@ interface ExcelInterface
      * @param $formatHandle
      * @return $this
      */
-    public function insertTexts(string $cell, string|array $data, string $format = null, $formatHandle = null): static;
+    public function insertTexts(string $cell, string|array $data, ?string $format = null, $formatHandle = null): static;
 
     /**
      * 设置头部
@@ -91,7 +91,7 @@ interface ExcelInterface
      * @param mixed|null $response
      * @return void
      */
-    public function download(string $filename = null, mixed $response = null): void;
+    public function download(?string $filename = null, mixed $response = null): void;
 
     /**
      * 获取Excel句柄
@@ -114,5 +114,5 @@ interface ExcelInterface
      * @param string|null $sheetName
      * @return array
      */
-    public function getData(string $filepath = null, string $sheetName = null): array;
+    public function getData(?string $filepath = null, ?string $sheetName = null): array;
 }
