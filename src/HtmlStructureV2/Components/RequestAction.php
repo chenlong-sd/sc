@@ -834,20 +834,23 @@ JS);
 
     /**
      * 设置请求成功后的钩子。
-     * handler 签名与 `on('success', ...)` 一致，只接收一个 context 对象。
-     * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
-     * 可用字段与 success 事件一致，常用有 request / response / payload / row / filters /
-     * forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
-     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
-     * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
+     * - handler 签名与 `on('success', ...)` 一致，只接收一个 context 对象。
+     * - 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
+     * - 可用字段与 success 事件一致，常用有 request / response / payload / row / filters /
+     * - forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
+     * - 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
+     * - 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
+     * - setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * - 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
+     * - 只想更新当前行某个字段时，可直接调用 updateTableRow({ field: value })（或读写 tableRow），
+     * - 列表会即时反映修改；此时不要再开启 reloadTable() 重新请求列表数据。
      *
      * @param string|JsExpression|StructuredEventInterface $afterSuccessHook 请求成功后的钩子逻辑。
      * @return static 当前请求动作实例。
      *
      * 示例：
      * - `RequestAction::make('保存')->afterSuccess(Events::returnTo('/admin/qa-info/lists'))`
+     * - `RequestAction::make('启用')->afterSuccess('({ updateTableRow }) => updateTableRow({ status: 1 })')`
      */
     public function afterSuccess(string|JsExpression|StructuredEventInterface $afterSuccessHook): static
     {
@@ -862,14 +865,14 @@ JS);
 
     /**
      * 设置请求失败后的钩子。
-     * handler 签名与 `on('fail', ...)` 一致，只接收一个 context 对象。
-     * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
-     * 可用字段与 fail 事件一致，常用有 request / error / row / filters / forms / dialogs /
-     * selection / query / page / mode / dialog / dialogKey / vm。
-     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
-     * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
+     * - handler 签名与 `on('fail', ...)` 一致，只接收一个 context 对象。
+     * - 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
+     * - 可用字段与 fail 事件一致，常用有 request / error / row / filters / forms / dialogs /
+     * - selection / query / page / mode / dialog / dialogKey / vm。
+     * - 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
+     * - 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
+     * - setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * - 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
      *
      * @param string|JsExpression|StructuredEventInterface $afterFailHook 请求失败后的钩子逻辑。
      * @return static 当前请求动作实例。
@@ -890,14 +893,14 @@ JS);
 
     /**
      * 设置请求结束后的 finally 钩子。
-     * handler 签名与 `on('finally', ...)` 一致，只接收一个 context 对象。
-     * 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
-     * 可用字段与 finally 事件一致，常用有 request，以及可能存在的 response / payload / error，
-     * 同时也可读取 row / filters / forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
-     * 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
-     * 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
-     * setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
-     * 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
+     * - handler 签名与 `on('finally', ...)` 一致，只接收一个 context 对象。
+     * - 可传字符串、JsExpression 或结构化 Events::* 对象；字符串会自动包装成 JsExpression。
+     * - 可用字段与 finally 事件一致，常用有 request，以及可能存在的 response / payload / error，
+     * - 同时也可读取 row / filters / forms / dialogs / selection / query / page / mode / dialog / dialogKey / vm。
+     * - 若当前请求动作启用了导入模式，还可读取 import.rows / import.headers / import.fileName / import.sheetName。
+     * - 若当前请求动作使用了表单快捷能力，还可读取 formScope / getFormModel() / cloneFormModel() /
+     * - setFormModel() / initializeFormModel() / resetForm() / getPageQuery() / resolvePageMode() / resolveFormMode()。
+     * - 运行在 iframe 子页面时，也可调用 closeHostDialog() / reloadHostTable() / openHostTab() 等宿主桥方法。
      *
      * @param string|JsExpression|StructuredEventInterface $afterFinallyHook 请求完成后的钩子逻辑。
      * @return static 当前请求动作实例。
@@ -926,6 +929,11 @@ JS);
      *
      * 公共上下文：
      * - action / row / tableKey / listKey / filters / forms / dialogs / selection / query / page / mode / vm
+     * - row 在弹窗场景中是打开弹窗时克隆的副本，修改它不会影响列表行
+     * - tableRow / getTableRow(options?) / updateTableRow(patch, options?): 当前操作行在表格中的真实响应式数据
+     * - tableRow 可直接赋值，例如 `tableRow.status = 2`，修改后列表即时刷新
+     * - getTableRow() 返回真实行；`options` 可覆盖 tableKey / rowKey / row，默认按动作 tableKey 的 rowKey 与 row 自动定位
+     * - updateTableRow({ status: 2 }) 批量更新真实行字段并返回该行，适合在 success 钩子里就地更新列表而无需 reloadTable()
      * - dialog / dialogKey: 动作目标指向弹窗且运行时存在对应弹窗时可用
      * - import: 当前动作启用导入模式并完成文件解析后可用，可读取 rows / headers / fileName / sheetName
      * - reloadTable() / reloadList() / reloadPage() / closeDialog()

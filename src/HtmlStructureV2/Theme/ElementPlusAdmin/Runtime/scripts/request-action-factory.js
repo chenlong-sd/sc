@@ -18,6 +18,7 @@
             resolveContextValue,
             resolvePageMode,
             resolveMessage,
+            setByPath,
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
           const dialogFormScopePrefix = 'dialog:';
           const knownFormScopes = () => Object.keys(cfg?.forms || {});
@@ -1022,6 +1023,16 @@
 
               return this.actionLoading;
             },
+            /**
+             * 构建请求动作上下文（before / success / fail / finally 钩子共享）。
+             * 常用字段：action / row / tableKey / listKey / filters / forms / dialogs / selection / query / page / mode / vm。
+             * 表格行辅助：
+             * - tableRow: 当前操作行在表格 rows 中的真实响应式引用；可直接 `tableRow.status = 2`，列表即时刷新。
+             * - getTableRow(options?): 返回真实行；options 可覆盖 tableKey / rowKey / row，默认按动作 tableKey 的 rowKey 自动定位。
+             * - updateTableRow(patch, options?): 批量更新真实行字段并返回该行，适合在 afterSuccess/reloadTable 之外就地更新列表。
+             * 注意：row 在弹窗场景是打开弹窗时的行副本，改它不会影响列表，需使用 tableRow / updateTableRow()。
+             * 例：ctx.updateTableRow({ status: 2 })。
+             */
             buildActionContext(actionConfig, row = null){
               const explicitActionFormScope = normalizeFormScope(actionConfig.formScope || null);
               const resolveActionTableKey = () => {
@@ -1093,6 +1104,41 @@
 
                 return postDialogHostMessage(payload);
               };
+              /**
+               * 解析当前操作行在表格 rows 中的真实引用。
+               * 默认使用动作 tableKey 与上下文 row 的 rowKey 值匹配；options 可覆盖 tableKey / rowKey / row。
+               * 找不到时返回 null。
+               */
+              const resolveActionTableRow = (options = {}) => {
+                const optionsConfig = isObject(options) ? options : {};
+                const tableKey = typeof optionsConfig.tableKey === 'string' && optionsConfig.tableKey !== ''
+                  ? optionsConfig.tableKey
+                  : resolvedTableKey;
+                if (!tableKey || typeof this.getTableRows !== 'function') {
+                  return null;
+                }
+
+                const tableCfg = typeof this.getTableConfig === 'function'
+                  ? this.getTableConfig(tableKey)
+                  : null;
+                const rowKey = typeof optionsConfig.rowKey === 'string' && optionsConfig.rowKey !== ''
+                  ? optionsConfig.rowKey
+                  : (typeof tableCfg?.rowKey === 'string' && tableCfg.rowKey !== '' ? tableCfg.rowKey : 'id');
+                const sourceRow = optionsConfig.row || resolvedRow || null;
+                const keyValue = sourceRow ? getByPath(sourceRow, rowKey) : null;
+                if (keyValue === null || keyValue === undefined || keyValue === '') {
+                  return null;
+                }
+
+                const rows = this.getTableRows(tableKey);
+                if (!Array.isArray(rows)) {
+                  return null;
+                }
+
+                return rows.find((item) => (
+                  isObject(item) && String(getByPath(item, rowKey)) === String(keyValue)
+                )) || null;
+              };
               const context = Object.assign({
                 action: effectiveActionConfig,
                 tableKey: resolvedTableKey,
@@ -1161,6 +1207,25 @@
                   }
 
                   return this.openDialog(dialogKey, data, tableKey);
+                },
+                getTableRow: (options = {}) => resolveActionTableRow(options),
+                updateTableRow: (patch, options = {}) => {
+                  if (!isObject(patch)) {
+                    return null;
+                  }
+
+                  const targetRow = resolveActionTableRow(options);
+                  if (!targetRow) {
+                    return null;
+                  }
+
+                  Object.keys(patch).forEach((path) => {
+                    if (typeof path === 'string' && path !== '') {
+                      setByPath(targetRow, path, patch[path]);
+                    }
+                  });
+
+                  return targetRow;
                 },
                 reloadPage: () => window.location.reload(),
                 notifyDialogHost: (payload = {}) => notifyHost(payload),
@@ -1300,6 +1365,11 @@
                   return fallback;
                 },
               }, sourceDialogContext || {}, baseContext);
+              Object.defineProperty(context, 'tableRow', {
+                enumerable: true,
+                configurable: true,
+                get: () => resolveActionTableRow(),
+              });
               const resolveImplicitFormScope = () => {
                 if (explicitActionFormScope && cfg?.forms?.[explicitActionFormScope]) {
                   return explicitActionFormScope;

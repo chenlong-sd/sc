@@ -686,6 +686,9 @@ class Action implements
      * - form / model / formScope: 当前动作可定位到表单时可用；suffixActions / footerActions 等表单场景会自动带入
      * - vm: 当前 Vue 实例
      * - reloadTable() / reloadList() / reloadPage() / closeDialog() / openDialog(): 常用运行时辅助方法
+     * - tableRow / getTableRow(options?) / updateTableRow(patch, options?): 当前操作行在表格中的真实响应式数据
+     *   （默认按动作 tableKey 的 rowKey 与 row 自动定位，options 可覆盖 tableKey / rowKey / row）；
+     *   注意该上下文里的 row 在弹窗场景是副本，改列表请用 `tableRow.status = ...` 或 `updateTableRow({ field: value })`
      * - resolveFormScope() / validateForm() / getFormModel() / cloneFormModel() / setFormModel() / initializeFormModel() / resetForm()
      * - notifyDialogHost() / closeHostDialog() / reloadHostTable() / openHostDialog() / openHostUrlDialog() / openHostTab(): iframe 子页面常用宿主桥接方法
      * - setHostDialogTitle() / setHostDialogFullscreen() / toggleHostDialogFullscreen() / refreshHostDialogIframe()
