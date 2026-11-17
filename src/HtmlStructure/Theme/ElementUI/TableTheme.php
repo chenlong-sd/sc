@@ -859,7 +859,12 @@ class TableTheme implements TableThemeInterface
     {
         Html::js()->vue->set("{$table->getId()}Sort", null);
 
-        $fieldMap = array_map(fn(Column $column) => [$column->getAttr('prop') => $column->getSortField()], $table->getColumns());
+        $fieldMap = array_map(
+            static fn(Column $column) => ($prop = $column->getAttr('prop')) === null
+                ? []
+                : [$prop => $column->getSortField()],
+            $table->getColumns()
+        );
         $fieldMap = array_filter(array_merge(...$fieldMap));
 
         if (!$fieldMap){

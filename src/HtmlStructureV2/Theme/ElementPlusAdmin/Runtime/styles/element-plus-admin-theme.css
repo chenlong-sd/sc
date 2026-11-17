@@ -180,11 +180,15 @@ body {
   border: 1px solid var(--sc-v2-border);
 }
 
+.sc-v2-form-section-card {
+  border-radius: 6px;
+}
+
 .sc-v2-section > .el-card__header,
 .sc-v2-form-section-card > .el-card__header,
 .sc-v2-form-array__item > .el-card__header {
   padding: 10px 16px;
-  border-bottom-color: var(--sc-v2-border);
+  border-bottom: 1px solid var(--sc-v2-border);
   background-color: rgba(0, 0, 0, 0.01);
 }
 
@@ -232,6 +236,11 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.sc-v2-form-section > .sc-v2-form-section__body {
+  padding-top: 12px;
+  border-top: 1px solid var(--sc-v2-border);
 }
 
 .sc-v2-form-section__heading,
