@@ -11,12 +11,14 @@ use Sc\Util\HtmlStructureV2\Components\Display\Media\Image;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Images;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Video;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Videos;
+use Sc\Util\HtmlStructureV2\Components\Display\Timeline;
 
 final class Displays
 {
     /**
  * 详情展示 DSL 工厂：
  * - descriptions() / descriptionItem() - 详情块与单项；
+ * - timeline() - 时间进度（维修记录、操作日志等按时间推进的内容）；
  * - image() / images() - 单图 / 多图（点击预览，多图共享统一预览组）；
  * - video() / videos() - 单视频 / 多视频（点击进入页面共享 el-dialog 自适应播放）；
  * - file() / files() - 单个 / 多个附件（el-link + 自动文件类型图标）。
@@ -50,6 +52,17 @@ final class Displays
     public static function descriptionItem(string $label, mixed $value): DescriptionItem
     {
         return DescriptionItem::make($label, $value);
+    }
+
+    /**
+     * 创建一个时间进度展示块（el-timeline），适合维修记录、操作日志等按时间推进的内容。
+     *
+     * 示例：
+     * - `Displays::timeline()->item('2026-01-01 10:00:00', '发起模具修复申请', ['申请人：张三'], 'warning')`
+     */
+    public static function timeline(): Timeline
+    {
+        return Timeline::make();
     }
 
     /**

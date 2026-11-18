@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Components\Block\Divider;
 use Sc\Util\HtmlStructureV2\Components\Block\Text;
 use Sc\Util\HtmlStructureV2\Components\Block\Title;
 use Sc\Util\HtmlStructureV2\Components\Display\Descriptions;
+use Sc\Util\HtmlStructureV2\Components\Display\Timeline;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Image;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Images;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\File;
@@ -46,6 +47,7 @@ final class LightweightComponentRenderer
         Alert::class => 'renderBlockAlert',
         Button::class => 'renderBlockButton',
         Descriptions::class => 'renderDescriptions',
+        Timeline::class => 'renderTimeline',
         Image::class => 'renderImage',
         Images::class => 'renderImages',
         File::class => 'renderFile',
@@ -168,6 +170,13 @@ final class LightweightComponentRenderer
             $eventContextExpression,
             $context
         );
+
+        $body = $this->sectionCardFactory->bodyOf($element);
+        if ($body !== null) {
+            $this->appendRenderedChildren($body, $card, $context, $eventContextExpression);
+
+            return $element;
+        }
 
         return $this->appendRenderedChildren($element, $card, $context, $eventContextExpression);
     }
@@ -809,6 +818,72 @@ final class LightweightComponentRenderer
         );
 
         return $this->applyComponentEvents($element, $image, $eventContextExpression, $context);
+    }
+
+    private function renderTimeline(
+        Timeline $timeline,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement
+    {
+        $element = El::double('el-timeline')->addClass('sc-v2-timeline');
+        $placement = $timeline->getPlacement();
+
+        foreach ($timeline->getItems() as $item) {
+            $attrs = ['placement' => $placement];
+
+            if ($item['time'] !== '') {
+                $attrs['timestamp'] = $item['time'];
+            } else {
+                $attrs['hide-timestamp'] = '';
+            }
+
+            if (in_array($item['type'], ['primary', 'success', 'warning', 'danger', 'info'], true)) {
+                $attrs['type'] = $item['type'];
+            }
+
+            if ($item['hollow']) {
+                $attrs['hollow'] = '';
+            }
+
+            $itemEl = El::double('el-timeline-item')->setAttrs($attrs);
+            $content = El::double('div')->addClass('sc-v2-timeline-item-content');
+
+            if ($item['title'] !== '') {
+                $content->append(
+                    El::double('div')
+                        ->addClass('sc-v2-timeline-title')
+                        ->append(El::text($this->escapeTimelineText($item['title'])))
+                );
+            }
+
+            foreach ($item['lines'] as $line) {
+                if (trim($line) === '') {
+                    continue;
+                }
+
+                $content->append(
+                    El::double('p')
+                        ->addClass('sc-v2-timeline-line')
+                        ->append(El::text($this->escapeTimelineText($line)))
+                );
+            }
+
+            $itemEl->append($content);
+            $element->append($itemEl);
+        }
+
+        return $this->applyComponentEvents(
+            $this->applyComponentRootAttributes($element, $timeline),
+            $timeline,
+            $eventContextExpression,
+            $context
+        );
+    }
+
+    private function escapeTimelineText(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function renderDescriptions(

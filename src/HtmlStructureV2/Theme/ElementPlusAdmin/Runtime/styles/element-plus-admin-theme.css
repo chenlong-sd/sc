@@ -1244,3 +1244,72 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   margin-right: 4px;
   vertical-align: middle;
 }
+
+/* 时间进度：维修记录 / 操作日志等按时间推进的内容 */
+.sc-v2-timeline {
+  padding: 4px 4px 0 2px;
+}
+
+.sc-v2-timeline .el-timeline-item__timestamp {
+  color: #909399;
+  font-size: 12px;
+}
+
+.sc-v2-timeline-item-content {
+  margin-top: 2px;
+  padding: 10px 14px;
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+}
+
+.sc-v2-timeline-title {
+  color: #303133;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.sc-v2-timeline-line {
+  margin: 4px 0 0;
+  color: #606266;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.sc-v2-timeline-line:first-of-type {
+  margin-top: 6px;
+}
+
+/* 拉丝机台配模配置：长规格文案在弹窗内换行，避免横向溢出 */
+.xndg_pull_machine-mach-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.xndg_pull_machine-mach-options .el-checkbox {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  height: auto;
+  margin-right: 0;
+  white-space: normal;
+}
+
+.xndg_pull_machine-mach-options .el-checkbox__input {
+  flex: none;
+  margin-top: 2px;
+}
+
+.xndg_pull_machine-mach-options .el-checkbox__label {
+  flex: 1;
+  padding-left: 8px;
+  line-height: 20px;
+  white-space: normal;
+  word-break: break-word;
+}

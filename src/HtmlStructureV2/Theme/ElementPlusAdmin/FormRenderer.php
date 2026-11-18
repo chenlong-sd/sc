@@ -61,6 +61,7 @@ final class FormRenderer
         private readonly FormTableColumnWalker $formTableColumnWalker = new FormTableColumnWalker(),
         private readonly ActionButtonRenderer $actionButtonRenderer = new ActionButtonRenderer(),
         private readonly ?LightweightComponentRenderer $lightweightComponentRenderer = null,
+        private readonly SectionCardFactory $sectionCardFactory = new SectionCardFactory(),
     ) {
     }
 
@@ -200,20 +201,19 @@ final class FormRenderer
         $sectionContext = $this->contextForConditionalNode($context, $section)
             ->mergeReadonly($section->isReadonly())
             ->inheritLabelWidth($section->getLabelWidth());
-        $body = El::double('div')->addClass('sc-v2-form-section');
+
+        $container = $this->sectionCardFactory->container();
         $header = $this->renderSectionHeader($section, $context->renderContext);
         if ($header !== null) {
-            $body->append($header);
+            $container->prepend($header);
         }
-        $body->append(
-            El::double('div')
-                ->addClass('sc-v2-form-section__body')
-                ->append($this->renderChildrenRow($section->getChildren(), $sectionContext))
+        ($this->sectionCardFactory->bodyOf($container) ?? $container)->append(
+            $this->renderChildrenRow($section->getChildren(), $sectionContext)
         );
 
         $wrapped = $section->isPlain()
-            ? $body
-            : El::double('el-card')->addClass('sc-v2-form-section-card')->append($body);
+            ? $container
+            : $this->sectionCardFactory->card()->append($container);
         $wrapped = $this->applyRenderableAttributes($wrapped, $section->getRenderAttributes());
 
         $block = $this->makeBlockNode($wrapped, $section)

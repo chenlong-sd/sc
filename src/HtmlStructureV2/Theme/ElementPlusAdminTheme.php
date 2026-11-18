@@ -413,7 +413,11 @@ final class ElementPlusAdminTheme implements ThemeInterface
 
     private function wrapInSectionCard(AbstractHtmlElement $content, string $title = ''): AbstractHtmlElement
     {
-        return $this->sectionCardFactory()->make($title)->append($content);
+        $factory = $this->sectionCardFactory();
+        $card = $factory->make($title);
+        ($factory->bodyOf($card) ?? $card)->append($content);
+
+        return $card;
     }
 
     /**
@@ -517,7 +521,8 @@ final class ElementPlusAdminTheme implements ThemeInterface
             $this->fieldRenderer(),
             new \Sc\Util\HtmlStructureV2\Support\FormTableColumnWalker(),
             $this->actionButtonRenderer(),
-            $this->lightweightComponentRenderer()
+            $this->lightweightComponentRenderer(),
+            $this->sectionCardFactory()
         );
     }
 
