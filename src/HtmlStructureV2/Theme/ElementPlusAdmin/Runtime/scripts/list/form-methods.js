@@ -110,6 +110,7 @@
               cloneSubmitModel: 'cloneFormSubmitModel',
               setFormModel: 'setFormModel',
               initializeFormModel: 'initializeFormModel',
+              resetForm: 'resetForm',
               setFormPathValue: 'setFormPathValue',
               getOptionState: 'getOptionState',
               getOptionLoadingState: 'getOptionLoadingState',

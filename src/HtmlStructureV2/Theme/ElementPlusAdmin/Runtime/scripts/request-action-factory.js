@@ -2148,6 +2148,14 @@
                             ElementPlus.ElMessage.success(successMessage);
                           }
 
+                          if (resolvedActionConfig.resetFormAfterSuccess) {
+                            try {
+                              context.resetForm(resolvedActionConfig.resetFormScope || null);
+                            } catch (error) {
+                              console.warn('[sc-v2] resetFormAfterSuccess failed', error);
+                            }
+                          }
+
                             return emitRequestSuccessLifecycle(request, payload)
                               .then(() => {
                                 if (resolvedActionConfig.closeDialog) {

@@ -287,6 +287,8 @@ final class ActionButtonRenderer
             'reloadTable' => $action->shouldReloadTable(),
             'reloadPage' => $action->shouldReloadPage(),
             'closeDialog' => $action->shouldCloseAfterSuccess(),
+            'resetFormAfterSuccess' => $action->shouldResetFormAfterSuccess(),
+            'resetFormScope' => $action->getResetFormAfterSuccessScope(),
             'dialogSubmitFallback' => $action->shouldUseDialogSubmitFallback(),
             'dialogTarget' => $this->resolveActionDialogTarget($action, $contextDialogKey),
             'form' => [

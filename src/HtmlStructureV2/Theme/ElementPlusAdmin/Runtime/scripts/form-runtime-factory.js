@@ -73,6 +73,7 @@
             cloneSubmitModel: 'cloneManagedFormSubmitModel',
             setFormModel: 'setManagedFormModel',
             initializeFormModel: 'initializeManagedFormModel',
+            resetForm: 'resetManagedForm',
             getFormPathStateValue: 'getFormPathStateValue',
             setFormPathValue: 'setManagedFormPathValue',
             getFormArrayGroupConfig: 'getFormArrayGroupConfig',
@@ -1124,6 +1125,10 @@
             },
             [names.initializeFormModel](scope, values = {}){
               const { formCfg, nextModel } = buildInitializedFormModel(this, scope, values);
+              return applyResolvedFormModel(this, scope, formCfg, nextModel);
+            },
+            [names.resetForm](scope){
+              const { formCfg, nextModel } = buildInitializedFormModel(this, scope, {});
               return applyResolvedFormModel(this, scope, formCfg, nextModel);
             },
             [names.setFormPathValue](scope, fieldName, value){

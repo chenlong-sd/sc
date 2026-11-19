@@ -27,6 +27,8 @@ final class RequestAction extends Action
     private bool $reloadTable = false;
     private bool $reloadPage = false;
     private bool $closeAfterSuccess = false;
+    private bool $resetFormAfterSuccess = false;
+    private ?string $resetFormAfterSuccessScope = null;
     private JsExpression|StructuredEventInterface|null $beforeHook = null;
     private JsExpression|StructuredEventInterface|null $afterSuccessHook = null;
     private JsExpression|StructuredEventInterface|null $afterFailHook = null;
@@ -733,6 +735,24 @@ final class RequestAction extends Action
     }
 
     /**
+     * 请求成功后把目标表单恢复到初始值（并清除校验提示）。
+     * 适合新增后留在当前页继续录入的场景。
+     *
+     * @param string|null $scope 目标表单 scope；不传时由运行时自动解析当前表单。
+     * @return static 当前请求动作实例。
+     *
+     * 示例：
+     * - `RequestAction::make('新增')->resetFormAfterSuccess('qa-info-form')`
+     */
+    public function resetFormAfterSuccess(?string $scope = null): static
+    {
+        $this->resetFormAfterSuccess = true;
+        $this->resetFormAfterSuccessScope = $scope;
+
+        return $this;
+    }
+
+    /**
      * 请求成功后自动关闭弹窗。
      * 若当前动作存在 dialog target，会关闭对应的本地弹窗；
      * 若动作运行在 iframe 宿主弹窗的子页面中且未指定 dialog target，会自动关闭宿主弹窗；
@@ -1038,6 +1058,16 @@ JS);
     public function shouldCloseAfterSuccess(): bool
     {
         return $this->closeAfterSuccess;
+    }
+
+    public function shouldResetFormAfterSuccess(): bool
+    {
+        return $this->resetFormAfterSuccess;
+    }
+
+    public function getResetFormAfterSuccessScope(): ?string
+    {
+        return $this->resetFormAfterSuccessScope;
     }
 
     public function getBeforeHook(): JsExpression|StructuredEventInterface|null
