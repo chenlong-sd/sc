@@ -63,8 +63,21 @@ final class TableRenderer
             $right->append($this->renderToolbarHeaderSearch($table, $bindings, $headerSearch, $trashModeExpression));
         }
 
+        $availableActionIds = [];
         foreach ($table->getToolbarLeftActions() as $action) {
-            $left->append($this->renderToolbarAction($table, $bindings, $action, $renderContext, $trashModeExpression));
+            $availableActionIds[spl_object_id($action)] = true;
+        }
+
+        foreach ($table->getToolbarLeftItems() as $item) {
+            if ($item instanceof Action) {
+                if (! isset($availableActionIds[spl_object_id($item)])) {
+                    continue;
+                }
+                $left->append($this->renderToolbarAction($table, $bindings, $item, $renderContext, $trashModeExpression));
+                continue;
+            }
+
+            $left->append($item);
         }
 
         if ($left->getChildren()) {

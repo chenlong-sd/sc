@@ -833,6 +833,7 @@ Fields::autocomplete('wire', '线盘')
 
 - `toolbarLeft(...)` 放左侧，适合新增、批量操作这类主操作
 - `toolbarRight(...)` 放右侧，适合刷新、辅助工具这类次级操作
+- `toolbarContent($html)` 在左侧动作区插入自定义内容（如动态统计），位置由与 `toolbarLeft(...)` 的调用顺序决定；可配合 `on('loadSuccess', ...)` 从响应中刷新
 - `export()` 和列设置按钮会继续固定在右侧
 
 ```php
