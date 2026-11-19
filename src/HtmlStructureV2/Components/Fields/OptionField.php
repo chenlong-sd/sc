@@ -25,6 +25,10 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     protected array $linkageUpdates = [];
     protected bool $linkageClearOnEmpty = true;
     protected bool $defaultedByMultiple = false;
+    protected ?string $optionValueField = null;
+    protected ?string $optionLabelField = null;
+    /** @var array<int, array{field: string, label: string, width: ?string}> */
+    protected array $tableColumns = [];
 
     public function __construct(string $name, string $label, FieldType $type = FieldType::SELECT)
     {
@@ -244,8 +248,8 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      * 这里默认只有当前作用域下的 form model 可用，不会注入 row / tableKey / listKey / vm。
      *
      * @param string $url 远端选项接口地址。
-     * @param string $valueField 结果中作为值的字段名，默认值为 id。
-     * @param string $labelField 结果中作为文案的字段名，默认值为 name。
+     * @param string $valueField 结果中作为值的字段名，默认值为 value。
+     * @param string $labelField 结果中作为文案的字段名，默认值为 label。
      * @param array $params 远端请求参数。
      * @return static 当前选项字段实例。
      *
@@ -254,10 +258,12 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
      */
     public function remoteOptions(
         string|\Stringable $url,
-        string $valueField = 'id',
-        string $labelField = 'name',
+        string $valueField = 'value',
+        string $labelField = 'label',
         array $params = []
     ): static {
+        $this->optionValueField = trim($valueField) !== '' ? trim($valueField) : null;
+        $this->optionLabelField = trim($labelField) !== '' ? trim($labelField) : null;
         $this->remoteOptions = [
             'url' => (string)$url,
             'method' => 'get',
@@ -270,13 +276,66 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
     }
 
     /**
+     * 设置选项提交到表单的值字段，默认是 `value`。
+     * 适用于 `remoteOptions()` / `remoteSearch()` 返回多字段选项的场景；
+     * 不设置时，远端选项如未显式配置 valueField，统一取选项的 `value` 字段。
+     *
+     * @param string $valueField 值字段名。
+     * @return static 当前选项字段实例。
+     *
+     * 示例：
+     * - `Fields::select('user_id', '用户')->valueField('id')->remoteSearch($url, 'name')`
+     */
+    public function valueField(string $valueField): static
+    {
+        $field = trim($valueField);
+        if ($field === '') {
+            return $this;
+        }
+
+        $this->optionValueField = $field;
+        if ($this->remoteOptions !== null) {
+            $this->remoteOptions['valueField'] = $field;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 设置选项展示文案字段，默认是 `label` / 远端搜索字段。
+     *
+     * @param string $labelField 展示字段名。
+     * @return static 当前选项字段实例。
+     */
+    public function labelField(string $labelField): static
+    {
+        $field = trim($labelField);
+        if ($field === '') {
+            return $this;
+        }
+
+        $this->optionLabelField = $field;
+        if ($this->remoteOptions !== null) {
+            $this->remoteOptions['labelField'] = $field;
+        }
+
+        return $this;
+    }
+
+    /**
      * 开启下拉远程搜索，兼容旧版 select remoteSearch() 的默认请求格式。
      * 用户输入会作为 `search.search[$searchField]` 发送，默认使用 like 查询；
      * 字段已有值但选项为空时，会用 `$haveDefaultSearchField` 回查当前选中项。
      *
+     * 表单赋值字段与回查字段已拆开：
+     * - 选项写入表单取 `value`（或 remoteOptions()/valueField() 显式配置的字段）
+     * - `$haveDefaultSearchField` 只用于“已有值回查”，默认 id
+     *
      * @param string|\Stringable $url 远程搜索接口地址。
-     * @param string|null $searchField 搜索字段，同时作为默认展示字段；不传时使用当前字段名。
+     * @param string|null $searchField 搜索字段；不传时使用当前字段名。
      * @param string|null $haveDefaultSearchField 当前表单已有值时回查的字段，默认 id。
+     *
+     * 选项展示文案默认取 `label` 字段（可用 labelField() 覆盖）。
      * @param string|null $afterSearchHandle 搜索完成后的 JS 处理代码，运行时可读 data/options/ctx。
      * @return static 当前选项字段实例。
      *
@@ -290,13 +349,24 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         ?string $afterSearchHandle = null
     ): static {
         $field = $this->normalizeRemoteSearchField($searchField ?: $this->name());
-        [$labelField, $valueField] = $this->resolveRemoteSearchLabelAndValue($field, $haveDefaultSearchField);
+        $existing = $this->remoteOptions ?? [];
+        $valueField = $this->optionValueField ?? ($existing['valueField'] ?? 'value');
+        $labelField = $this->optionLabelField ?? ($existing['labelField'] ?? 'label');
+        $defaultSearchField = trim((string) $haveDefaultSearchField) !== ''
+            ? trim((string) $haveDefaultSearchField)
+            : 'id';
 
-        $this->remoteOptions($url, $valueField, $labelField);
+        $this->remoteOptions = array_merge($existing, [
+            'url' => (string) $url,
+            'method' => $existing['method'] ?? 'get',
+            'valueField' => $valueField,
+            'labelField' => $labelField,
+            'params' => $existing['params'] ?? [],
+        ]);
         $this->remoteOptions['remoteSearch'] = [
             'enabled' => true,
             'searchField' => $field,
-            'defaultSearchField' => $valueField,
+            'defaultSearchField' => $defaultSearchField,
             'searchType' => 'like',
             'page' => 1,
             'pageSize' => 20,
@@ -444,6 +514,63 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return $this;
     }
 
+    /**
+     * 将下拉选项改为“表格列”展示：下拉顶部显示列名，每个选项按列渲染。
+     * 适合选项本身包含多个业务字段（如客户/型号/规格）时使用。
+     *
+     * 支持两种写法：
+     * - ['name' => '客户姓名', 'model' => '型号']
+     * - [['field' => 'name', 'label' => '客户姓名', 'width' => '2fr'], ...]
+     *
+     * 注意：选项行会原样保留接口返回的扩展字段，因此远端选项接口需要返回对应字段。
+     *
+     * @param array<string, string>|array<int, array{field: string, label?: string, width?: string}> $columns
+     * @return static 当前选项字段实例
+     */
+    public function tableColumns(array $columns): static
+    {
+        $normalized = [];
+
+        foreach ($columns as $key => $column) {
+            if (is_array($column)) {
+                $field = trim((string) ($column['field'] ?? ''));
+                $label = (string) ($column['label'] ?? $field);
+                $width = isset($column['width']) ? trim((string) $column['width']) : null;
+            } else {
+                $field = trim((string) $key);
+                $label = (string) $column;
+                $width = null;
+            }
+
+            if ($field === '') {
+                continue;
+            }
+
+            $normalized[] = [
+                'field' => $field,
+                'label' => $label,
+                'width' => $width !== '' ? $width : null,
+            ];
+        }
+
+        $this->tableColumns = $normalized;
+
+        return $this;
+    }
+
+    public function hasTableColumns(): bool
+    {
+        return $this->tableColumns !== [];
+    }
+
+    /**
+     * @return array<int, array{field: string, label: string, width: ?string}>
+     */
+    public function getTableColumns(): array
+    {
+        return $this->tableColumns;
+    }
+
     public function getOptions(): array
     {
         return $this->options;
@@ -478,6 +605,7 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         return array_merge($this->remoteOptions, [
             'dependencies' => $this->getRemoteOptionDependencies(),
             'clearOnChange' => $this->remoteOptionsClearOnChange,
+            'table' => $this->hasTableColumns(),
         ]);
     }
 
@@ -567,16 +695,6 @@ class OptionField extends Field implements PlaceholderFieldInterface, Validatabl
         $field = trim($field);
 
         return $field === '' ? $this->name() : $field;
-    }
-
-    private function resolveRemoteSearchLabelAndValue(string $field, ?string $defaultSearchField): array
-    {
-        $labelSource = str_contains($field, '&') ? explode('&', $field)[0] : $field;
-        $fields = explode('.', $labelSource);
-        $labelField = count($fields) === 2 ? $fields[1] : $fields[0];
-        $valueField = $defaultSearchField ?: (count($fields) === 2 ? $fields[0] . '.id' : 'id');
-
-        return [$labelField, $valueField];
     }
 
     private function isMultipleSelect(): bool
