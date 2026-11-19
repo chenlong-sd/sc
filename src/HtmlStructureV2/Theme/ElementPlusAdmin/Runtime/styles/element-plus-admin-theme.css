@@ -275,12 +275,105 @@ body {
 .sc-v2-form-inline {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  /* 纵向间距统一由表单项 margin-bottom 控制，避免换行时与 row-gap 叠加导致间隔不一致 */
+  column-gap: 12px;
+  row-gap: 0;
   flex-wrap: wrap;
 }
 
 .sc-v2-form-inline .el-form-item {
   margin-right: 0;
+}
+
+/* 表格型下拉：表头与选项行共用列宽，选项内容按列展示 */
+.sc-v2-select-table-row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.sc-v2-select-table-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-v2-select-table-dropdown .el-select-dropdown__header {
+  padding: 0;
+}
+
+.sc-v2-select-table-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #909399;
+  background: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.sc-v2-select-table-dropdown .el-select-dropdown__item {
+  height: auto;
+  line-height: 20px;
+  padding: 7px 12px;
+}
+
+.sc-v2-select-table-dropdown .el-select-dropdown__item > span {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.sc-v2-select-table-dropdown .el-select-dropdown__item.is-selected {
+  font-weight: 600;
+}
+
+/* 输入联想：建议项可按表格列展示 */
+.sc-v2-autocomplete-dropdown .el-autocomplete-suggestion__list {
+  margin: 0;
+  padding: 0;
+}
+
+.sc-v2-autocomplete-dropdown .el-autocomplete-suggestion__list li {
+  height: auto;
+  line-height: 20px;
+  padding: 8px 12px;
+  white-space: normal;
+}
+
+.sc-v2-autocomplete-dropdown .el-autocomplete-suggestion__header {
+  padding: 0;
+}
+
+/* 加载中或没有匹配项时不展示下拉，避免打开后立即关闭造成闪烁 */
+.sc-v2-autocomplete-dropdown:not(:has(.el-autocomplete-suggestion__list li)) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.sc-v2-autocomplete-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #909399;
+  background: #f5f7fa;
+  pointer-events: none;
+}
+
+.sc-v2-autocomplete-row {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.sc-v2-autocomplete-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sc-v2-form__footer {

@@ -11,6 +11,7 @@ enum FieldType: string
     case EDITOR = 'editor';
     case NUMBER = 'number';
     case SELECT = 'select';
+    case AUTOCOMPLETE = 'autocomplete';
     case RADIO = 'radio';
     case CHECKBOX = 'checkbox';
     case CASCADER = 'cascader';

@@ -8,6 +8,7 @@ use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
 use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Action;
 use Sc\Util\HtmlStructureV2\Components\Field;
+use Sc\Util\HtmlStructureV2\Components\Fields\AutocompleteField;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
 use Sc\Util\HtmlStructureV2\Components\Fields\EditorField;
@@ -418,6 +419,7 @@ final class FieldRenderer
                 'clearable' => '',
                 'style' => $inline ? 'width: 192px' : 'width: 100%',
             ])),
+            FieldType::AUTOCOMPLETE => $this->buildAutocompleteComponent($field, $bindModelValue, $placeholder, $inline),
             FieldType::RADIO => El::double('el-radio-group')->setAttrs($bindModelValue([])),
             FieldType::CHECKBOX => El::double('el-checkbox-group')->setAttrs($bindModelValue([])),
             FieldType::CASCADER => El::double('el-cascader')->setAttrs($bindModelValue([
@@ -897,15 +899,32 @@ final class FieldRenderer
         );
 
         if ($field->type() === FieldType::SELECT) {
+            $isTableSelect = $optionField->hasTableColumns();
+            $tablePopperClass = null;
+
+            if ($isTableSelect) {
+                $tablePopperClass = 'sc-v2-select-table-dropdown sc-v2-select-table-dropdown-'
+                    . substr(md5(($options->formScope ?? $modelName) . '|' . $fieldPath), 0, 12);
+                $component->addClass('sc-v2-select-table');
+                $component->setAttr('popper-class', $tablePopperClass);
+            }
+
             if ($hasRemoteOptions) {
                 $component->setAttr('filterable');
+                if (! $isTableSelect) {
+                    $component->setAttr(
+                        ':loading',
+                        $propExpression === null
+                            ? $options->remoteLoadingExpression($fieldPath)
+                            : $options->remoteLoadingExpressionByPathExpression($propExpression)
+                    );
+                }
                 $component->setAttr(
-                    ':loading',
-                    $propExpression === null
-                        ? $options->remoteLoadingExpression($fieldPath)
-                        : $options->remoteLoadingExpressionByPathExpression($propExpression)
+                    '@visible-change',
+                    $isTableSelect && $optionField->hasRemoteSearch()
+                        ? $options->remoteTableSelectVisibleChangeHandler($pathExpression, $tablePopperClass)
+                        : $options->remoteVisibleChangeHandler($pathExpression)
                 );
-                $component->setAttr('@visible-change', $options->remoteVisibleChangeHandler($pathExpression));
 
                 if ($optionField->hasRemoteSearch()) {
                     $component->setAttr(':remote', 'true');
@@ -913,7 +932,12 @@ final class FieldRenderer
                 }
             }
 
-            $this->appendOptionChildren($component, $optionField, $optionsExpression, 'el-option');
+            if ($isTableSelect) {
+                $this->appendSelectTableHeader($component, $optionField);
+                $this->appendSelectTableOptions($component, $optionField, $optionsExpression);
+            } else {
+                $this->appendOptionChildren($component, $optionField, $optionsExpression, 'el-option');
+            }
 
             return;
         }
@@ -1379,6 +1403,159 @@ final class FieldRenderer
         $item->append(
             El::double('div')->addClass('sc-v2-form__help')->append($field->getHelpText())
         );
+    }
+
+    private function buildAutocompleteComponent(
+        Field $field,
+        callable $bindModelValue,
+        string $placeholder,
+        bool $inline
+    ): AbstractHtmlElement {
+        $autocomplete = $field instanceof AutocompleteField ? $field : null;
+        $popperClass = 'sc-v2-autocomplete-dropdown sc-v2-autocomplete-dropdown-'
+            . substr(md5($field->name() . '|' . spl_object_id($field)), 0, 12);
+        $columns = $autocomplete?->getTableColumns() ?? [];
+        $config = $autocomplete?->suggestionConfig() ?? [
+            'staticOptions' => [],
+            'labelField' => 'label',
+            'valueKey' => 'label',
+        ];
+
+        $component = El::double('el-autocomplete')
+            ->addClass('sc-v2-autocomplete')
+            ->setAttrs($bindModelValue([
+                'placeholder' => $placeholder,
+                'clearable' => '',
+                'hide-loading' => '',
+                'value-key' => $autocomplete?->getValueKey() ?? 'label',
+                'popper-class' => $popperClass,
+                'style' => $inline ? 'width: 220px' : 'width: 100%',
+                ':fetch-suggestions' => '(query, callback) => scV2FetchAutocompleteSuggestions('
+                    . $this->jsValue($config)
+                    . ', query, callback)',
+            ]));
+
+        if ($autocomplete !== null && $autocomplete->hasTableColumns()) {
+            $columns = $autocomplete->getTableColumns();
+            $header = El::double('template')->setAttr('#header', '');
+            $headerRow = El::double('div')
+                ->addClass('sc-v2-autocomplete-header')
+                ->append(
+                    (function () use ($columns): AbstractHtmlElement {
+                        $row = El::double('div')
+                            ->addClass('sc-v2-autocomplete-row')
+                            ->setAttr('style', $this->selectTableGridStyle($columns));
+
+                        foreach ($columns as $column) {
+                            $row->append(
+                                El::double('span')->append(
+                                    htmlspecialchars((string) $column['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                                )
+                            );
+                        }
+
+                        return $row;
+                    })()
+                );
+            $header->append($headerRow);
+            $component->append($header);
+
+            $template = El::double('template')->setAttr('#default', '{ item }');
+            $row = El::double('div')
+                ->addClass('sc-v2-autocomplete-row')
+                ->setAttr('style', $this->selectTableGridStyle($columns));
+
+            foreach ($columns as $column) {
+                $expression = 'item[' . json_encode(
+                    (string) $column['field'],
+                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                ) . "] ?? ''";
+
+                $row->append(
+                    El::double('span')
+                        ->setAttr(':title', $expression)
+                        ->append('{{ ' . $expression . ' }}')
+                );
+            }
+
+            $template->append($row);
+            $component->append($template);
+        }
+
+        return $component;
+    }
+
+    private function appendSelectTableHeader(AbstractHtmlElement $component, OptionField $field): void
+    {
+        $columns = $field->getTableColumns();
+        $template = El::double('template')->setAttr('#header', '');
+        $row = El::double('div')
+            ->addClass('sc-v2-select-table-row')
+            ->addClass('sc-v2-select-table-header')
+            ->setAttr('style', $this->selectTableGridStyle($columns));
+
+        foreach ($columns as $column) {
+            $row->append(
+                El::double('span')->append(
+                    htmlspecialchars((string) $column['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                )
+            );
+        }
+
+        $template->append($row);
+        $component->append($template);
+    }
+
+    private function appendSelectTableOptions(
+        AbstractHtmlElement $component,
+        OptionField $field,
+        ?string $optionsExpression
+    ): void {
+        $columns = $field->getTableColumns();
+        $itemsExpression = $optionsExpression ?? $this->jsValue($field->getOptions());
+        $gridStyle = $this->selectTableGridStyle($columns);
+
+        $option = El::double('el-option')->setAttrs([
+            'v-for' => sprintf('(item, index) in %s', $itemsExpression),
+            ':key' => 'item.key ?? item.value ?? index',
+            ':label' => 'item.label',
+            ':value' => 'item.value',
+            ':disabled' => 'item.disabled === true',
+        ]);
+
+        $row = El::double('div')
+            ->addClass('sc-v2-select-table-row')
+            ->addClass('sc-v2-select-table-option')
+            ->setAttr('style', $gridStyle);
+
+        foreach ($columns as $column) {
+            $expression = 'item[' . json_encode(
+                (string) $column['field'],
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            ) . "] ?? ''";
+
+            $row->append(
+                El::double('span')
+                    ->setAttr(':title', $expression)
+                    ->append('{{ ' . $expression . ' }}')
+            );
+        }
+
+        $option->append($row);
+        $component->append($option);
+    }
+
+    /**
+     * @param array<int, array{field: string, label: string, width: ?string}> $columns
+     */
+    private function selectTableGridStyle(array $columns): string
+    {
+        $widths = array_map(
+            static fn (array $column): string => $column['width'] ?: 'minmax(0,1fr)',
+            $columns
+        );
+
+        return 'grid-template-columns:' . implode(' ', $widths);
     }
 
     private function appendOptionChildren(

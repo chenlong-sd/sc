@@ -628,7 +628,8 @@ $assignDialog = Dialogs::make('assign-user', '分配人员')
     ->form(
         Forms::make('assign-user')->addFields(
             Fields::select('user_id', '处理人')
-                ->remoteSearch('/admin/user/listsData', 'realname')
+                ->remoteSearch('/admin/user/listsData', 'realname', 'id')
+                ->valueField('id')
         )
     );
 
@@ -760,7 +761,7 @@ echo $page->toHtml();
 ```
 
 `remoteOptions()` 适合打开下拉时加载一组固定候选项；`remoteSearch()` 适合数据量较大、需要按输入关键字搜索的下拉。
-`remoteSearch($url, 'realname')` 会按旧版默认协议请求：
+`remoteSearch($url, 'realname')` 会按旧版默认协议请求（表单值默认取选项 `value` 字段，接口不返回 `value` 时用 `valueField()` 指定值字段）：
 
 ```php
 [
@@ -772,6 +773,59 @@ echo $page->toHtml();
     'pageSize' => 20,
 ]
 ```
+
+表格型下拉：`Fields::tableSelect()`（或 `Fields::select()->tableColumns()`）会把下拉头部与每个选项按列渲染，适合选项包含多个业务字段的场景。列的 `field` 对应选项行上的字段名，接口返回的扩展字段会原样保留：
+
+```php
+Fields::tableSelect('archives_id', '技术标准', [
+    ['field' => 'name', 'label' => '客户姓名', 'width' => '2fr'],
+    ['field' => 'model', 'label' => '型号', 'width' => '1fr'],
+    ['field' => 'spec', 'label' => '规格', 'width' => '1fr'],
+])
+    ->remoteSearch('/admin/plugins/xndg/production/order/archives-options', 'input_content', 'id')
+    ->validateRequired();
+```
+
+表格型下拉的远端接口按 `page` / `pageSize` 分页，并返回 `data` + `total` 时，下拉开到底部会自动加载下一页；关键字搜索会重置到第一页并清空旧分页。接口可返回：
+
+```php
+['data' => $rows, 'total' => $total]
+```
+
+表格型下拉也支持不使用远程搜索：
+
+```php
+// 静态选项：行里保留 value/label 作为提交值/展示值，其他字段用于表格列
+Fields::tableSelect('mold_id', '模具', [
+    ['field' => 'name', 'label' => '名称'],
+    ['field' => 'spec', 'label' => '规格'],
+])->options([
+    ['value' => 1, 'label' => 'A', 'name' => 'A', 'spec' => '0.1'],
+]);
+
+// 远端固定选项：valueField / labelField 通过 remoteOptions 或 valueField()/labelField() 指定
+Fields::tableSelect('mold_id', '模具', [...])
+    ->remoteOptions('/admin/mold/options', 'id', 'name');
+```
+
+`remoteSearch($url, $searchField, $existingValueField)` 的第三个参数只用于“表单已有值时回查选项”，不再决定表单提交值。表单值默认取选项的 `value` 字段；如果远端接口使用其他字段作为值，可显式调用 `->valueField('id')`。
+
+输入联想（可自由输入，同时展示建议）：
+
+```php
+Fields::autocomplete('wire', '线盘')
+    ->remoteSearch('/admin/plugins/xndg/production/plan/materials-options', 'input_content')
+    ->labelField('name')
+    ->tableColumns([
+        ['field' => 'name', 'label' => '材料名称'],
+        ['field' => 'spec', 'label' => '材料规格'],
+    ]);
+```
+
+- 输入框允许手输任意内容，选中建议项时写入 `valueKey()` 对应字段，默认 `label`
+- 支持静态 `options()`；静态项可用 `label` 作为展示、其它字段用于表格列
+- `tableColumns()` 可把建议项渲染成多列表格行，下拉顶部会显示固定列名表头
+- 远端建议按 `search[search][searchField]=keyword` 请求，返回行通过 `labelField()` 映射展示文案；同一关键字的结果会缓存 30 秒，减少重复打开时的闪烁
 
 如果表单已有值但选项还没加载，运行时会用第三个参数指定的字段回查当前选中项；不传时默认用 `id`。
 

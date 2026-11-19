@@ -62,6 +62,11 @@
             syncUploadModelValue
           } = globalThis.__SC_V2_RUNTIME_HELPERS__;
 
+          const selectTablePagerState = new Map();
+          const selectTableScrollHandlers = new Map();
+          const selectTablePagerKey = (scope, fieldName) => String(scope || '') + '::' + String(fieldName || '');
+          const autocompleteSuggestionCache = new Map();
+
           const names = Object.assign({
             getFormRef: 'getManagedFormRef',
             getFormRules: 'getManagedFormRules',
@@ -586,7 +591,7 @@
           const hasRemoteSearchEnabled = (fieldCfg) => {
             return fieldCfg?.remoteSearch?.enabled === true;
           };
-          const buildRemoteOptionsRequestQuery = (fieldCfg, model, fieldName, keyword = null) => {
+          const buildRemoteOptionsRequestQuery = (fieldCfg, model, fieldName, keyword = null, pageOverride = null) => {
             const query = Object.assign({}, resolveDynamicParams(fieldCfg.params || {}, model));
             if (!hasRemoteSearchEnabled(fieldCfg)) {
               return query;
@@ -618,7 +623,9 @@
             searchPayload.search = searchValues;
             searchPayload.searchType = searchTypes;
             query.search = searchPayload;
-            if (query.page === undefined) {
+            if (pageOverride !== null && pageOverride !== undefined) {
+              query.page = pageOverride;
+            } else if (query.page === undefined) {
               query.page = searchCfg.page ?? 1;
             }
             if (query.pageSize === undefined) {
@@ -1848,7 +1855,7 @@
                 this[names.initializeArrayGroupRemoteOptions](scope, arrayPath, force);
               });
             },
-            [names.loadFormFieldOptions](scope, fieldName, force = false, keyword = null){
+            [names.loadFormFieldOptions](scope, fieldName, force = false, keyword = null, pagination = null){
               const fieldCfg = resolveRemoteFieldConfig(this, scope, fieldName);
               if (!fieldCfg?.url) {
                 return Promise.resolve([]);
@@ -1871,12 +1878,23 @@
               }
 
               const requestToken = this[names.nextRemoteRequestToken](scope, fieldName);
-              setByPath(loadingState, fieldName, true);
+              const isAppendRequest = pagination?.append === true;
+              if (!isAppendRequest) {
+                setByPath(loadingState, fieldName, true);
+              }
+
+              const requestQuery = buildRemoteOptionsRequestQuery(
+                fieldCfg,
+                model,
+                fieldName,
+                keyword,
+                pagination?.page ?? null
+              );
 
               return makeRequest({
                 method: fieldCfg.method || 'get',
                 url: fieldCfg.url,
-                query: buildRemoteOptionsRequestQuery(fieldCfg, model, fieldName, keyword)
+                query: requestQuery
               })
                 .then((response) => {
                   if (!this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
@@ -1884,9 +1902,54 @@
                   }
 
                   const payload = ensureSuccess(extractPayload(response), '选项加载失败');
-                  const options = pickRows(payload).map((item, index) => normalizeOption(item, fieldCfg, index));
+                  const fetchedOptions = pickRows(payload).map((item, index) => normalizeOption(item, fieldCfg, index));
+                  const appendOptions = pagination?.append === true && fieldCfg?.table === true;
+                  let options = fetchedOptions;
+
+                  if (fieldCfg?.table === true && !appendOptions) {
+                    const currentValue = getByPath(model, fieldName);
+                    const previousOptions = getByPath(this[names.getOptionState](scope), fieldName) || [];
+                    const selectedOption = previousOptions.find((option) => isSameValue(option.value, currentValue));
+                    const selectedMissing = selectedOption
+                      && !fetchedOptions.some((option) => isSameValue(option.value, currentValue));
+
+                    if (selectedMissing) {
+                      options = [selectedOption, ...fetchedOptions];
+                    }
+                  }
+
+                  if (appendOptions) {
+                    const previousOptions = getByPath(this[names.getOptionState](scope), fieldName) || [];
+                    const mergedByValue = new Map();
+                    [...previousOptions, ...fetchedOptions].forEach((option) => {
+                      mergedByValue.set(option.value, option);
+                    });
+                    options = [...mergedByValue.values()];
+                  }
+
                   setByPath(this[names.getOptionState](scope), fieldName, options);
                   setByPath(loadedState, fieldName, true);
+
+                  if (fieldCfg?.table === true) {
+                    const pagerKey = selectTablePagerKey(scope, fieldName);
+                    const pager = selectTablePagerState.get(pagerKey)
+                      || { page: 1, keyword: '', hasMore: true, loading: false };
+                    const requestPage = Number(requestQuery.page ?? pager.page ?? 1);
+                    const pageSize = Number(fieldCfg?.remoteSearch?.pageSize ?? 20);
+                    const total = Number(payload?.total ?? payload?.data?.total);
+
+                    pager.page = Number.isFinite(requestPage) && requestPage > 0 ? requestPage : 1;
+                    if (!appendOptions) {
+                      const defaultSearchField = fieldCfg?.remoteSearch?.defaultSearchField || 'id';
+                      pager.keyword = keyword === null || keyword === undefined ? '' : String(keyword);
+                      pager.selectedLookup = (keyword === null || keyword === undefined)
+                        && Boolean(requestQuery?.search?.search?.[defaultSearchField]);
+                    }
+                    pager.hasMore = Number.isFinite(total) && total >= 0
+                      ? options.length < total
+                      : fetchedOptions.length >= pageSize;
+                    selectTablePagerState.set(pagerKey, pager);
+                  }
                   runRemoteSearchAfterHandle(this, fieldCfg, {
                     scope,
                     fieldName,
@@ -1928,9 +1991,226 @@
                   }).then(() => []);
                 })
                 .finally(() => {
-                  if (this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
+                  if (!isAppendRequest && this[names.isLatestRemoteRequestToken](scope, fieldName, requestToken)) {
                     setByPath(loadingState, fieldName, false);
                   }
+                });
+            },
+            scV2HandleSelectTableVisibleChange(visible, scope, fieldName, popperClass){
+              if (!visible) {
+                this.scV2TeardownSelectTableScroll(popperClass);
+                return;
+              }
+
+              const fieldCfg = resolveRemoteFieldConfig(this, scope, fieldName);
+              const pager = selectTablePagerState.get(selectTablePagerKey(scope, fieldName));
+              const forceFirstPage = fieldCfg?.table === true && (!pager || pager.selectedLookup === true);
+              const request = forceFirstPage
+                ? this[names.loadFormFieldOptions](scope, fieldName, true, '')
+                : this[names.loadFormFieldOptions](scope, fieldName);
+              this.scV2SetupSelectTableScroll(popperClass, scope, fieldName);
+
+              return request;
+            },
+            scV2SetupSelectTableScroll(popperClass, scope, fieldName){
+              const popperKey = String(popperClass || '');
+              if (popperKey === '') {
+                return;
+              }
+
+              let attempts = 0;
+              const attach = () => {
+                const uniqueClass = popperKey.split(/\s+/).filter(Boolean).pop();
+                const popper = uniqueClass ? document.querySelector('.' + uniqueClass) : null;
+                if (!popper) {
+                  if (attempts++ < 5) {
+                    setTimeout(attach, 50);
+                  }
+                  return;
+                }
+
+                const previous = selectTableScrollHandlers.get(popperKey);
+                if (previous) {
+                  previous.element.removeEventListener('scroll', previous.handler);
+                  selectTableScrollHandlers.delete(popperKey);
+                }
+
+                const candidates = [
+                  popper.querySelector('.el-scrollbar__wrap'),
+                  popper.querySelector('.el-select-dropdown__list'),
+                  popper.querySelector('.el-select-dropdown'),
+                  popper
+                ].filter(Boolean);
+                const scroller = candidates.find((element) => element.scrollHeight > element.clientHeight + 1)
+                  || candidates[0];
+
+                if (!scroller) {
+                  return;
+                }
+
+                const handler = () => {
+                  if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 24) {
+                    this.scV2LoadMoreSelectTableOptions(scope, fieldName);
+                  }
+                };
+
+                scroller.addEventListener('scroll', handler, { passive: true });
+                selectTableScrollHandlers.set(popperKey, { element: scroller, handler });
+              };
+              const run = () => setTimeout(attach, 0);
+
+              if (typeof this.$nextTick === 'function') {
+                this.$nextTick(run);
+              } else {
+                run();
+              }
+            },
+            scV2TeardownSelectTableScroll(popperClass){
+              const popperKey = String(popperClass || '');
+              const entry = selectTableScrollHandlers.get(popperKey);
+              if (!entry) {
+                return;
+              }
+
+              entry.element.removeEventListener('scroll', entry.handler);
+              selectTableScrollHandlers.delete(popperKey);
+            },
+            scV2LoadMoreSelectTableOptions(scope, fieldName){
+              const fieldCfg = resolveRemoteFieldConfig(this, scope, fieldName);
+              if (!fieldCfg?.url || fieldCfg.table !== true || !hasRemoteSearchEnabled(fieldCfg)) {
+                return Promise.resolve([]);
+              }
+
+              const pagerKey = selectTablePagerKey(scope, fieldName);
+              const pager = selectTablePagerState.get(pagerKey);
+              if (!pager || pager.loading === true || pager.hasMore === false) {
+                return Promise.resolve([]);
+              }
+
+              const loadingState = this[names.getOptionLoadingState](scope);
+              if (getByPath(loadingState, fieldName)) {
+                return Promise.resolve([]);
+              }
+
+              pager.loading = true;
+              selectTablePagerState.set(pagerKey, pager);
+              const page = (Number(pager.page) || 1) + 1;
+
+              return this[names.loadFormFieldOptions](
+                scope,
+                fieldName,
+                true,
+                pager.keyword || '',
+                { page, append: true }
+              ).finally(() => {
+                const latestPager = selectTablePagerState.get(pagerKey);
+                if (latestPager) {
+                  latestPager.loading = false;
+                }
+              });
+            },
+            scV2FetchAutocompleteSuggestions(config, query, callback){
+              if (!config || typeof callback !== 'function') {
+                return;
+              }
+
+              const keyword = query === null || query === undefined ? '' : String(query);
+              const labelField = typeof config.labelField === 'string' && config.labelField !== ''
+                ? config.labelField
+                : 'label';
+              const valueKey = typeof config.valueKey === 'string' && config.valueKey !== ''
+                ? config.valueKey
+                : 'label';
+              const normalizeSuggestion = (item) => {
+                const row = isObject(item)
+                  ? Object.assign({}, item)
+                  : { label: item === null || item === undefined ? '' : String(item) };
+                const label = row[labelField] !== undefined
+                  ? row[labelField]
+                  : (row.label !== undefined ? row.label : (row.value !== undefined ? row.value : ''));
+
+                row.label = label === null || label === undefined ? '' : String(label);
+                if (row[valueKey] === undefined || row[valueKey] === null) {
+                  row[valueKey] = row.label;
+                }
+
+                return row;
+              };
+
+              const finish = (rows) => {
+                callback(rows);
+              };
+
+              if (Array.isArray(config.staticOptions)) {
+                const lowered = keyword.trim().toLowerCase();
+                const rows = config.staticOptions
+                  .map(normalizeSuggestion)
+                  .filter((row) => lowered === ''
+                    || String(row.label || '').toLowerCase().includes(lowered)
+                    || JSON.stringify(row).toLowerCase().includes(lowered));
+
+                finish(rows);
+                return;
+              }
+
+              if (!config.url) {
+                finish([]);
+                return;
+              }
+
+              const cacheKey = [
+                config.url,
+                config.searchField || '',
+                keyword,
+                JSON.stringify(isObject(config.params) ? config.params : {})
+              ].join('|');
+              const cached = autocompleteSuggestionCache.get(cacheKey);
+              if (cached && cached.expiresAt > Date.now()) {
+                finish(cached.rows);
+                return;
+              }
+
+              const queryParams = Object.assign({}, isObject(config.params) ? config.params : {});
+              const searchField = typeof config.searchField === 'string' && config.searchField !== ''
+                ? config.searchField
+                : 'keyword';
+
+              queryParams.page = 1;
+              queryParams.pageSize = Number(config.pageSize) > 0 ? Number(config.pageSize) : 20;
+              queryParams.search = Object.assign({}, isObject(queryParams.search) ? queryParams.search : {});
+              queryParams.search.search = Object.assign(
+                {},
+                isObject(queryParams.search.search) ? queryParams.search.search : {},
+                { [searchField]: keyword }
+              );
+              queryParams.search.searchType = Object.assign(
+                {},
+                isObject(queryParams.search.searchType) ? queryParams.search.searchType : {},
+                { [searchField]: 'like' }
+              );
+
+              makeRequest({
+                method: config.method || 'get',
+                url: config.url,
+                query: queryParams
+              })
+                .then((response) => {
+                  try {
+                    const payload = ensureSuccess(extractPayload(response), '建议加载失败');
+                    const rows = pickRows(payload).map(normalizeSuggestion);
+                    autocompleteSuggestionCache.set(cacheKey, {
+                      rows,
+                      expiresAt: Date.now() + 30000
+                    });
+                    finish(rows);
+                  } catch (error) {
+                    console.warn('[sc-v2] autocomplete suggestions failed', error);
+                    finish([]);
+                  }
+                })
+                .catch((error) => {
+                  console.warn('[sc-v2] autocomplete suggestions request failed', error);
+                  finish([]);
                 });
             },
             [names.initializeUploadFiles](scope){

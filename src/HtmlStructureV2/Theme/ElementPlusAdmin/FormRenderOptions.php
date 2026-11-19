@@ -191,6 +191,19 @@ final class FormRenderOptions
         );
     }
 
+    /**
+     * 表格型下拉的展开事件：首次展开时加载第一页，并挂载下拉滚动触底加载监听。
+     */
+    public function remoteTableSelectVisibleChangeHandler(string $fieldPathExpression, string $popperClass): string
+    {
+        return sprintf(
+            '(visible) => scV2HandleSelectTableVisibleChange(visible, %s, %s, %s)',
+            $this->jsLiteral($this->remoteScope),
+            $fieldPathExpression,
+            $this->jsLiteral($popperClass)
+        );
+    }
+
     public function linkageChangeHandler(string $fieldPathExpression): string
     {
         return $this->scopedFieldHandler($this->linkageMethod, $this->remoteScope, $fieldPathExpression, 'value');

@@ -2,6 +2,7 @@
 
 namespace Sc\Util\HtmlStructureV2\Dsl;
 
+use Sc\Util\HtmlStructureV2\Components\Fields\AutocompleteField;
 use Sc\Util\HtmlStructureV2\Components\Fields\BasicField;
 use Sc\Util\HtmlStructureV2\Components\Fields\CascaderField;
 use Sc\Util\HtmlStructureV2\Components\Fields\DateField;
@@ -85,6 +86,22 @@ final class Fields
     }
 
     /**
+     * 创建输入联想框（el-autocomplete）。
+     * 输入框允许自由输入，并根据输入展示静态或远端建议项；可配合 tableColumns() 以表格列展示建议。
+     *
+     * @param string $name 字段名
+     * @param string|null $label 字段标签
+     * @return AutocompleteField 联想输入字段实例
+     *
+     * 示例：
+     * - `Fields::autocomplete('wire', '线盘')->remoteSearch('/options', 'keyword')`
+     */
+    public static function autocomplete(string $name, ?string $label = null): AutocompleteField
+    {
+        return new AutocompleteField($name, $label ?? '');
+    }
+
+    /**
      * 创建富文本编辑器字段。
      * 底层使用 SimpleRichEditor，并支持 uploadUrl()/initOptions()/event() 等编辑器配置。
      * `uploadUrl()` 会为图片、视频、附件自动补默认上传处理；`initOptions()` 的键名与
@@ -155,6 +172,29 @@ final class Fields
     public static function radio(string $name, ?string $label = null): OptionField
     {
         return new OptionField($name, $label ?? '', FieldType::RADIO);
+    }
+
+    /**
+     * 创建表格型下拉：下拉顶部展示列名，选项按列渲染。
+     * 支持静态 options()、remoteOptions() 和 remoteSearch() 三种数据来源；
+     * 表单提交值默认取选项的 `value` 字段，可用 valueField() 单独指定。
+     *
+     * 列配置支持 `['name' => '客户姓名', 'model' => '型号']`
+     * 或 `[['field' => 'name', 'label' => '客户姓名', 'width' => '2fr']]`。
+     *
+     * @param string $name 字段名
+     * @param string|null $label 字段标签
+     * @param array $columns 列配置
+     * @return OptionField 下拉字段实例
+     *
+     * 示例：
+     * - `Fields::tableSelect('archives_id', '技术标准', ['name' => '客户姓名', 'model' => '型号', 'spec' => '规格'])`
+     */
+    public static function tableSelect(string $name, ?string $label = null, array $columns = []): OptionField
+    {
+        $field = static::select($name, $label);
+
+        return $columns === [] ? $field : $field->tableColumns($columns);
     }
 
     /**
