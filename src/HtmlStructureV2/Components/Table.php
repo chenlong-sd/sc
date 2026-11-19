@@ -51,6 +51,8 @@ final class Table implements Renderable, EventAware
     public const HEADER_SEARCH_MODEL_KEY = '__sc_v2_header_search__';
 
     private array $columns = [];
+    private string|AbstractHtmlElement|null $toolbarContent = null;
+    private array $toolbarLeftItems = [];
     private array $toolbarLeftActions = [];
     private array $toolbarRightActions = [];
     private array $rowActions = [];
@@ -144,9 +146,39 @@ final class Table implements Renderable, EventAware
      * 示例：
      * - `Tables::make('qa-info-table')->toolbarLeft(Actions::create()->dialog('qa-info-dialog'))`
      */
+    /**
+     * 在表格工具栏左侧插入自定义内容，展示位置按调用顺序决定。
+     *
+     * @param string|AbstractHtmlElement $content 自定义 HTML 内容。
+     * @return self 当前表格实例。
+     */
+    public function toolbarContent(string|AbstractHtmlElement $content): self
+    {
+        $this->toolbarContent = $content;
+        $this->toolbarLeftItems[] = $content;
+
+        return $this;
+    }
+
+    public function getToolbarContent(): string|AbstractHtmlElement|null
+    {
+        return $this->toolbarContent;
+    }
+
+    /**
+     * @return array<int, Action|string|AbstractHtmlElement>
+     */
+    public function getToolbarLeftItems(): array
+    {
+        return $this->toolbarLeftItems;
+    }
+
     public function toolbarLeft(Action ...$actions): self
     {
         $this->toolbarLeftActions = array_merge($this->toolbarLeftActions, $actions);
+        foreach ($actions as $action) {
+            $this->toolbarLeftItems[] = $action;
+        }
 
         return $this;
     }
