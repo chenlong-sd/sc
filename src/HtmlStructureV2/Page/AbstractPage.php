@@ -61,6 +61,8 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
     private array $externalScriptsBeforeRuntime = [];
     /** @var string[] 页面加载时注入的 <link rel="stylesheet"> 外部样式 */
     private array $externalStyles = [];
+    /** @var string[] 页面级内联 <style> 片段 */
+    private array $inlineStyles = [];
     private ?string $background = null;
     private ?ThemeInterface $renderTheme = null;
 
@@ -426,6 +428,36 @@ abstract class AbstractPage implements DocumentRenderable, Renderable
         $href !== '' && !in_array($href, $this->externalStyles, true) && $this->externalStyles[] = $href;
 
         return $this;
+    }
+
+    /**
+     * 为当前页面追加一段内联 CSS，最终以 `<style>` 注入页面 head。
+     * 适合只在本页面使用的布局/组件样式，避免写入公共主题或插件全局样式。
+     *
+     * @param string $css CSS 片段；空字符串忽略，完全相同的片段自动去重。
+     * @return static 当前页面实例。
+     *
+     * 示例：
+     * - `Pages::make('机台管理')->style('.tech-grid{display:grid;grid-template-columns:repeat(3,1fr)}')`
+     */
+    public function style(string $css): static
+    {
+        $css = trim($css);
+        if ($css !== '' && !in_array($css, $this->inlineStyles, true)) {
+            $this->inlineStyles[] = $css;
+        }
+
+        return $this;
+    }
+
+    /**
+     * 页面级内联 CSS 列表。
+     *
+     * @return string[]
+     */
+    public function getInlineStyles(): array
+    {
+        return $this->inlineStyles;
     }
 
     /**

@@ -136,6 +136,9 @@ final class ElementPlusAdminTheme implements ThemeInterface
         foreach ($page->getExternalStyles() as $href) {
             $context->document()->assets()->addStylesheet($href);
         }
+        foreach ($page->getInlineStyles() as $css) {
+            $context->document()->assets()->addInlineStyle($css);
+        }
 
         return $body;
     }
