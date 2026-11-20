@@ -1,7 +1,7 @@
 (function (global) {
   'use strict';
 
-  var HIDE_SELECTOR = '.sc-v2-page__header, .sc-v2-actions, .xndg-print-actions';
+  var HIDE_SELECTOR = '.sc-v2-page__header, .sc-v2-actions';
   var PRINT_STYLE = [
     'html,body{background:#fff!important;margin:0!important;padding:0!important;width:100%!important;box-sizing:border-box!important;overflow:visible!important;}',
     'body,body *{visibility:visible!important;box-sizing:border-box!important;}',
