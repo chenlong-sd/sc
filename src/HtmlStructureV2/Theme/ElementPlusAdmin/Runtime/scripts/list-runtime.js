@@ -888,6 +888,14 @@
           if (typeof globalThis.axios === 'function') {
             app.config.globalProperties.axios = globalThis.axios;
           }
+          app.config.globalProperties.scV2PrintPage = function(selector){
+            if (typeof globalThis.scV2PrintPage === 'function') {
+              return globalThis.scV2PrintPage(selector);
+            }
+            if (typeof window !== 'undefined' && typeof window.print === 'function') {
+              window.print();
+            }
+          };
           app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
           const vm = app.mount('#app');
           globalThis.__SC_V2_PAGE__ = Object.assign(
