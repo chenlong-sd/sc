@@ -5,6 +5,7 @@ namespace Sc\Util\HtmlStructureV2\Theme\ElementPlusAdmin;
 use InvalidArgumentException;
 use Sc\Util\HtmlElement\El;
 use Sc\Util\HtmlElement\ElementType\AbstractHtmlElement;
+use Sc\Util\HtmlElement\ElementType\DoubleLabel;
 use Sc\Util\HtmlStructureV2\Components\Column;
 use Sc\Util\HtmlStructureV2\Contracts\Renderable;
 use Sc\Util\HtmlStructureV2\RenderContext;
@@ -122,7 +123,13 @@ final class ColumnRenderer
         }
 
         if ($format instanceof AbstractHtmlElement) {
-            $template->append($format->copy());
+            if ($format instanceof DoubleLabel && $format->getLabel() === 'template' && $format->getAttrs() === []) {
+                foreach ($format->getChildren() as $child) {
+                    $template->append($child->copy());
+                }
+            } else {
+                $template->append($format->copy());
+            }
 
             return $template;
         }

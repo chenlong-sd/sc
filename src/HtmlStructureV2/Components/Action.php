@@ -138,6 +138,31 @@ class Action implements
     }
 
     /**
+     * 创建打印动作。
+     *
+     * @param string $label 按钮文案。
+     * @param string $selector 要打印的内容选择器，默认打印整个 .sc-v2-page。
+     * @return self 当前动作实例。
+     *
+     * 示例：
+     * - `Action::print('打印')`
+     * - `Action::print('打印卡片', '.xndg-lacquer-card')`
+     */
+    public static function print(string $label = '打印', string $selector = '.sc-v2-page'): self
+    {
+        $selector = trim($selector) !== '' ? trim($selector) : '.sc-v2-page';
+        $handler = sprintf(
+            'scV2PrintPage(%s)',
+            json_encode($selector, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_QUOT | JSON_HEX_APOS)
+        );
+
+        return self::custom($label)
+            ->type('primary')
+            ->icon('Printer')
+            ->onClick($handler);
+    }
+
+    /**
      * 创建“关闭弹窗”动作。
      * 若动作放在 dialog footer 中，会默认关闭当前 dialog；
      * 其它位置如需显式指定目标 dialog，再链式调用 dialog()。

@@ -86,6 +86,22 @@ final class Actions
     }
 
     /**
+     * 创建打印动作。
+     *
+     * @param string $label 按钮文案。
+     * @param string $selector 要打印的内容选择器，默认打印整个 .sc-v2-page。
+     * @return Action 打印动作实例。
+     *
+     * 示例：
+     * - `Actions::print()`
+     * - `Actions::print('打印卡片', '.xndg-lacquer-card')`
+     */
+    public static function print(string $label = '打印', string $selector = '.sc-v2-page'): Action
+    {
+        return Action::print($label, $selector);
+    }
+
+    /**
      * 创建一个通用“保存”请求动作。
      * 默认按钮类型为 primary，图标为 Check；
      * 默认会按当前唯一表单或显式 submitForm() 目标执行保存；

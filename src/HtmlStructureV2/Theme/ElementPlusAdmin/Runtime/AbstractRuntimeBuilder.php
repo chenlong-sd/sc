@@ -25,13 +25,14 @@ abstract class AbstractRuntimeBuilder
             foreach ($urls as $url) {
                 $assets->addScript($url);
             }
-            $assets->addInlineScript($this->bootstrapScript($state, $config));
         } else {
             foreach ($files as $filename) {
                 $assets->addInlineScript(RuntimeScriptLoader::load($filename));
             }
-            $assets->addInlineScript($this->bootstrapScript($state, $config));
         }
+
+        $assets->addInlineScript(RuntimeScriptLoader::load('print.js'));
+        $assets->addInlineScript($this->bootstrapScript($state, $config));
 
         $context->set($this->runtimeFlagKey(), true);
     }

@@ -1322,6 +1322,18 @@ echo $page->toHtml();
 - `->openTab()/->openNewPage()/->openCurrentPage()/->historyBack()`：挂在任意 Action 之后的跳转/返回链式方法，见 `### 页面跳转与返回`
 - `custom`：原生 JS 兜底，只在确实无法抽象时使用
 
+### 打印动作
+
+`Actions::print()` 会自动加载 V2 运行时打印器，并通过隐藏 iframe 打印指定内容，不会打印后台外壳或被浏览器拦截弹窗。
+
+```php
+Actions::print()                                     // 打印整个 .sc-v2-page（自动隐藏页头/操作按钮）
+Actions::print('打印卡片', '.xndg-lacquer-card')      // 只打印指定内容
+Actions::print('打印详情', '#print-area')
+```
+
+打印器也暴露为全局 `scV2PrintPage(selector)`，可在自定义按钮或其他动作中直接调用；目标可以是任意页面内元素选择器。
+
 ### 弹窗动作推荐写法
 
 推荐直接在动作后链式 `->dialog($dialog)`，页面会自动注册：
@@ -2461,7 +2473,7 @@ Tables::column('状态', 'status')->displayDynamic(
 - 列表页运行时拆在 `Theme/ElementPlusAdmin/Runtime/scripts/list/`
 - 普通表单运行时拆在 `Theme/ElementPlusAdmin/Runtime/scripts/simple/`
 - 结构化请求动作 runtime 在 `request-action-factory.js`
-- 公共 helper 在 `runtime-helpers.js`
+- 公共 helper 在 `runtime-helpers.js`；打印器在 `print.js`，随 runtime bootstrap 内联注入，全局 `scV2PrintPage(selector)` 不依赖单独脚本加载
 - 公共表单 runtime 工厂在 `form-runtime-factory.js`
 - 渲染时会优先把 runtime 按原始模块文件名发布到 `public/js/sc-v2/`，页面里直接加载 `runtime-helpers.js`、`managed-dialog-factory.js` 这类具体脚本，便于定位问题
 - 主题 CSS 也会从 `Theme/ElementPlusAdmin/Runtime/styles/element-plus-admin-theme.css` 自动发布到 `public/js/sc-v2/`；如果发布失败，会回退成 inline style
