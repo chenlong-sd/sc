@@ -60,6 +60,50 @@ class SqlTableComparator {
                 $token = trim($token);
                 if (empty($token)) continue;
 
+                // 处理主键（支持多列）
+                if (preg_match('/^(?:CONSTRAINT\s+`?[^`\s]+`?\s+)?PRIMARY\s+KEY\b/i', $token)) {
+                    if (preg_match('/PRIMARY\s+KEY\s*(?:USING\s+\w+)?\s*\(((?:[^()]|\([^()]*\))+)\)/i', $token, $pkMatches)) {
+                        $tableInfo['primary_key'] = $this->parseIndexColumnList($pkMatches[1]);
+                    }
+                    continue;
+                }
+
+                // 处理唯一键（支持多列）
+                if (preg_match('/^(?:CONSTRAINT\s+`?[^`\s]+`?\s+)?UNIQUE\s+(?:KEY|INDEX)\b/i', $token)) {
+                    if (preg_match('/UNIQUE\s+(?:KEY|INDEX)\s+`?([^`\s]*?)`?\s*(?:USING\s+\w+)?\s*\(((?:[^()]|\([^()]*\))+)\)/i', $token, $ukMatches)) {
+                        $columns = $this->parseIndexColumnList($ukMatches[2]);
+                        $keyName = $ukMatches[1] ?: $this->generateIndexName($columns);
+                        $tableInfo['unique_keys'][$keyName] = $columns;
+                    }
+                    continue;
+                }
+
+                // 处理普通索引（支持多列）
+                if (preg_match('/^(?:CONSTRAINT\s+`?[^`\s]+`?\s+)?(?:KEY|INDEX)\b/i', $token)) {
+                    if (preg_match('/(?:KEY|INDEX)\s+`?([^`\s]*?)`?\s*(?:USING\s+\w+)?\s*\(((?:[^()]|\([^()]*\))+)\)/i', $token, $idxMatches)) {
+                        $columns = $this->parseIndexColumnList($idxMatches[2]);
+                        $keyName = $idxMatches[1] ?: $this->generateIndexName($columns);
+                        $tableInfo['indexes'][$keyName] = $columns;
+                    }
+                    continue;
+                }
+
+                // 处理外键
+                if (preg_match('/^(?:CONSTRAINT\s+`?[^`\s]+`?\s+)?FOREIGN\s+KEY\b/i', $token)) {
+                    if (preg_match('/FOREIGN\s+KEY\s*\(((?:[^()]|\([^()]*\))+)\)\s+REFERENCES\s+`?([^`\s(]+)`?\s*\(((?:[^()]|\([^()]*\))+)\)/i', $token, $fkMatches)) {
+                        $localColumns = $this->parseIndexColumnList($fkMatches[1]);
+                        $refColumns = $this->parseIndexColumnList($fkMatches[3]);
+                        foreach ($localColumns as $index => $localColumn) {
+                            $tableInfo['foreign_keys'][] = [
+                                'local_column' => $localColumn,
+                                'ref_table' => $fkMatches[2],
+                                'ref_column' => $refColumns[$index] ?? ($refColumns[0] ?? '')
+                            ];
+                        }
+                    }
+                    continue;
+                }
+
                 // 处理字段定义（保留AUTO_INCREMENT属性）
                 if (preg_match('/^`?([^`\s]+)`?\s+(.+?)(?=\s+(PRIMARY KEY|UNIQUE|KEY|INDEX|NOT NULL|DEFAULT|COMMENT|AUTO_INCREMENT|REFERENCES|,|$))/i', $token, $colMatches)) {
                     $colName = $colMatches[1];
@@ -105,49 +149,6 @@ class SqlTableComparator {
                     $tableInfo['column_order'][] = $colName;
                     continue;
                 }
-
-                // 处理主键
-                if (stripos($token, 'PRIMARY KEY') !== false) {
-                    if (preg_match('/PRIMARY KEY\s*(?:USING \w+)?\s*\(`?([^`\)]+)`?\)/i', $token, $pkMatches)) {
-                        $tableInfo['primary_key'] = explode('`,`', trim($pkMatches[1], '`'));
-                    }
-                    continue;
-                }
-
-                // 处理唯一键
-                if (stripos($token, 'UNIQUE') !== false) {
-                    if (preg_match('/UNIQUE\s+(KEY|INDEX)\s+`?([^`\s]*?)`?\s*(?:USING \w+)?\s*\(`?([^`\)]+)`?\)/i', $token, $ukMatches)) {
-                        $keyName = $ukMatches[2] ?: $this->generateIndexName($ukMatches[3]);
-                        $columns = explode('`,`', trim($ukMatches[3], '`'));
-                        $tableInfo['unique_keys'][$keyName] = $columns;
-                    }
-                    continue;
-                }
-
-                // 处理普通索引
-                if (stripos($token, 'KEY') !== false || stripos($token, 'INDEX') !== false) {
-                    if (stripos($token, 'PRIMARY') !== false || stripos($token, 'UNIQUE') !== false) {
-                        continue;
-                    }
-                    if (preg_match('/(KEY|INDEX)\s+`?([^`\s]*?)`?\s*(?:USING \w+)?\s*\(`?([^`\)]+)`?\)/i', $token, $idxMatches)) {
-                        $keyName = $idxMatches[2] ?: $this->generateIndexName($idxMatches[3]);
-                        $columns = explode('`,`', trim($idxMatches[3], '`'));
-                        $tableInfo['indexes'][$keyName] = $columns;
-                    }
-                    continue;
-                }
-
-                // 处理外键
-                if (stripos($token, 'FOREIGN KEY') !== false) {
-                    if (preg_match('/FOREIGN KEY\s*\(`?([^`\)]+)`?\)\s+REFERENCES\s+`?([^`\s]+)`?\s*\(`?([^`\)]+)`?\)/i', $token, $fkMatches)) {
-                        $tableInfo['foreign_keys'][] = [
-                            'local_column' => $fkMatches[1],
-                            'ref_table' => $fkMatches[2],
-                            'ref_column' => $fkMatches[3]
-                        ];
-                    }
-                    continue;
-                }
             }
         }
 
@@ -155,10 +156,54 @@ class SqlTableComparator {
     }
 
     /**
+     * 解析索引列列表，支持多列、反引号和前缀长度（如 `plan`(191)）。
+     *
+     * @return array<int, string>
+     */
+    private function parseIndexColumnList(string $columnsStr): array
+    {
+        $columns = [];
+        $parts = preg_split('/,(?![^()]*\))/', $columnsStr) ?: [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+
+            $length = '';
+            if (preg_match('/^`?([^`"\s(]+)`?\s*(\(\s*\d+\s*\))?(?:\s+(?:ASC|DESC))?$/i', $part, $matches)) {
+                $name = $matches[1];
+                $length = isset($matches[2]) ? preg_replace('/\s+/', '', $matches[2]) : '';
+            } else {
+                $name = trim($part, '`" ');
+            }
+
+            $columns[] = $name . $length;
+        }
+
+        return $columns;
+    }
+
+    /**
+     * 生成索引列 SQL 片段，兼容列前缀长度。
+     *
+     * @param array<int, string> $columns
+     */
+    private function renderIndexColumns(array $columns): string
+    {
+        return implode(',', array_map(static function (string $column): string {
+            if (preg_match('/^([^(]+)(\(\d+\))$/', $column, $matches)) {
+                return '`' . $matches[1] . '`' . $matches[2];
+            }
+
+            return '`' . $column . '`';
+        }, $columns));
+    }
+
+    /**
      * 生成默认索引名
      */
-    private function generateIndexName($columnsStr) {
-        $columns = explode('`,`', trim($columnsStr, '`'));
+    private function generateIndexName(array $columns) {
         return 'idx_' . implode('_', $columns);
     }
 
@@ -444,8 +489,8 @@ class SqlTableComparator {
                 $sql[] = "DROP PRIMARY KEY";
             }
             if (!empty($differences['primary_key']['new'])) {
-                $pkCols = implode('`,`', $differences['primary_key']['new']);
-                $sql[] = "ADD PRIMARY KEY (`{$pkCols}`)";
+                $pkCols = $this->renderIndexColumns($differences['primary_key']['new']);
+                $sql[] = "ADD PRIMARY KEY ({$pkCols})";
             }
         }
 
@@ -454,13 +499,13 @@ class SqlTableComparator {
             $sql[] = "DROP INDEX `{$keyName}`";
         }
         foreach ($differences['unique_keys']['added'] as $keyName => $cols) {
-            $ukCols = implode('`,`', $cols);
-            $sql[] = "ADD UNIQUE KEY `{$keyName}` (`{$ukCols}`)";
+            $ukCols = $this->renderIndexColumns($cols);
+            $sql[] = "ADD UNIQUE KEY `{$keyName}` ({$ukCols})";
         }
         foreach ($differences['unique_keys']['modified'] as $keyName => $change) {
             $sql[] = "DROP INDEX `{$keyName}`";
-            $ukCols = implode('`,`', $change['new']);
-            $sql[] = "ADD UNIQUE KEY `{$keyName}` (`{$ukCols}`)";
+            $ukCols = $this->renderIndexColumns($change['new']);
+            $sql[] = "ADD UNIQUE KEY `{$keyName}` ({$ukCols})";
         }
 
         // 普通索引操作
@@ -468,13 +513,13 @@ class SqlTableComparator {
             $sql[] = "DROP INDEX `{$keyName}`";
         }
         foreach ($differences['indexes']['added'] as $keyName => $cols) {
-            $idxCols = implode('`,`', $cols);
-            $sql[] = "ADD INDEX `{$keyName}` (`{$idxCols}`)";
+            $idxCols = $this->renderIndexColumns($cols);
+            $sql[] = "ADD INDEX `{$keyName}` ({$idxCols})";
         }
         foreach ($differences['indexes']['modified'] as $keyName => $change) {
             $sql[] = "DROP INDEX `{$keyName}`";
-            $idxCols = implode('`,`', $change['new']);
-            $sql[] = "ADD INDEX `{$keyName}` (`{$idxCols}`)";
+            $idxCols = $this->renderIndexColumns($change['new']);
+            $sql[] = "ADD INDEX `{$keyName}` ({$idxCols})";
         }
 
         // 外键操作
