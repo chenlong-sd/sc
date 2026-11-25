@@ -450,15 +450,18 @@ final class Table implements Renderable, EventAware
      * @param string $name 筛选模型字段名。
      * @param array $options 状态切换选项。
      * @param string|AbstractHtmlElement|\Stringable|null $label 按钮组标签。
+     * @param int|string|bool|null $default 默认选中的选项值；null 表示默认“全部”。
      * @return self 当前表格实例。
      *
      * 示例：
      * - `Tables::make('qa-info-table')->statusToggle('status', [1 => '启用', 0 => '停用'], '状态')`
+     * - `Tables::make('qa-info-table')->statusToggle('status', [1 => '启用', 0 => '停用'], '状态', 1)`
      */
     public function statusToggle(
         string $name,
         array $options,
-        string|AbstractHtmlElement|\Stringable|null $label = null
+        string|AbstractHtmlElement|\Stringable|null $label = null,
+        int|string|bool|null $default = null
     ): self {
         $normalizedName = trim($name);
         if ($normalizedName === '') {
@@ -469,6 +472,7 @@ final class Table implements Renderable, EventAware
             'name' => $normalizedName,
             'label' => $label,
             'options' => $this->normalizeStatusToggleOptions($options),
+            'default' => $default,
         ];
 
         return $this;

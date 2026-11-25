@@ -163,6 +163,7 @@ final class TableRuntimeConfigBuilder
             $items[] = [
                 'name' => $name,
                 'options' => array_values(is_array($toggle['options'] ?? null) ? $toggle['options'] : []),
+                'default' => $toggle['default'] ?? null,
             ];
         }
 

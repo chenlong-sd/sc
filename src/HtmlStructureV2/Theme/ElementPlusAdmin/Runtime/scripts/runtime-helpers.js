@@ -2814,7 +2814,8 @@
             const quickFilters = {};
             (Array.isArray(tableConfig?.statusToggles?.items) ? tableConfig.statusToggles.items : []).forEach((item) => {
               if (typeof item?.name === 'string' && item.name !== '') {
-                quickFilters[item.name] = null;
+                const defaultValue = Object.prototype.hasOwnProperty.call(item, 'default') ? item.default : null;
+                quickFilters[item.name] = isBlank(defaultValue) ? null : defaultValue;
               }
             });
 
