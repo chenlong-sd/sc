@@ -476,9 +476,10 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   --sc-v2-dialog-footer-height: 0px;
 }
 
-.el-dialog.sc-v2-dialog--iframe-fixed-height .el-dialog__body {
+.el-dialog.sc-v2-dialog--iframe-fixed-height:not(.is-fullscreen) .el-dialog__body {
   box-sizing: border-box;
   height: max(0px, calc(var(--sc-v2-dialog-body-height, 0px) - var(--sc-v2-dialog-footer-height, 0px)));
+  height: max(0px, min(calc(var(--sc-v2-dialog-body-height, 0px) - var(--sc-v2-dialog-footer-height, 0px)), calc(100vh - 120px)));
   min-height: 0;
   overflow: hidden;
 }

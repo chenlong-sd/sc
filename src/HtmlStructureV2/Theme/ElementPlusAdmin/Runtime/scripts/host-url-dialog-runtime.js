@@ -112,7 +112,7 @@
     style.id = styleId;
     style.textContent = `
       .sc-v2-host-url-dialog .el-dialog__body { padding: 0; overflow: hidden; }
-      .sc-v2-host-url-dialog__iframe { display: block; width: 100%; border: 0; }
+      .sc-v2-host-url-dialog__iframe { display: block; width: 100%; max-height: calc(100vh - 120px); border: 0; }
     `;
     document.head?.appendChild(style);
   }
