@@ -176,6 +176,13 @@ body {
   text-align: center;
 }
 
+.sc-v2-static-table__table .sc-v2-static-table__cell-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
 .sc-v2-block-text--muted {
   color: var(--sc-v2-text-muted);
 }

@@ -38,7 +38,7 @@ final class StaticTable implements Renderable, EventAware
 
     private ?string $title;
 
-    /** @var array<int, array{label: string, index: bool, key: ?string, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string}> */
+    /** @var array<int, array{label: string, index: bool, key: ?string, render: ?callable, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string}> */
     private array $columns = [];
 
     /** @var array<int, array<int, mixed>> */
@@ -99,6 +99,33 @@ final class StaticTable implements Renderable, EventAware
     public function column(string $label, array $options = []): self
     {
         $this->columns[] = $this->normalizeColumn(array_replace($options, ['label' => $label]));
+
+        return $this;
+    }
+
+    /**
+     * 追加"事件列"：单元格内容由回调按行生成，典型用于操作按钮 / 链接等交互。
+     *
+     * 回调签名：`fn (array $row, int $rowIndex): Renderable|AbstractHtmlElement|array|string|null`
+     * - 返回 Renderable（如 `Blocks::button('查看')->link()->on('click', ...)`）时按主题渲染；
+     * - 返回数组时按顺序渲染为一组行内元素（多个按钮）；
+     * - 返回字符串时按纯文本转义输出。
+     *
+     * @param string   $label   列标题。
+     * @param callable $render  行内容回调。
+     * @param array    $options 其他列配置（width / align / class / empty 等）。
+     *
+     * 示例：
+     * - `->eventColumn('操作', fn (array $row) => Blocks::button('查看')
+     *        ->link()
+     *        ->on('click', '({ vm }) => vm.openDetail(' . (int) $row['id'] . ')'))`
+     */
+    public function eventColumn(string $label, callable $render, array $options = []): self
+    {
+        $this->columns[] = $this->normalizeColumn(array_replace($options, [
+            'label' => $label,
+            'render' => $render,
+        ]));
 
         return $this;
     }
@@ -340,7 +367,7 @@ final class StaticTable implements Renderable, EventAware
     }
 
     /**
-     * @return array<int, array{label: string, index: bool, key: ?string, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string}>
+     * @return array<int, array{label: string, index: bool, key: ?string, render: ?callable, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string}>
      */
     public function getColumns(): array
     {
@@ -402,11 +429,13 @@ final class StaticTable implements Renderable, EventAware
         $key = isset($column['key']) ? trim((string) $column['key']) : '';
         $empty = isset($column['empty']) ? trim((string) $column['empty']) : '';
         $index = (bool) ($column['index'] ?? false);
+        $render = isset($column['render']) && is_callable($column['render']) ? $column['render'] : null;
 
         return [
             'label' => (string) ($column['label'] ?? ''),
             'index' => $index,
-            'key' => $index || $key === '' ? null : $key,
+            'key' => $index || $render !== null || $key === '' ? null : $key,
+            'render' => $render,
             'width' => $width === '' ? null : $width,
             'align' => $this->normalizeAlign($column['align'] ?? null),
             'class' => $class === '' ? null : $class,

@@ -1056,27 +1056,37 @@ final class LightweightComponentRenderer
                             continue;
                         }
 
-                        $cellSpec = null;
                         $column = $columns[$columnIndex];
-                        if ($column['index'] ?? false) {
-                            $cellSpec = $rowIndex + 1;
-                        } elseif (($column['key'] ?? null) !== null) {
-                            $cellSpec = $row[$column['key']] ?? '';
+                        $render = $column['render'] ?? null;
+
+                        if ($render !== null) {
+                            $value = $render($row, $rowIndex);
+                            $colspan = 1;
+                            $rowspan = 1;
+                            $cellClass = null;
+                            $cellAlign = null;
                         } else {
-                            $cellSpec = $cellPointer < count($cells) ? $cells[$cellPointer] : null;
-                            $cellPointer++;
-                        }
+                            $cellSpec = null;
+                            if ($column['index'] ?? false) {
+                                $cellSpec = $rowIndex + 1;
+                            } elseif (($column['key'] ?? null) !== null) {
+                                $cellSpec = $row[$column['key']] ?? '';
+                            } else {
+                                $cellSpec = $cellPointer < count($cells) ? $cells[$cellPointer] : null;
+                                $cellPointer++;
+                            }
 
-                        [$value, $colspan, $rowspan, $cellClass, $cellAlign] =
-                            $this->normalizeStaticTableCellSpec($cellSpec);
+                            [$value, $colspan, $rowspan, $cellClass, $cellAlign] =
+                                $this->normalizeStaticTableCellSpec($cellSpec);
 
-                        if (($column['format'] ?? null) !== null && is_callable($column['format'])) {
-                            $value = $column['format']($value, $row);
-                        }
+                            if (($column['format'] ?? null) !== null && is_callable($column['format'])) {
+                                $value = $column['format']($value, $row);
+                            }
 
-                        $blankText = $column['empty'] ?? $table->getEmptyCell();
-                        if ($blankText !== null && ($value === null || (is_scalar($value) && trim((string) $value) === ''))) {
-                            $value = $blankText;
+                            $blankText = $column['empty'] ?? $table->getEmptyCell();
+                            if ($blankText !== null && ($value === null || (is_scalar($value) && trim((string) $value) === ''))) {
+                                $value = $blankText;
+                            }
                         }
 
                         $colspan = max(1, min($colspan, $columnCount - $columnIndex));
@@ -1117,7 +1127,7 @@ final class LightweightComponentRenderer
     }
 
     /**
-     * @param array{label: string, index: bool, key: ?string, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string} $column
+     * @param array{label: string, index: bool, key: ?string, render: ?callable, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string} $column
      */
     private function renderStaticTableCell(
         string $tag,
@@ -1148,7 +1158,9 @@ final class LightweightComponentRenderer
 
         $cell = El::double($tag)->setAttrs($attrs);
 
-        if ($value instanceof Renderable) {
+        if (is_array($value)) {
+            $cell->append($this->renderStaticTableCellItems($value, $context));
+        } elseif ($value instanceof Renderable) {
             $cell->append($context->theme()->render($value, $context));
         } elseif ($value instanceof AbstractHtmlElement) {
             $cell->append($value);
@@ -1157,6 +1169,26 @@ final class LightweightComponentRenderer
         }
 
         return $cell;
+    }
+
+    /**
+     * 事件列等多元素单元格：按顺序渲染为一组行内元素。
+     */
+    private function renderStaticTableCellItems(array $items, RenderContext $context): AbstractHtmlElement
+    {
+        $group = El::double('span')->addClass('sc-v2-static-table__cell-actions');
+
+        foreach ($items as $item) {
+            if ($item instanceof Renderable) {
+                $group->append($context->theme()->render($item, $context));
+            } elseif ($item instanceof AbstractHtmlElement) {
+                $group->append($item);
+            } elseif ($item !== null) {
+                $group->append($this->escapeStaticTableText((string) $item));
+            }
+        }
+
+        return $group;
     }
 
     /**
