@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Components\Block\Divider;
 use Sc\Util\HtmlStructureV2\Components\Block\Text;
 use Sc\Util\HtmlStructureV2\Components\Block\Title;
 use Sc\Util\HtmlStructureV2\Components\Display\Descriptions;
+use Sc\Util\HtmlStructureV2\Components\Display\StaticTable;
 use Sc\Util\HtmlStructureV2\Components\Display\Timeline;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Image;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Images;
@@ -47,6 +48,7 @@ final class LightweightComponentRenderer
         Alert::class => 'renderBlockAlert',
         Button::class => 'renderBlockButton',
         Descriptions::class => 'renderDescriptions',
+        StaticTable::class => 'renderStaticTable',
         Timeline::class => 'renderTimeline',
         Image::class => 'renderImage',
         Images::class => 'renderImages',
@@ -966,6 +968,223 @@ final class LightweightComponentRenderer
         $wrapper = $this->applyComponentRootAttributes($wrapper, $descriptions);
 
         return $this->applyComponentEvents($wrapper, $descriptions, $eventContextExpression, $context);
+    }
+
+    private function renderStaticTable(
+        StaticTable $table,
+        RenderContext $context,
+        ?string $eventContextExpression = null
+    ): AbstractHtmlElement {
+        $wrapper = El::double('div')->addClass('sc-v2-static-table');
+
+        $title = $table->getTitle();
+        if ($title !== null && trim($title) !== '') {
+            $wrapper->append(
+                El::double('div')->addClass('sc-v2-section__header')->append($title)
+            );
+        }
+
+        $columns = $table->getColumns();
+        if ($columns !== []) {
+            $tableElement = El::double('table')->addClass('sc-v2-static-table__table');
+            if ($table->isBorder()) {
+                $tableElement->addClass('is-border');
+            }
+            if ($table->isStriped()) {
+                $tableElement->addClass('is-striped');
+            }
+            if ($table->getSize() === 'small') {
+                $tableElement->addClass('is-small');
+            }
+            if ($table->getWidth() !== null) {
+                $tableElement->setAttr('style', 'width:' . $table->getWidth());
+            }
+
+            if ($table->isHeader()) {
+                $thead = El::double('thead');
+                $headRow = El::double('tr');
+                foreach ($columns as $column) {
+                    $headRow->append($this->renderStaticTableCell(
+                        'th',
+                        $column['label'],
+                        $column,
+                        $column['align'] ?? $table->getAlign(),
+                        $context
+                    ));
+                }
+                $thead->append($headRow);
+                $tableElement->append($thead);
+            }
+
+            $tbody = El::double('tbody');
+            $rows = $table->getRows();
+            if ($rows === []) {
+                if (trim($table->getEmptyText()) !== '') {
+                    $tbody->append(
+                        El::double('tr')->append(
+                            El::double('td')
+                                ->setAttrs([
+                                    'colspan' => (string) count($columns),
+                                    'class' => 'sc-v2-static-table__empty',
+                                ])
+                                ->append($this->escapeStaticTableText($table->getEmptyText()))
+                        )
+                    );
+                }
+            } else {
+                $columnCount = count($columns);
+                $rowCount = count($rows);
+                $rowClasses = $table->getRowClasses();
+                // 每列仍需跳过的行数：rowspan 覆盖到的列在后续行不再输出 <td>
+                $rowspanSkip = array_fill(0, $columnCount, 0);
+
+                foreach ($rows as $rowIndex => $row) {
+                    $tr = El::double('tr');
+                    $rowClass = trim((string) ($rowClasses[$rowIndex] ?? ''));
+                    if ($rowClass !== '') {
+                        $tr->addClass($rowClass);
+                    }
+
+                    // 顺序取值只对列表行生效；关联行按列的 key 取值
+                    $cells = array_is_list($row) ? $row : [];
+                    $cellPointer = 0;
+
+                    for ($columnIndex = 0; $columnIndex < $columnCount; $columnIndex++) {
+                        if (($rowspanSkip[$columnIndex] ?? 0) > 0) {
+                            $rowspanSkip[$columnIndex]--;
+
+                            continue;
+                        }
+
+                        $cellSpec = null;
+                        $column = $columns[$columnIndex];
+                        if ($column['index'] ?? false) {
+                            $cellSpec = $rowIndex + 1;
+                        } elseif (($column['key'] ?? null) !== null) {
+                            $cellSpec = $row[$column['key']] ?? '';
+                        } else {
+                            $cellSpec = $cellPointer < count($cells) ? $cells[$cellPointer] : null;
+                            $cellPointer++;
+                        }
+
+                        [$value, $colspan, $rowspan, $cellClass, $cellAlign] =
+                            $this->normalizeStaticTableCellSpec($cellSpec);
+
+                        if (($column['format'] ?? null) !== null && is_callable($column['format'])) {
+                            $value = $column['format']($value, $row);
+                        }
+
+                        $blankText = $column['empty'] ?? $table->getEmptyCell();
+                        if ($blankText !== null && ($value === null || (is_scalar($value) && trim((string) $value) === ''))) {
+                            $value = $blankText;
+                        }
+
+                        $colspan = max(1, min($colspan, $columnCount - $columnIndex));
+                        $rowspan = max(1, min($rowspan, $rowCount - $rowIndex));
+
+                        // rowspan 覆盖的所有列都要在后续行跳过对应单元格
+                        if ($rowspan > 1) {
+                            for ($covered = $columnIndex; $covered < $columnIndex + $colspan; $covered++) {
+                                $rowspanSkip[$covered] = max($rowspanSkip[$covered] ?? 0, $rowspan - 1);
+                            }
+                        }
+
+                        $tr->append($this->renderStaticTableCell(
+                            'td',
+                            $value,
+                            $column,
+                            $cellAlign ?? $column['align'] ?? $table->getAlign(),
+                            $context,
+                            $colspan,
+                            $rowspan,
+                            $cellClass
+                        ));
+
+                        $columnIndex += $colspan - 1;
+                    }
+
+                    $tbody->append($tr);
+                }
+            }
+
+            $tableElement->append($tbody);
+            $wrapper->append($tableElement);
+        }
+
+        $wrapper = $this->applyComponentRootAttributes($wrapper, $table);
+
+        return $this->applyComponentEvents($wrapper, $table, $eventContextExpression, $context);
+    }
+
+    /**
+     * @param array{label: string, index: bool, key: ?string, width: ?string, align: ?string, class: ?string, format: ?callable, empty: ?string} $column
+     */
+    private function renderStaticTableCell(
+        string $tag,
+        mixed $value,
+        array $column,
+        ?string $align,
+        RenderContext $context,
+        int $colspan = 1,
+        int $rowspan = 1,
+        ?string $cellClass = null
+    ): AbstractHtmlElement {
+        $styles = [];
+        if ($tag === 'th' && $column['width'] !== null) {
+            $styles[] = 'width:' . $column['width'];
+        }
+        if ($align !== null) {
+            $styles[] = 'text-align:' . $align;
+        }
+
+        $class = trim(($column['class'] ?? '') . ' ' . ($cellClass ?? ''));
+
+        $attrs = array_filter([
+            'style' => $styles === [] ? null : implode(';', $styles),
+            'class' => $class === '' ? null : $class,
+            'colspan' => $tag === 'td' && $colspan > 1 ? (string) $colspan : null,
+            'rowspan' => $tag === 'td' && $rowspan > 1 ? (string) $rowspan : null,
+        ], static fn(mixed $value): bool => $value !== null);
+
+        $cell = El::double($tag)->setAttrs($attrs);
+
+        if ($value instanceof Renderable) {
+            $cell->append($context->theme()->render($value, $context));
+        } elseif ($value instanceof AbstractHtmlElement) {
+            $cell->append($value);
+        } elseif ($value !== null) {
+            $cell->append($this->escapeStaticTableText((string) $value));
+        }
+
+        return $cell;
+    }
+
+    /**
+     * 单元格合并写法：`['value' => ..., 'colspan' => 2, 'rowspan' => 2, 'align' => 'center', 'class' => 'x']`。
+     *
+     * @return array{0: mixed, 1: int, 2: int, 3: ?string, 4: ?string}
+     */
+    private function normalizeStaticTableCellSpec(mixed $cell): array
+    {
+        if (!is_array($cell)) {
+            return [$cell, 1, 1, null, null];
+        }
+
+        $class = isset($cell['class']) ? trim((string) $cell['class']) : '';
+        $align = isset($cell['align']) ? strtolower(trim((string) $cell['align'])) : '';
+
+        return [
+            $cell['value'] ?? '',
+            max(1, (int) ($cell['colspan'] ?? 1)),
+            max(1, (int) ($cell['rowspan'] ?? 1)),
+            $class === '' ? null : $class,
+            in_array($align, ['left', 'center', 'right'], true) ? $align : null,
+        ];
+    }
+
+    private function escapeStaticTableText(string $text): string
+    {
+        return htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private function appendRenderedChildren(

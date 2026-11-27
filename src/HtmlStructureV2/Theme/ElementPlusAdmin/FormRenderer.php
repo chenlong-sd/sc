@@ -490,6 +490,14 @@ final class FormRenderer
         ]);
         $tableElement = $this->applyRenderableAttributes($tableElement, $table->getRenderAttributes());
 
+        if ($table->isEnterToAddRow() && $table->isAddable() && !$tableContext->formReadonly) {
+            $tableElement->setAttr('@keydown.enter', sprintf(
+                'handleFormTableEnterAddRow(%s, %s, $event)',
+                $scopeLiteral,
+                $arrayPathExpression
+            ));
+        }
+
         foreach ($columns as $columnSchema) {
             $tableElement->append(
                 $this->renderFormTableColumnNode(
@@ -695,7 +703,7 @@ final class FormRenderer
         $column = El::double('el-table-column')->setAttrs([
             'label' => '操作',
             'align' => 'center',
-            'width' => $table->isReorderable() && $table->isRemovable() ? '132' : '80',
+            'width' => $table->isReorderable() && $table->isRemovable() ? '76' : '56',
         ]);
 
         $template = El::double('template')->setAttr('#default', $tableScopeVariable);
@@ -717,7 +725,7 @@ final class FormRenderer
                     ),
                     'class' => self::DRAG_SORT_HANDLE_CLASS,
                     'icon' => 'Rank',
-                ])->append('拖动')
+                ])
             );
         }
 
@@ -728,13 +736,14 @@ final class FormRenderer
                     'type' => 'danger',
                     'size' => 'small',
                     ':disabled' => $disabledExpression ?? 'false',
+                    'icon' => 'Delete',
                     '@click' => sprintf(
                         'removeFormArrayRow(%s, %s, %s)',
                         $scopeLiteral,
                         $arrayPathExpression,
                         $rowIndexExpression
                     ),
-                ])->append('删除')
+                ])
             );
         }
 

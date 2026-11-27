@@ -31,6 +31,7 @@ class FormArrayGroup implements FormNode, FormNodeContainer, ConditionalFormNode
     private bool $addable = true;
     private bool $removable = true;
     private bool $reorderable = false;
+    private bool $enterToAddRow = true;
     private int $minRows = 0;
     private ?int $maxRows = null;
 
@@ -172,6 +173,23 @@ class FormArrayGroup implements FormNode, FormNodeContainer, ConditionalFormNode
     }
 
     /**
+     * 控制表格单元格内按回车时是否自动在末尾新增一行，默认开启。
+     * 仅在可新增（addable）且非只读时生效。
+     *
+     * @param bool $enabled 是否开启回车新增行。
+     * @return static 当前重复分组节点。
+     *
+     * 示例：
+     * - `Forms::table('items')->enterToAddRow(false)`
+     */
+    public function enterToAddRow(bool $enabled = true): static
+    {
+        $this->enterToAddRow = $enabled;
+
+        return $this;
+    }
+
+    /**
      * 设置最少保留的分组行数，不足时会自动补齐默认行。
      * 子字段路径会落到 `name.0.xxx`、`name.1.xxx` 这类数组作用域下。
      *
@@ -245,6 +263,11 @@ class FormArrayGroup implements FormNode, FormNodeContainer, ConditionalFormNode
     public function isReorderable(): bool
     {
         return $this->reorderable;
+    }
+
+    public function isEnterToAddRow(): bool
+    {
+        return $this->enterToAddRow;
     }
 
     public function runtimeType(): string

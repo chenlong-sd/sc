@@ -11,6 +11,7 @@ use Sc\Util\HtmlStructureV2\Components\Display\Media\Image;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Images;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Video;
 use Sc\Util\HtmlStructureV2\Components\Display\Media\Videos;
+use Sc\Util\HtmlStructureV2\Components\Display\StaticTable;
 use Sc\Util\HtmlStructureV2\Components\Display\Timeline;
 
 final class Displays
@@ -18,6 +19,7 @@ final class Displays
     /**
  * 详情展示 DSL 工厂：
  * - descriptions() / descriptionItem() - 详情块与单项；
+ * - table() - 静态表格（服务端直出原生 <table>，适合详情页一次性数据展示）；
  * - timeline() - 时间进度（维修记录、操作日志等按时间推进的内容）；
  * - image() / images() - 单图 / 多图（点击预览，多图共享统一预览组）；
  * - video() / videos() - 单视频 / 多视频（点击进入页面共享 el-dialog 自适应播放）；
@@ -52,6 +54,21 @@ final class Displays
     public static function descriptionItem(string $label, mixed $value): DescriptionItem
     {
         return DescriptionItem::make($label, $value);
+    }
+
+    /**
+     * 创建一个静态表格展示块（原生 <table>，服务端直出，不走 el-table / 行数据运行时）。
+     * 适合详情页等数据一次性给定的场景。
+     *
+     * 示例：
+     * - `Displays::table('尺寸明细')
+     *      ->column('实测尺寸', ['width' => 220, 'align' => 'center'])
+     *      ->column('判定')
+     *      ->rows([['10.02', '合格'], ['9.98', '不合格']])`
+     */
+    public static function table(?string $title = null): StaticTable
+    {
+        return StaticTable::make($title);
     }
 
     /**

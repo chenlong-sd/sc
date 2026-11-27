@@ -91,6 +91,7 @@
             addFormArrayRow: 'addFormArrayRow',
             removeFormArrayRow: 'removeFormArrayRow',
             reorderFormArrayRow: 'reorderFormArrayRow',
+            handleFormTableEnterAddRow: 'handleFormTableEnterAddRow',
             moveFormArrayRow: 'moveFormArrayRow',
             ensureFormTableSortableStore: 'ensureFormTableSortableStore',
             destroyFormTableSortables: 'destroyFormTableSortables',
@@ -1309,6 +1310,54 @@
                 rows
               });
               return rows;
+            },
+            [names.handleFormTableEnterAddRow](scope, arrayPath, event){
+              if (!event || event.isComposing || event.repeat) {
+                return;
+              }
+
+              const target = event.target;
+              if (!target || String(target.tagName || '').toUpperCase() !== 'INPUT' || target.disabled) {
+                return;
+              }
+
+              if (typeof target.closest === 'function'
+                && target.closest('.el-select, .el-cascader, .el-date-editor, .el-autocomplete, .el-time-picker')) {
+                return;
+              }
+
+              event.preventDefault();
+
+              const rows = this[names.getFormArrayRows](scope, arrayPath);
+              if (!Array.isArray(rows)) {
+                return;
+              }
+
+              const previousLength = rows.length;
+              this[names.addFormArrayRow](scope, arrayPath);
+              const nextRows = this[names.getFormArrayRows](scope, arrayPath);
+              if (!Array.isArray(nextRows) || nextRows.length <= previousLength) {
+                return;
+              }
+
+              const tableElement = typeof target.closest === 'function' ? target.closest('[data-sc-form-table="1"]') : null;
+              if (!tableElement || typeof this.$nextTick !== 'function') {
+                return;
+              }
+
+              this.$nextTick(() => {
+                const tbody = getFormTableBodyElement(tableElement);
+                const rowElements = tbody ? tbody.querySelectorAll('tr.el-table__row') : [];
+                const lastRow = rowElements[rowElements.length - 1];
+                if (!lastRow) {
+                  return;
+                }
+
+                const focusTarget = lastRow.querySelector('input:not([disabled]):not([readonly])');
+                if (focusTarget && typeof focusTarget.focus === 'function') {
+                  focusTarget.focus();
+                }
+              });
             },
             [names.removeFormArrayRow](scope, arrayPath, rowIndex){
               const groupCfg = this[names.getFormArrayGroupConfig](scope, arrayPath) || {};

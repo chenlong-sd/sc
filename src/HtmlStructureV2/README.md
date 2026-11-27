@@ -296,6 +296,7 @@ V2 后续页面灵活性优先通过轻组件补齐，而不是继续把标题�
 - `Blocks::alert(...)` 提示块
 - `Blocks::button(...)` 轻量交互按钮
 - `Displays::descriptions(...)` 轻量详情展示
+- `Displays::table('标题')` 静态表格：服务端直出原生 `<table>`，不创建 `el-table`、不进入行数据运行时，适合详情页一次性数据展示；支持 `column()` / `columns()`（width / align / class / key / format / empty）、`indexColumn()`、`rows()`、`border()`、`striped()`、`header()`、`align()`、`size('small')`、`emptyText()`、`emptyCell()`；列可声明 `key` 对应关联行数据的键名（如 `columns(['size' => '实测尺寸'])` 或 `['label' => '实测尺寸', 'key' => 'size']`，rows 传 `['size' => '10.02']`，行里多余字段自动忽略，无需逐行挑选数据）；`indexColumn('序号', ['width' => 80])` 自动在最前生成序号列；`width(1500)` / `width('80%')` 设置表格整体宽度（数字按 px，默认撑满容器）；列支持 `format`（`fn($value, $row)` 回调，适合枚举/数值/拼接格式化）与 `empty`（该列空值占位，`emptyCell('-')` 可设表格级默认占位）；单元格写成 `['value' => ..., 'rowspan' => 2, 'colspan' => 2, 'align' => 'center', 'class' => 'x']` 可合并单元格（被 rowspan 覆盖的后续行省略对应单元格）；`rowClass(int $index, string $class)` / `rowClasses([1 => 'is-bg'])` 可按行索引给 `<tr>` 挂 class（斑马行、合计行等）
 - 以上轻组件现在统一支持 `attr()` / `attrs()` / `className()` / `style()`，属性会挂到各自渲染根节点上；动态绑定请自行写成 `":prop"` / `"@event"`
 - `Displays::descriptions()->item(...)` 支持给单个 `el-descriptions-item` 设置属性：第三参可传属性数组或配置回调；也可以先用 `Displays::descriptionItem(...)` 创建 item 后再链式设置 `span()` / `attr()` / `className()`
 
@@ -478,6 +479,7 @@ Fields::editor('content', '正文')
 - `Forms::table()` 继续复用数组节点协议，行内现在也支持继续嵌套 `Forms::arrayGroup()` / `Forms::table()`；它们会作为单个单元格里的嵌套数组编辑器渲染，并沿用同一套数组路径和 runtime 协议。
 - `Forms::table()` 现在支持在行节点里继续使用 `object()`、`section()`、`grid()`、`inline()` 做结构组织；最终会在构建期展开成列。
 - `Forms::table()` 在 `->reorderable()` / `->removable()` 时会自动追加内置“操作”列；当前支持拖动排序和删除行。
+- `Forms::table()` 默认开启在单元格输入框内按回车自动新增一行（聚焦新行首个可输入单元格）；用 `->enterToAddRow(false)` 关闭，仅在 `addable` 且非只读时生效。
 - `Forms::table()` 的叶子列节点现在支持 `columnWidth()` / `columnMinWidth()` / `columnAlign()` / `columnFixed()` / `columnProps()`；可直接写在 `Fields::*()`、`Forms::custom()`、嵌套 `Forms::arrayGroup()` / `Forms::table()` 上。
 - `Fields::*()` 原本已有 `prop()` / `props()`；现在也补了统一别名 `attr()` / `attrs()` / `className()` / `style()`，仍然直接作用到字段实际渲染的组件根节点，不作用于外层 form-item。
 - `Fields::*()` 现在支持 `on()` / `events()` 绑定底层字段组件事件；handler 按 Element Plus 原生事件参数调用，例如 `->on('change', '(value) => console.log(value)')`。如果字段内部也绑定同名事件（例如 `linkageUpdate()` 的 `change`），会和自定义事件串行执行。

@@ -127,6 +127,55 @@ body {
   min-width: var(--sc-v2-desc-min-width, auto);
 }
 
+/* 静态表格（Displays::table）：服务端直出原生 <table>，不依赖 el-table 运行时 */
+.sc-v2-static-table {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sc-v2-static-table__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.sc-v2-static-table__table th,
+.sc-v2-static-table__table td {
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.sc-v2-static-table__table.is-border th,
+.sc-v2-static-table__table.is-border td {
+  border: 1px solid var(--sc-v2-border);
+}
+
+.sc-v2-static-table__table thead th {
+  background: var(--el-table-header-bg-color, #f5f7fa);
+  font-weight: 600;
+  color: var(--sc-v2-text-secondary);
+}
+
+.sc-v2-static-table__table.is-striped tbody tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+.sc-v2-static-table__table.is-small th,
+.sc-v2-static-table__table.is-small td {
+  padding: 4px 8px;
+}
+
+.sc-v2-static-table__table td.sc-v2-static-table__empty {
+  color: var(--sc-v2-text-muted);
+  text-align: center;
+}
+
 .sc-v2-block-text--muted {
   color: var(--sc-v2-text-muted);
 }
@@ -468,8 +517,26 @@ body.sc-v2-iframe-dialog-child #app > .sc-v2-page:only-child > .sc-v2-form--has-
   margin-bottom: 0;
 }
 
+.sc-v2-form-table__table.el-table td.el-table__cell {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+
+.sc-v2-form-table__table td.el-table__cell > .cell {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
 .sc-v2-form-table__actions {
   justify-content: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+}
+
+.sc-v2-form-table__actions .el-button {
+  height: auto;
+  padding: 2px 5px;
+  font-size: 18px;
 }
 
 .el-dialog.sc-v2-dialog--iframe {
